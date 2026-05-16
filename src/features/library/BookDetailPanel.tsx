@@ -1,4 +1,5 @@
 import type { LibraryBook } from "../../schemas/library";
+import type { BookFileDownloadResult } from "../../schemas/library";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -14,10 +15,12 @@ export function BookDetailPanel({
   book,
   launchMessage,
   onOpenReader,
+  downloadState,
 }: {
   book: LibraryBook;
   launchMessage: string | null;
   onOpenReader: (book: LibraryBook) => void;
+  downloadState: { phase: "idle" } | { phase: "fetching" } | { phase: "success"; result: BookFileDownloadResult } | { phase: "error"; message: string };
 }) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
@@ -43,6 +46,21 @@ export function BookDetailPanel({
 
       {!canOpen ? <div className="muted">No EPUB file available for this book.</div> : null}
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
+
+      {downloadState.phase === "fetching" ? <div className="muted">Fetching EPUB…</div> : null}
+      {downloadState.phase === "error" ? <div className="errorText">{downloadState.message}</div> : null}
+      {downloadState.phase === "success" ? (
+        <div className="downloadResultBox">
+          <div>
+            <span className="pill pillOk">EPUB fetch succeeded</span>
+          </div>
+          <div className="muted">
+            size: {formatFileSize(downloadState.result.blob.size) ?? `${downloadState.result.blob.size} bytes`}
+          </div>
+          {downloadState.result.contentType ? <div className="muted">type: {downloadState.result.contentType}</div> : null}
+          {downloadState.result.filename ? <div className="muted">filename: {downloadState.result.filename}</div> : null}
+        </div>
+      ) : null}
 
       <div className="bookDetailGrid">
         {authors ? (
@@ -122,4 +140,3 @@ export function BookDetailPanel({
     </div>
   );
 }
-

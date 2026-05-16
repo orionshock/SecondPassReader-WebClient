@@ -25,6 +25,12 @@ export function LibraryLandingPage({ profile }: Props) {
   const [data, setData] = useState<PaginatedResponse<LibraryBook> | null>(null);
   const [selectedBook, setSelectedBook] = useState<LibraryBook | null>(null);
   const [launchMessage, setLaunchMessage] = useState<string | null>(null);
+  const [downloadState, setDownloadState] = useState<
+    | { phase: "idle" }
+    | { phase: "fetching" }
+    | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
+    | { phase: "error"; message: string }
+  >({ phase: "idle" });
 
   async function loadBooks(targetPage = page) {
     if (!profile) return;
@@ -48,6 +54,7 @@ export function LibraryLandingPage({ profile }: Props) {
       setData(result);
       setPage(targetPage);
       setLaunchMessage(null);
+      setDownloadState({ phase: "idle" });
       setSelectedBook((prev) => {
         if (!prev) return null;
         const match = result.results.find((b) => String(b.id) === String(prev.id));
@@ -69,13 +76,44 @@ export function LibraryLandingPage({ profile }: Props) {
   function handleSelectBook(book: LibraryBook) {
     setSelectedBook(book);
     setLaunchMessage(null);
+    setDownloadState({ phase: "idle" });
   }
 
-  function handleOpenReader(book: LibraryBook) {
-    if (!book.file?.download_url) {
-      setLaunchMessage("No EPUB file available for this book.");
+  async function handleOpenReader(book: LibraryBook) {
+    setLaunchMessage(null);
+    setDownloadState({ phase: "idle" });
+
+    if (!profile?.accessToken) {
+      setDownloadState({ phase: "error", message: "Profile is not linked." });
       return;
     }
+    if (!book.file?.download_url) {
+      setDownloadState({ phase: "error", message: "No EPUB file available for this book." });
+      return;
+    }
+
+    setDownloadState({ phase: "fetching" });
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+      const result = await api.downloadBookFile({
+        downloadUrl: book.file.download_url,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+      });
+      setDownloadState({ phase: "success", result });
+    } catch (e) {
+      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
+        setDownloadState({
+          phase: "error",
+          message:
+            "Could not download this book file. The token may be revoked or may not have file download permission.",
+        });
+      } else {
+        setDownloadState({ phase: "error", message: e instanceof Error ? e.message : "Download failed." });
+      }
+      return;
+    }
+
     setLaunchMessage("Reader launch is not implemented yet. Next step: fetch EPUB blob.");
   }
 
@@ -165,6 +203,7 @@ export function LibraryLandingPage({ profile }: Props) {
                   book={selectedBook}
                   launchMessage={launchMessage}
                   onOpenReader={handleOpenReader}
+                  downloadState={downloadState}
                 />
               ) : (
                 <div className="muted">Select a book to view details.</div>

@@ -4,7 +4,7 @@ import type {
   MePayload,
   SecondPassDiscovery,
 } from "../schemas/clientApiAuth";
-import type { LibraryBook, PaginatedResponse } from "../schemas/library";
+import type { BookFileDownloadResult, LibraryBook, PaginatedResponse } from "../schemas/library";
 
 type RequestUrlOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -155,6 +155,52 @@ export class SecondPassApiClient {
 
     return (await res.json()) as PaginatedResponse<LibraryBook>;
   }
+
+  async downloadBookFile(input: {
+    downloadUrl: string;
+    accessToken: string;
+    tokenType?: string;
+  }): Promise<BookFileDownloadResult> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const res = await fetch(input.downloadUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/epub+zip, application/octet-stream, */*",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to download files (403)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    const contentType = res.headers.get("content-type") ?? undefined;
+    const contentDisposition = res.headers.get("content-disposition") ?? undefined;
+    const contentLengthRaw = res.headers.get("content-length");
+    const contentLength = contentLengthRaw ? Number(contentLengthRaw) : undefined;
+
+    const blob = await res.blob();
+    const filename = contentDisposition ? tryParseFilename(contentDisposition) : undefined;
+
+    return {
+      blob,
+      contentType,
+      contentLength: Number.isFinite(contentLength) ? contentLength : undefined,
+      contentDisposition,
+      filename,
+    };
+  }
 }
 
 function resolveUrl(baseUrl: string, endpointOrUrl: string): string {
@@ -162,4 +208,21 @@ function resolveUrl(baseUrl: string, endpointOrUrl: string): string {
   const base = baseUrl.replace(/\/+$/, "");
   const path = endpointOrUrl.startsWith("/") ? endpointOrUrl : `/${endpointOrUrl}`;
   return `${base}${path}`;
+}
+
+function tryParseFilename(contentDisposition: string): string | undefined {
+  // RFC 6266 basics: filename="<name>" or filename*=UTF-8''<urlencoded>
+  const filenameStar = /filename\*\s*=\s*([^']*)''([^;]+)/i.exec(contentDisposition);
+  if (filenameStar) {
+    const encoded = filenameStar[2].trim();
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  }
+
+  const filename = /filename\s*=\s*\"?([^\";]+)\"?/i.exec(contentDisposition);
+  if (filename) return filename[1].trim();
+  return undefined;
 }

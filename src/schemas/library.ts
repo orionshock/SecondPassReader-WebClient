@@ -62,3 +62,11 @@ export type LibraryBook = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type BookFileDownloadResult = {
+  blob: Blob;
+  contentType?: string;
+  contentLength?: number;
+  contentDisposition?: string;
+  filename?: string;
+};

@@ -439,6 +439,16 @@ a {
   gap: 4px;
 }
 
+.downloadResultBox {
+  margin-top: 8px;
+  border: 1px dashed var(--sp-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+  background: rgba(18, 140, 63, 0.04);
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
