@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light;
+  --sp-bg: #fafafa;
+  --sp-panel: #ffffff;
+  --sp-text: #111827;
+  --sp-muted: #6b7280;
+  --sp-border: rgba(17, 24, 39, 0.12);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+* {
+  box-sizing: border-box;
+}
+

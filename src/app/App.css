@@ -1,0 +1,99 @@
+.appShell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.appHeader {
+  margin-bottom: 20px;
+}
+
+.appTitle {
+  font-size: 28px;
+  line-height: 1.1;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.appSubtitle {
+  margin: 8px 0 0;
+  color: var(--sp-muted);
+}
+
+.appMain {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.panel {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: var(--sp-panel);
+  padding: 16px;
+}
+
+.panelTitle {
+  margin: 0 0 10px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sp-muted);
+}
+
+.statusList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.statusRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusRow dt {
+  color: var(--sp-muted);
+}
+
+.statusRow dd {
+  margin: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  border: 1px solid var(--sp-border);
+  background: #fff;
+}
+
+.pillOk {
+  border-color: rgba(18, 140, 63, 0.35);
+  background: rgba(18, 140, 63, 0.08);
+  color: rgb(18, 140, 63);
+}
+
+.pillWarn {
+  border-color: rgba(185, 106, 0, 0.35);
+  background: rgba(185, 106, 0, 0.08);
+  color: rgb(185, 106, 0);
+}
+
+.pillIdle {
+  border-color: rgba(75, 85, 99, 0.35);
+  background: rgba(75, 85, 99, 0.08);
+  color: rgb(55, 65, 81);
+}
+
+.targetsList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--sp-text);
+}
+
