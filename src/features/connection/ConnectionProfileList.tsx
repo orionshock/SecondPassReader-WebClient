@@ -32,6 +32,11 @@ export function ConnectionProfileList({ profiles, selectedProfileId, onSelect, o
                     <span className="muted">Name:</span> {profile.serverName}
                   </div>
                 ) : null}
+                {profile.linkedAt ? (
+                  <div>
+                    <span className="muted">Link:</span> <span className="pill pillOk">linked</span>
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="profileActions">
@@ -53,4 +58,3 @@ export function ConnectionProfileList({ profiles, selectedProfileId, onSelect, o
     </ul>
   );
 }
-

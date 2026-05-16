@@ -5,7 +5,16 @@ export type ConnectionProfile = {
   apiBaseUrl?: string;
   serverName?: string;
   accessToken?: string;
+  tokenType?: string;
   clientSessionId?: string;
+  linkedAt?: string;
+  clientApi?: {
+    discoveryVersion: string;
+    discoveryEndpoint: string;
+    loginRequestEndpoint: string;
+    authorizeUrl: string;
+    pollEndpointTemplate: string;
+  };
   createdAt: string;
   lastUsedAt?: string;
 };

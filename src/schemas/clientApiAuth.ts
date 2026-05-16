@@ -21,10 +21,12 @@ export type SecondPassDiscovery = {
 };
 
 export type ClientApiLoginRequestResponse = {
+  id: string;
   code: string;
   authorize_url: string;
   poll_url: string;
-  expires_at?: string;
+  expires_at: string;
+  interval: number;
 };
 
 export type ClientApiPollResponse =
@@ -32,4 +34,13 @@ export type ClientApiPollResponse =
   | { status: "denied" }
   | { status: "expired" }
   | { status: "consumed" }
-  | { status: "approved"; access_token: string };
+  | {
+      status: "approved";
+      access_token: string;
+      token_type: "Bearer" | string;
+      client_session: {
+        id: string;
+        name: string;
+        client_type: string;
+      };
+    };

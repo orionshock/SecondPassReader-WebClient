@@ -1,11 +1,12 @@
 import "./App.css";
 import { useEffect, useMemo, useState } from "react";
-import { ConnectionSetup } from "../features/connection";
+import { ClientApiLinking, ConnectionSetup } from "../features/connection";
 import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export default function App() {
+  const [profilesVersion, setProfilesVersion] = useState(0);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(SELECTED_PROFILE_KEY);
@@ -17,7 +18,7 @@ export default function App() {
   const selectedProfile = useMemo(() => {
     if (!selectedProfileId) return null;
     return getConnectionProfile(selectedProfileId) ?? null;
-  }, [selectedProfileId]);
+  }, [selectedProfileId, profilesVersion]);
 
   useEffect(() => {
     const profiles = listConnectionProfiles();
@@ -77,6 +78,13 @@ export default function App() {
         <ConnectionSetup
           selectedProfileId={selectedProfileId}
           onSelectedProfileIdChange={setSelectedProfileId}
+          onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+        />
+
+        <ClientApiLinking
+          selectedProfileId={selectedProfileId}
+          onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+          profilesVersion={profilesVersion}
         />
 
         <section className="panel">

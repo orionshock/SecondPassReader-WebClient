@@ -13,6 +13,7 @@ import { discoverSecondPass, normalizeServerBaseUrl } from "./connectionUtils";
 type Props = {
   selectedProfileId?: string | null;
   onSelectedProfileIdChange: (profileId: string | null) => void;
+  onProfilesChanged?: () => void;
 };
 
 function newProfileId() {
@@ -23,10 +24,17 @@ function formatDiscoverySummary(discovery: SecondPassDiscovery) {
   return {
     serverName: discovery.server_name,
     apiBaseUrl: discovery.api_base_url,
+    clientApi: {
+      discoveryVersion: discovery.client_api.discovery_version,
+      discoveryEndpoint: discovery.client_api.discovery_endpoint,
+      loginRequestEndpoint: discovery.client_api.login_request_endpoint,
+      authorizeUrl: discovery.client_api.authorize_url,
+      pollEndpointTemplate: discovery.client_api.poll_endpoint_template,
+    },
   };
 }
 
-export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange }: Props) {
+export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange, onProfilesChanged }: Props) {
   const [serverUrlInput, setServerUrlInput] = useState("");
   const [labelInput, setLabelInput] = useState("");
   const [profilesVersion, setProfilesVersion] = useState(0);
@@ -39,6 +47,7 @@ export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange }
 
   function refreshProfiles() {
     setProfilesVersion((v) => v + 1);
+    onProfilesChanged?.();
   }
 
   async function handleSaveProfile() {
@@ -84,6 +93,7 @@ export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange }
           serverBaseUrl,
           serverName: summary.serverName,
           apiBaseUrl: summary.apiBaseUrl,
+          clientApi: summary.clientApi,
           lastUsedAt: existing.lastUsedAt ?? undefined,
         };
         saveConnectionProfile(updated);
