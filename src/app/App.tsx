@@ -2,6 +2,7 @@ import "./App.css";
 import { useEffect, useMemo, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectionSetup } from "../features/connection";
 import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
+import { LibraryLandingPage } from "../features/library";
 import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
@@ -96,6 +97,8 @@ export default function App() {
           profilesVersion={profilesVersion}
           onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
         />
+
+        <LibraryLandingPage profile={selectedProfile} />
       </main>
     </div>
   );

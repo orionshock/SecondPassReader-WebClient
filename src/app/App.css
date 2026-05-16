@@ -283,3 +283,48 @@ a {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.libraryControls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+}
+
+.bookList {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.bookCard {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.bookHeader {
+  margin-bottom: 8px;
+}
+
+.bookTitle {
+  font-weight: 700;
+}
+
+.bookSubtitle {
+  margin-top: 4px;
+  color: var(--sp-muted);
+}
+
+.bookMeta {
+  display: grid;
+  gap: 4px;
+}
