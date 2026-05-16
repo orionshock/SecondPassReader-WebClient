@@ -8,12 +8,14 @@ import {
   type ConnectionProfile,
 } from "../../storage/connectionProfiles";
 import { ConnectionProfileList } from "./ConnectionProfileList";
+import { getConnectionStatus, isProfileLinked, isProfileVerified } from "./connectionStatus";
 import { discoverSecondPass, normalizeServerBaseUrl } from "./connectionUtils";
 
 type Props = {
   selectedProfileId?: string | null;
   onSelectedProfileIdChange: (profileId: string | null) => void;
   onProfilesChanged?: () => void;
+  profilesVersion?: number;
 };
 
 function newProfileId() {
@@ -34,19 +36,28 @@ function formatDiscoverySummary(discovery: SecondPassDiscovery) {
   };
 }
 
-export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange, onProfilesChanged }: Props) {
+export function ConnectionSetup({
+  selectedProfileId,
+  onSelectedProfileIdChange,
+  onProfilesChanged,
+  profilesVersion,
+}: Props) {
   const [serverUrlInput, setServerUrlInput] = useState("");
   const [labelInput, setLabelInput] = useState("");
-  const [profilesVersion, setProfilesVersion] = useState(0);
+  const [localVersion, setLocalVersion] = useState(0);
   const [busy, setBusy] = useState<"save" | "discover" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [discovery, setDiscovery] = useState<SecondPassDiscovery | null>(null);
 
-  const profiles = useMemo(() => listConnectionProfiles(), [profilesVersion]);
+  const profiles = useMemo(() => {
+    void profilesVersion;
+    return listConnectionProfiles();
+  }, [localVersion, profilesVersion]);
+
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId) ?? null;
 
   function refreshProfiles() {
-    setProfilesVersion((v) => v + 1);
+    setLocalVersion((v) => v + 1);
     onProfilesChanged?.();
   }
 
@@ -94,13 +105,10 @@ export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange, 
           serverName: summary.serverName,
           apiBaseUrl: summary.apiBaseUrl,
           clientApi: summary.clientApi,
-          lastUsedAt: existing.lastUsedAt ?? undefined,
         };
         saveConnectionProfile(updated);
         refreshProfiles();
-      }
-
-      if (!existing) {
+      } else {
         setServerUrlInput(serverBaseUrl);
       }
     } catch (e) {
@@ -220,6 +228,36 @@ export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange, 
             <div className="selectedRow">
               <span className="muted">Last used:</span> {selectedProfile.lastUsedAt ?? "—"}
             </div>
+            <div className="selectedRow">
+              <span className="muted">Status:</span> {getConnectionStatus(selectedProfile)}
+            </div>
+            <div className="selectedRow">
+              <span className="muted">Linked status:</span> {isProfileLinked(selectedProfile) ? "linked" : "not linked"}
+            </div>
+            {selectedProfile.linkedAt ? (
+              <div className="selectedRow">
+                <span className="muted">Linked at:</span> {selectedProfile.linkedAt}
+              </div>
+            ) : null}
+            <div className="selectedRow">
+              <span className="muted">Verified status:</span>{" "}
+              {isProfileVerified(selectedProfile) ? "verified" : "not verified"}
+            </div>
+            {selectedProfile.verifiedUser ? (
+              <div className="selectedRow">
+                <span className="muted">Verified user:</span> <span className="mono">{selectedProfile.verifiedUser.username}</span>
+              </div>
+            ) : null}
+            {selectedProfile.verifiedAt ? (
+              <div className="selectedRow">
+                <span className="muted">Verified at:</span> {selectedProfile.verifiedAt}
+              </div>
+            ) : null}
+            {selectedProfile.clientSessionId ? (
+              <div className="selectedRow">
+                <span className="muted">Client session:</span> <span className="mono">{selectedProfile.clientSessionId}</span>
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className="muted">No profile selected.</p>
@@ -228,3 +266,4 @@ export function ConnectionSetup({ selectedProfileId, onSelectedProfileIdChange, 
     </div>
   );
 }
+

@@ -44,3 +44,13 @@ export type ClientApiPollResponse =
         client_type: string;
       };
     };
+
+export type MePayload = {
+  id?: string | number;
+  username: string;
+  display_name?: string;
+  email?: string;
+  must_change_password?: boolean;
+  capabilities?: unknown;
+  raw?: unknown;
+};

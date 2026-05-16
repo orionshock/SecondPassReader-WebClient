@@ -97,12 +97,6 @@
   color: rgb(55, 65, 81);
 }
 
-.targetsList {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--sp-text);
-}
-
 .form {
   display: grid;
   gap: 12px;
@@ -159,6 +153,11 @@
 .errorText {
   margin: 0;
   color: rgb(185, 28, 28);
+}
+
+.warningText {
+  margin: 10px 0 0;
+  color: rgb(185, 106, 0);
 }
 
 .muted {
@@ -219,6 +218,7 @@ a {
 .profileTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
@@ -233,6 +233,33 @@ a {
   border: 1px solid rgba(37, 99, 235, 0.35);
   background: rgba(37, 99, 235, 0.08);
   color: rgb(37, 99, 235);
+}
+
+.badgeRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-border);
+  background: #fff;
+}
+
+.badgeOk {
+  border-color: rgba(18, 140, 63, 0.35);
+  background: rgba(18, 140, 63, 0.08);
+  color: rgb(18, 140, 63);
+}
+
+.badgeWarn {
+  border-color: rgba(185, 106, 0, 0.35);
+  background: rgba(185, 106, 0, 0.08);
+  color: rgb(185, 106, 0);
 }
 
 .profileMeta {

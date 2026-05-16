@@ -6,29 +6,43 @@ This app links to a Second Pass server using a **PIN/code + polling** flow (not 
 
 1. **Discover server**
    - `GET /.well-known/secondpass`
-   - Use discovery response to learn base API URLs/metadata needed for linking.
+   - Use discovery response to learn `api_base_url` and the client API endpoints.
 
 2. **Create login request**
-   - `POST` the server’s “login request” endpoint (as defined by discovery).
+   - `POST` the server’s “login request” endpoint (from discovery).
    - Response includes:
-     - `code` (short authorization code/PIN to display to user)
-     - `authorize_url` (URL the user visits to approve the request)
-     - `poll_url` (URL the client polls for completion)
+     - `code` (authorization code/PIN to display to the user)
+     - `authorize_url` (URL the user visits to approve)
+     - `poll_url` (URL the client polls)
+     - `interval` (poll interval in seconds)
 
 3. **Display and wait**
-   - Show the `code` and provide the `authorize_url` to the user.
+   - Show the `code` and provide a link to open `authorize_url`.
 
 4. **Poll for completion**
    - Repeatedly `GET poll_url` until one of:
-     - **Token received:** response contains a one-time bearer token
-     - **Denied:** user denied the request
-     - **Expired:** request timed out
-     - **Consumed:** token already exchanged/used
+     - **approved:** one-time bearer token returned
+     - **denied:** user denied the request
+     - **expired:** request timed out
+     - **consumed:** token already exchanged/used
    - Stop polling immediately on any terminal state.
 
-5. **Verify**
-   - Call `GET /api/v1/accounts/me/` with the bearer token.
-   - Treat success as “linked”; store only what’s necessary to reconnect.
+5. **Verify (/me)**
+   - Call `GET {apiBaseUrl}/accounts/me/` with the bearer token.
+   - Treat success as “verified”.
+
+## /me verification
+
+- Request:
+  - `GET {apiBaseUrl}/accounts/me/`
+  - `Authorization: Bearer <accessToken>`
+  - `Accept: application/json`
+- Server phase 1 note:
+  - Bearer token support currently only needs to support `GET /api/v1/accounts/me/` on the server.
+- Failure handling:
+  - `401` / `403` => token invalid/revoked/not allowed; profile may need re-linking.
+- If `must_change_password` is true:
+  - Warn the user to change their password in the server web UI before continuing.
 
 ## Security notes
 

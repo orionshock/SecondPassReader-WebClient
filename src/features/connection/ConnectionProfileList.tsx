@@ -1,4 +1,5 @@
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
+import { getConnectionStatus, getConnectionStatusLabel } from "./connectionStatus";
 
 type Props = {
   profiles: ConnectionProfile[];
@@ -16,25 +17,29 @@ export function ConnectionProfileList({ profiles, selectedProfileId, onSelect, o
     <ul className="profileList">
       {profiles.map((profile) => {
         const selected = profile.id === selectedProfileId;
+        const status = getConnectionStatus(profile);
+        const primary = profile.label?.trim() ? profile.label : profile.serverBaseUrl;
         return (
           <li key={profile.id} className={`profileRow ${selected ? "profileRowSelected" : ""}`}>
             <div className="profileMain">
               <div className="profileTop">
-                <span className="profileLabel">{profile.label}</span>
-                {selected ? <span className="profileSelectedMark">Selected</span> : null}
+                <span className="profileLabel">{primary}</span>
+                <div className="badgeRow">
+                  {selected ? <span className="profileSelectedMark">Selected</span> : null}
+                  {status === "linked" ? <span className="badge badgeWarn">Linked</span> : null}
+                  {status === "verified" ? <span className="badge badgeOk">Verified</span> : null}
+                </div>
               </div>
               <div className="profileMeta">
-                <div>
-                  <span className="muted">Server:</span> <span className="mono">{profile.serverBaseUrl}</span>
-                </div>
+                <div className="mono">{profile.serverBaseUrl}</div>
                 {profile.serverName ? (
                   <div>
                     <span className="muted">Name:</span> {profile.serverName}
                   </div>
                 ) : null}
-                {profile.linkedAt ? (
+                {status !== "not_configured" ? (
                   <div>
-                    <span className="muted">Link:</span> <span className="pill pillOk">linked</span>
+                    <span className="muted">Status:</span> {getConnectionStatusLabel(status)}
                   </div>
                 ) : null}
               </div>

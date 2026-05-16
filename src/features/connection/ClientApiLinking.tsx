@@ -6,6 +6,7 @@ import type {
   SecondPassDiscovery,
 } from "../../schemas/clientApiAuth";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
+import { isProfileLinked } from "./connectionStatus";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -19,12 +20,6 @@ type LinkingState =
   | { phase: "waiting"; loginRequest: ClientApiLoginRequestResponse; pollStatus: ClientApiPollResponse["status"] }
   | { phase: "success" }
   | { phase: "error"; message: string };
-
-function maskToken(token: string) {
-  if (!token) return "";
-  if (token.length <= 8) return "••••••••";
-  return `${token.slice(0, 4)}…${token.slice(-4)}`;
-}
 
 function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
   if (!profile.apiBaseUrl || !profile.serverName || !profile.clientApi) return null;
@@ -49,6 +44,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
   const profile = useMemo(() => {
     if (!selectedProfileId) return null;
+    void profilesVersion;
     return getConnectionProfile(selectedProfileId) ?? null;
   }, [selectedProfileId, profilesVersion, state.phase]);
 
@@ -85,9 +81,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         signal: abort.signal,
         onUpdate: (status, detail) => {
           setPollDetail(detail ?? null);
-          setState((prev) =>
-            prev.phase === "waiting" ? { ...prev, pollStatus: status } : prev,
-          );
+          setState((prev) => (prev.phase === "waiting" ? { ...prev, pollStatus: status } : prev));
         },
         onApproved: (approved) => {
           const now = new Date().toISOString();
@@ -110,7 +104,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     }
   }
 
-  function reset() {
+  function resetLocal() {
     abortRef.current?.abort();
     setPollDetail(null);
     setState({ phase: "idle" });
@@ -144,16 +138,16 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         </p>
       ) : null}
 
-      {profile.linkedAt ? (
+      {isProfileLinked(profile) ? (
         <div className="discoveryBox">
           <div>
             <span className="muted">Status:</span> <span className="pill pillOk">linked</span>
           </div>
           <div>
-            <span className="muted">Linked at:</span> {profile.linkedAt}
+            <span className="muted">Linked at:</span> {profile.linkedAt ?? "—"}
           </div>
           <div>
-            <span className="muted">Token:</span> <span className="mono">{profile.accessToken ? maskToken(profile.accessToken) : "—"}</span>
+            <span className="muted">Bearer token:</span> stored
           </div>
           <div>
             <span className="muted">Client session:</span> <span className="mono">{profile.clientSessionId ?? "—"}</span>
@@ -173,8 +167,8 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           {state.phase === "starting" ? "Starting…" : state.phase === "waiting" ? "Linking…" : "Start linking"}
         </button>
         {state.phase !== "idle" ? (
-          <button type="button" className="button" onClick={reset}>
-            Reset
+          <button type="button" className="button" onClick={resetLocal}>
+            Reset local state
           </button>
         ) : null}
       </div>
@@ -209,7 +203,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       {state.phase === "error" ? (
         <div>
           <p className="errorText">{state.message}</p>
-          <button type="button" className="button" onClick={reset}>
+          <button type="button" className="button" onClick={resetLocal}>
             Retry
           </button>
         </div>
@@ -259,3 +253,4 @@ function sleep(ms: number, signal: AbortSignal) {
     signal.addEventListener("abort", onAbort);
   });
 }
+

@@ -1,6 +1,7 @@
 import "./App.css";
 import { useEffect, useMemo, useState } from "react";
-import { ClientApiLinking, ConnectionSetup } from "../features/connection";
+import { ClientApiLinking, ClientApiVerification, ConnectionSetup } from "../features/connection";
+import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
 import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
@@ -19,6 +20,8 @@ export default function App() {
     if (!selectedProfileId) return null;
     return getConnectionProfile(selectedProfileId) ?? null;
   }, [selectedProfileId, profilesVersion]);
+
+  const connectionStatus = useMemo(() => getConnectionStatus(selectedProfile), [selectedProfile]);
 
   useEffect(() => {
     const profiles = listConnectionProfiles();
@@ -59,10 +62,10 @@ export default function App() {
             <div className="statusRow">
               <dt>Server connection</dt>
               <dd>
-                {selectedProfile ? (
-                  <span className="pill pillOk">configured</span>
+                {connectionStatus === "verified" ? (
+                  <span className="pill pillOk">{getConnectionStatusLabel(connectionStatus)}</span>
                 ) : (
-                  <span className="pill pillWarn">not configured</span>
+                  <span className="pill pillWarn">{getConnectionStatusLabel(connectionStatus)}</span>
                 )}
               </dd>
             </div>
@@ -79,6 +82,7 @@ export default function App() {
           selectedProfileId={selectedProfileId}
           onSelectedProfileIdChange={setSelectedProfileId}
           onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+          profilesVersion={profilesVersion}
         />
 
         <ClientApiLinking
@@ -87,15 +91,11 @@ export default function App() {
           profilesVersion={profilesVersion}
         />
 
-        <section className="panel">
-          <h2 className="panelTitle">Next build targets</h2>
-          <ul className="targetsList">
-            <li>Connection setup</li>
-            <li>Client API linking flow</li>
-            <li>Library landing page</li>
-            <li>EPUB renderer bridge</li>
-          </ul>
-        </section>
+        <ClientApiVerification
+          selectedProfileId={selectedProfileId}
+          profilesVersion={profilesVersion}
+          onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+        />
       </main>
     </div>
   );

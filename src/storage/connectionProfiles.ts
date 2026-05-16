@@ -8,6 +8,14 @@ export type ConnectionProfile = {
   tokenType?: string;
   clientSessionId?: string;
   linkedAt?: string;
+  verifiedAt?: string;
+  verifiedUser?: {
+    id?: string | number;
+    username: string;
+    displayName?: string;
+    email?: string;
+  };
+  mustChangePassword?: boolean;
   clientApi?: {
     discoveryVersion: string;
     discoveryEndpoint: string;
