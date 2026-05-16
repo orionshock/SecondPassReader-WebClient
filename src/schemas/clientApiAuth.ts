@@ -7,6 +7,19 @@ export type SecondPassWellKnown = {
   };
 };
 
+export type SecondPassDiscovery = {
+  server_name: string;
+  api_base_url: string;
+  client_api: {
+    discovery_version: string;
+    discovery_endpoint: string;
+    login_request_endpoint: string;
+    authorize_url: string;
+    poll_endpoint_template: string;
+    token_type: "Bearer" | string;
+  };
+};
+
 export type ClientApiLoginRequestResponse = {
   code: string;
   authorize_url: string;
@@ -20,4 +33,3 @@ export type ClientApiPollResponse =
   | { status: "expired" }
   | { status: "consumed" }
   | { status: "approved"; access_token: string };
-

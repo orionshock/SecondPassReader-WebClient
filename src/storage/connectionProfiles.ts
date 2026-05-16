@@ -2,8 +2,12 @@ export type ConnectionProfile = {
   id: string;
   label: string;
   serverBaseUrl: string;
+  apiBaseUrl?: string;
+  serverName?: string;
+  accessToken?: string;
+  clientSessionId?: string;
   createdAt: string;
-  lastUsedAt?: string | null;
+  lastUsedAt?: string;
 };
 
 const STORAGE_KEY = "secondpass.connectionProfiles.v1";
@@ -25,7 +29,11 @@ function writeAll(profiles: ConnectionProfile[]) {
 }
 
 export function listConnectionProfiles(): ConnectionProfile[] {
-  return readAll();
+  return readAll().sort((a, b) => (b.lastUsedAt ?? b.createdAt).localeCompare(a.lastUsedAt ?? a.createdAt));
+}
+
+export function getConnectionProfile(profileId: string): ConnectionProfile | undefined {
+  return readAll().find((p) => p.id === profileId);
 }
 
 export function saveConnectionProfile(profile: ConnectionProfile): void {
@@ -41,3 +49,10 @@ export function deleteConnectionProfile(profileId: string): void {
   writeAll(profiles);
 }
 
+export function touchConnectionProfileLastUsed(profileId: string, isoNow = new Date().toISOString()): void {
+  const profiles = readAll();
+  const index = profiles.findIndex((p) => p.id === profileId);
+  if (index < 0) return;
+  profiles[index] = { ...profiles[index], lastUsedAt: isoNow };
+  writeAll(profiles);
+}

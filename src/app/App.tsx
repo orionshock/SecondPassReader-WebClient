@@ -1,6 +1,43 @@
 import "./App.css";
+import { useEffect, useMemo, useState } from "react";
+import { ConnectionSetup } from "../features/connection";
+import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
+
+const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export default function App() {
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(SELECTED_PROFILE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  const selectedProfile = useMemo(() => {
+    if (!selectedProfileId) return null;
+    return getConnectionProfile(selectedProfileId) ?? null;
+  }, [selectedProfileId]);
+
+  useEffect(() => {
+    const profiles = listConnectionProfiles();
+    if (selectedProfileId && profiles.some((p) => p.id === selectedProfileId)) return;
+    if (profiles.length === 0) {
+      setSelectedProfileId(null);
+      return;
+    }
+    setSelectedProfileId(profiles[0].id);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (selectedProfileId) localStorage.setItem(SELECTED_PROFILE_KEY, selectedProfileId);
+      else localStorage.removeItem(SELECTED_PROFILE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }, [selectedProfileId]);
+
   return (
     <div className="appShell">
       <header className="appHeader">
@@ -21,7 +58,11 @@ export default function App() {
             <div className="statusRow">
               <dt>Server connection</dt>
               <dd>
-                <span className="pill pillWarn">not configured</span>
+                {selectedProfile ? (
+                  <span className="pill pillOk">configured</span>
+                ) : (
+                  <span className="pill pillWarn">not configured</span>
+                )}
               </dd>
             </div>
             <div className="statusRow">
@@ -32,6 +73,11 @@ export default function App() {
             </div>
           </dl>
         </section>
+
+        <ConnectionSetup
+          selectedProfileId={selectedProfileId}
+          onSelectedProfileIdChange={setSelectedProfileId}
+        />
 
         <section className="panel">
           <h2 className="panelTitle">Next build targets</h2>
@@ -46,4 +92,3 @@ export default function App() {
     </div>
   );
 }
-
