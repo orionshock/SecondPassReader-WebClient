@@ -10,7 +10,15 @@ function formatFileSize(bytes?: number | null) {
   return `${gb.toFixed(2)} GB`;
 }
 
-export function BookCard({ book }: { book: LibraryBook }) {
+export function BookCard({
+  book,
+  selected,
+  onSelect,
+}: {
+  book: LibraryBook;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
     book.series?.name && book.series_index != null ? `${book.series.name} #${book.series_index}` : book.series?.name;
@@ -19,43 +27,27 @@ export function BookCard({ book }: { book: LibraryBook }) {
   const fileSize = formatFileSize(book.file?.file_size ?? null);
 
   return (
-    <article className="bookCard">
-      <div className="bookHeader">
+    <article className={`bookCard ${selected ? "bookCardSelected" : ""}`}>
+      <div className="bookTitleRow">
         <div className="bookTitle">{book.title}</div>
-        {book.subtitle ? <div className="bookSubtitle">{book.subtitle}</div> : null}
+        <div className="bookCardRight">
+          <button type="button" className="button buttonCompact" onClick={onSelect}>
+            {selected ? "Selected" : "View"}
+          </button>
+          {hasFile ? <span className="pill pillOk">EPUB</span> : <span className="pill pillIdle">No file</span>}
+        </div>
       </div>
 
+      {book.subtitle ? <div className="bookSubtitle">{book.subtitle}</div> : null}
+
       <div className="bookMeta">
-        {authors ? (
-          <div>
-            <span className="muted">Authors:</span> {authors}
-          </div>
-        ) : null}
-        {seriesText ? (
-          <div>
-            <span className="muted">Series:</span> {seriesText}
-          </div>
-        ) : null}
-        {book.language ? (
-          <div>
-            <span className="muted">Language:</span> {book.language}
-          </div>
-        ) : null}
-        {book.published_date ? (
-          <div>
-            <span className="muted">Published:</span> {book.published_date}
-          </div>
-        ) : null}
-        <div>
-          <span className="muted">File:</span>{" "}
-          {hasFile ? (
-            <>
-              <span className="pill pillOk">EPUB available</span>
-              {fileSize ? <span className="muted"> ({fileSize})</span> : null}
-            </>
-          ) : (
-            <span className="pill pillIdle">No file</span>
-          )}
+        {authors ? <div className="bookLine">{authors}</div> : null}
+        {seriesText ? <div className="bookLine">{seriesText}</div> : null}
+
+        <div className="bookLine muted">
+          {[book.language || null, book.published_date || null, hasFile && fileSize ? fileSize : null]
+            .filter(Boolean)
+            .join(" · ")}
         </div>
       </div>
     </article>

@@ -3,6 +3,7 @@ import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
+import { BookDetailPanel } from "./BookDetailPanel";
 import { BookList } from "./BookList";
 
 type Props = {
@@ -15,7 +16,6 @@ export function LibraryLandingPage({ profile }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
 
   const [q, setQ] = useState("");
-  const [hasFiles, setHasFiles] = useState(true);
   const [ordering, setOrdering] = useState<Ordering>("-updated_at");
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
@@ -23,6 +23,8 @@ export function LibraryLandingPage({ profile }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<LibraryBook> | null>(null);
+  const [selectedBook, setSelectedBook] = useState<LibraryBook | null>(null);
+  const [launchMessage, setLaunchMessage] = useState<string | null>(null);
 
   async function loadBooks(targetPage = page) {
     if (!profile) return;
@@ -38,7 +40,6 @@ export function LibraryLandingPage({ profile }: Props) {
         tokenType: profile.tokenType ?? "Bearer",
         params: {
           q: q.trim() || undefined,
-          hasFiles,
           ordering,
           page: targetPage,
           pageSize,
@@ -46,6 +47,12 @@ export function LibraryLandingPage({ profile }: Props) {
       });
       setData(result);
       setPage(targetPage);
+      setLaunchMessage(null);
+      setSelectedBook((prev) => {
+        if (!prev) return null;
+        const match = result.results.find((b) => String(b.id) === String(prev.id));
+        return match ?? null;
+      });
     } catch (e) {
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setError(
@@ -59,6 +66,19 @@ export function LibraryLandingPage({ profile }: Props) {
     }
   }
 
+  function handleSelectBook(book: LibraryBook) {
+    setSelectedBook(book);
+    setLaunchMessage(null);
+  }
+
+  function handleOpenReader(book: LibraryBook) {
+    if (!book.file?.download_url) {
+      setLaunchMessage("No EPUB file available for this book.");
+      return;
+    }
+    setLaunchMessage("Reader launch is not implemented yet. Next step: fetch EPUB blob.");
+  }
+
   return (
     <section className="panel">
       <h2 className="panelTitle">Library</h2>
@@ -69,24 +89,24 @@ export function LibraryLandingPage({ profile }: Props) {
 
       {status === "verified" ? (
         <>
-          <div className="libraryControls">
-            <label className="field">
-              <span className="fieldLabel">Search</span>
-              <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="q…" />
-            </label>
-
-            <label className="field checkboxField">
+          <div className="libraryToolbar">
+            <label className="toolbarField toolbarSearch">
+              <span className="srOnly">Search</span>
               <input
-                type="checkbox"
-                checked={hasFiles}
-                onChange={(e) => setHasFiles(e.target.checked)}
+                className="input inputCompact"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search…"
               />
-              <span>Only books with files</span>
             </label>
 
-            <label className="field">
-              <span className="fieldLabel">Ordering</span>
-              <select className="input" value={ordering} onChange={(e) => setOrdering(e.target.value as Ordering)}>
+            <label className="toolbarField">
+              <span className="srOnly">Ordering</span>
+              <select
+                className="input inputCompact"
+                value={ordering}
+                onChange={(e) => setOrdering(e.target.value as Ordering)}
+              >
                 <option value="-updated_at">Recently updated</option>
                 <option value="title">Title</option>
                 <option value="-created_at">Created</option>
@@ -94,36 +114,21 @@ export function LibraryLandingPage({ profile }: Props) {
               </select>
             </label>
 
-            <label className="field">
-              <span className="fieldLabel">Page size</span>
-              <select className="input" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+            <label className="toolbarField">
+              <span className="srOnly">Page size</span>
+              <select
+                className="input inputCompact"
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
             </label>
-          </div>
 
-          <div className="formActions">
             <button className="button buttonPrimary" type="button" onClick={() => void loadBooks(1)} disabled={busy}>
-              {busy ? "Loading…" : "Load Library"}
-            </button>
-
-            <button
-              className="button"
-              type="button"
-              onClick={() => void loadBooks(Math.max(1, page - 1))}
-              disabled={busy || !data?.previous}
-            >
-              Previous page
-            </button>
-            <button
-              className="button"
-              type="button"
-              onClick={() => void loadBooks(page + 1)}
-              disabled={busy || !data?.next}
-            >
-              Next page
+              {busy ? "Loading…" : "Load"}
             </button>
           </div>
 
@@ -131,10 +136,45 @@ export function LibraryLandingPage({ profile }: Props) {
 
           {data ? (
             <>
-              <div className="muted">
-                Showing page {page} · {data.count} total
+              <div className="libraryMetaRow">
+                <div className="muted">
+                  Showing page {page} · {data.count} total
+                </div>
+                <div className="pagerButtons">
+                  <button
+                    className="button buttonCompact"
+                    type="button"
+                    onClick={() => void loadBooks(Math.max(1, page - 1))}
+                    disabled={busy || !data.previous}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    className="button buttonCompact"
+                    type="button"
+                    onClick={() => void loadBooks(page + 1)}
+                    disabled={busy || !data.next}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
-              <BookList books={data.results} />
+
+              {selectedBook ? (
+                <BookDetailPanel
+                  book={selectedBook}
+                  launchMessage={launchMessage}
+                  onOpenReader={handleOpenReader}
+                />
+              ) : (
+                <div className="muted">Select a book to view details.</div>
+              )}
+
+              <BookList
+                books={data.results}
+                selectedBookId={selectedBook ? String(selectedBook.id) : null}
+                onSelectBook={handleSelectBook}
+              />
             </>
           ) : (
             <p className="muted">Load the library to view books.</p>
@@ -144,4 +184,3 @@ export function LibraryLandingPage({ profile }: Props) {
     </section>
   );
 }
-

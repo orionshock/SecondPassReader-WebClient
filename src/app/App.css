@@ -284,35 +284,64 @@ a {
   flex-wrap: wrap;
 }
 
-.libraryControls {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+.libraryToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
   margin-bottom: 10px;
 }
 
-.checkboxField {
+.toolbarField {
   display: flex;
   align-items: center;
+}
+
+.toolbarSearch {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.inputCompact {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.buttonCompact {
+  padding: 7px 10px;
+  border-radius: 10px;
+}
+
+.libraryMetaRow {
+  margin-top: 8px;
+  display: flex;
   gap: 10px;
-  padding: 6px 2px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.pagerButtons {
+  display: flex;
+  gap: 8px;
 }
 
 .bookList {
   margin-top: 12px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .bookCard {
   border: 1px solid var(--sp-border);
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   background: #fff;
 }
 
-.bookHeader {
-  margin-bottom: 8px;
+.bookCardSelected {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.04);
 }
 
 .bookTitle {
@@ -320,11 +349,104 @@ a {
 }
 
 .bookSubtitle {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--sp-muted);
 }
 
 .bookMeta {
   display: grid;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.bookTitleRow {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.bookCardRight {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.bookLine {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookDetailPanel {
+  margin-top: 10px;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.01);
+  padding: 12px;
+}
+
+.bookDetailHeader {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.bookDetailTitle {
+  font-weight: 800;
+}
+
+.bookDetailSubtitle {
+  margin-top: 2px;
+  color: var(--sp-muted);
+}
+
+.bookDetailActions {
+  flex: 0 0 auto;
+}
+
+.bookDetailGrid {
+  display: grid;
   gap: 4px;
+  margin-top: 8px;
+}
+
+.detailRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailSummaryText {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bookFilePanel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+}
+
+.bookFileGrid {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
