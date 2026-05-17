@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectionSetup } from "../features/connection";
 import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
 import { LibraryLandingPage } from "../features/library";
+import { ReaderArea, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
 import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
@@ -11,6 +12,7 @@ const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export default function App() {
   const [profilesVersion, setProfilesVersion] = useState(0);
+  const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(SELECTED_PROFILE_KEY);
@@ -113,11 +115,27 @@ export default function App() {
                 <ServerSummary profile={selectedProfile} />
               </section>
 
-              <LibraryLandingPage profile={selectedProfile} />
+              <LibraryLandingPage
+                profile={selectedProfile}
+                onBookOpened={(opened) => {
+                  setOpenedBook((prev) => {
+                    if (prev) URL.revokeObjectURL(prev.objectUrl);
+                    return opened;
+                  });
+                }}
+              />
 
               <section className="panel">
                 <h2 className="panelTitle">Reader area</h2>
-                <p className="muted">No book open. Select a book from the library.</p>
+                <ReaderArea
+                  openedBook={openedBook}
+                  onClose={() => {
+                    setOpenedBook((prev) => {
+                      if (prev) URL.revokeObjectURL(prev.objectUrl);
+                      return null;
+                    });
+                  }}
+                />
               </section>
 
               <section className="panel">

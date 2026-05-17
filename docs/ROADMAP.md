@@ -6,7 +6,9 @@
 4. **`/me` verification** (done)
 5. **Library landing page** (current)
    - Replaced the one-page dev dashboard with a state-driven workflow shell (connect/pair/verify/library).
-6. **Renderer sandbox** (ReaderBridge + minimal renderer integration harness)
+6. **Renderer sandbox** (current)
+   - EPUB blob fetch smoke test (done)
+   - Renderer spike 1: react-reader/epubjs (current)
 7. **Book launch from library** (open selected book)
 8. **Current location sync** (report/restore location via CFI)
 9. **Highlight creation** (selection → Web Annotation JSON-LD draft → persist)

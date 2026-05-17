@@ -5,14 +5,16 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookDetailPanel } from "./BookDetailPanel";
 import { BookList } from "./BookList";
+import type { OpenedBook } from "../reader";
 
 type Props = {
   profile: ConnectionProfile | null;
+  onBookOpened?: (opened: OpenedBook) => void;
 };
 
 type Ordering = "-updated_at" | "title" | "-created_at" | "-published_date";
 
-export function LibraryLandingPage({ profile }: Props) {
+export function LibraryLandingPage({ profile, onBookOpened }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
 
   const [q, setQ] = useState("");
@@ -101,6 +103,13 @@ export function LibraryLandingPage({ profile }: Props) {
         tokenType: profile.tokenType ?? "Bearer",
       });
       setDownloadState({ phase: "success", result });
+      const objectUrl = URL.createObjectURL(result.blob);
+      onBookOpened?.({
+        book,
+        blob: result.blob,
+        objectUrl,
+        openedAt: new Date().toISOString(),
+      });
     } catch (e) {
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setDownloadState({
@@ -114,7 +123,7 @@ export function LibraryLandingPage({ profile }: Props) {
       return;
     }
 
-    setLaunchMessage("Reader launch is not implemented yet. Next step: fetch EPUB blob.");
+    setLaunchMessage("Reader spike: EPUB fetched and opened in reader area.");
   }
 
   return (

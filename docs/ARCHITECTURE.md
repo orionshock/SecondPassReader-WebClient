@@ -19,7 +19,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
    - Hides renderer quirks and provides events in app-owned types.
 
 5. **EPUB renderer implementation**
-   - Initial candidate: epub.js / react-reader (added later).
+   - Initial spike: react-reader + epubjs (renderer-only; replaceable).
    - Replaceable via `ReaderBridge` without rewriting app state/model.
 
 6. **Session/annotation adapter**

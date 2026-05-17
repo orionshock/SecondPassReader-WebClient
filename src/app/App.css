@@ -495,6 +495,32 @@ a {
   background: rgba(18, 140, 63, 0.04);
 }
 
+.readerArea {
+  display: grid;
+  gap: 10px;
+}
+
+.readerHeader {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.readerTitle {
+  font-weight: 700;
+}
+
+.epubContainer {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: #fff;
+  height: 70vh;
+  min-height: 420px;
+  overflow: hidden;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
