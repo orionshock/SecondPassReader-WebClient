@@ -5,6 +5,7 @@ import { LibraryLandingPage } from "../features/library";
 import { ReaderArea, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
+import type { LibraryBook } from "../schemas/library";
 import {
   deleteConnectionProfile,
   getConnectionProfile,
@@ -12,6 +13,7 @@ import {
 } from "../storage/connectionProfiles";
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
+import { openBookForReader } from "../features/library/openBookForReader";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -62,6 +64,12 @@ export default function App() {
       if (prev) URL.revokeObjectURL(prev.objectUrl);
       return opened;
     });
+  }
+
+  async function handleOpenBookFromReader(book: LibraryBook) {
+    if (!selectedProfile) throw new Error("No profile selected.");
+    const opened = await openBookForReader({ profile: selectedProfile, book });
+    handleBookOpened(opened);
   }
 
   function handleCloseReader() {
@@ -153,6 +161,7 @@ export default function App() {
                     apiBaseUrl={selectedProfile?.apiBaseUrl}
                     accessToken={selectedProfile?.accessToken}
                     tokenType={selectedProfile?.tokenType}
+                    onOpenBook={handleOpenBookFromReader}
                   />
                 </section>
               ) : (

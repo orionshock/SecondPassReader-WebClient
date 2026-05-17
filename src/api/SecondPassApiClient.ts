@@ -13,6 +13,7 @@ import type {
   ReadingOpenResponse,
   ReadingProgress,
   ReadingProgressUpdatePayload,
+  ReadingSession,
 } from "../schemas/readingSession";
 
 type RequestUrlOptions = {
@@ -130,6 +131,7 @@ export class SecondPassApiClient {
     params?: {
       q?: string;
       hasFiles?: boolean;
+      series?: string | number;
       ordering?: string;
       page?: number;
       pageSize?: number;
@@ -141,6 +143,7 @@ export class SecondPassApiClient {
 
     if (params.q) url.searchParams.set("q", params.q);
     if (params.hasFiles !== undefined) url.searchParams.set("has_files", params.hasFiles ? "true" : "false");
+    if (params.series !== undefined) url.searchParams.set("series", String(params.series));
     if (params.ordering) url.searchParams.set("ordering", params.ordering);
     if (params.page !== undefined) url.searchParams.set("page", String(params.page));
     if (params.pageSize !== undefined) url.searchParams.set("page_size", String(params.pageSize));
@@ -169,6 +172,48 @@ export class SecondPassApiClient {
     }
 
     return (await res.json()) as PaginatedResponse<LibraryBook>;
+  }
+
+  async closeReadingSession(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    sessionId: string;
+  }): Promise<ReadingSession> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/close/`);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({
+        kind: "forbidden",
+        status: 403,
+        message: "Token is not allowed to modify reading data (403).",
+      });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Reading session not found or not accessible (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingSession;
   }
 
   async downloadBookFile(input: {

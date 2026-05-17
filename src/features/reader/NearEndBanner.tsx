@@ -1,6 +1,8 @@
 export function NearEndBanner({
   closeSessionFirst,
   disabled,
+  nextBookDisabled,
+  nextBookBusy,
   message,
   onToggleCloseSessionFirst,
   onGoToStart,
@@ -9,6 +11,8 @@ export function NearEndBanner({
 }: {
   closeSessionFirst: boolean;
   disabled: boolean;
+  nextBookDisabled?: boolean;
+  nextBookBusy?: boolean;
   message: string | null;
   onToggleCloseSessionFirst: (checked: boolean) => void;
   onGoToStart: () => void;
@@ -35,8 +39,14 @@ export function NearEndBanner({
         <button type="button" className="button buttonCompact" onClick={onGoToStart}>
           Go to start
         </button>
-        <button type="button" className="button buttonCompact" onClick={onNextBook}>
-          Next book
+        <button
+          type="button"
+          className="button buttonCompact"
+          onClick={onNextBook}
+          disabled={Boolean(nextBookDisabled) || Boolean(nextBookBusy)}
+          title={nextBookDisabled ? "No next book available." : undefined}
+        >
+          {nextBookBusy ? "Opening..." : "Next book"}
         </button>
       </div>
 
@@ -50,4 +60,3 @@ export function NearEndBanner({
     </div>
   );
 }
-
