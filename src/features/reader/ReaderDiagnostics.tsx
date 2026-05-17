@@ -19,19 +19,22 @@ export function ReaderDiagnostics({
             <summary className="muted">Reading session payload</summary>
             <div className="readerDiagBody">
               <div className="detailRow">
-                <span className="muted">profile_version:</span> <span className="mono">{readingOpen.profile_version}</span>
+                <span className="muted">profile_version:</span>{" "}
+                <span className="mono">{readingOpen.profile_version}</span>
               </div>
               <div className="detailRow">
                 <span className="muted">session id:</span> <span className="mono">{readingOpen.session.id}</span>
               </div>
               {"status" in readingOpen.session && (readingOpen.session as any).status ? (
                 <div className="detailRow">
-                  <span className="muted">session status:</span> <span className="mono">{String((readingOpen.session as any).status)}</span>
+                  <span className="muted">session status:</span>{" "}
+                  <span className="mono">{String((readingOpen.session as any).status)}</span>
                 </div>
               ) : null}
               {readingOpen.progress?.progression != null ? (
                 <div className="detailRow">
-                  <span className="muted">progression:</span> <span className="mono">{String(readingOpen.progress.progression)}</span>
+                  <span className="muted">progression:</span>{" "}
+                  <span className="mono">{String(readingOpen.progress.progression)}</span>
                 </div>
               ) : null}
               {initialCfi ? (
@@ -83,14 +86,8 @@ export function ReaderDiagnostics({
         )}
 
         <details className="readerDiagSubdetails">
-          <summary className="muted">EPUB file</summary>
+          <summary className="muted">EPUB object URL</summary>
           <div className="readerDiagBody">
-            <div className="detailRow">
-              <span className="muted">blob size:</span> <span className="mono">{openedBook.blob.size}</span>
-            </div>
-            <div className="detailRow">
-              <span className="muted">blob type:</span> <span className="mono">{openedBook.blob.type || "—"}</span>
-            </div>
             <div className="detailRow">
               <span className="muted">object URL:</span>{" "}
               <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
