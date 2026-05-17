@@ -13,6 +13,7 @@ import {
   createServerAnnotationUpdatePayloadFromLocalHighlight,
 } from "./readingAnnotationAdapter";
 import type { LocalHighlight, PendingSelection, ReaderLocation, OpenedBook } from "./types";
+import { createIdempotencyKey } from "./idempotency";
 
 export function ReaderArea({
   openedBook,
@@ -541,6 +542,12 @@ export function ReaderArea({
       if (!target) return;
       if (target.serverSaveStatus === "saving" || target.serverSaveStatus === "saved" || target.serverAnnotationId) return;
 
+      // Ensure a stable idempotency key for this draft so retries don't create duplicates.
+      const idempotencyKey = target.createIdempotencyKey ?? createIdempotencyKey();
+      if (!target.createIdempotencyKey) {
+        setHighlights((prev) => prev.map((h) => (h.id === highlightId ? { ...h, createIdempotencyKey: idempotencyKey } : h)));
+      }
+
       setHighlights((prev) =>
         prev.map((h) => (h.id === highlightId ? { ...h, serverSaveStatus: "saving", serverSaveError: undefined } : h)),
       );
@@ -558,6 +565,7 @@ export function ReaderArea({
           accessToken,
           tokenType: tokenType ?? "Bearer",
           payload,
+          idempotencyKey,
         });
 
         const now = new Date().toISOString();
@@ -576,13 +584,15 @@ export function ReaderArea({
         );
       } catch (e) {
         const message =
-          e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+          e instanceof ApiError && e.status === 409
+            ? e.message
+            : e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
             ? "Could not save annotation. Your device token may be revoked or not allowed to access reading data."
             : e instanceof ApiError && e.status === 404
               ? "Could not save annotation. The reading session was not found or is no longer accessible."
-              : e instanceof Error
-                ? e.message
-                : "Failed to save annotation.";
+            : e instanceof Error
+              ? e.message
+              : "Failed to save annotation.";
 
         setHighlights((prev) =>
           prev.map((h) => (h.id === highlightId ? { ...h, serverSaveStatus: "error", serverSaveError: message } : h)),
@@ -715,6 +725,7 @@ export function ReaderArea({
       note: input.note,
       color: "yellow",
       createdAt: now,
+      createIdempotencyKey: createIdempotencyKey(),
       serverSaveStatus: "unsaved",
     };
     return h;

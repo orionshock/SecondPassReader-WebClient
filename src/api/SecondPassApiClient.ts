@@ -436,17 +436,21 @@ export class SecondPassApiClient {
     accessToken: string;
     tokenType?: string;
     payload: ReadingAnnotationCreatePayload;
+    idempotencyKey?: string;
   }): Promise<ReadingAnnotation> {
     const tokenType = input.tokenType ?? "Bearer";
     const url = resolveUrl(input.apiBaseUrl, "/reading/annotations/");
 
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `${tokenType} ${input.accessToken}`,
+    };
+    if (input.idempotencyKey) headers["Idempotency-Key"] = input.idempotencyKey;
+
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `${tokenType} ${input.accessToken}`,
-      },
+      headers,
       body: JSON.stringify(input.payload),
     });
 
@@ -462,6 +466,14 @@ export class SecondPassApiClient {
         kind: "http_error",
         status: 400,
         message: `Validation error (400)${text ? ` - ${text}` : ""}`,
+      });
+    }
+    if (res.status === 409) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: 409,
+        message: `Idempotency key was already used for a different request (409)${text ? ` - ${text}` : ""}`,
       });
     }
     if (res.status === 404) {

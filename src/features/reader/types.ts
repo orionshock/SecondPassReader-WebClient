@@ -26,6 +26,7 @@ export type LocalHighlight = {
   note?: string;
   color?: string;
   createdAt: string;
+  createIdempotencyKey?: string;
   serverAnnotationId?: string;
   serverSavedAt?: string;
   serverSaveStatus?: "unsaved" | "saving" | "saved" | "error";
