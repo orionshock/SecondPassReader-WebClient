@@ -181,6 +181,44 @@
   color: var(--sp-text);
 }
 
+.nearEndBanner {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.02);
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.nearEndBanner .sep {
+  opacity: 0.7;
+}
+
+.nearEndLabel {
+  font-weight: 600;
+}
+
+.nearEndCheckbox {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--sp-muted);
+}
+
+.nearEndActions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nearEndMessage {
+  color: var(--sp-muted);
+  margin-left: 6px;
+}
+
 .statusList {
   display: grid;
   gap: 10px;

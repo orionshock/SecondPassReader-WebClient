@@ -3,6 +3,7 @@ import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { ReadingOpenResponse, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { EpubReaderPanel } from "./EpubReaderPanel";
+import { NearEndBanner } from "./NearEndBanner";
 import { ProgressPanel, type ProgressAutosaveState, type ProgressSaveState } from "./ProgressPanel";
 import {
   createLocalHighlightFromServerAnnotation,
@@ -25,6 +26,7 @@ export function ReaderArea({
   tokenType?: string;
 }) {
   const PROGRESS_AUTOSAVE_DELAY_MS = 5000;
+  const NEAR_END_PROGRESSION_THRESHOLD = 0.98;
 
   const [locationString, setLocationString] = useState<string | null>(null);
   const [readerLocation, setReaderLocation] = useState<ReaderLocation | null>(null);
@@ -51,6 +53,9 @@ export function ReaderArea({
   const autosaveTimerRef = useRef<number | null>(null);
 
   const prevSessionKeyRef = useRef<string | null>(null);
+  const [nearEndDismissed, setNearEndDismissed] = useState(false);
+  const [closeSessionFirst, setCloseSessionFirst] = useState(false);
+  const [nearEndMessage, setNearEndMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setLocationString(null);
@@ -77,6 +82,9 @@ export function ReaderArea({
     setPendingSelection(null);
     setNoteOpen(false);
     setNoteDraft("");
+    setNearEndDismissed(false);
+    setCloseSessionFirst(false);
+    setNearEndMessage(null);
   }, [openedBook?.readingOpen?.session?.id, openedBook?.book?.id]);
 
   useEffect(() => {
@@ -552,6 +560,28 @@ export function ReaderArea({
         currentHref={currentHref}
         progression={currentProgression}
       />
+
+      {autosave.enabled && currentProgression != null && currentProgression >= NEAR_END_PROGRESSION_THRESHOLD && !nearEndDismissed ? (
+        <NearEndBanner
+          closeSessionFirst={closeSessionFirst}
+          disabled={closeSessionFirst}
+          message={nearEndMessage}
+          onToggleCloseSessionFirst={(checked) => {
+            setCloseSessionFirst(checked);
+            setNearEndMessage(null);
+          }}
+          onGoToStart={() => {
+            setNearEndMessage(closeSessionFirst ? "Finish session + start over is not wired yet." : "Go to start is not wired yet.");
+          }}
+          onNextBook={() => {
+            setNearEndMessage(closeSessionFirst ? "Finish session + next book is not wired yet." : "Next book is not wired yet.");
+          }}
+          onResume={() => {
+            setNearEndDismissed(true);
+            setNearEndMessage(null);
+          }}
+        />
+      ) : null}
 
       {pendingSelection ? (
         <div className="annotationFloat">
