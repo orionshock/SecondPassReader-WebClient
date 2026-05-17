@@ -4,7 +4,6 @@ import type { ReadingOpenResponse, ReadingProgressUpdatePayload } from "../../sc
 import { AnnotationPanel } from "./AnnotationPanel";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { ProgressPanel, type ProgressAutosaveState, type ProgressSaveState } from "./ProgressPanel";
-import { ReaderDiagnostics } from "./ReaderDiagnostics";
 import {
   createLocalHighlightFromServerAnnotation,
   createServerAnnotationPayloadFromLocalHighlight,
@@ -14,13 +13,13 @@ import type { LocalHighlight, PendingSelection, ReaderLocation, OpenedBook } fro
 
 export function ReaderArea({
   openedBook,
-  onClose,
+  onBackToLibrary,
   apiBaseUrl,
   accessToken,
   tokenType,
 }: {
   openedBook: OpenedBook | null;
-  onClose: () => void;
+  onBackToLibrary: () => void;
   apiBaseUrl?: string;
   accessToken?: string;
   tokenType?: string;
@@ -199,6 +198,13 @@ export function ReaderArea({
     () => (openedBook?.book.authors ?? []).map((a) => a.name).filter(Boolean).join(", "),
     [openedBook?.book.authors],
   );
+  const seriesLine = useMemo(() => {
+    const seriesName = openedBook?.book.series?.name;
+    const idx = openedBook?.book.series_index;
+    if (!seriesName) return null;
+    if (idx === null || idx === undefined || idx === "") return seriesName;
+    return `${seriesName} #${idx}`;
+  }, [openedBook?.book.series?.name, openedBook?.book.series_index]);
 
   const initialCfi =
     readingOpen?.progress?.current_location?.cfi ?? readingOpen?.progress?.current_location?.selector?.value ?? null;
@@ -521,33 +527,22 @@ export function ReaderArea({
 
   if (!openedBook) return <p className="muted">No book open. Select a book from the library.</p>;
 
-  const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
-  const rehydratedCount = Array.isArray(readingOpen?.annotations?.results) ? readingOpen!.annotations.results.length : 0;
   const loadedServerAnnotations = highlights.filter((h) => Boolean(h.serverAnnotationId)).length;
 
   return (
     <div className="readerArea">
-      <div className="readerHeader">
-        <div>
-          <div className="readerTitle">{openedBook.book.title}</div>
-          {authors ? <div className="muted">{authors}</div> : null}
-          {locationString ? (
-            <div className="muted">
-              location: <span className="mono">{locationString}</span>
-            </div>
-          ) : null}
-          <div className="muted">annotations: {highlights.length}</div>
-          {readingOpen ? (
-            <div className="muted">
-              session: <span className="mono">{readingOpen.session.id}</span>
-              {serverAnnotationCount !== null ? <span> · server annotations: {serverAnnotationCount}</span> : null}
-              {rehydratedCount ? <span> · rehydrated: {rehydratedCount}</span> : null}
-            </div>
-          ) : null}
+      <div className="readerTopBar">
+        <div className="readerTopLeft">
+          <div className="readerBookTitle">{openedBook.book.title}</div>
+          <div className="readerBookSubtitle muted">
+            {seriesLine ? <span>{seriesLine}</span> : null}
+            {seriesLine && authors ? <span className="sep"> · </span> : null}
+            {authors ? <span>{authors}</span> : null}
+          </div>
         </div>
-        <div>
-          <button type="button" className="button" onClick={onClose}>
-            Close reader
+        <div className="readerTopRight">
+          <button type="button" className="button buttonCompact" onClick={onBackToLibrary}>
+            Back to Library
           </button>
         </div>
       </div>
@@ -557,8 +552,6 @@ export function ReaderArea({
         currentHref={currentHref}
         progression={currentProgression}
       />
-
-      <ReaderDiagnostics openedBook={openedBook} readingOpen={readingOpen} initialCfi={initialCfi} />
 
       {pendingSelection ? (
         <div className="annotationFloat">
@@ -648,6 +641,21 @@ export function ReaderArea({
         </div>
       ) : null}
 
+      <EpubReaderPanel
+        blob={openedBook.blob}
+        highlights={highlights}
+        initialLocation={initialCfi ?? undefined}
+        onLocationChanged={setLocationString}
+        onReaderLocationChange={setReaderLocation}
+        onHighlightClicked={setSelectedHighlightId}
+        onTextSelected={(sel) => {
+          if (pendingSelection?.cfiRange === sel.cfiRange) return;
+          setPendingSelection(sel);
+          setNoteOpen(false);
+          setNoteDraft("");
+        }}
+      />
+
       <AnnotationPanel
         highlights={highlights}
         selectedId={selectedHighlightId}
@@ -674,21 +682,6 @@ export function ReaderArea({
         readingOpen={readingOpen}
         book={openedBook.book}
         apiReady={Boolean(apiBaseUrl && accessToken)}
-      />
-
-      <EpubReaderPanel
-        blob={openedBook.blob}
-        highlights={highlights}
-        initialLocation={initialCfi ?? undefined}
-        onLocationChanged={setLocationString}
-        onReaderLocationChange={setReaderLocation}
-        onHighlightClicked={setSelectedHighlightId}
-        onTextSelected={(sel) => {
-          if (pendingSelection?.cfiRange === sel.cfiRange) return;
-          setPendingSelection(sel);
-          setNoteOpen(false);
-          setNoteDraft("");
-        }}
       />
     </div>
   );

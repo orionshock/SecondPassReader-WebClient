@@ -49,6 +49,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - The app derives a workflow step from the selected connection profile and only renders one primary step at a time:
   - connect server → pair device → verify connection → library home → reader mode (when a book is open)
 - Debug/internal state is shown in a collapsible DebugDetails panel (no tokens displayed).
+- Reader mode uses a book-focused layout and hides the normal app header to keep reading focused.
 
 ## Reader launch
 

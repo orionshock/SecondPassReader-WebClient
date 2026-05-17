@@ -81,18 +81,20 @@ export default function App() {
   }
 
   return (
-    <div className="appShell">
-      <AppHeader
-        profile={selectedProfile}
-        view={view}
-        readerOpen={Boolean(openedBook)}
-        onShowLibrary={() => {
-          setView("main");
-          handleCloseReader();
-        }}
-        onBackToLibrary={() => handleCloseReader()}
-        onShowSettings={() => setView((v) => (v === "settings" ? "main" : "settings"))}
-      />
+    <div className={`appShell ${openedBook ? "appShellReader" : ""}`}>
+      {openedBook ? null : (
+        <AppHeader
+          profile={selectedProfile}
+          view={view}
+          readerOpen={Boolean(openedBook)}
+          onShowLibrary={() => {
+            setView("main");
+            handleCloseReader();
+          }}
+          onBackToLibrary={() => handleCloseReader()}
+          onShowSettings={() => setView((v) => (v === "settings" ? "main" : "settings"))}
+        />
+      )}
 
       <main className="appMain">
         {view === "settings" ? (
@@ -144,11 +146,10 @@ export default function App() {
 
             {workflowStep === "library_home" ? (
               openedBook ? (
-                <section className="panel readerScreen">
-                  <h2 className="panelTitle">Reader</h2>
+                <section className="readerScreen">
                   <ReaderArea
                     openedBook={openedBook}
-                    onClose={handleCloseReader}
+                    onBackToLibrary={handleCloseReader}
                     apiBaseUrl={selectedProfile?.apiBaseUrl}
                     accessToken={selectedProfile?.accessToken}
                     tokenType={selectedProfile?.tokenType}

@@ -4,6 +4,12 @@
   padding: 32px 20px 48px;
 }
 
+.appShellReader {
+  max-width: none;
+  width: min(1600px, calc(100vw - 48px));
+  padding: 18px 24px 28px;
+}
+
 .appHeader {
   margin-bottom: 20px;
   display: flex;
@@ -610,7 +616,7 @@ a {
   gap: 10px;
 }
 
-.readerHeader {
+.readerTopBar {
   display: flex;
   gap: 12px;
   justify-content: space-between;
@@ -618,8 +624,29 @@ a {
   flex-wrap: wrap;
 }
 
-.readerTitle {
+.readerTopLeft {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.readerBookTitle {
+  font-size: 16px;
   font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.readerBookSubtitle {
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.readerTopRight {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .readerDiagBox {

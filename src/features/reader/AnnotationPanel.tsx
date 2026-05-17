@@ -148,8 +148,10 @@ export function AnnotationPanel({
                             if (!editingId) return;
                             onUpdateNote(editingId, noteDraft);
                           }}
+                          aria-label="Save note"
+                          title="Save note"
                         >
-                          {isUpdating ? "Saving…" : "Save note"}
+                          {isUpdating ? "..." : "\u2713"}
                         </button>
                         <button
                           type="button"
@@ -159,8 +161,10 @@ export function AnnotationPanel({
                             setNoteDraft("");
                           }}
                           disabled={isUpdating}
+                          aria-label="Cancel"
+                          title="Cancel"
                         >
-                          Cancel
+                          {"\u2715"}
                         </button>
                       </div>
                     </div>
@@ -235,8 +239,9 @@ export function AnnotationPanel({
                       }}
                       disabled={!canEdit}
                       title={!sessionId ? "No active reading session." : undefined}
+                      aria-label={isEditing ? "Cancel edit" : "Edit note"}
                     >
-                      {isUpdating ? "Saving…" : isEditing ? "Cancel edit" : "Edit note"}
+                      {isUpdating ? "..." : isEditing ? "\u2715" : "\u270E"}
                     </button>
                   ) : null}
                   <button
@@ -245,8 +250,9 @@ export function AnnotationPanel({
                     onClick={() => onSaveToSession(h.id)}
                     disabled={!canSave}
                     title={!sessionId ? "No active reading session." : undefined}
+                    aria-label="Save to session"
                   >
-                    Save to session
+                    {"\u{1F4BE}"}
                   </button>
                   <button
                     type="button"
@@ -259,8 +265,10 @@ export function AnnotationPanel({
                       }
                     }}
                     disabled={isSaved ? !canDelete : false}
+                    aria-label={isSaved ? "Delete from session" : "Remove draft"}
+                    title={isSaved ? "Delete from session" : "Remove draft"}
                   >
-                    {isSaved ? (isDeleting ? "Deleting…" : "Delete from session") : "Remove draft"}
+                    {isSaved ? (isDeleting ? "..." : "\u{1F5D1}") : "\u2715"}
                   </button>
                 </div>
               </li>
