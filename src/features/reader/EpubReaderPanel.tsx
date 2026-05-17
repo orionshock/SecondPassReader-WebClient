@@ -9,6 +9,7 @@ export function EpubReaderPanel({
   blob,
   highlights,
   initialLocation,
+  goToStartSignal,
   onLocationChanged,
   onReaderLocationChange,
   onHighlightClicked,
@@ -18,6 +19,7 @@ export function EpubReaderPanel({
   blob: Blob;
   highlights: LocalHighlight[];
   initialLocation?: string | number;
+  goToStartSignal?: number;
   onLocationChanged?: (location: string) => void;
   onReaderLocationChange?: (loc: ReaderLocation) => void;
   onHighlightClicked?: (highlightId: string) => void;
@@ -89,6 +91,19 @@ export function EpubReaderPanel({
     if (initialLocation === undefined || initialLocation === null) return;
     setLocation((prev) => (prev === null ? initialLocation : prev));
   }, [initialLocation]);
+
+  useEffect(() => {
+    if (!goToStartSignal) return;
+    // Best-effort: drive via state (react-reader) and via rendition (epub.js) if available.
+    setLocation(0);
+    const r = renditionRef.current;
+    try {
+      if (r?.display) void r.display(0);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[reader] goToStart failed:", e);
+    }
+  }, [goToStartSignal]);
 
   // Reconcile highlight overlays whenever highlights change and rendition is available.
   useEffect(() => {

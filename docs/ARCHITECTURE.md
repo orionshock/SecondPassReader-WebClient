@@ -51,6 +51,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - Debug/internal state is shown in a collapsible DebugDetails panel (no tokens displayed).
 - Reader mode uses a book-focused layout and hides the normal app header to keep reading focused.
 - Session lifecycle UI is intentionally surfaced only near end-of-book (currently a compact banner; actions are placeholders except Resume).
+- Banner supports same-session “Go to start”; “close session first + Go to start” uses `POST /reading/books/{book_id}/start-over/` when available.
 
 ## Reader launch
 

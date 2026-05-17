@@ -261,6 +261,48 @@ export class SecondPassApiClient {
     return (await res.json()) as ReadingOpenResponse;
   }
 
+  async startOverReadingSession(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    bookId: string | number;
+  }): Promise<ReadingOpenResponse> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/reading/books/${encodeURIComponent(String(input.bookId))}/start-over/`);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({
+        kind: "forbidden",
+        status: 403,
+        message: "Token is not allowed to start over reading sessions (403).",
+      });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Book not found or not accessible (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingOpenResponse;
+  }
+
   async updateReadingProgress(input: {
     apiBaseUrl: string;
     accessToken: string;

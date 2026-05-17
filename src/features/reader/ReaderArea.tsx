@@ -27,6 +27,7 @@ export function ReaderArea({
 }) {
   const PROGRESS_AUTOSAVE_DELAY_MS = 5000;
   const NEAR_END_PROGRESSION_THRESHOLD = 0.98;
+  const DEBUG_PROGRESS = import.meta.env.DEV;
 
   const [locationString, setLocationString] = useState<string | null>(null);
   const [readerLocation, setReaderLocation] = useState<ReaderLocation | null>(null);
@@ -51,11 +52,18 @@ export function ReaderArea({
     status: "idle",
   });
   const autosaveTimerRef = useRef<number | null>(null);
+  const autosaveGenerationRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
+  const progressPayloadRef = useRef<ReadingProgressUpdatePayload | null>(null);
+  const currentCfiRef = useRef<string | null>(null);
+  const autosaveDebugLastKeyRef = useRef<string | null>(null);
 
   const prevSessionKeyRef = useRef<string | null>(null);
   const [nearEndDismissed, setNearEndDismissed] = useState(false);
   const [closeSessionFirst, setCloseSessionFirst] = useState(false);
   const [nearEndMessage, setNearEndMessage] = useState<string | null>(null);
+  const [goToStartSignal, setGoToStartSignal] = useState(0);
+  const [autosaveKickSessionId, setAutosaveKickSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocationString(null);
@@ -64,13 +72,28 @@ export function ReaderArea({
     setAutosave((prev) => ({ ...prev, status: "idle", error: undefined }));
   }, [openedBook?.objectUrl]);
 
-  const readingOpen: ReadingOpenResponse | null = openedBook?.readingOpen ?? null;
+  const [readingOpenState, setReadingOpenState] = useState<ReadingOpenResponse | null>(openedBook?.readingOpen ?? null);
+
+  useEffect(() => {
+    setReadingOpenState(openedBook?.readingOpen ?? null);
+  }, [openedBook?.objectUrl]);
+
+  const readingOpen: ReadingOpenResponse | null = readingOpenState;
   const sessionId = readingOpen?.session?.id ?? null;
   const effectiveProfileVersion = readingOpen?.profile_version ?? "0.1.0";
 
   useEffect(() => {
+    if (!DEBUG_PROGRESS) return;
+    // eslint-disable-next-line no-console
+    console.log("[progress] sessionId changed", {
+      sessionId,
+      bookId: openedBook?.book?.id,
+    });
+  }, [DEBUG_PROGRESS, openedBook?.book?.id, sessionId]);
+
+  useEffect(() => {
     if (!openedBook) return;
-    const sid = openedBook.readingOpen?.session?.id ?? null;
+    const sid = readingOpen?.session?.id ?? null;
     const bookId = openedBook.book?.id ?? null;
     const sessionKey = sid ? `${String(bookId)}:${sid}` : null;
 
@@ -85,7 +108,8 @@ export function ReaderArea({
     setNearEndDismissed(false);
     setCloseSessionFirst(false);
     setNearEndMessage(null);
-  }, [openedBook?.readingOpen?.session?.id, openedBook?.book?.id]);
+    setGoToStartSignal(0);
+  }, [readingOpen?.session?.id, openedBook?.book?.id]);
 
   useEffect(() => {
     const results = readingOpen?.annotations?.results;
@@ -220,6 +244,45 @@ export function ReaderArea({
   const currentCfi = readerLocation?.cfi ?? locationString;
   const currentHref = readerLocation?.href;
   const currentProgression = readerLocation?.progression ?? null;
+  const nearEndActive =
+    currentProgression != null && Number.isFinite(currentProgression) && currentProgression >= NEAR_END_PROGRESSION_THRESHOLD;
+  const nearEndProgressSaved =
+    !autosave.enabled ||
+    autosave.status === "error" ||
+    (autosave.lastAutosavedCfi != null && currentCfi != null && autosave.lastAutosavedCfi === currentCfi);
+
+  useEffect(() => {
+    if (!nearEndActive) {
+      setNearEndDismissed(false);
+      setNearEndMessage(null);
+      setCloseSessionFirst(false);
+    }
+  }, [nearEndActive]);
+
+  useEffect(() => {
+    // After start-over, allow the first location we observe in the *new* session to schedule autosave,
+    // even if it matches the server-provided initial current_location.
+    if (!autosaveKickSessionId) return;
+    if (sessionId !== autosaveKickSessionId) return;
+    if (!currentCfi) return;
+
+    if (DEBUG_PROGRESS) {
+      // eslint-disable-next-line no-console
+      console.log("[progress] autosave kick: first location observed for new session", {
+        sessionId,
+        cfi: `${currentCfi.slice(0, 48)}...`,
+      });
+    }
+
+    setAutosave((prev) => ({
+      ...prev,
+      lastAutosavedAt: undefined,
+      lastAutosavedCfi: undefined,
+      status: "idle",
+      error: undefined,
+    }));
+    setAutosaveKickSessionId(null);
+  }, [autosaveKickSessionId, currentCfi, sessionId]);
 
   const progressPayload: ReadingProgressUpdatePayload | null = useMemo(() => {
     if (!currentCfi) return null;
@@ -235,14 +298,35 @@ export function ReaderArea({
     return payload;
   }, [currentCfi, currentHref, currentProgression, effectiveProfileVersion]);
 
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    progressPayloadRef.current = progressPayload;
+    currentCfiRef.current = currentCfi ?? null;
+    if (DEBUG_PROGRESS) {
+      // eslint-disable-next-line no-console
+      console.log("[progress] refs updated", {
+        sessionId,
+        hasPayload: Boolean(progressPayload),
+        cfi: currentCfi ? `${currentCfi.slice(0, 48)}...` : null,
+      });
+    }
+  }, [sessionId, progressPayload, currentCfi]);
+
   // Manual save UI is no longer shown in normal reader mode; keep saveState for internal success/error visibility if needed later.
 
   const saveProgress = useCallback(
     async (mode: "manual" | "autosave") => {
-      if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
+      const sid = sessionIdRef.current;
+      const payload = progressPayloadRef.current;
+      const cfi = currentCfiRef.current;
+      if (!apiBaseUrl || !accessToken || !sid || !payload) return;
 
       if (mode === "manual") setSaveState({ phase: "saving" });
-      if (mode === "autosave") setAutosave((prev) => ({ ...prev, status: "saving", error: undefined }));
+      if (mode === "autosave") {
+        // eslint-disable-next-line no-console
+        console.log("[progress] autosave: saving", { sessionId: sid, cfi: cfi ? `${cfi.slice(0, 48)}...` : null });
+        setAutosave((prev) => ({ ...prev, status: "saving", error: undefined }));
+      }
 
       try {
         const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
@@ -250,8 +334,8 @@ export function ReaderArea({
           apiBaseUrl,
           accessToken,
           tokenType: tokenType ?? "Bearer",
-          sessionId,
-          payload: progressPayload,
+          sessionId: sid,
+          payload,
           method: "PATCH",
         });
 
@@ -261,9 +345,13 @@ export function ReaderArea({
           ...prev,
           status: mode === "autosave" ? "saved" : prev.status === "saving" ? "saved" : prev.status,
           lastAutosavedAt: savedAt,
-          lastAutosavedCfi: currentCfi ?? prev.lastAutosavedCfi,
+          lastAutosavedCfi: cfi ?? prev.lastAutosavedCfi,
           error: undefined,
         }));
+        if (mode === "autosave") {
+          // eslint-disable-next-line no-console
+          console.log("[progress] autosave: saved", { sessionId: sid, savedAt });
+        }
       } catch (e) {
         const message =
           e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
@@ -275,23 +363,71 @@ export function ReaderArea({
                 : "Failed to save progress.";
 
         if (mode === "manual") setSaveState({ phase: "error", message });
-        if (mode === "autosave") setAutosave((prev) => ({ ...prev, status: "error", error: message }));
+        if (mode === "autosave") {
+          // eslint-disable-next-line no-console
+          console.warn("[progress] autosave: error", { sessionId: sid, message });
+          setAutosave((prev) => ({ ...prev, status: "error", error: message }));
+        }
       }
     },
-    [accessToken, apiBaseUrl, currentCfi, progressPayload, sessionId, tokenType],
+    [accessToken, apiBaseUrl, tokenType],
   );
 
   useEffect(() => {
     // Initialize autosave baseline for this opened session so we don't immediately re-save the same CFI.
     if (!openedBook) return;
+    if (DEBUG_PROGRESS) {
+      // eslint-disable-next-line no-console
+      console.log("[progress] autosave baseline init", {
+        sessionId: readingOpen?.session?.id ?? null,
+        initialCfi: initialCfi ? `${initialCfi.slice(0, 48)}...` : null,
+      });
+    }
     setAutosave((prev) => ({
       ...prev,
-      lastAutosavedCfi: initialCfi ?? prev.lastAutosavedCfi,
+      lastAutosavedAt: undefined,
+      lastAutosavedCfi: initialCfi ?? undefined,
       status: "idle",
       error: undefined,
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openedBook?.readingOpen?.session?.id]);
+  }, [openedBook?.objectUrl, readingOpen?.session?.id, initialCfi]);
+
+  useEffect(() => {
+    if (!readingOpen?.session?.id) return;
+    // Clear any pending autosave timers when sessions change (including start-over).
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = null;
+    autosaveGenerationRef.current += 1;
+    if (DEBUG_PROGRESS) {
+      // eslint-disable-next-line no-console
+      console.log("[progress] autosave generation bumped", {
+        sessionId: readingOpen.session.id,
+        gen: autosaveGenerationRef.current,
+      });
+    }
+  }, [readingOpen?.session?.id]);
+
+  useEffect(() => {
+    if (!readingOpen?.session?.id) return;
+    if (!autosave.enabled) return;
+    // After a session swap (start-over), force one autosave scheduling pass once we have a fresh CFI.
+    if (!currentCfi) return;
+    if (autosave.lastAutosavedCfi) return;
+    setAutosave((prev) => ({ ...prev, status: "waiting", error: undefined }));
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    const gen = autosaveGenerationRef.current;
+    autosaveTimerRef.current = window.setTimeout(() => {
+      if (gen !== autosaveGenerationRef.current) return;
+      void saveProgress("autosave");
+    }, PROGRESS_AUTOSAVE_DELAY_MS);
+  }, [
+    PROGRESS_AUTOSAVE_DELAY_MS,
+    autosave.enabled,
+    autosave.lastAutosavedCfi,
+    currentCfi,
+    readingOpen?.session?.id,
+    saveProgress,
+  ]);
 
   useEffect(() => {
     if (saveState.phase !== "saving") return;
@@ -306,19 +442,70 @@ export function ReaderArea({
       autosaveTimerRef.current = null;
       return;
     }
-    if (!currentCfi) return;
-    if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
+    const reasons: string[] = [];
+    if (!currentCfi) reasons.push("no-current-cfi");
+    if (!apiBaseUrl) reasons.push("no-apiBaseUrl");
+    if (!accessToken) reasons.push("no-accessToken");
+    if (!sessionId) reasons.push("no-sessionId");
+    if (!progressPayload) reasons.push("no-progressPayload");
+    if (reasons.length > 0) {
+      if (DEBUG_PROGRESS) {
+        const key = `${sessionId ?? "null"}|${reasons.join(",")}`;
+        if (autosaveDebugLastKeyRef.current !== key) {
+          autosaveDebugLastKeyRef.current = key;
+          // eslint-disable-next-line no-console
+          console.log("[progress] autosave not scheduling", {
+            sessionId,
+            reasons,
+            cfi: currentCfi ? `${currentCfi.slice(0, 48)}...` : null,
+          });
+        }
+      }
+      return;
+    }
+
+    // TypeScript narrowing: if we got here, we have a current CFI and payload.
+    const cfi = currentCfi;
+    if (!cfi) return;
     if (saveState.phase === "saving" || autosave.status === "saving") {
       setAutosave((prev) => ({ ...prev, status: "dirty" }));
       return;
     }
 
-    if (autosave.lastAutosavedCfi && autosave.lastAutosavedCfi === currentCfi) return;
+    if (autosave.lastAutosavedCfi && autosave.lastAutosavedCfi === cfi) {
+      if (DEBUG_PROGRESS) {
+        const key = `${sessionId}|same-cfi`;
+        if (autosaveDebugLastKeyRef.current !== key) {
+          autosaveDebugLastKeyRef.current = key;
+          // eslint-disable-next-line no-console
+          console.log("[progress] autosave suppressed (same cfi)", {
+            sessionId,
+            cfi: `${cfi.slice(0, 48)}...`,
+          });
+        }
+      }
+      return;
+    }
 
     setAutosave((prev) => ({ ...prev, status: "waiting", error: undefined }));
 
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    const gen = autosaveGenerationRef.current;
+    if (DEBUG_PROGRESS) {
+      // eslint-disable-next-line no-console
+      console.log("[progress] autosave scheduled", {
+        sessionId,
+        gen,
+        cfi: `${cfi.slice(0, 48)}...`,
+        delayMs: PROGRESS_AUTOSAVE_DELAY_MS,
+      });
+    }
     autosaveTimerRef.current = window.setTimeout(() => {
+      if (gen !== autosaveGenerationRef.current) return;
+      if (DEBUG_PROGRESS) {
+        // eslint-disable-next-line no-console
+        console.log("[progress] autosave timer fired", { sessionId: sessionIdRef.current, gen });
+      }
       void saveProgress("autosave");
     }, PROGRESS_AUTOSAVE_DELAY_MS);
 
@@ -561,17 +748,102 @@ export function ReaderArea({
         progression={currentProgression}
       />
 
-      {autosave.enabled && currentProgression != null && currentProgression >= NEAR_END_PROGRESSION_THRESHOLD && !nearEndDismissed ? (
-        <NearEndBanner
-          closeSessionFirst={closeSessionFirst}
-          disabled={closeSessionFirst}
-          message={nearEndMessage}
+       {nearEndActive && !nearEndDismissed && nearEndProgressSaved ? (
+         <NearEndBanner
+           closeSessionFirst={closeSessionFirst}
+           disabled={closeSessionFirst}
+           message={nearEndMessage}
           onToggleCloseSessionFirst={(checked) => {
             setCloseSessionFirst(checked);
             setNearEndMessage(null);
           }}
-          onGoToStart={() => {
-            setNearEndMessage(closeSessionFirst ? "Finish session + start over is not wired yet." : "Go to start is not wired yet.");
+          onGoToStart={async () => {
+            setNearEndMessage(null);
+            if (!openedBook) return;
+
+            if (!closeSessionFirst) {
+              setGoToStartSignal((v) => v + 1);
+              setNearEndMessage("Returned to start.");
+              setNearEndDismissed(true);
+              return;
+            }
+
+            if (!apiBaseUrl || !accessToken) {
+              setNearEndMessage("Finish session + start over is not available.");
+              return;
+            }
+
+             try {
+               const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+               if (DEBUG_PROGRESS) {
+                 // eslint-disable-next-line no-console
+                 console.log("[progress] start-over: request", { bookId: openedBook.book.id, priorSessionId: sessionIdRef.current });
+               }
+              let next = await api.startOverReadingSession({
+                apiBaseUrl,
+                accessToken,
+                tokenType: tokenType ?? "Bearer",
+                bookId: openedBook.book.id,
+              });
+
+              const nextSessionId: string | null = (next as unknown as { session?: { id?: string } })?.session?.id ?? null;
+              if (!nextSessionId) {
+                // Some server variants may return a minimal payload; fall back to an explicit open to get a full session object.
+                if (DEBUG_PROGRESS) {
+                  // eslint-disable-next-line no-console
+                  console.warn("[progress] start-over: response missing session.id; falling back to openReadingSession", {
+                    keys: next && typeof next === "object" ? Object.keys(next as object) : typeof next,
+                  });
+                }
+                next = await api.openReadingSession({
+                  apiBaseUrl,
+                  accessToken,
+                  tokenType: tokenType ?? "Bearer",
+                  bookId: openedBook.book.id,
+                });
+              }
+              if (DEBUG_PROGRESS) {
+                // eslint-disable-next-line no-console
+                console.log("[progress] start-over: response", {
+                  newSessionId: (next as unknown as { session?: { id?: string } })?.session?.id ?? null,
+                  profileVersion: (next as unknown as { profile_version?: unknown })?.profile_version ?? null,
+                });
+              }
+
+              setReadingOpenState(next);
+              setAutosave((prev) => ({
+                ...prev,
+                status: "idle",
+                lastAutosavedAt: undefined,
+                lastAutosavedCfi: undefined,
+                error: undefined,
+              }));
+              setLocationString(null);
+              setReaderLocation(null);
+              setHighlights([]);
+              setSelectedHighlightId(null);
+              setPendingSelection(null);
+              setNoteOpen(false);
+              setNoteDraft("");
+              setNearEndDismissed(true);
+              setCloseSessionFirst(false);
+              setNearEndMessage("Started a new session at the beginning.");
+              setGoToStartSignal((v) => v + 1);
+              {
+                const sid = (next as unknown as { session?: { id?: string } })?.session?.id ?? null;
+                if (sid) setAutosaveKickSessionId(sid);
+              }
+            } catch (e) {
+              const message =
+                e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+                  ? "Could not start over. Your device token may be revoked or not allowed to access reading data."
+                  : e instanceof ApiError && e.status === 404
+                    ? "Could not start over. You may not have access to this book."
+                    : e instanceof Error
+                      ? e.message
+                      : "Failed to start over.";
+              setNearEndMessage(message);
+            }
           }}
           onNextBook={() => {
             setNearEndMessage(closeSessionFirst ? "Finish session + next book is not wired yet." : "Next book is not wired yet.");
@@ -675,6 +947,7 @@ export function ReaderArea({
         blob={openedBook.blob}
         highlights={highlights}
         initialLocation={initialCfi ?? undefined}
+        goToStartSignal={goToStartSignal}
         onLocationChanged={setLocationString}
         onReaderLocationChange={setReaderLocation}
         onHighlightClicked={setSelectedHighlightId}
