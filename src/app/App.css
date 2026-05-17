@@ -602,6 +602,19 @@ a {
   gap: 8px;
 }
 
+.codeBlock {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.02);
+  overflow: auto;
+  max-height: 240px;
+  font-size: 12px;
+  line-height: 1.35;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 .epubContainer {
   border: 1px solid var(--sp-border);
   border-radius: 12px;

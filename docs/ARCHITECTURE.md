@@ -28,6 +28,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
      - reading session updates (server-owned)
      - W3C Web Annotation JSON-LD (canonical annotation form)
    - See local read-only spec reference at `docs/specs/reading-session-annotation-profile`.
+   - Client-side preview conversion helper lives in `src/features/reader/w3cAnnotationAdapter.ts` (local-only; not persisted).
 
 7. **Local storage**
    - Stores connection profile(s) and user preferences (non-sensitive).

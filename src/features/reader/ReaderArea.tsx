@@ -3,6 +3,7 @@ import type { OpenedBook } from "./types";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { inspectBlob, type EpubBlobDiagnostics } from "./epubDiagnostics";
 import type { LocalHighlight, PendingSelection } from "./types";
+import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
 
 export function ReaderArea({
   openedBook,
@@ -84,6 +85,7 @@ export function ReaderArea({
   }
 
   const authors = (openedBook.book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
+  const w3cPreviewCount = highlights.length;
 
   return (
     <div className="readerArea">
@@ -96,7 +98,9 @@ export function ReaderArea({
               location: <span className="mono">{location}</span>
             </div>
           ) : null}
-          <div className="muted">local highlights: {highlights.length}</div>
+          <div className="muted">
+            local highlights: {highlights.length} · W3C previews: {w3cPreviewCount}
+          </div>
         </div>
         <div>
           <button type="button" className="button" onClick={onClose}>
@@ -251,6 +255,16 @@ export function ReaderArea({
                     <summary className="muted">details</summary>
                     <div className="mono">cfi: {h.cfiRange}</div>
                     <div className="mono">created: {h.createdAt}</div>
+                  </details>
+                  <details className="highlightDetails">
+                    <summary className="muted">W3C annotation preview</summary>
+                    <pre className="codeBlock">
+                      {JSON.stringify(
+                        createW3CAnnotationFromLocalHighlight({ localHighlight: h, book: openedBook.book }),
+                        null,
+                        2,
+                      )}
+                    </pre>
                   </details>
                 </div>
                 <div className="highlightActions">
