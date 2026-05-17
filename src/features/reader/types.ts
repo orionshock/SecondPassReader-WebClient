@@ -1,10 +1,12 @@
 import type { LibraryBook } from "../../schemas/library";
+import type { ReadingOpenResponse } from "../../schemas/readingSession";
 
 export type OpenedBook = {
   book: LibraryBook;
   blob: Blob;
   objectUrl: string;
   openedAt: string;
+  readingOpen?: ReadingOpenResponse;
 };
 
 // Local-only spike type (NOT canonical; will be replaced by W3C Web Annotation JSON-LD from server).

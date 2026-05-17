@@ -8,6 +8,7 @@ export type ConnectionProfile = {
   accessToken?: string;
   tokenType?: string;
   clientSessionId?: string;
+  clientSessionName?: string;
   linkedAt?: string;
   verifiedAt?: string;
   verifiedUser?: {

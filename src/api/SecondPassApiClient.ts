@@ -5,6 +5,13 @@ import type {
   SecondPassDiscovery,
 } from "../schemas/clientApiAuth";
 import type { BookFileDownloadResult, LibraryBook, PaginatedResponse } from "../schemas/library";
+import type {
+  ReadingAnnotationCreatePayload,
+  ReadingAnnotationPage,
+  ReadingOpenResponse,
+  ReadingProgress,
+  ReadingProgressUpdatePayload,
+} from "../schemas/readingSession";
 
 type RequestUrlOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -65,12 +72,18 @@ export class SecondPassApiClient {
     return (await res.json()) as T;
   }
 
-  async createLoginRequest(discovery: SecondPassDiscovery): Promise<ClientApiLoginRequestResponse> {
+  async createLoginRequest(
+    discovery: SecondPassDiscovery,
+    input?: { clientName?: string; clientType?: string },
+  ): Promise<ClientApiLoginRequestResponse> {
     const url = resolveUrl(discovery.api_base_url, discovery.client_api.login_request_endpoint);
     return this.requestJsonUrl<ClientApiLoginRequestResponse>({
       url,
       method: "POST",
-      body: { client_name: "Second Pass Reader", client_type: "reader" },
+      body: {
+        client_name: input?.clientName ?? "Second Pass Reader",
+        client_type: input?.clientType ?? "reader",
+      },
     });
   }
 
@@ -200,6 +213,209 @@ export class SecondPassApiClient {
       contentDisposition,
       filename,
     };
+  }
+
+  async openReadingSession(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    bookId: string | number;
+  }): Promise<ReadingOpenResponse> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/reading/books/${encodeURIComponent(String(input.bookId))}/open/`);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({
+        kind: "forbidden",
+        status: 403,
+        message: "Token is not allowed to access reading data (403).",
+      });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Book not found or not accessible (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingOpenResponse;
+  }
+
+  async updateReadingProgress(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    sessionId: string;
+    payload: ReadingProgressUpdatePayload;
+    method?: "PUT" | "PATCH";
+  }): Promise<ReadingProgress> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/progress/`);
+
+    const res = await fetch(url, {
+      method: input.method ?? "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+      body: JSON.stringify(input.payload),
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot update reading progress (403)." });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Reading session not found (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingProgress;
+  }
+
+  async listReadingAnnotations(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    sessionId: string;
+    page?: number;
+  }): Promise<ReadingAnnotationPage> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = new URL(resolveUrl(input.apiBaseUrl, "/reading/annotations/"));
+    url.searchParams.set("session_id", input.sessionId);
+    if (input.page !== undefined) url.searchParams.set("page", String(input.page));
+
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot list reading annotations (403)." });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotations endpoint not found (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingAnnotationPage;
+  }
+
+  async createReadingAnnotation(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    payload: ReadingAnnotationCreatePayload;
+  }): Promise<unknown> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, "/reading/annotations/");
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+      body: JSON.stringify(input.payload),
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot create reading annotations (403)." });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotations endpoint not found (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json().catch(() => ({}))) as unknown;
+  }
+
+  async deleteReadingAnnotation(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    annotationId: string;
+  }): Promise<void> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/reading/annotations/${encodeURIComponent(input.annotationId)}/`);
+
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot delete reading annotations (403)." });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotation not found (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
   }
 }
 

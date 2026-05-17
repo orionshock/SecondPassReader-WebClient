@@ -59,6 +59,11 @@ export function SettingsPanel({
                 <span className="muted">Client session:</span> <span className="mono">{profile.clientSessionId}</span>
               </div>
             ) : null}
+            {profile.clientSessionName ? (
+              <div className="detailRow">
+                <span className="muted">Client name:</span> {profile.clientSessionName}
+              </div>
+            ) : null}
             {profile.verifiedUser ? (
               <div className="detailRow">
                 <span className="muted">Verified user:</span> <span className="mono">{profile.verifiedUser.username}</span>

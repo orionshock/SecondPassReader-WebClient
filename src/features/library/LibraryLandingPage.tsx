@@ -29,8 +29,13 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
   const [launchMessage, setLaunchMessage] = useState<string | null>(null);
   const [downloadState, setDownloadState] = useState<
     | { phase: "idle" }
+    | { phase: "opening_session" }
     | { phase: "fetching" }
-    | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
+    | { phase: "opening_reader" }
+    | {
+        phase: "success";
+        result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string };
+      }
     | { phase: "error"; message: string }
   >({ phase: "idle" });
 
@@ -93,29 +98,50 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
       setDownloadState({ phase: "error", message: "No EPUB file available for this book." });
       return;
     }
+    if (!profile.apiBaseUrl) {
+      setDownloadState({ phase: "error", message: "Profile is missing apiBaseUrl. Run discovery again." });
+      return;
+    }
 
-    setDownloadState({ phase: "fetching" });
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+
+      setDownloadState({ phase: "opening_session" });
+      const open = await api.openReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        bookId: book.id,
+      });
+
+      setDownloadState({ phase: "fetching" });
       const result = await api.downloadBookFile({
         downloadUrl: book.file.download_url,
         accessToken: profile.accessToken,
         tokenType: profile.tokenType ?? "Bearer",
       });
-      setDownloadState({ phase: "success", result });
+
+      setDownloadState({ phase: "opening_reader" });
       const objectUrl = URL.createObjectURL(result.blob);
       onBookOpened?.({
         book,
         blob: result.blob,
         objectUrl,
         openedAt: new Date().toISOString(),
+        readingOpen: open,
       });
+      setDownloadState({ phase: "success", result });
     } catch (e) {
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setDownloadState({
           phase: "error",
           message:
-            "Could not download this book file. The token may be revoked or may not have file download permission.",
+            "Could not open reading session or download this book file. Your device token may be revoked or not allowed to access reading data/files.",
+        });
+      } else if (e instanceof ApiError && e.status === 404) {
+        setDownloadState({
+          phase: "error",
+          message: "Could not open reading session. You may not have access to this book.",
         });
       } else {
         setDownloadState({ phase: "error", message: e instanceof Error ? e.message : "Download failed." });
@@ -123,7 +149,7 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
       return;
     }
 
-    setLaunchMessage("Reader spike: EPUB fetched and opened in reader area.");
+    setLaunchMessage("Reader opened.");
   }
 
   return (

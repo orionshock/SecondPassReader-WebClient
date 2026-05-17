@@ -623,6 +623,10 @@ a {
   gap: 6px;
 }
 
+.readerDiagSubdetails > summary {
+  cursor: pointer;
+}
+
 .highlightList {
   list-style: none;
   padding: 0;

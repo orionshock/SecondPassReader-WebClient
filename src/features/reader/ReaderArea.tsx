@@ -4,6 +4,7 @@ import { EpubReaderPanel } from "./EpubReaderPanel";
 import { inspectBlob, type EpubBlobDiagnostics } from "./epubDiagnostics";
 import type { LocalHighlight, PendingSelection } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
+import type { ReadingOpenResponse } from "../../schemas/readingSession";
 
 export function ReaderArea({
   openedBook,
@@ -87,6 +88,11 @@ export function ReaderArea({
   const authors = (openedBook.book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const w3cPreviewCount = highlights.length;
 
+  const readingOpen: ReadingOpenResponse | null = openedBook.readingOpen ?? null;
+  const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
+  const initialCfi =
+    readingOpen?.progress?.current_location?.cfi ?? readingOpen?.progress?.current_location?.selector?.value ?? null;
+
   return (
     <div className="readerArea">
       <div className="readerHeader">
@@ -101,6 +107,12 @@ export function ReaderArea({
           <div className="muted">
             local highlights: {highlights.length} · W3C previews: {w3cPreviewCount}
           </div>
+          {readingOpen ? (
+            <div className="muted">
+              session: <span className="mono">{readingOpen.session.id}</span>
+              {serverAnnotationCount !== null ? <span> · server annotations: {serverAnnotationCount}</span> : null}
+            </div>
+          ) : null}
         </div>
         <div>
           <button type="button" className="button" onClick={onClose}>
@@ -112,10 +124,50 @@ export function ReaderArea({
       <details className="readerDiagBox">
         <summary className="muted">Diagnostics</summary>
         <div className="readerDiagBody">
-        <div className="detailRow">
-          <span className="muted">object URL:</span>{" "}
-          <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
-            Open object URL in new tab
+          {readingOpen ? (
+            <details className="readerDiagSubdetails">
+              <summary className="muted">Reading session payload</summary>
+              <div className="readerDiagBody">
+                <div className="detailRow">
+                  <span className="muted">profile_version:</span> <span className="mono">{readingOpen.profile_version}</span>
+                </div>
+                <div className="detailRow">
+                  <span className="muted">session id:</span> <span className="mono">{readingOpen.session.id}</span>
+                </div>
+                {readingOpen.progress?.progression != null ? (
+                  <div className="detailRow">
+                    <span className="muted">progression:</span>{" "}
+                    <span className="mono">{String(readingOpen.progress.progression)}</span>
+                  </div>
+                ) : null}
+                {initialCfi ? (
+                  <div className="detailRow">
+                    <span className="muted">current_location cfi:</span> <span className="mono">{initialCfi}</span>
+                  </div>
+                ) : null}
+                {readingOpen.annotations?.results?.length ? (
+                  <details className="readerDiagSubdetails">
+                    <summary className="muted">Returned annotations (first page)</summary>
+                    <ul className="muted" style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+                      {readingOpen.annotations.results.slice(0, 25).map((a) => (
+                        <li key={String(a.id)}>
+                          <span className="mono">{String(a.id)}</span>
+                          {a.motivation ? <span> · {String(a.motivation)}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </div>
+            </details>
+          ) : (
+            <div className="muted">No reading session payload attached to this opened book.</div>
+          )}
+
+          <div className="detailRow">
+            <span className="muted">object URL:</span>{" "}
+            <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
+              Open object URL in new tab
           </a>
         </div>
         {diagError ? <div className="errorText">{diagError}</div> : null}
@@ -291,6 +343,7 @@ export function ReaderArea({
       <EpubReaderPanel
         blob={openedBook.blob}
         highlights={highlights}
+        initialLocation={initialCfi ?? undefined}
         onLocationChanged={setLocation}
         onHighlightClicked={handleHighlightClicked}
         onTextSelected={(sel) => {

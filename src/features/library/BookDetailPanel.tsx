@@ -20,7 +20,13 @@ export function BookDetailPanel({
   book: LibraryBook;
   launchMessage: string | null;
   onOpenReader: (book: LibraryBook) => void;
-  downloadState: { phase: "idle" } | { phase: "fetching" } | { phase: "success"; result: BookFileDownloadResult } | { phase: "error"; message: string };
+  downloadState:
+    | { phase: "idle" }
+    | { phase: "opening_session" }
+    | { phase: "fetching" }
+    | { phase: "opening_reader" }
+    | { phase: "success"; result: BookFileDownloadResult }
+    | { phase: "error"; message: string };
 }) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
@@ -28,6 +34,7 @@ export function BookDetailPanel({
 
   const file = book.file;
   const canOpen = Boolean(file?.download_url);
+  const busy = downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
   const fileSize = formatFileSize(file?.file_size ?? null);
   const fileStatus = file ? "EPUB available" : "No file";
 
@@ -43,7 +50,12 @@ export function BookDetailPanel({
           {authors ? <div className="muted">{authors}</div> : null}
         </div>
         <div className="bookDetailActions">
-          <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={!canOpen}>
+          <button
+            type="button"
+            className="button buttonPrimary"
+            onClick={() => onOpenReader(book)}
+            disabled={!canOpen || busy}
+          >
             Open reader
           </button>
         </div>
@@ -52,7 +64,9 @@ export function BookDetailPanel({
       {!canOpen ? <div className="muted">No EPUB file available for this book.</div> : null}
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
 
+      {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}
       {downloadState.phase === "fetching" ? <div className="muted">Fetching EPUB...</div> : null}
+      {downloadState.phase === "opening_reader" ? <div className="muted">Opening reader...</div> : null}
       {downloadState.phase === "error" ? <div className="errorText">{downloadState.message}</div> : null}
       {downloadState.phase === "success" ? (
         <div className="downloadResultBox">

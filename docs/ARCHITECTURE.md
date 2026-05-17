@@ -51,3 +51,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
   - connect server → pair device → verify connection → library home → reader mode (when a book is open)
 - Debug/internal state is shown in a collapsible DebugDetails panel (no tokens displayed).
 
+## Reader launch
+
+- The Open Reader flow bootstraps server reading state by calling `POST /reading/books/{book_id}/open/` (session + progress + first page of annotations) before downloading/rendering the EPUB.
+- Progress autosave and server annotation persistence are intentionally not wired yet.

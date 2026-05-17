@@ -8,6 +8,7 @@ import type { LocalHighlight, PendingSelection } from "./types";
 export function EpubReaderPanel({
   blob,
   highlights,
+  initialLocation,
   onLocationChanged,
   onHighlightClicked,
   onTextSelected,
@@ -15,6 +16,7 @@ export function EpubReaderPanel({
 }: {
   blob: Blob;
   highlights: LocalHighlight[];
+  initialLocation?: string | number;
   onLocationChanged?: (location: string) => void;
   onHighlightClicked?: (highlightId: string) => void;
   onTextSelected?: (selection: PendingSelection) => void;
@@ -74,6 +76,11 @@ export function EpubReaderPanel({
       cancelled = true;
     };
   }, [blob]);
+
+  useEffect(() => {
+    if (initialLocation === undefined || initialLocation === null) return;
+    setLocation((prev) => (prev === null ? initialLocation : prev));
+  }, [initialLocation]);
 
   // Reconcile highlight overlays whenever highlights change and rendition is available.
   useEffect(() => {

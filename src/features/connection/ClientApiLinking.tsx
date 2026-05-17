@@ -40,6 +40,7 @@ function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
 export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profilesVersion }: Props) {
   const [state, setState] = useState<LinkingState>({ phase: "idle" });
   const [pollDetail, setPollDetail] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string>("Second Pass Reader");
   const abortRef = useRef<AbortController | null>(null);
 
   const profile = useMemo(() => {
@@ -49,6 +50,11 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   }, [selectedProfileId, profilesVersion, state.phase]);
 
   const discovery = useMemo(() => (profile ? toDiscovery(profile) : null), [profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    setClientName(profile.clientSessionName ?? profile.label ?? "Second Pass Reader");
+  }, [profile?.id]);
 
   useEffect(() => {
     return () => {
@@ -72,7 +78,10 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const loginRequest = await api.createLoginRequest(discovery);
+      const loginRequest = await api.createLoginRequest(discovery, {
+        clientName: clientName.trim() || "Second Pass Reader",
+        clientType: "reader",
+      });
       setState({ phase: "waiting", loginRequest, pollStatus: "pending" });
 
       await pollUntilDone({
@@ -90,6 +99,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
             accessToken: approved.access_token,
             tokenType: approved.token_type,
             clientSessionId: approved.client_session.id,
+            clientSessionName: approved.client_session.name ?? (clientName.trim() || profile.clientSessionName),
             linkedAt: now,
             lastUsedAt: now,
           };
@@ -138,6 +148,17 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         </p>
       ) : null}
 
+      <label className="field">
+        <span className="fieldLabel">Device name</span>
+        <input
+          className="input"
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          placeholder="Second Pass Reader"
+          disabled={state.phase === "starting" || state.phase === "waiting"}
+        />
+      </label>
+
       {isProfileLinked(profile) ? (
         <div className="discoveryBox">
           <div>
@@ -152,6 +173,11 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           <div>
             <span className="muted">Client session:</span> <span className="mono">{profile.clientSessionId ?? "—"}</span>
           </div>
+          {profile.clientSessionName ? (
+            <div>
+              <span className="muted">Client name:</span> {profile.clientSessionName}
+            </div>
+          ) : null}
         </div>
       ) : (
         <p className="muted">Not linked yet.</p>
@@ -253,4 +279,3 @@ function sleep(ms: number, signal: AbortSignal) {
     signal.addEventListener("abort", onAbort);
   });
 }
-

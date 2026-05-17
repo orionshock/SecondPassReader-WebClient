@@ -36,8 +36,11 @@ export function DebugDetails({
               <span className="muted">access token:</span> {profile.accessToken ? "stored" : "missing"}
             </div>
             <div className="detailRow">
-              <span className="muted">clientSessionId:</span>{" "}
-              <span className="mono">{profile.clientSessionId ?? "—"}</span>
+              <span className="muted">clientSessionId:</span> <span className="mono">{profile.clientSessionId ?? "—"}</span>
+            </div>
+            <div className="detailRow">
+              <span className="muted">clientSessionName:</span>{" "}
+              <span className="mono">{profile.clientSessionName ?? "—"}</span>
             </div>
             <div className="detailRow">
               <span className="muted">linkedAt:</span> <span className="mono">{profile.linkedAt ?? "—"}</span>
@@ -46,8 +49,7 @@ export function DebugDetails({
               <span className="muted">verifiedAt:</span> <span className="mono">{profile.verifiedAt ?? "—"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">verified user:</span>{" "}
-              <span className="mono">{profile.verifiedUser?.username ?? "—"}</span>
+              <span className="muted">verified user:</span> <span className="mono">{profile.verifiedUser?.username ?? "—"}</span>
             </div>
           </>
         ) : null}

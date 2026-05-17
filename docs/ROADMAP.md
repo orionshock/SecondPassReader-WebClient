@@ -10,6 +10,6 @@
 8. **Renderer spike 1: react-reader/epubjs render** (done)
 9. **Pending selection annotation UI spike** (done)
 10. **Local W3C conversion preview** (done, local-only)
-11. **Product workflow UI refactor (connect → pair → verify → library → reader/settings)** (current)
-12. **Later:** reading sessions, server-synced annotations, notes, bookmarks, layered sessions
-
+11. **Product workflow UI refactor (connect → pair → verify → library → reader/settings)** (done)
+12. **Reading Session API Phase 1 (open session bootstrap + display)** (current)
+13. **Later:** progress autosave, server-synced annotations, notes, bookmarks, layered sessions
