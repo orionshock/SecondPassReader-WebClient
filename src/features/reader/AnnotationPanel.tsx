@@ -17,6 +17,7 @@ export function AnnotationPanel({
   onSelect,
   onRemoveLocal,
   onSaveToSession,
+  onDeleteFromSession,
   readingOpen,
   book,
   apiReady,
@@ -26,6 +27,7 @@ export function AnnotationPanel({
   onSelect: (id: string) => void;
   onRemoveLocal: (id: string) => void;
   onSaveToSession: (id: string) => void;
+  onDeleteFromSession: (id: string) => void;
   readingOpen: ReadingOpenResponse | null;
   book: LibraryBook;
   apiReady: boolean;
@@ -45,7 +47,8 @@ export function AnnotationPanel({
             const state = getAnnotationStateLabel(h);
             const isSaved = state.kind === "saved";
             const canSave = apiReady && Boolean(sessionId) && !isSaved && state.kind !== "saving";
-            const removeLabel = isSaved ? "Hide locally" : "Remove draft";
+            const isDeleting = h.serverDeleteStatus === "deleting";
+            const canDelete = apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting;
 
             return (
               <li key={h.id} className={`highlightRow ${h.id === selectedId ? "highlightRowSelected" : ""}`}>
@@ -75,8 +78,9 @@ export function AnnotationPanel({
                   </div>
 
                   {state.kind === "error" && h.serverSaveError ? <div className="errorText">{h.serverSaveError}</div> : null}
-
-                  {isSaved ? <div className="muted">Server delete is not implemented yet.</div> : null}
+                  {h.serverDeleteStatus === "error" && h.serverDeleteError ? (
+                    <div className="errorText">{h.serverDeleteError}</div>
+                  ) : null}
 
                   <details className="highlightDetails">
                     <summary className="muted">Details</summary>
@@ -122,9 +126,16 @@ export function AnnotationPanel({
                   <button
                     type="button"
                     className="button buttonDanger buttonCompact"
-                    onClick={() => onRemoveLocal(h.id)}
+                    onClick={() => {
+                      if (isSaved) {
+                        onDeleteFromSession(h.id);
+                      } else {
+                        onRemoveLocal(h.id);
+                      }
+                    }}
+                    disabled={isSaved ? !canDelete : false}
                   >
-                    {removeLabel}
+                    {isSaved ? (isDeleting ? "Deleting…" : "Delete from session") : "Remove draft"}
                   </button>
                 </div>
               </li>
@@ -135,4 +146,3 @@ export function AnnotationPanel({
     </section>
   );
 }
-

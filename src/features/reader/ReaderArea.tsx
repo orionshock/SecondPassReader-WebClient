@@ -203,6 +203,48 @@ export function ReaderArea({
     [apiBaseUrl, accessToken, effectiveProfileVersion, highlights, sessionId, tokenType],
   );
 
+  const handleDeleteHighlightFromSession = useCallback(
+    async (highlightId: string) => {
+      if (!apiBaseUrl || !accessToken) return;
+      const target = highlights.find((h) => h.id === highlightId);
+      if (!target?.serverAnnotationId) return;
+      if (target.serverDeleteStatus === "deleting") return;
+
+      setHighlights((prev) =>
+        prev.map((h) =>
+          h.id === highlightId ? { ...h, serverDeleteStatus: "deleting", serverDeleteError: undefined } : h,
+        ),
+      );
+
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+        await api.deleteReadingAnnotation({
+          apiBaseUrl,
+          accessToken,
+          tokenType: tokenType ?? "Bearer",
+          annotationId: target.serverAnnotationId,
+        });
+
+        setHighlights((prev) => prev.filter((h) => h.id !== highlightId));
+        if (selectedHighlightId === highlightId) setSelectedHighlightId(null);
+      } catch (e) {
+        const message =
+          e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+            ? "Could not delete annotation. Your device token may be revoked or not allowed to access reading data."
+            : e instanceof ApiError && e.status === 404
+              ? "Could not delete annotation. It may already be deleted or no longer accessible."
+              : e instanceof Error
+                ? e.message
+                : "Failed to delete annotation.";
+
+        setHighlights((prev) =>
+          prev.map((h) => (h.id === highlightId ? { ...h, serverDeleteStatus: "error", serverDeleteError: message } : h)),
+        );
+      }
+    },
+    [apiBaseUrl, accessToken, highlights, selectedHighlightId, tokenType],
+  );
+
   const createDraftHighlight = useCallback((input: { cfiRange: string; text: string; note?: string }) => {
     const now = new Date().toISOString();
     const h: LocalHighlight = {
@@ -369,6 +411,7 @@ export function ReaderArea({
           if (selectedHighlightId === id) setSelectedHighlightId(null);
         }}
         onSaveToSession={(id) => void handleSaveHighlightToSession(id)}
+        onDeleteFromSession={(id) => void handleDeleteHighlightFromSession(id)}
         readingOpen={readingOpen}
         book={openedBook.book}
         apiReady={Boolean(apiBaseUrl && accessToken)}
