@@ -12,6 +12,13 @@ export type LocalHighlight = {
   id: string;
   cfiRange: string;
   text: string;
+  note?: string;
   color?: string;
+  createdAt: string;
+};
+
+export type PendingSelection = {
+  cfiRange: string;
+  text: string;
   createdAt: string;
 };

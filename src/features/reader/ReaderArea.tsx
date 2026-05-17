@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { OpenedBook } from "./types";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { inspectBlob, type EpubBlobDiagnostics } from "./epubDiagnostics";
-import type { LocalHighlight } from "./types";
+import type { LocalHighlight, PendingSelection } from "./types";
 
 export function ReaderArea({
   openedBook,
@@ -16,6 +16,9 @@ export function ReaderArea({
   const [diagError, setDiagError] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
   const [highlightSelectedId, setHighlightSelectedId] = useState<string | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
 
   useEffect(() => {
     setLocation(null);
@@ -25,14 +28,27 @@ export function ReaderArea({
     // Reset local-only highlights when switching books.
     setHighlights([]);
     setHighlightSelectedId(null);
+    setPendingSelection(null);
+    setNoteOpen(false);
+    setNoteDraft("");
   }, [openedBook?.openedAt]);
 
-  const handleHighlightCreated = useCallback((h: LocalHighlight) => {
-    setHighlights((prev) => {
-      if (prev.some((x) => x.cfiRange === h.cfiRange)) return prev;
-      return [h, ...prev];
-    });
-  }, []);
+  function createLocalHighlight(input: { cfiRange: string; text: string; note?: string }) {
+    return {
+      id: `lh_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`,
+      cfiRange: input.cfiRange,
+      text: input.text,
+      note: input.note,
+      color: "yellow",
+      createdAt: new Date().toISOString(),
+    } satisfies LocalHighlight;
+  }
+
+  const selectionPreview = useMemo(() => {
+    if (!pendingSelection) return "";
+    const t = pendingSelection.text.trim();
+    return t.length > 80 ? `${t.slice(0, 80)}…` : t;
+  }, [pendingSelection]);
 
   const handleHighlightClicked = useCallback((id: string) => {
     setHighlightSelectedId(id);
@@ -126,6 +142,100 @@ export function ReaderArea({
         )}
       </div>
 
+      {pendingSelection ? (
+        <div className="annotationFloat">
+          <div className="annotationFloatTitle">Selection</div>
+          <div className="annotationFloatText mono">{selectionPreview || "(no text captured)"}</div>
+
+          {!noteOpen ? (
+            <div className="annotationFloatActions">
+              <button
+                type="button"
+                className="button buttonPrimary buttonCompact"
+                onClick={() => {
+                  if (highlights.some((h) => h.cfiRange === pendingSelection.cfiRange)) {
+                    setPendingSelection(null);
+                    return;
+                  }
+                  const h = createLocalHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text });
+                  setHighlights((prev) => [h, ...prev]);
+                  setPendingSelection(null);
+                }}
+              >
+                Highlight
+              </button>
+              <button
+                type="button"
+                className="button buttonCompact"
+                onClick={() => {
+                  setNoteOpen(true);
+                }}
+              >
+                Add note
+              </button>
+              <button
+                type="button"
+                className="button buttonCompact"
+                onClick={() => {
+                  setPendingSelection(null);
+                  setNoteOpen(false);
+                  setNoteDraft("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="annotationFloatNote">
+              <textarea
+                className="input"
+                rows={3}
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="Note…"
+              />
+              <div className="annotationFloatActions">
+                <button
+                  type="button"
+                  className="button buttonPrimary buttonCompact"
+                  onClick={() => {
+                    if (highlights.some((h) => h.cfiRange === pendingSelection.cfiRange)) {
+                      setPendingSelection(null);
+                      setNoteOpen(false);
+                      setNoteDraft("");
+                      return;
+                    }
+                    const note = noteDraft.trim();
+                    const h = createLocalHighlight({
+                      cfiRange: pendingSelection.cfiRange,
+                      text: pendingSelection.text,
+                      note: note || undefined,
+                    });
+                    setHighlights((prev) => [h, ...prev]);
+                    setPendingSelection(null);
+                    setNoteOpen(false);
+                    setNoteDraft("");
+                  }}
+                >
+                  Save note
+                </button>
+                <button
+                  type="button"
+                  className="button buttonCompact"
+                  onClick={() => {
+                    setPendingSelection(null);
+                    setNoteOpen(false);
+                    setNoteDraft("");
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <div className="panel">
         <h2 className="panelTitle">Local highlights (spike)</h2>
         {highlights.length === 0 ? (
@@ -136,6 +246,7 @@ export function ReaderArea({
               <li key={h.id} className={`highlightRow ${h.id === highlightSelectedId ? "highlightRowSelected" : ""}`}>
                 <div className="highlightMain">
                   <div className="highlightText">{h.text}</div>
+                  {h.note ? <div className="muted">note: {h.note}</div> : null}
                   <details className="highlightDetails">
                     <summary className="muted">details</summary>
                     <div className="mono">cfi: {h.cfiRange}</div>
@@ -164,8 +275,13 @@ export function ReaderArea({
         blob={openedBook.blob}
         highlights={highlights}
         onLocationChanged={setLocation}
-        onHighlightCreated={handleHighlightCreated}
         onHighlightClicked={handleHighlightClicked}
+        onTextSelected={(sel) => {
+          if (pendingSelection?.cfiRange === sel.cfiRange) return;
+          setPendingSelection(sel);
+          setNoteOpen(false);
+          setNoteDraft("");
+        }}
         onRendererError={handleRendererError}
       />
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactReader } from "react-reader";
-import type { LocalHighlight } from "./types";
+import type { LocalHighlight, PendingSelection } from "./types";
 
 // Renderer spike: keep react-reader usage isolated here.
 // TODO: Move renderer interactions behind ReaderBridge before adding annotations/sessions.
@@ -9,15 +9,15 @@ export function EpubReaderPanel({
   blob,
   highlights,
   onLocationChanged,
-  onHighlightCreated,
   onHighlightClicked,
+  onTextSelected,
   onRendererError,
 }: {
   blob: Blob;
   highlights: LocalHighlight[];
   onLocationChanged?: (location: string) => void;
-  onHighlightCreated?: (highlight: LocalHighlight) => void;
   onHighlightClicked?: (highlightId: string) => void;
+  onTextSelected?: (selection: PendingSelection) => void;
   onRendererError?: (message: string) => void;
 }) {
   const [location, setLocation] = useState<string | number | null>(null);
@@ -108,10 +108,6 @@ export function EpubReaderPanel({
       onRendererError?.(e instanceof Error ? e.message : "Highlight reconcile failed.");
     }
   }, [highlights, highlightIndex, onHighlightClicked, onRendererError]);
-
-  function createHighlightId() {
-    return `lh_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
-  }
 
   async function extractSelectedText(cfiRange: string): Promise<string> {
     // Prefer epubjs range extraction if available; fallback to DOM selection.
@@ -241,33 +237,22 @@ export function EpubReaderPanel({
                   return;
                 }
                 const text = await extractSelectedText(cfiRange);
-                const highlight: LocalHighlight = {
-                  id: createHighlightId(),
+                const selection: PendingSelection = {
                   cfiRange,
                   text: text || "(no text captured)",
-                  color: "yellow",
                   createdAt: new Date().toISOString(),
                 };
 
-                // Render immediately (and parent will also re-render via state update).
-                r.annotations.highlight(
-                  highlight.cfiRange,
-                  { id: highlight.id },
-                  () => onHighlightClicked?.(highlight.id),
-                  "sp-local-highlight",
-                );
-                renderedCfisRef.current.add(highlight.cfiRange);
-
+                onTextSelected?.(selection);
                 try {
                   window.getSelection()?.removeAllRanges();
                 } catch {
                   // ignore
                 }
-                onHighlightCreated?.(highlight);
               } catch (err) {
                 // eslint-disable-next-line no-console
                 console.error("Selection/highlight failed:", err);
-                onRendererError?.(err instanceof Error ? err.message : "Selection/highlight failed.");
+                onRendererError?.(err instanceof Error ? err.message : "Selection capture failed.");
               }
               };
 

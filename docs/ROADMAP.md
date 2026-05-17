@@ -9,7 +9,7 @@
 6. **Renderer sandbox** (current)
    - EPUB blob fetch smoke test (done)
    - Renderer spike 1: react-reader/epubjs render (done)
-   - Local highlight spike (current)
+   - Pending selection annotation UI spike (current)
 7. **Book launch from library** (open selected book)
 8. **Current location sync** (report/restore location via CFI)
 9. **Highlight creation** (selection → Web Annotation JSON-LD draft → persist)
