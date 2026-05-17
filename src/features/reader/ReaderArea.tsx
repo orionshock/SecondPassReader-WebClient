@@ -221,7 +221,7 @@ export function ReaderArea({
     return payload;
   }, [currentCfi, currentHref, currentProgression, effectiveProfileVersion]);
 
-  const canSaveProgress = Boolean(apiBaseUrl && accessToken && sessionId && progressPayload && saveState.phase !== "saving");
+  // Manual save UI is no longer shown in normal reader mode; keep saveState for internal success/error visibility if needed later.
 
   const saveProgress = useCallback(
     async (mode: "manual" | "autosave") => {
@@ -266,8 +266,6 @@ export function ReaderArea({
     },
     [accessToken, apiBaseUrl, currentCfi, progressPayload, sessionId, tokenType],
   );
-
-  const handleSaveProgress = useCallback(() => void saveProgress("manual"), [saveProgress]);
 
   useEffect(() => {
     // Initialize autosave baseline for this opened session so we don't immediately re-save the same CFI.
@@ -555,22 +553,9 @@ export function ReaderArea({
       </div>
 
       <ProgressPanel
-        currentCfi={currentCfi}
+        autosave={autosave}
         currentHref={currentHref}
         progression={currentProgression}
-        displayed={
-          readerLocation?.displayedPage != null && readerLocation?.displayedTotal != null
-            ? { page: readerLocation.displayedPage, total: readerLocation.displayedTotal }
-            : null
-        }
-        canSave={canSaveProgress}
-        saveState={saveState}
-        autosave={autosave}
-        onToggleAutosave={(enabled) => {
-          setAutosave((prev) => ({ ...prev, enabled, status: enabled ? prev.status : "idle", error: undefined }));
-        }}
-        progressPayload={progressPayload}
-        onSave={handleSaveProgress}
       />
 
       <ReaderDiagnostics openedBook={openedBook} readingOpen={readingOpen} initialCfi={initialCfi} />

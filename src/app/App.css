@@ -169,6 +169,12 @@
   margin: 0;
 }
 
+.progressLine {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--sp-text);
+}
+
 .statusList {
   display: grid;
   gap: 10px;
