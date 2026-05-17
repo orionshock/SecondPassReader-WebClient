@@ -61,3 +61,8 @@ This app is a standalone static web client that talks to a Second Pass Library s
 
 - `src/features/reader/w3cAnnotationAdapter.ts`: local W3C Web Annotation JSON-LD preview/export shape (not persisted yet).
 - `src/features/reader/readingAnnotationAdapter.ts`: tight Reading API `POST /reading/annotations/` create payload adapter (manual save only in this phase).
+
+## Annotation rehydration (Phase 1)
+
+- The reader converts server annotations returned by `POST /reading/books/{book_id}/open/` into local renderable highlights and feeds them into the renderer overlay layer.
+- Server update/delete and pagination are future work.

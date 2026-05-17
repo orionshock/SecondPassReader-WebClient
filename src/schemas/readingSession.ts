@@ -41,6 +41,8 @@ export type ReadingAnnotation = {
   target?: Partial<W3CAnnotationTarget> | unknown;
   body?: Array<Partial<W3CTextualBody> & Record<string, unknown>> | unknown;
   is_deleted?: boolean;
+  created_at?: string;
+  updated_at?: string;
   created?: string;
   modified?: string;
   [k: string]: unknown;
@@ -83,4 +85,3 @@ export type ReadingAnnotationCreatePayload = {
       }
   >;
 };
-

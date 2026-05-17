@@ -13,5 +13,7 @@
 11. **Product workflow UI refactor (connect → pair → verify → library → reader/settings)** (done)
 12. **Reading Session API Phase 1 (open session bootstrap + display)** (done)
 13. **Manual progress save (CFI/href/progression via relocated + Save Progress button)** (done)
-14. **Manual annotation save (Save to session)** (current)
-15. **Later:** progress autosave, server-synced annotations, notes, bookmarks, layered sessions
+14. **Manual annotation save (Save to session)** (done)
+15. **Server annotation rehydration (render saved overlays on reopen)** (current)
+16. **Later:** progress autosave, server-synced annotations, notes, bookmarks, layered sessions
+

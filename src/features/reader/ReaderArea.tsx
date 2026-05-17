@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OpenedBook } from "./types";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
 import type { ReadingOpenResponse, ReadingProgress, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
-import { createServerAnnotationPayloadFromLocalHighlight } from "./readingAnnotationAdapter";
+import {
+  createLocalHighlightFromServerAnnotation,
+  createServerAnnotationPayloadFromLocalHighlight,
+} from "./readingAnnotationAdapter";
 
 export function ReaderArea({
   openedBook,
@@ -33,6 +36,7 @@ export function ReaderArea({
     | { phase: "success"; savedAt: string; progress: ReadingProgress }
     | { phase: "error"; message: string }
   >({ phase: "idle" });
+  const prevSessionKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     setLocation(null);
@@ -41,13 +45,21 @@ export function ReaderArea({
   }, [openedBook?.objectUrl]);
 
   useEffect(() => {
-    // Reset local-only highlights when switching books.
+    // Reset local-only UI state when switching sessions/books.
+    // Do NOT wipe highlights just because of re-renders or reopen of the same session.
+    const sid = openedBook?.readingOpen?.session?.id ?? null;
+    const bookId = openedBook?.book?.id ?? null;
+    const sessionKey = sid ? `${String(bookId)}:${sid}` : null;
+
+    if (sessionKey && prevSessionKeyRef.current === sessionKey) return;
+    prevSessionKeyRef.current = sessionKey;
+
     setHighlights([]);
     setHighlightSelectedId(null);
     setPendingSelection(null);
     setNoteOpen(false);
     setNoteDraft("");
-  }, [openedBook?.openedAt]);
+  }, [openedBook?.readingOpen?.session?.id, openedBook?.book?.id]);
 
   function createLocalHighlight(input: { cfiRange: string; text: string; note?: string }) {
     return {
@@ -85,6 +97,10 @@ export function ReaderArea({
 
   const readingOpen: ReadingOpenResponse | null = openedBook.readingOpen ?? null;
   const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
+  const rehydratedCount = useMemo(() => {
+    const results = readingOpen?.annotations?.results;
+    return Array.isArray(results) ? results.length : 0;
+  }, [readingOpen?.annotations?.results]);
   const initialCfi =
     readingOpen?.progress?.current_location?.cfi ?? readingOpen?.progress?.current_location?.selector?.value ?? null;
 
@@ -93,6 +109,27 @@ export function ReaderArea({
   const currentProgression = readerLocation?.progression;
   const sessionId = readingOpen?.session?.id ?? null;
   const effectiveProfileVersion = readingOpen?.profile_version ?? "0.1.0";
+
+  useEffect(() => {
+    const results = readingOpen?.annotations?.results;
+    if (!Array.isArray(results) || results.length === 0) return;
+
+    const converted = results
+      .map((a) => createLocalHighlightFromServerAnnotation(a))
+      .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+    if (converted.length === 0) return;
+
+    setHighlights((prev) => {
+      const existingServerIds = new Set(prev.map((h) => h.serverAnnotationId).filter(Boolean) as string[]);
+      const merged = [...prev];
+      for (const h of converted) {
+        if (h.serverAnnotationId && existingServerIds.has(h.serverAnnotationId)) continue;
+        merged.push(h);
+      }
+      return merged;
+    });
+  }, [readingOpen?.session?.id, readingOpen?.annotations?.results]);
 
   const progressPayload: ReadingProgressUpdatePayload | null = useMemo(() => {
     if (!currentLocationCfi) return null;
@@ -252,6 +289,7 @@ export function ReaderArea({
             <div className="muted">
               session: <span className="mono">{readingOpen.session.id}</span>
               {serverAnnotationCount !== null ? <span> · server annotations: {serverAnnotationCount}</span> : null}
+              {rehydratedCount ? <span> · rehydrated: {rehydratedCount}</span> : null}
             </div>
           ) : null}
         </div>
@@ -582,6 +620,7 @@ export function ReaderArea({
                       !apiBaseUrl ||
                       !accessToken ||
                       !sessionId ||
+                      Boolean(h.serverAnnotationId) ||
                       h.serverSaveStatus === "saving" ||
                       h.serverSaveStatus === "saved"
                     }
@@ -597,7 +636,7 @@ export function ReaderArea({
                       if (highlightSelectedId === h.id) setHighlightSelectedId(null);
                     }}
                   >
-                    Remove
+                    Remove locally
                   </button>
                 </div>
               </li>
