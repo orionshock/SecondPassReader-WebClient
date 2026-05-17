@@ -12,7 +12,7 @@ export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string }
   try {
     url = new URL(withProtocol);
   } catch {
-    throw new Error("That server URL doesn’t look valid. Example: http://localhost:8000");
+    throw new Error("That server URL doesn't look valid. Example: http://localhost:8000");
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
@@ -37,4 +37,3 @@ export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondP
 
   return (await res.json()) as SecondPassDiscovery;
 }
-

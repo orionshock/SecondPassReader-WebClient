@@ -5,7 +5,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## Layers
 
 1. **App shell**
-   - Workflow shell (connect → pair → verify → library), global error handling, basic persistence (connection profile, preferences).
+   - Product workflow shell (connect → pair → verify → library → reader/settings), global error handling, basic persistence (connection profile, preferences).
 
 2. **Connection & auth flow**
    - UI/state for “pick server URL” + Client API linking flow.
@@ -48,5 +48,6 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## App workflow
 
 - The app derives a workflow step from the selected connection profile and only renders one primary step at a time:
-  - connect server → pair device → verify connection → library home
+  - connect server → pair device → verify connection → library home → reader mode (when a book is open)
 - Debug/internal state is shown in a collapsible DebugDetails panel (no tokens displayed).
+

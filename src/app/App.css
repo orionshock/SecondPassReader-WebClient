@@ -13,29 +13,39 @@
   flex-wrap: wrap;
 }
 
-.appTitle {
-  font-size: 28px;
-  line-height: 1.1;
-  margin: 0;
-  letter-spacing: -0.02em;
+.appHeaderLeft {
+  display: grid;
+  gap: 4px;
 }
 
-.appSubtitle {
-  margin: 8px 0 0;
-  color: var(--sp-muted);
+.appBrand {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.appHeaderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.appHeaderMeta .sep {
+  opacity: 0.8;
+}
+
+.appHeaderNav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .appMain {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
-}
-
-.headerStrip {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .workflowPanel {
@@ -46,6 +56,60 @@
 .homeGrid {
   display: grid;
   gap: 14px;
+}
+
+.connectScreen {
+  max-width: 680px;
+}
+
+.fieldHelp {
+  font-size: 12px;
+}
+
+.connectAdvanced {
+  border: 1px dashed var(--sp-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(17, 24, 39, 0.01);
+}
+
+.connectAdvanced > summary {
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.libraryScreen {
+  display: grid;
+  gap: 14px;
+}
+
+.readerScreen {
+  display: grid;
+  gap: 12px;
+}
+
+.settingsLayout {
+  display: grid;
+  gap: 14px;
+}
+
+.settingsGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.settingsActions {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.settingsAdvanced > summary {
+  cursor: pointer;
+}
+
+.settingsAdvancedBody {
+  margin-top: 12px;
 }
 
 .debugDetails {
@@ -194,6 +258,12 @@
 .buttonDanger {
   border-color: rgba(185, 28, 28, 0.35);
   background: rgba(185, 28, 28, 0.06);
+}
+
+.buttonCompact {
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: 13px;
 }
 
 .errorText {
@@ -441,6 +511,24 @@ a {
   margin-bottom: 8px;
 }
 
+.bookCoverPlaceholder {
+  width: 72px;
+  height: 96px;
+  border: 1px dashed var(--sp-border);
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.02);
+  color: var(--sp-muted);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.bookDetailHeaderText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .bookDetailTitle {
   font-weight: 800;
 }
@@ -477,6 +565,10 @@ a {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--sp-border);
+}
+
+.bookFilePanel > summary {
+  cursor: pointer;
 }
 
 .bookFileGrid {
@@ -519,6 +611,16 @@ a {
   display: grid;
   gap: 6px;
   background: rgba(17, 24, 39, 0.02);
+}
+
+.readerDiagBox > summary {
+  cursor: pointer;
+}
+
+.readerDiagBody {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
 }
 
 .highlightList {

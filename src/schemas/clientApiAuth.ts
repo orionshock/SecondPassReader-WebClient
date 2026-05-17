@@ -9,6 +9,7 @@ export type SecondPassWellKnown = {
 
 export type SecondPassDiscovery = {
   server_name: string;
+  server_description?: string;
   api_base_url: string;
   client_api: {
     discovery_version: string;

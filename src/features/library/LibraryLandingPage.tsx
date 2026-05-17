@@ -143,7 +143,7 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
                 className="input inputCompact"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search…"
+                placeholder="Search..."
               />
             </label>
 
@@ -175,7 +175,7 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
             </label>
 
             <button className="button buttonPrimary" type="button" onClick={() => void loadBooks(1)} disabled={busy}>
-              {busy ? "Loading…" : "Load"}
+              {busy ? "Loading..." : "Load"}
             </button>
           </div>
 

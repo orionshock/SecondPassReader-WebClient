@@ -109,7 +109,9 @@ export function ReaderArea({
         </div>
       </div>
 
-      <div className="readerDiagBox">
+      <details className="readerDiagBox">
+        <summary className="muted">Diagnostics</summary>
+        <div className="readerDiagBody">
         <div className="detailRow">
           <span className="muted">object URL:</span>{" "}
           <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
@@ -142,9 +144,10 @@ export function ReaderArea({
             ) : null}
           </>
         ) : (
-          <div className="muted">Inspecting EPUB blob…</div>
+          <div className="muted">Inspecting EPUB blob...</div>
         )}
-      </div>
+        </div>
+      </details>
 
       {pendingSelection ? (
         <div className="annotationFloat">

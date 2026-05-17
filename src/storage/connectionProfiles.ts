@@ -4,6 +4,7 @@ export type ConnectionProfile = {
   serverBaseUrl: string;
   apiBaseUrl?: string;
   serverName?: string;
+  serverDescription?: string;
   accessToken?: string;
   tokenType?: string;
   clientSessionId?: string;

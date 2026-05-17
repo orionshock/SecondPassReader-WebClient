@@ -1,18 +1,24 @@
 import "./App.css";
 import { useEffect, useMemo, useState } from "react";
-import { ClientApiLinking, ClientApiVerification, ConnectionSetup } from "../features/connection";
-import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
+import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
 import { LibraryLandingPage } from "../features/library";
 import { ReaderArea, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
-import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
+import {
+  deleteConnectionProfile,
+  getConnectionProfile,
+  listConnectionProfiles,
+} from "../storage/connectionProfiles";
+import { AppHeader } from "./AppHeader";
+import { SettingsPanel } from "./SettingsPanel";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export default function App() {
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
+  const [view, setView] = useState<"main" | "settings">("main");
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(SELECTED_PROFILE_KEY);
@@ -26,7 +32,6 @@ export default function App() {
     return getConnectionProfile(selectedProfileId) ?? null;
   }, [selectedProfileId, profilesVersion]);
 
-  const connectionStatus = useMemo(() => getConnectionStatus(selectedProfile), [selectedProfile]);
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
 
   useEffect(() => {
@@ -48,110 +53,109 @@ export default function App() {
     }
   }, [selectedProfileId]);
 
+  function refreshProfiles() {
+    setProfilesVersion((v) => v + 1);
+  }
+
+  function handleBookOpened(opened: OpenedBook) {
+    setOpenedBook((prev) => {
+      if (prev) URL.revokeObjectURL(prev.objectUrl);
+      return opened;
+    });
+  }
+
+  function handleCloseReader() {
+    setOpenedBook((prev) => {
+      if (prev) URL.revokeObjectURL(prev.objectUrl);
+      return null;
+    });
+  }
+
+  function handleForgetServer() {
+    if (!selectedProfileId) return;
+    deleteConnectionProfile(selectedProfileId);
+    setSelectedProfileId(null);
+    handleCloseReader();
+    refreshProfiles();
+    setView("main");
+  }
+
   return (
     <div className="appShell">
-      <header className="appHeader">
-        <div>
-          <h1 className="appTitle">Second Pass Reader</h1>
-          <p className="appSubtitle">Standalone browser reader client</p>
-        </div>
-        <div className="headerStrip">
-          <span className="pill pillOk">client: running</span>
-          {connectionStatus === "verified" ? (
-            <span className="pill pillOk">server: {getConnectionStatusLabel(connectionStatus)}</span>
-          ) : (
-            <span className="pill pillWarn">server: {getConnectionStatusLabel(connectionStatus)}</span>
-          )}
-          <span className="pill pillIdle">renderer: not initialized</span>
-        </div>
-      </header>
+      <AppHeader
+        profile={selectedProfile}
+        view={view}
+        readerOpen={Boolean(openedBook)}
+        onShowLibrary={() => {
+          setView("main");
+          handleCloseReader();
+        }}
+        onBackToLibrary={() => handleCloseReader()}
+        onShowSettings={() => setView((v) => (v === "settings" ? "main" : "settings"))}
+      />
 
       <main className="appMain">
-        <section className="panel workflowPanel">
-          <h2 className="panelTitle">Workflow</h2>
-
-          {workflowStep === "connect_server" ? (
-            <>
-              <p className="muted">Step 1: Connect to a server and run discovery.</p>
-              <ConnectionSetup
+        {view === "settings" ? (
+          <>
+            <SettingsPanel
+              profile={selectedProfile}
+              selectedProfileId={selectedProfileId}
+              onSelectedProfileIdChange={setSelectedProfileId}
+              onProfilesChanged={refreshProfiles}
+              profilesVersion={profilesVersion}
+              onForgetServer={handleForgetServer}
+            />
+            <DebugDetails step={workflowStep} selectedProfileId={selectedProfileId} profile={selectedProfile} />
+          </>
+        ) : (
+          <>
+            {workflowStep === "connect_server" ? (
+              <ConnectServerScreen
                 selectedProfileId={selectedProfileId}
                 onSelectedProfileIdChange={setSelectedProfileId}
-                onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
-                profilesVersion={profilesVersion}
-                showSelectedProfilePanel={false}
+                onProfilesChanged={refreshProfiles}
               />
-            </>
-          ) : null}
+            ) : null}
 
-          {workflowStep === "pair_device" ? (
-            <>
-              <p className="muted">Step 2: Pair this device to your server.</p>
-              <ServerSummary profile={selectedProfile} />
-              <ClientApiLinking
-                selectedProfileId={selectedProfileId}
-                onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
-                profilesVersion={profilesVersion}
-              />
-            </>
-          ) : null}
-
-          {workflowStep === "verify_connection" ? (
-            <>
-              <p className="muted">Step 3: Verify the linked token.</p>
-              <ServerSummary profile={selectedProfile} />
-              <ClientApiVerification
-                selectedProfileId={selectedProfileId}
-                profilesVersion={profilesVersion}
-                onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
-                autoVerify
-              />
-            </>
-          ) : null}
-
-          {workflowStep === "library_home" ? (
-            <div className="homeGrid">
-              <section className="panel">
-                <h2 className="panelTitle">Server status</h2>
+            {workflowStep === "pair_device" ? (
+              <section className="panel workflowPanel">
+                <h2 className="panelTitle">Pair this device</h2>
                 <ServerSummary profile={selectedProfile} />
-              </section>
-
-              <LibraryLandingPage
-                profile={selectedProfile}
-                onBookOpened={(opened) => {
-                  setOpenedBook((prev) => {
-                    if (prev) URL.revokeObjectURL(prev.objectUrl);
-                    return opened;
-                  });
-                }}
-              />
-
-              <section className="panel">
-                <h2 className="panelTitle">Reader area</h2>
-                <ReaderArea
-                  openedBook={openedBook}
-                  onClose={() => {
-                    setOpenedBook((prev) => {
-                      if (prev) URL.revokeObjectURL(prev.objectUrl);
-                      return null;
-                    });
-                  }}
+                <ClientApiLinking
+                  selectedProfileId={selectedProfileId}
+                  onProfilesChanged={refreshProfiles}
+                  profilesVersion={profilesVersion}
                 />
               </section>
+            ) : null}
 
-              <section className="panel">
-                <h2 className="panelTitle">Session controls</h2>
-                <p className="muted">Reading sessions not implemented yet.</p>
+            {workflowStep === "verify_connection" ? (
+              <section className="panel workflowPanel">
+                <h2 className="panelTitle">Verify connection</h2>
+                <ServerSummary profile={selectedProfile} />
+                <ClientApiVerification
+                  selectedProfileId={selectedProfileId}
+                  profilesVersion={profilesVersion}
+                  onProfilesChanged={refreshProfiles}
+                  autoVerify
+                />
               </section>
+            ) : null}
 
-              <section className="panel">
-                <h2 className="panelTitle">Annotation controls</h2>
-                <p className="muted">Annotations not implemented yet.</p>
-              </section>
-            </div>
-          ) : null}
-        </section>
-
-        <DebugDetails step={workflowStep} selectedProfileId={selectedProfileId} profile={selectedProfile} />
+            {workflowStep === "library_home" ? (
+              openedBook ? (
+                <section className="panel readerScreen">
+                  <h2 className="panelTitle">Reader</h2>
+                  <ReaderArea openedBook={openedBook} onClose={handleCloseReader} />
+                </section>
+              ) : (
+                <div className="libraryScreen">
+                  <LibraryLandingPage profile={selectedProfile} onBookOpened={handleBookOpened} />
+                </div>
+              )
+            ) : null}
+          </>
+        )}
       </main>
     </div>
   );
@@ -170,6 +174,11 @@ function ServerSummary({ profile }: { profile: ReturnType<typeof getConnectionPr
       {profile.serverName ? (
         <div className="detailRow">
           <span className="muted">Name:</span> {profile.serverName}
+        </div>
+      ) : null}
+      {profile.serverDescription ? (
+        <div className="detailRow">
+          <span className="muted">Description:</span> {profile.serverDescription}
         </div>
       ) : null}
       {profile.apiBaseUrl ? (

@@ -26,6 +26,7 @@ function newProfileId() {
 function formatDiscoverySummary(discovery: SecondPassDiscovery) {
   return {
     serverName: discovery.server_name,
+    serverDescription: discovery.server_description,
     apiBaseUrl: discovery.api_base_url,
     clientApi: {
       discoveryVersion: discovery.client_api.discovery_version,
@@ -105,6 +106,7 @@ export function ConnectionSetup({
           ...existing,
           serverBaseUrl,
           serverName: summary.serverName,
+          serverDescription: summary.serverDescription,
           apiBaseUrl: summary.apiBaseUrl,
           clientApi: summary.clientApi,
         };

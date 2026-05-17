@@ -29,13 +29,18 @@ export function BookDetailPanel({
   const file = book.file;
   const canOpen = Boolean(file?.download_url);
   const fileSize = formatFileSize(file?.file_size ?? null);
+  const fileStatus = file ? "EPUB available" : "No file";
 
   return (
     <div className="bookDetailPanel">
       <div className="bookDetailHeader">
-        <div>
+        <div className="bookCoverPlaceholder" aria-hidden="true">
+          cover
+        </div>
+        <div className="bookDetailHeaderText">
           <div className="bookDetailTitle">{book.title}</div>
           {book.subtitle ? <div className="bookDetailSubtitle">{book.subtitle}</div> : null}
+          {authors ? <div className="muted">{authors}</div> : null}
         </div>
         <div className="bookDetailActions">
           <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={!canOpen}>
@@ -47,7 +52,7 @@ export function BookDetailPanel({
       {!canOpen ? <div className="muted">No EPUB file available for this book.</div> : null}
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
 
-      {downloadState.phase === "fetching" ? <div className="muted">Fetching EPUB…</div> : null}
+      {downloadState.phase === "fetching" ? <div className="muted">Fetching EPUB...</div> : null}
       {downloadState.phase === "error" ? <div className="errorText">{downloadState.message}</div> : null}
       {downloadState.phase === "success" ? (
         <div className="downloadResultBox">
@@ -62,12 +67,13 @@ export function BookDetailPanel({
         </div>
       ) : null}
 
+      <div className="detailRow">
+        <span className="muted">File status:</span> {fileStatus}
+        {file?.format ? <span className="muted">({file.format})</span> : null}
+        {fileSize ? <span className="muted">· {fileSize}</span> : null}
+      </div>
+
       <div className="bookDetailGrid">
-        {authors ? (
-          <div className="detailRow">
-            <span className="muted">Authors:</span> {authors}
-          </div>
-        ) : null}
         {seriesText ? (
           <div className="detailRow">
             <span className="muted">Series:</span> {seriesText}
@@ -105,23 +111,13 @@ export function BookDetailPanel({
         ) : null}
       </div>
 
-      <div className="bookFilePanel">
-        <div className="muted">File</div>
-        {file ? (
+      {file ? (
+        <details className="bookFilePanel">
+          <summary className="muted">File details</summary>
           <div className="bookFileGrid">
             <div className="detailRow">
               <span className="muted">id:</span> <span className="mono">{String(file.id)}</span>
             </div>
-            {file.format ? (
-              <div className="detailRow">
-                <span className="muted">format:</span> {file.format}
-              </div>
-            ) : null}
-            {fileSize ? (
-              <div className="detailRow">
-                <span className="muted">size:</span> {fileSize}
-              </div>
-            ) : null}
             {file.checksum_short ? (
               <div className="detailRow">
                 <span className="muted">checksum:</span> <span className="mono">{file.checksum_short}</span>
@@ -133,10 +129,8 @@ export function BookDetailPanel({
               </div>
             ) : null}
           </div>
-        ) : (
-          <div className="muted">No file.</div>
-        )}
-      </div>
+        </details>
+      ) : null}
     </div>
   );
 }
