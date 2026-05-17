@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectionSetup } from "../features/connection";
 import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
 import { LibraryLandingPage } from "../features/library";
+import { DebugDetails } from "./DebugDetails";
+import { getAppWorkflowStep } from "./appWorkflow";
 import { getConnectionProfile, listConnectionProfiles } from "../storage/connectionProfiles";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
@@ -23,6 +25,7 @@ export default function App() {
   }, [selectedProfileId, profilesVersion]);
 
   const connectionStatus = useMemo(() => getConnectionStatus(selectedProfile), [selectedProfile]);
+  const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
 
   useEffect(() => {
     const profiles = listConnectionProfiles();
@@ -46,60 +49,116 @@ export default function App() {
   return (
     <div className="appShell">
       <header className="appHeader">
-        <h1 className="appTitle">Second Pass Reader</h1>
-        <p className="appSubtitle">Standalone browser reader client</p>
+        <div>
+          <h1 className="appTitle">Second Pass Reader</h1>
+          <p className="appSubtitle">Standalone browser reader client</p>
+        </div>
+        <div className="headerStrip">
+          <span className="pill pillOk">client: running</span>
+          {connectionStatus === "verified" ? (
+            <span className="pill pillOk">server: {getConnectionStatusLabel(connectionStatus)}</span>
+          ) : (
+            <span className="pill pillWarn">server: {getConnectionStatusLabel(connectionStatus)}</span>
+          )}
+          <span className="pill pillIdle">renderer: not initialized</span>
+        </div>
       </header>
 
       <main className="appMain">
-        <section className="panel">
-          <h2 className="panelTitle">Status</h2>
-          <dl className="statusList">
-            <div className="statusRow">
-              <dt>Client app</dt>
-              <dd>
-                <span className="pill pillOk">running</span>
-              </dd>
+        <section className="panel workflowPanel">
+          <h2 className="panelTitle">Workflow</h2>
+
+          {workflowStep === "connect_server" ? (
+            <>
+              <p className="muted">Step 1: Connect to a server and run discovery.</p>
+              <ConnectionSetup
+                selectedProfileId={selectedProfileId}
+                onSelectedProfileIdChange={setSelectedProfileId}
+                onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+                profilesVersion={profilesVersion}
+                showSelectedProfilePanel={false}
+              />
+            </>
+          ) : null}
+
+          {workflowStep === "pair_device" ? (
+            <>
+              <p className="muted">Step 2: Pair this device to your server.</p>
+              <ServerSummary profile={selectedProfile} />
+              <ClientApiLinking
+                selectedProfileId={selectedProfileId}
+                onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+                profilesVersion={profilesVersion}
+              />
+            </>
+          ) : null}
+
+          {workflowStep === "verify_connection" ? (
+            <>
+              <p className="muted">Step 3: Verify the linked token.</p>
+              <ServerSummary profile={selectedProfile} />
+              <ClientApiVerification
+                selectedProfileId={selectedProfileId}
+                profilesVersion={profilesVersion}
+                onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
+                autoVerify
+              />
+            </>
+          ) : null}
+
+          {workflowStep === "library_home" ? (
+            <div className="homeGrid">
+              <section className="panel">
+                <h2 className="panelTitle">Server status</h2>
+                <ServerSummary profile={selectedProfile} />
+              </section>
+
+              <LibraryLandingPage profile={selectedProfile} />
+
+              <section className="panel">
+                <h2 className="panelTitle">Reader area</h2>
+                <p className="muted">No book open. Select a book from the library.</p>
+              </section>
+
+              <section className="panel">
+                <h2 className="panelTitle">Session controls</h2>
+                <p className="muted">Reading sessions not implemented yet.</p>
+              </section>
+
+              <section className="panel">
+                <h2 className="panelTitle">Annotation controls</h2>
+                <p className="muted">Annotations not implemented yet.</p>
+              </section>
             </div>
-            <div className="statusRow">
-              <dt>Server connection</dt>
-              <dd>
-                {connectionStatus === "verified" ? (
-                  <span className="pill pillOk">{getConnectionStatusLabel(connectionStatus)}</span>
-                ) : (
-                  <span className="pill pillWarn">{getConnectionStatusLabel(connectionStatus)}</span>
-                )}
-              </dd>
-            </div>
-            <div className="statusRow">
-              <dt>Renderer</dt>
-              <dd>
-                <span className="pill pillIdle">not initialized</span>
-              </dd>
-            </div>
-          </dl>
+          ) : null}
         </section>
 
-        <ConnectionSetup
-          selectedProfileId={selectedProfileId}
-          onSelectedProfileIdChange={setSelectedProfileId}
-          onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
-          profilesVersion={profilesVersion}
-        />
-
-        <ClientApiLinking
-          selectedProfileId={selectedProfileId}
-          onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
-          profilesVersion={profilesVersion}
-        />
-
-        <ClientApiVerification
-          selectedProfileId={selectedProfileId}
-          profilesVersion={profilesVersion}
-          onProfilesChanged={() => setProfilesVersion((v) => v + 1)}
-        />
-
-        <LibraryLandingPage profile={selectedProfile} />
+        <DebugDetails step={workflowStep} selectedProfileId={selectedProfileId} profile={selectedProfile} />
       </main>
+    </div>
+  );
+}
+
+function ServerSummary({ profile }: { profile: ReturnType<typeof getConnectionProfile> | null }) {
+  if (!profile) return <p className="muted">No profile selected.</p>;
+  return (
+    <div className="serverSummary">
+      <div className="detailRow">
+        <span className="muted">Profile:</span> {profile.label}
+      </div>
+      <div className="detailRow">
+        <span className="muted">Server:</span> <span className="mono">{profile.serverBaseUrl}</span>
+      </div>
+      {profile.serverName ? (
+        <div className="detailRow">
+          <span className="muted">Name:</span> {profile.serverName}
+        </div>
+      ) : null}
+      {profile.apiBaseUrl ? (
+        <div className="detailRow">
+          <span className="muted">API base:</span> <span className="mono">{profile.apiBaseUrl}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -5,7 +5,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## Layers
 
 1. **App shell**
-   - Routing/layout, global error handling, basic persistence (connection profile, preferences).
+   - Workflow shell (connect → pair → verify → library), global error handling, basic persistence (connection profile, preferences).
 
 2. **Connection & auth flow**
    - UI/state for “pick server URL” + Client API linking flow.
@@ -41,3 +41,9 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - `schemas/` Shared TypeScript types for API/data shapes (no validation libs yet)
 - `storage/` Local persistence (connection profiles, preferences)
 - `styles/` Minimal global/app CSS (no framework)
+
+## App workflow
+
+- The app derives a workflow step from the selected connection profile and only renders one primary step at a time:
+  - connect server → pair device → verify connection → library home
+- Debug/internal state is shown in a collapsible DebugDetails panel (no tokens displayed).

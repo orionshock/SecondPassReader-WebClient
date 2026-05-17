@@ -6,6 +6,11 @@
 
 .appHeader {
   margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .appTitle {
@@ -24,6 +29,47 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
+}
+
+.headerStrip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.workflowPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.homeGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.debugDetails {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--sp-panel);
+}
+
+.debugDetails > summary {
+  cursor: pointer;
+  color: var(--sp-muted);
+  font-size: 13px;
+}
+
+.debugGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.serverSummary {
+  display: grid;
+  gap: 6px;
 }
 
 .connectionGrid {

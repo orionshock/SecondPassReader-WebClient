@@ -16,6 +16,7 @@ type Props = {
   onSelectedProfileIdChange: (profileId: string | null) => void;
   onProfilesChanged?: () => void;
   profilesVersion?: number;
+  showSelectedProfilePanel?: boolean;
 };
 
 function newProfileId() {
@@ -41,6 +42,7 @@ export function ConnectionSetup({
   onSelectedProfileIdChange,
   onProfilesChanged,
   profilesVersion,
+  showSelectedProfilePanel = true,
 }: Props) {
   const [serverUrlInput, setServerUrlInput] = useState("");
   const [labelInput, setLabelInput] = useState("");
@@ -205,65 +207,69 @@ export function ConnectionSetup({
         />
       </section>
 
-      <section className="panel">
-        <h2 className="panelTitle">Selected profile</h2>
-        {selectedProfile ? (
-          <div className="selectedSummary">
-            <div className="selectedRow">
-              <span className="muted">Label:</span> {selectedProfile.label}
-            </div>
-            <div className="selectedRow">
-              <span className="muted">Server:</span> <span className="mono">{selectedProfile.serverBaseUrl}</span>
-            </div>
-            {selectedProfile.serverName ? (
+      {showSelectedProfilePanel ? (
+        <section className="panel">
+          <h2 className="panelTitle">Selected profile</h2>
+          {selectedProfile ? (
+            <div className="selectedSummary">
               <div className="selectedRow">
-                <span className="muted">Name:</span> {selectedProfile.serverName}
+                <span className="muted">Label:</span> {selectedProfile.label}
               </div>
-            ) : null}
-            {selectedProfile.apiBaseUrl ? (
               <div className="selectedRow">
-                <span className="muted">API base:</span> <span className="mono">{selectedProfile.apiBaseUrl}</span>
+                <span className="muted">Server:</span> <span className="mono">{selectedProfile.serverBaseUrl}</span>
               </div>
-            ) : null}
-            <div className="selectedRow">
-              <span className="muted">Last used:</span> {selectedProfile.lastUsedAt ?? "—"}
+              {selectedProfile.serverName ? (
+                <div className="selectedRow">
+                  <span className="muted">Name:</span> {selectedProfile.serverName}
+                </div>
+              ) : null}
+              {selectedProfile.apiBaseUrl ? (
+                <div className="selectedRow">
+                  <span className="muted">API base:</span> <span className="mono">{selectedProfile.apiBaseUrl}</span>
+                </div>
+              ) : null}
+              <div className="selectedRow">
+                <span className="muted">Last used:</span> {selectedProfile.lastUsedAt ?? "—"}
+              </div>
+              <div className="selectedRow">
+                <span className="muted">Status:</span> {getConnectionStatus(selectedProfile)}
+              </div>
+              <div className="selectedRow">
+                <span className="muted">Linked status:</span>{" "}
+                {isProfileLinked(selectedProfile) ? "linked" : "not linked"}
+              </div>
+              {selectedProfile.linkedAt ? (
+                <div className="selectedRow">
+                  <span className="muted">Linked at:</span> {selectedProfile.linkedAt}
+                </div>
+              ) : null}
+              <div className="selectedRow">
+                <span className="muted">Verified status:</span>{" "}
+                {isProfileVerified(selectedProfile) ? "verified" : "not verified"}
+              </div>
+              {selectedProfile.verifiedUser ? (
+                <div className="selectedRow">
+                  <span className="muted">Verified user:</span>{" "}
+                  <span className="mono">{selectedProfile.verifiedUser.username}</span>
+                </div>
+              ) : null}
+              {selectedProfile.verifiedAt ? (
+                <div className="selectedRow">
+                  <span className="muted">Verified at:</span> {selectedProfile.verifiedAt}
+                </div>
+              ) : null}
+              {selectedProfile.clientSessionId ? (
+                <div className="selectedRow">
+                  <span className="muted">Client session:</span>{" "}
+                  <span className="mono">{selectedProfile.clientSessionId}</span>
+                </div>
+              ) : null}
             </div>
-            <div className="selectedRow">
-              <span className="muted">Status:</span> {getConnectionStatus(selectedProfile)}
-            </div>
-            <div className="selectedRow">
-              <span className="muted">Linked status:</span> {isProfileLinked(selectedProfile) ? "linked" : "not linked"}
-            </div>
-            {selectedProfile.linkedAt ? (
-              <div className="selectedRow">
-                <span className="muted">Linked at:</span> {selectedProfile.linkedAt}
-              </div>
-            ) : null}
-            <div className="selectedRow">
-              <span className="muted">Verified status:</span>{" "}
-              {isProfileVerified(selectedProfile) ? "verified" : "not verified"}
-            </div>
-            {selectedProfile.verifiedUser ? (
-              <div className="selectedRow">
-                <span className="muted">Verified user:</span> <span className="mono">{selectedProfile.verifiedUser.username}</span>
-              </div>
-            ) : null}
-            {selectedProfile.verifiedAt ? (
-              <div className="selectedRow">
-                <span className="muted">Verified at:</span> {selectedProfile.verifiedAt}
-              </div>
-            ) : null}
-            {selectedProfile.clientSessionId ? (
-              <div className="selectedRow">
-                <span className="muted">Client session:</span> <span className="mono">{selectedProfile.clientSessionId}</span>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <p className="muted">No profile selected.</p>
-        )}
-      </section>
+          ) : (
+            <p className="muted">No profile selected.</p>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }
-
