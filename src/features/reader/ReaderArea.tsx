@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { OpenedBook } from "./types";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { inspectBlob, type EpubBlobDiagnostics } from "./epubDiagnostics";
+import type { LocalHighlight } from "./types";
 
 export function ReaderArea({
   openedBook,
@@ -13,10 +14,34 @@ export function ReaderArea({
   const [location, setLocation] = useState<string | null>(null);
   const [diag, setDiag] = useState<EpubBlobDiagnostics | null>(null);
   const [diagError, setDiagError] = useState<string | null>(null);
+  const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
+  const [highlightSelectedId, setHighlightSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocation(null);
   }, [openedBook?.objectUrl]);
+
+  useEffect(() => {
+    // Reset local-only highlights when switching books.
+    setHighlights([]);
+    setHighlightSelectedId(null);
+  }, [openedBook?.openedAt]);
+
+  const handleHighlightCreated = useCallback((h: LocalHighlight) => {
+    setHighlights((prev) => {
+      if (prev.some((x) => x.cfiRange === h.cfiRange)) return prev;
+      return [h, ...prev];
+    });
+  }, []);
+
+  const handleHighlightClicked = useCallback((id: string) => {
+    setHighlightSelectedId(id);
+  }, []);
+
+  const handleRendererError = useCallback((msg: string) => {
+    // eslint-disable-next-line no-console
+    console.error("Renderer error:", msg);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +80,7 @@ export function ReaderArea({
               location: <span className="mono">{location}</span>
             </div>
           ) : null}
+          <div className="muted">local highlights: {highlights.length}</div>
         </div>
         <div>
           <button type="button" className="button" onClick={onClose}>
@@ -100,7 +126,48 @@ export function ReaderArea({
         )}
       </div>
 
-      <EpubReaderPanel blob={openedBook.blob} onLocationChanged={setLocation} />
+      <div className="panel">
+        <h2 className="panelTitle">Local highlights (spike)</h2>
+        {highlights.length === 0 ? (
+          <p className="muted">Select text in the reader to create a highlight.</p>
+        ) : (
+          <ul className="highlightList">
+            {highlights.map((h) => (
+              <li key={h.id} className={`highlightRow ${h.id === highlightSelectedId ? "highlightRowSelected" : ""}`}>
+                <div className="highlightMain">
+                  <div className="highlightText">{h.text}</div>
+                  <details className="highlightDetails">
+                    <summary className="muted">details</summary>
+                    <div className="mono">cfi: {h.cfiRange}</div>
+                    <div className="mono">created: {h.createdAt}</div>
+                  </details>
+                </div>
+                <div className="highlightActions">
+                  <button
+                    type="button"
+                    className="button buttonDanger buttonCompact"
+                    onClick={() => {
+                      setHighlights((prev) => prev.filter((x) => x.id !== h.id));
+                      if (highlightSelectedId === h.id) setHighlightSelectedId(null);
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <EpubReaderPanel
+        blob={openedBook.blob}
+        highlights={highlights}
+        onLocationChanged={setLocation}
+        onHighlightCreated={handleHighlightCreated}
+        onHighlightClicked={handleHighlightClicked}
+        onRendererError={handleRendererError}
+      />
     </div>
   );
 }

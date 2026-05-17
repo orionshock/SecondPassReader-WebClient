@@ -521,6 +521,50 @@ a {
   background: rgba(17, 24, 39, 0.02);
 }
 
+.highlightList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.highlightRow {
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  background: #fff;
+}
+
+.highlightRowSelected {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.highlightMain {
+  min-width: 0;
+}
+
+.highlightText {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.highlightDetails summary {
+  cursor: pointer;
+}
+
+.highlightActions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .epubContainer {
   border: 1px solid var(--sp-border);
   border-radius: 12px;

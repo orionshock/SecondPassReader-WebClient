@@ -21,6 +21,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 5. **EPUB renderer implementation**
    - Initial spike: react-reader + epubjs (renderer-only; replaceable).
    - Replaceable via `ReaderBridge` without rewriting app state/model.
+   - Local-only highlight spike is for renderer capability proof only (not canonical data).
 
 6. **Session/annotation adapter**
    - Maps renderer events (selection/range, location) into:
