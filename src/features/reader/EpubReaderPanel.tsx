@@ -63,6 +63,7 @@ export function EpubReaderPanel({
     renditionRef.current = null;
     setRenditionReady(false);
     setNavStatus("idle");
+    renderedCfisRef.current = new Set();
     locationsInitStartedRef.current = false;
     locationsInitForRef.current = null;
     // eslint-disable-next-line no-console
@@ -120,6 +121,9 @@ export function EpubReaderPanel({
         );
         rendered.add(h.cfiRange);
       }
+
+      // eslint-disable-next-line no-console
+      console.log("[reader] highlight reconcile", { highlights: highlights.length, rendered: rendered.size });
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error("Highlight reconcile failed:", e);
@@ -199,6 +203,7 @@ export function EpubReaderPanel({
           const r = rendition as any;
           renditionRef.current = r;
           setRenditionReady(true);
+          renderedCfisRef.current = new Set();
 
           // eslint-disable-next-line no-console
           console.log("[reader] rendition ready", {
