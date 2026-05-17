@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { OpenedBook } from "./types";
 import { EpubReaderPanel } from "./EpubReaderPanel";
-import { inspectBlob, type EpubBlobDiagnostics } from "./epubDiagnostics";
 import type { LocalHighlight, PendingSelection } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
 import type { ReadingOpenResponse } from "../../schemas/readingSession";
@@ -14,8 +13,6 @@ export function ReaderArea({
   onClose: () => void;
 }) {
   const [location, setLocation] = useState<string | null>(null);
-  const [diag, setDiag] = useState<EpubBlobDiagnostics | null>(null);
-  const [diagError, setDiagError] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
   const [highlightSelectedId, setHighlightSelectedId] = useState<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
@@ -60,26 +57,6 @@ export function ReaderArea({
     // eslint-disable-next-line no-console
     console.error("Renderer error:", msg);
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setDiag(null);
-    setDiagError(null);
-    if (!openedBook) return;
-    void (async () => {
-      try {
-        const d = await inspectBlob(openedBook.blob, 16);
-        if (cancelled) return;
-        setDiag(d);
-      } catch (e) {
-        if (cancelled) return;
-        setDiagError(e instanceof Error ? e.message : "Failed to inspect blob.");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [openedBook?.blob]);
 
   if (!openedBook) {
     return <p className="muted">No book open. Select a book from the library.</p>;
@@ -134,6 +111,12 @@ export function ReaderArea({
                 <div className="detailRow">
                   <span className="muted">session id:</span> <span className="mono">{readingOpen.session.id}</span>
                 </div>
+                {"status" in readingOpen.session && readingOpen.session.status ? (
+                  <div className="detailRow">
+                    <span className="muted">session status:</span>{" "}
+                    <span className="mono">{String(readingOpen.session.status)}</span>
+                  </div>
+                ) : null}
                 {readingOpen.progress?.progression != null ? (
                   <div className="detailRow">
                     <span className="muted">progression:</span>{" "}
@@ -143,6 +126,26 @@ export function ReaderArea({
                 {initialCfi ? (
                   <div className="detailRow">
                     <span className="muted">current_location cfi:</span> <span className="mono">{initialCfi}</span>
+                  </div>
+                ) : null}
+                {readingOpen.progress?.current_location ? (
+                  <details className="readerDiagSubdetails">
+                    <summary className="muted">current_location</summary>
+                    <pre className="codeBlock">{JSON.stringify(readingOpen.progress.current_location, null, 2)}</pre>
+                  </details>
+                ) : null}
+                <div className="detailRow">
+                  <span className="muted">annotations page:</span>{" "}
+                  <span className="mono">
+                    count={String(readingOpen.annotations?.count ?? "—")} results={String(readingOpen.annotations?.results?.length ?? 0)}
+                  </span>
+                </div>
+                {readingOpen.annotations?.next || readingOpen.annotations?.previous ? (
+                  <div className="detailRow">
+                    <span className="muted">page links:</span>{" "}
+                    <span className="mono">
+                      next={readingOpen.annotations.next ?? "—"} prev={readingOpen.annotations.previous ?? "—"}
+                    </span>
                   </div>
                 ) : null}
                 {readingOpen.annotations?.results?.length ? (
@@ -158,46 +161,33 @@ export function ReaderArea({
                     </ul>
                   </details>
                 ) : null}
+                <details className="readerDiagSubdetails">
+                  <summary className="muted">Raw open response (JSON)</summary>
+                  <pre className="codeBlock">{JSON.stringify(readingOpen, null, 2)}</pre>
+                </details>
               </div>
             </details>
           ) : (
             <div className="muted">No reading session payload attached to this opened book.</div>
           )}
 
-          <div className="detailRow">
-            <span className="muted">object URL:</span>{" "}
-            <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
-              Open object URL in new tab
-          </a>
-        </div>
-        {diagError ? <div className="errorText">{diagError}</div> : null}
-        {diag ? (
-          <>
-            <div className="detailRow">
-              <span className="muted">blob size:</span> <span className="mono">{diag.blobSize}</span>
-            </div>
-            <div className="detailRow">
-              <span className="muted">blob type:</span> <span className="mono">{diag.blobType || "—"}</span>
-            </div>
-            <div className="detailRow">
-              <span className="muted">first bytes (ascii):</span> <span className="mono">{diag.firstBytesAscii}</span>
-            </div>
-            <div className="detailRow">
-              <span className="muted">first bytes (hex):</span> <span className="mono">{diag.firstBytesHex}</span>
-            </div>
-            <div className="detailRow">
-              <span className="muted">looks like ZIP:</span> {diag.looksLikeZip ? "yes" : "no"}
-            </div>
-            {!diag.looksLikeZip ? (
-              <div className="warningText">
-                The downloaded file does not look like an EPUB/ZIP. The server may have returned an HTML error page or
-                another response.
+          <details className="readerDiagSubdetails">
+            <summary className="muted">EPUB file (simplified)</summary>
+            <div className="readerDiagBody">
+              <div className="detailRow">
+                <span className="muted">blob size:</span> <span className="mono">{openedBook.blob.size}</span>
               </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="muted">Inspecting EPUB blob...</div>
-        )}
+              <div className="detailRow">
+                <span className="muted">blob type:</span> <span className="mono">{openedBook.blob.type || "—"}</span>
+              </div>
+              <div className="detailRow">
+                <span className="muted">object URL:</span>{" "}
+                <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
+                  Open object URL in new tab
+                </a>
+              </div>
+            </div>
+          </details>
         </div>
       </details>
 
