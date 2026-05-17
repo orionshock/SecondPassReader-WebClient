@@ -32,6 +32,9 @@ export type LocalHighlight = {
   serverSaveError?: string;
   serverDeleteStatus?: "deleting" | "error";
   serverDeleteError?: string;
+  serverUpdateStatus?: "editing" | "saving" | "saved" | "error";
+  serverUpdateError?: string;
+  serverUpdatedAt?: string;
 };
 
 export type PendingSelection = {

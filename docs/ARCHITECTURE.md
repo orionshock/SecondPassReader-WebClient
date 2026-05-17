@@ -64,5 +64,5 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## Annotation rehydration (Phase 1)
 
 - The reader converts server annotations returned by `POST /reading/books/{book_id}/open/` into local renderable highlights and feeds them into the renderer overlay layer.
-- Server delete uses `DELETE /reading/annotations/{annotation_id}/` (soft-delete). Update/edit and pagination are future work.
-
+- Server delete uses `DELETE /reading/annotations/{annotation_id}/` (soft-delete).
+- Saved note-backed annotations can be updated via `PATCH /reading/annotations/{annotation_id}/` (note text only in Phase 1; target/CFI editing not supported yet).

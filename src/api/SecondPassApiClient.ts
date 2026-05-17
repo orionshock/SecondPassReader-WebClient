@@ -9,6 +9,7 @@ import type {
   ReadingAnnotationCreatePayload,
   ReadingAnnotationPage,
   ReadingAnnotation,
+  ReadingAnnotationUpdatePayload,
   ReadingOpenResponse,
   ReadingProgress,
   ReadingProgressUpdatePayload,
@@ -378,6 +379,55 @@ export class SecondPassApiClient {
     }
     if (res.status === 404) {
       throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotations endpoint not found (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingAnnotation;
+  }
+
+  async updateReadingAnnotation(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    annotationId: string;
+    payload: ReadingAnnotationUpdatePayload;
+  }): Promise<ReadingAnnotation> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/reading/annotations/${encodeURIComponent(input.annotationId)}/`);
+
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+      body: JSON.stringify(input.payload),
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot update reading annotations (403)." });
+    }
+    if (res.status === 400) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: 400,
+        message: `Validation error (400)${text ? ` - ${text}` : ""}`,
+      });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotation not found (404)." });
     }
     if (!res.ok) {
       const text = await res.text().catch(() => "");

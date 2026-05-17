@@ -3,6 +3,7 @@ import type { LibraryBook } from "../../schemas/library";
 import type { LocalHighlight } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
 import { createServerAnnotationPayloadFromLocalHighlight } from "./readingAnnotationAdapter";
+import { useEffect, useMemo, useState } from "react";
 
 function getAnnotationStateLabel(h: LocalHighlight): { label: string; kind: "draft" | "saving" | "saved" | "error" } {
   if (h.serverSaveStatus === "saving") return { label: "Saving", kind: "saving" };
@@ -18,6 +19,7 @@ export function AnnotationPanel({
   onRemoveLocal,
   onSaveToSession,
   onDeleteFromSession,
+  onUpdateNote,
   readingOpen,
   book,
   apiReady,
@@ -28,12 +30,31 @@ export function AnnotationPanel({
   onRemoveLocal: (id: string) => void;
   onSaveToSession: (id: string) => void;
   onDeleteFromSession: (id: string) => void;
+  onUpdateNote: (id: string, note: string) => void;
   readingOpen: ReadingOpenResponse | null;
   book: LibraryBook;
   apiReady: boolean;
 }) {
   const sessionId = readingOpen?.session?.id ?? null;
   const profileVersion = readingOpen?.profile_version ?? "0.1.0";
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const editingHighlight = useMemo(
+    () => (editingId ? highlights.find((h) => h.id === editingId) ?? null : null),
+    [editingId, highlights],
+  );
+
+  useEffect(() => {
+    if (!editingId) return;
+    if (!editingHighlight) return;
+    if (editingHighlight.serverUpdateStatus === "saved") {
+      setEditingId(null);
+      setNoteDraft("");
+    }
+  }, [editingId, editingHighlight]);
 
   return (
     <section className="panel">
@@ -49,6 +70,9 @@ export function AnnotationPanel({
             const canSave = apiReady && Boolean(sessionId) && !isSaved && state.kind !== "saving";
             const isDeleting = h.serverDeleteStatus === "deleting";
             const canDelete = apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting;
+            const isEditing = editingId === h.id;
+            const isUpdating = h.serverUpdateStatus === "saving";
+            const canEdit = apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting && !isUpdating;
 
             return (
               <li key={h.id} className={`highlightRow ${h.id === selectedId ? "highlightRowSelected" : ""}`}>
@@ -56,13 +80,58 @@ export function AnnotationPanel({
                   <button
                     type="button"
                     className="highlightSelect"
-                    onClick={() => onSelect(h.id)}
-                    title="Select annotation"
+                    onClick={() => {
+                      if (selectedId === h.id) {
+                        setExpandedId((prev) => (prev === h.id ? null : h.id));
+                      } else {
+                        onSelect(h.id);
+                        setExpandedId(null);
+                      }
+                    }}
+                    title={selectedId === h.id ? "Click to expand/collapse text" : "Select annotation"}
                   >
-                    <span className="highlightText">{h.text}</span>
+                    <span className={`highlightText ${expandedId === h.id ? "highlightTextExpanded" : ""}`}>
+                      {h.text}
+                    </span>
                   </button>
 
                   {h.note ? <div className="muted">note: {h.note}</div> : null}
+
+                  {isSaved && isEditing ? (
+                    <div className="highlightEditBox">
+                      <textarea
+                        className="input"
+                        rows={3}
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        placeholder="Note..."
+                      />
+                      <div className="highlightEditActions">
+                        <button
+                          type="button"
+                          className="button buttonPrimary buttonCompact"
+                          disabled={!canEdit}
+                          onClick={() => {
+                            if (!editingId) return;
+                            onUpdateNote(editingId, noteDraft);
+                          }}
+                        >
+                          {isUpdating ? "Saving…" : "Save note"}
+                        </button>
+                        <button
+                          type="button"
+                          className="button buttonCompact"
+                          onClick={() => {
+                            setEditingId(null);
+                            setNoteDraft("");
+                          }}
+                          disabled={isUpdating}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="muted">
                     status:{" "}
@@ -81,6 +150,9 @@ export function AnnotationPanel({
                   {h.serverDeleteStatus === "error" && h.serverDeleteError ? (
                     <div className="errorText">{h.serverDeleteError}</div>
                   ) : null}
+                  {h.serverUpdateStatus === "error" && h.serverUpdateError ? (
+                    <div className="errorText">{h.serverUpdateError}</div>
+                  ) : null}
 
                   <details className="highlightDetails">
                     <summary className="muted">Details</summary>
@@ -88,6 +160,7 @@ export function AnnotationPanel({
                     <div className="mono">created: {h.createdAt}</div>
                     {h.serverAnnotationId ? <div className="mono">server id: {h.serverAnnotationId}</div> : null}
                     {h.serverSavedAt ? <div className="mono">server saved: {h.serverSavedAt}</div> : null}
+                    {h.serverUpdatedAt ? <div className="mono">server updated: {h.serverUpdatedAt}</div> : null}
                   </details>
 
                   <details className="highlightDetails">
@@ -114,6 +187,25 @@ export function AnnotationPanel({
                 </div>
 
                 <div className="highlightActions">
+                  {isSaved ? (
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => {
+                        if (editingId === h.id) {
+                          setEditingId(null);
+                          setNoteDraft("");
+                          return;
+                        }
+                        setEditingId(h.id);
+                        setNoteDraft(h.note ?? "");
+                      }}
+                      disabled={!canEdit}
+                      title={!sessionId ? "No active reading session." : undefined}
+                    >
+                      {isUpdating ? "Saving…" : isEditing ? "Cancel edit" : "Edit note"}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="button buttonPrimary buttonCompact"

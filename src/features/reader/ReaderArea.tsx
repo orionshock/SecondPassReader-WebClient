@@ -8,6 +8,7 @@ import { ReaderDiagnostics } from "./ReaderDiagnostics";
 import {
   createLocalHighlightFromServerAnnotation,
   createServerAnnotationPayloadFromLocalHighlight,
+  createServerAnnotationUpdatePayloadFromLocalHighlight,
 } from "./readingAnnotationAdapter";
 import type { LocalHighlight, PendingSelection, ReaderLocation, OpenedBook } from "./types";
 
@@ -245,6 +246,78 @@ export function ReaderArea({
     [apiBaseUrl, accessToken, highlights, selectedHighlightId, tokenType],
   );
 
+  const handleUpdateSavedAnnotationNote = useCallback(
+    async (highlightId: string, newNoteText: string) => {
+      if (!apiBaseUrl || !accessToken) return;
+      if (!sessionId) return;
+
+      const target = highlights.find((h) => h.id === highlightId);
+      if (!target?.serverAnnotationId) return;
+      if (target.serverUpdateStatus === "saving") return;
+
+      setHighlights((prev) =>
+        prev.map((h) =>
+          h.id === highlightId ? { ...h, serverUpdateStatus: "saving", serverUpdateError: undefined } : h,
+        ),
+      );
+
+      const trimmed = newNoteText.trim();
+      const nextHighlight: LocalHighlight = { ...target, note: trimmed ? trimmed : undefined };
+
+      try {
+        const payload = createServerAnnotationUpdatePayloadFromLocalHighlight({
+          localHighlight: nextHighlight,
+          sessionId,
+          profileVersion: effectiveProfileVersion,
+        });
+
+        const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+        const updated = await api.updateReadingAnnotation({
+          apiBaseUrl,
+          accessToken,
+          tokenType: tokenType ?? "Bearer",
+          annotationId: target.serverAnnotationId,
+          payload,
+        });
+
+        const updatedAt =
+          (typeof (updated as any)?.updated_at === "string" && (updated as any).updated_at) ||
+          (typeof (updated as any)?.modified === "string" && (updated as any).modified) ||
+          new Date().toISOString();
+
+        setHighlights((prev) =>
+          prev.map((h) =>
+            h.id === highlightId
+              ? {
+                  ...h,
+                  note: nextHighlight.note,
+                  serverUpdateStatus: "saved",
+                  serverUpdateError: undefined,
+                  serverUpdatedAt: updatedAt,
+                }
+              : h,
+          ),
+        );
+      } catch (e) {
+        const message =
+          e instanceof ApiError && e.status === 400
+            ? e.message
+            : e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+              ? "Could not update annotation. Your device token may be revoked or not allowed to modify reading data."
+              : e instanceof ApiError && e.status === 404
+                ? "Could not update annotation. It may have been deleted or is no longer accessible."
+                : e instanceof Error
+                  ? e.message
+                  : "Failed to update annotation.";
+
+        setHighlights((prev) =>
+          prev.map((h) => (h.id === highlightId ? { ...h, serverUpdateStatus: "error", serverUpdateError: message } : h)),
+        );
+      }
+    },
+    [apiBaseUrl, accessToken, effectiveProfileVersion, highlights, sessionId, tokenType],
+  );
+
   const createDraftHighlight = useCallback((input: { cfiRange: string; text: string; note?: string }) => {
     const now = new Date().toISOString();
     const h: LocalHighlight = {
@@ -412,6 +485,7 @@ export function ReaderArea({
         }}
         onSaveToSession={(id) => void handleSaveHighlightToSession(id)}
         onDeleteFromSession={(id) => void handleDeleteHighlightFromSession(id)}
+        onUpdateNote={(id, note) => void handleUpdateSavedAnnotationNote(id, note)}
         readingOpen={readingOpen}
         book={openedBook.book}
         apiReady={Boolean(apiBaseUrl && accessToken)}

@@ -85,3 +85,6 @@ export type ReadingAnnotationCreatePayload = {
       }
   >;
 };
+
+// For now, PATCH payload uses the same tight shape as create.
+export type ReadingAnnotationUpdatePayload = ReadingAnnotationCreatePayload;

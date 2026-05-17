@@ -1,5 +1,6 @@
 import type { ReadingAnnotationCreatePayload } from "../../schemas/readingSession";
 import type { ReadingAnnotation } from "../../schemas/readingSession";
+import type { ReadingAnnotationUpdatePayload } from "../../schemas/readingSession";
 import type { LocalHighlight } from "./types";
 
 const EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html";
@@ -43,6 +44,15 @@ export function createServerAnnotationPayloadFromLocalHighlight(input: {
     },
     body,
   };
+}
+
+export function createServerAnnotationUpdatePayloadFromLocalHighlight(input: {
+  localHighlight: LocalHighlight;
+  sessionId: string;
+  profileVersion?: string;
+}): ReadingAnnotationUpdatePayload {
+  // For Phase 1, PATCH uses the same tight shape as create (server rejects unknown fields).
+  return createServerAnnotationPayloadFromLocalHighlight(input);
 }
 
 function looksLikeColor(value: string): boolean {
