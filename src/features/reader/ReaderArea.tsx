@@ -478,7 +478,7 @@ export function ReaderArea({
               ? {
                   ...h,
                   note: nextHighlight.note,
-                  serverUpdateStatus: "saved",
+                  serverUpdateStatus: undefined,
                   serverUpdateError: undefined,
                   serverUpdatedAt: updatedAt,
                 }

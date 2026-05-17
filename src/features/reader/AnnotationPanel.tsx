@@ -3,7 +3,7 @@ import type { LibraryBook } from "../../schemas/library";
 import type { LocalHighlight } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
 import { createServerAnnotationPayloadFromLocalHighlight } from "./readingAnnotationAdapter";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 function getAnnotationStateLabel(h: LocalHighlight): { label: string; kind: "draft" | "saving" | "saved" | "error" } {
   if (h.serverSaveStatus === "saving") return { label: "Saving", kind: "saving" };
@@ -51,20 +51,25 @@ export function AnnotationPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const editingHighlight = useMemo(
-    () => (editingId ? highlights.find((h) => h.id === editingId) ?? null : null),
-    [editingId, highlights],
-  );
+  const [pendingSaveId, setPendingSaveId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!editingId) return;
-    if (!editingHighlight) return;
-    if (editingHighlight.serverUpdateStatus === "saved") {
-      setEditingId(null);
-      setNoteDraft("");
+    if (!pendingSaveId) return;
+    const h = highlights.find((x) => x.id === pendingSaveId) ?? null;
+    if (!h) {
+      setPendingSaveId(null);
+      return;
     }
-  }, [editingId, editingHighlight]);
+    if (h.serverUpdateStatus === "saving") return;
+    if (h.serverUpdateStatus === "error") {
+      setPendingSaveId(null);
+      return;
+    }
+    // Save completed successfully (ReaderArea clears serverUpdateStatus on success).
+    setPendingSaveId(null);
+    setEditingId(null);
+    setNoteDraft("");
+  }, [highlights, pendingSaveId]);
 
   return (
     <section className="panel">
@@ -146,6 +151,7 @@ export function AnnotationPanel({
                           disabled={!canEdit}
                           onClick={() => {
                             if (!editingId) return;
+                            setPendingSaveId(editingId);
                             onUpdateNote(editingId, noteDraft);
                           }}
                           aria-label="Save note"
