@@ -30,6 +30,13 @@ export function ReaderArea({
 
   const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
   const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
+  const [serverAnnotationPaging, setServerAnnotationPaging] = useState<{
+    count: number;
+    next: string | null;
+    previous: string | null;
+  } | null>(null);
+  const [loadingMoreAnnotations, setLoadingMoreAnnotations] = useState(false);
+  const [loadMoreAnnotationsError, setLoadMoreAnnotationsError] = useState<string | null>(null);
 
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -84,6 +91,101 @@ export function ReaderArea({
       return merged;
     });
   }, [readingOpen?.session?.id, readingOpen?.annotations?.results]);
+
+  useEffect(() => {
+    if (!readingOpen?.annotations) {
+      setServerAnnotationPaging(null);
+      setLoadMoreAnnotationsError(null);
+      setLoadingMoreAnnotations(false);
+      return;
+    }
+    setServerAnnotationPaging({
+      count: readingOpen.annotations.count ?? 0,
+      next: readingOpen.annotations.next ?? null,
+      previous: readingOpen.annotations.previous ?? null,
+    });
+    setLoadMoreAnnotationsError(null);
+    setLoadingMoreAnnotations(false);
+  }, [readingOpen?.session?.id, readingOpen?.annotations?.count, readingOpen?.annotations?.next, readingOpen?.annotations?.previous]);
+
+  const parseNextPage = useCallback((nextUrl: string | null): number | null => {
+    if (!nextUrl) return null;
+    try {
+      const u = new URL(nextUrl);
+      const pageRaw = u.searchParams.get("page");
+      if (!pageRaw) return null;
+      const page = Number(pageRaw);
+      return Number.isFinite(page) && page > 0 ? page : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const handleLoadMoreSavedAnnotations = useCallback(async () => {
+    if (!apiBaseUrl || !accessToken) return;
+    if (!sessionId) return;
+    if (!serverAnnotationPaging?.next) return;
+    if (loadingMoreAnnotations) return;
+
+    const nextPage = parseNextPage(serverAnnotationPaging.next) ?? null;
+    if (!nextPage) {
+      setLoadMoreAnnotationsError("Could not determine next annotations page.");
+      return;
+    }
+
+    setLoadingMoreAnnotations(true);
+    setLoadMoreAnnotationsError(null);
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+      const page = await api.listReadingAnnotations({
+        apiBaseUrl,
+        accessToken,
+        tokenType: tokenType ?? "Bearer",
+        sessionId,
+        page: nextPage,
+      });
+
+      const converted = (page.results ?? [])
+        .map((a) => createLocalHighlightFromServerAnnotation(a))
+        .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+      setHighlights((prev) => {
+        const existingServerIds = new Set(prev.map((h) => h.serverAnnotationId).filter(Boolean) as string[]);
+        const merged = [...prev];
+        for (const h of converted) {
+          if (h.serverAnnotationId && existingServerIds.has(h.serverAnnotationId)) continue;
+          merged.push(h);
+        }
+        return merged;
+      });
+
+      setServerAnnotationPaging({
+        count: page.count ?? serverAnnotationPaging.count,
+        next: page.next ?? null,
+        previous: page.previous ?? null,
+      });
+    } catch (e) {
+      const message =
+        e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+          ? "Could not load annotations. Your device token may be revoked or not allowed to access reading data."
+          : e instanceof ApiError && e.status === 404
+            ? "Could not load annotations. The endpoint was not found or is no longer accessible."
+            : e instanceof Error
+              ? e.message
+              : "Failed to load annotations.";
+      setLoadMoreAnnotationsError(message);
+    } finally {
+      setLoadingMoreAnnotations(false);
+    }
+  }, [
+    accessToken,
+    apiBaseUrl,
+    loadingMoreAnnotations,
+    parseNextPage,
+    serverAnnotationPaging,
+    sessionId,
+    tokenType,
+  ]);
 
   const authors = useMemo(
     () => (openedBook?.book.authors ?? []).map((a) => a.name).filter(Boolean).join(", "),
@@ -342,6 +444,7 @@ export function ReaderArea({
 
   const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
   const rehydratedCount = Array.isArray(readingOpen?.annotations?.results) ? readingOpen!.annotations.results.length : 0;
+  const loadedServerAnnotations = highlights.filter((h) => Boolean(h.serverAnnotationId)).length;
 
   return (
     <div className="readerArea">
@@ -486,6 +589,18 @@ export function ReaderArea({
         onSaveToSession={(id) => void handleSaveHighlightToSession(id)}
         onDeleteFromSession={(id) => void handleDeleteHighlightFromSession(id)}
         onUpdateNote={(id, note) => void handleUpdateSavedAnnotationNote(id, note)}
+        serverPageInfo={
+          serverAnnotationPaging
+            ? {
+                count: serverAnnotationPaging.count ?? 0,
+                loaded: loadedServerAnnotations,
+                next: serverAnnotationPaging.next,
+                loading: loadingMoreAnnotations,
+                error: loadMoreAnnotationsError,
+              }
+            : null
+        }
+        onLoadMoreSavedAnnotations={() => void handleLoadMoreSavedAnnotations()}
         readingOpen={readingOpen}
         book={openedBook.book}
         apiReady={Boolean(apiBaseUrl && accessToken)}

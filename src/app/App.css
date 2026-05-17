@@ -157,6 +157,18 @@
   color: var(--sp-muted);
 }
 
+.panelHeaderRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.panelHeaderRow .panelTitle {
+  margin: 0;
+}
+
 .statusList {
   display: grid;
   gap: 10px;

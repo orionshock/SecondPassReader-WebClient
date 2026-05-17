@@ -20,6 +20,8 @@ export function AnnotationPanel({
   onSaveToSession,
   onDeleteFromSession,
   onUpdateNote,
+  serverPageInfo,
+  onLoadMoreSavedAnnotations,
   readingOpen,
   book,
   apiReady,
@@ -31,6 +33,14 @@ export function AnnotationPanel({
   onSaveToSession: (id: string) => void;
   onDeleteFromSession: (id: string) => void;
   onUpdateNote: (id: string, note: string) => void;
+  serverPageInfo: {
+    count: number;
+    loaded: number;
+    next: string | null;
+    loading: boolean;
+    error: string | null;
+  } | null;
+  onLoadMoreSavedAnnotations: () => void;
   readingOpen: ReadingOpenResponse | null;
   book: LibraryBook;
   apiReady: boolean;
@@ -58,7 +68,30 @@ export function AnnotationPanel({
 
   return (
     <section className="panel">
-      <h2 className="panelTitle">Annotations</h2>
+      <div className="panelHeaderRow">
+        <h2 className="panelTitle">Annotations</h2>
+        {serverPageInfo ? (
+          <div className="muted">
+            server: {serverPageInfo.loaded} / {serverPageInfo.count}
+            {serverPageInfo.next ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="button buttonCompact"
+                  onClick={onLoadMoreSavedAnnotations}
+                  disabled={!apiReady || !sessionId || serverPageInfo.loading}
+                  title={!sessionId ? "No active reading session." : undefined}
+                >
+                  {serverPageInfo.loading ? "Loading…" : "Load more saved annotations"}
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {serverPageInfo?.error ? <div className="errorText">{serverPageInfo.error}</div> : null}
 
       {highlights.length === 0 ? (
         <p className="muted">Select text in the reader to create an annotation.</p>
