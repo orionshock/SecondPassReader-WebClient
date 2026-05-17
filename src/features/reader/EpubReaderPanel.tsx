@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactReader } from "react-reader";
-import type { LocalHighlight, PendingSelection } from "./types";
+import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
 
 // Renderer spike: keep react-reader usage isolated here.
 // TODO: Move renderer interactions behind ReaderBridge before adding annotations/sessions.
@@ -10,6 +10,7 @@ export function EpubReaderPanel({
   highlights,
   initialLocation,
   onLocationChanged,
+  onReaderLocationChange,
   onHighlightClicked,
   onTextSelected,
   onRendererError,
@@ -18,6 +19,7 @@ export function EpubReaderPanel({
   highlights: LocalHighlight[];
   initialLocation?: string | number;
   onLocationChanged?: (location: string) => void;
+  onReaderLocationChange?: (loc: ReaderLocation) => void;
   onHighlightClicked?: (highlightId: string) => void;
   onTextSelected?: (selection: PendingSelection) => void;
   onRendererError?: (message: string) => void;
@@ -33,8 +35,15 @@ export function EpubReaderPanel({
   const selectedHandlerRef = useRef<((cfiRange: string) => void) | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handlerAttachedToRef = useRef<any | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const relocatedHandlerRef = useRef<((loc: any) => void) | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const relocatedAttachedToRef = useRef<any | null>(null);
   const renderedCfisRef = useRef<Set<string>>(new Set());
   const highlightByCfiRef = useRef<Map<string, LocalHighlight>>(new Map());
+  const locationsInitForRef = useRef<ArrayBuffer | null>(null);
+  const locationsInitStartedRef = useRef(false);
+  const lastRelocatedRef = useRef<unknown>(null);
 
   const highlightIndex = useMemo(() => {
     const byCfi = new Map<string, LocalHighlight>();
@@ -54,6 +63,8 @@ export function EpubReaderPanel({
     renditionRef.current = null;
     setRenditionReady(false);
     setNavStatus("idle");
+    locationsInitStartedRef.current = false;
+    locationsInitForRef.current = null;
     // eslint-disable-next-line no-console
     console.log("[reader] EpubReaderPanel: loading new blob");
 
@@ -197,17 +208,137 @@ export function EpubReaderPanel({
           });
 
           try {
-            r.on?.("relocated", (loc: unknown) => {
-              // eslint-disable-next-line no-console
-              console.log("[reader] relocated", loc);
-            });
+            // Attach a single relocated handler per rendition instance.
+            if (relocatedAttachedToRef.current !== r) {
+              if (relocatedAttachedToRef.current && relocatedHandlerRef.current && relocatedAttachedToRef.current.off) {
+                try {
+                  relocatedAttachedToRef.current.off("relocated", relocatedHandlerRef.current);
+                } catch {
+                  // ignore
+                }
+              }
+
+              const relocatedHandler = (loc: any) => {
+                try {
+                  lastRelocatedRef.current = loc;
+                  const start = loc?.start ?? loc?.location?.start ?? null;
+                  const displayed = start?.displayed ?? null;
+
+                  // Best-effort progression:
+                  // - Prefer epub.js relocated `start.percentage` when present
+                  // - If stuck at 0/undefined, try percentageFromCfi(cfi) (requires locations to be generated)
+                  let progression: number | undefined =
+                    typeof start?.percentage === "number" && Number.isFinite(start.percentage) ? start.percentage : undefined;
+
+                  const cfi = typeof start?.cfi === "string" ? start.cfi : undefined;
+
+                  if ((progression === undefined || progression === 0) && cfi) {
+                    try {
+                      const pctFn = r?.book?.locations?.percentageFromCfi;
+                      if (typeof pctFn === "function") {
+                        const computed = pctFn.call(r.book.locations, cfi);
+                        if (typeof computed === "number" && Number.isFinite(computed)) progression = computed;
+                      }
+                    } catch {
+                      // ignore
+                    }
+                  }
+
+                  const readerLoc: ReaderLocation = {
+                    cfi,
+                    href: typeof start?.href === "string" ? start.href : undefined,
+                    progression,
+                    displayedPage: typeof displayed?.page === "number" ? displayed.page : undefined,
+                    displayedTotal: typeof displayed?.total === "number" ? displayed.total : undefined,
+                    raw: loc,
+                  };
+                  onReaderLocationChange?.(readerLoc);
+                } catch (e) {
+                  // eslint-disable-next-line no-console
+                  console.error("[reader] relocated handler failed:", e);
+                }
+              };
+
+              relocatedHandlerRef.current = relocatedHandler;
+              relocatedAttachedToRef.current = r;
+              r.on?.("relocated", relocatedHandler);
+            }
+
+            // Optional render debug; harmless.
             r.on?.("rendered", (section: unknown) => {
               // eslint-disable-next-line no-console
               console.log("[reader] rendered", section);
             });
           } catch (e) {
             // eslint-disable-next-line no-console
-            console.log("[reader] could not attach rendition debug events", e);
+            console.log("[reader] could not attach rendition events", e);
+          }
+
+          // Kick off locations generation once per opened book (enables percentageFromCfi / progression).
+          try {
+            if (!locationsInitStartedRef.current && bookData && locationsInitForRef.current !== bookData) {
+              locationsInitStartedRef.current = true;
+              locationsInitForRef.current = bookData;
+              const gen = r?.book?.locations?.generate;
+              if (typeof gen === "function") {
+                // eslint-disable-next-line no-console
+                console.log("[reader] generating locations for progression...");
+                void Promise.resolve(gen.call(r.book.locations, 1600))
+                  .then(() => {
+                    // eslint-disable-next-line no-console
+                    console.log("[reader] locations generated");
+
+                    // After locations are generated, re-emit the current location so progression updates immediately
+                    // (otherwise it won't change until the next navigation triggers relocated).
+                    try {
+                      const currentLocObj =
+                        (typeof r?.currentLocation === "function" ? r.currentLocation() : null) ??
+                        (r?.location ? r.location : null) ??
+                        lastRelocatedRef.current;
+
+                      const start =
+                        // currentLocation() returns { start, end } in many epub.js versions
+                        // but we also tolerate nested shapes seen in some wrappers.
+                        (currentLocObj as any)?.start ?? (currentLocObj as any)?.location?.start ?? null;
+                      const cfi = typeof start?.cfi === "string" ? start.cfi : typeof location === "string" ? location : undefined;
+                      const href = typeof start?.href === "string" ? start.href : undefined;
+                      const displayed = start?.displayed ?? null;
+
+                      let progression: number | undefined = undefined;
+                      try {
+                        const pctFn = r?.book?.locations?.percentageFromCfi;
+                        if (cfi && typeof pctFn === "function") {
+                          const computed = pctFn.call(r.book.locations, cfi);
+                          if (typeof computed === "number" && Number.isFinite(computed)) progression = computed;
+                        }
+                      } catch {
+                        // ignore
+                      }
+
+                      if (cfi || href || progression !== undefined) {
+                        onReaderLocationChange?.({
+                          cfi,
+                          href,
+                          progression,
+                          displayedPage: typeof displayed?.page === "number" ? displayed.page : undefined,
+                          displayedTotal: typeof displayed?.total === "number" ? displayed.total : undefined,
+                          raw: currentLocObj,
+                        });
+                      }
+                    } catch (e) {
+                      // eslint-disable-next-line no-console
+                      console.warn("[reader] post-generate location emit failed:", e);
+                    }
+                  })
+                  .catch((err: unknown) => {
+                    // eslint-disable-next-line no-console
+                    console.warn("[reader] locations generation failed:", err);
+                  });
+              }
+            }
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn("[reader] locations init error:", e);
           }
 
           try {

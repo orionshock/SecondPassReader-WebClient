@@ -1,26 +1,42 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { OpenedBook } from "./types";
 import { EpubReaderPanel } from "./EpubReaderPanel";
-import type { LocalHighlight, PendingSelection } from "./types";
+import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
+import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
-import type { ReadingOpenResponse } from "../../schemas/readingSession";
+import type { ReadingOpenResponse, ReadingProgress, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
 
 export function ReaderArea({
   openedBook,
   onClose,
+  apiBaseUrl,
+  accessToken,
+  tokenType,
 }: {
   openedBook: OpenedBook | null;
   onClose: () => void;
+  apiBaseUrl?: string;
+  accessToken?: string;
+  tokenType?: string;
 }) {
   const [location, setLocation] = useState<string | null>(null);
+  const [readerLocation, setReaderLocation] = useState<ReaderLocation | null>(null);
   const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
   const [highlightSelectedId, setHighlightSelectedId] = useState<string | null>(null);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
+  const [saveState, setSaveState] = useState<
+    | { phase: "idle" }
+    | { phase: "saving" }
+    | { phase: "success"; savedAt: string; progress: ReadingProgress }
+    | { phase: "error"; message: string }
+  >({ phase: "idle" });
 
   useEffect(() => {
     setLocation(null);
+    setReaderLocation(null);
+    setSaveState({ phase: "idle" });
   }, [openedBook?.objectUrl]);
 
   useEffect(() => {
@@ -46,7 +62,7 @@ export function ReaderArea({
   const selectionPreview = useMemo(() => {
     if (!pendingSelection) return "";
     const t = pendingSelection.text.trim();
-    return t.length > 80 ? `${t.slice(0, 80)}…` : t;
+    return t.length > 80 ? `${t.slice(0, 80)}...` : t;
   }, [pendingSelection]);
 
   const handleHighlightClicked = useCallback((id: string) => {
@@ -69,6 +85,65 @@ export function ReaderArea({
   const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
   const initialCfi =
     readingOpen?.progress?.current_location?.cfi ?? readingOpen?.progress?.current_location?.selector?.value ?? null;
+
+  const currentLocationCfi = readerLocation?.cfi ?? location;
+  const currentHref = readerLocation?.href;
+  const currentProgression = readerLocation?.progression;
+  const sessionId = readingOpen?.session?.id ?? null;
+  const effectiveProfileVersion = readingOpen?.profile_version ?? "0.1.0";
+
+  const progressPayload: ReadingProgressUpdatePayload | null = useMemo(() => {
+    if (!currentLocationCfi) return null;
+    const payload: ReadingProgressUpdatePayload = {
+      profile_version: effectiveProfileVersion,
+      current_location: {
+        format: "epub",
+        cfi: currentLocationCfi,
+      },
+    };
+    if (currentHref) {
+      payload.current_location = { ...(payload.current_location ?? { format: "epub" }), href: currentHref };
+    }
+    if (currentProgression != null) payload.progression = currentProgression;
+    return payload;
+  }, [currentLocationCfi, currentHref, currentProgression, effectiveProfileVersion]);
+
+  const canSaveProgress = Boolean(
+    apiBaseUrl && accessToken && sessionId && progressPayload && saveState.phase !== "saving",
+  );
+
+  async function handleSaveProgress() {
+    if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
+
+    setSaveState({ phase: "saving" });
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+      const progress = await api.updateReadingProgress({
+        apiBaseUrl,
+        accessToken,
+        tokenType: tokenType ?? "Bearer",
+        sessionId,
+        payload: progressPayload,
+        method: "PATCH",
+      });
+      setSaveState({ phase: "success", savedAt: new Date().toISOString(), progress });
+    } catch (e) {
+      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
+        setSaveState({
+          phase: "error",
+          message:
+            "Could not save progress. Your device token may be revoked or not allowed to access reading data.",
+        });
+      } else if (e instanceof ApiError && e.status === 404) {
+        setSaveState({
+          phase: "error",
+          message: "Could not save progress. The reading session was not found or is no longer accessible.",
+        });
+      } else {
+        setSaveState({ phase: "error", message: e instanceof Error ? e.message : "Failed to save progress." });
+      }
+    }
+  }
 
   return (
     <div className="readerArea">
@@ -97,6 +172,72 @@ export function ReaderArea({
           </button>
         </div>
       </div>
+
+      <section className="panel progressPanel">
+        <h2 className="panelTitle">Progress</h2>
+        <div className="detailRow">
+          <span className="muted">Current CFI:</span>{" "}
+          {currentLocationCfi ? (
+            <span className="mono">{currentLocationCfi}</span>
+          ) : (
+            <span className="muted">No current location yet</span>
+          )}
+        </div>
+        <div className="detailRow">
+          <span className="muted">Href:</span>{" "}
+          {currentHref ? <span className="mono">{currentHref}</span> : <span className="muted">not available</span>}
+        </div>
+        <div className="detailRow">
+          <span className="muted">Progression:</span>{" "}
+          {currentProgression != null ? (
+            <span className="mono">{Math.round(currentProgression * 1000) / 10}%</span>
+          ) : (
+            <span className="muted">not available</span>
+          )}
+        </div>
+        {readerLocation?.displayedPage != null && readerLocation?.displayedTotal != null ? (
+          <div className="detailRow">
+            <span className="muted">Displayed:</span>{" "}
+            <span className="mono">
+              {readerLocation.displayedPage}/{readerLocation.displayedTotal}
+            </span>
+          </div>
+        ) : null}
+
+        <div className="formActions" style={{ marginTop: 8 }}>
+          <button
+            type="button"
+            className="button buttonPrimary"
+            onClick={() => void handleSaveProgress()}
+            disabled={!canSaveProgress}
+          >
+            {saveState.phase === "saving" ? "Saving..." : "Save progress"}
+          </button>
+        </div>
+
+        {saveState.phase === "success" ? (
+          <div className="muted" style={{ marginTop: 8 }}>
+            <span className="pill pillOk">Progress saved</span> <span className="mono">{saveState.savedAt}</span>
+          </div>
+        ) : null}
+        {saveState.phase === "error" ? (
+          <p className="errorText" style={{ marginTop: 8 }}>
+            {saveState.message}
+          </p>
+        ) : null}
+
+        <details style={{ marginTop: 10 }}>
+          <summary className="muted">Progress payload preview</summary>
+          <pre className="codeBlock">{JSON.stringify(progressPayload ?? { note: "No current location yet." }, null, 2)}</pre>
+        </details>
+
+        {saveState.phase === "success" ? (
+          <details style={{ marginTop: 10 }}>
+            <summary className="muted">Saved progress response</summary>
+            <pre className="codeBlock">{JSON.stringify(saveState.progress, null, 2)}</pre>
+          </details>
+        ) : null}
+      </section>
 
       <details className="readerDiagBox">
         <summary className="muted">Diagnostics</summary>
@@ -335,6 +476,7 @@ export function ReaderArea({
         highlights={highlights}
         initialLocation={initialCfi ?? undefined}
         onLocationChanged={setLocation}
+        onReaderLocationChange={setReaderLocation}
         onHighlightClicked={handleHighlightClicked}
         onTextSelected={(sel) => {
           if (pendingSelection?.cfiRange === sel.cfiRange) return;

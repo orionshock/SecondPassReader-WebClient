@@ -1,6 +1,15 @@
 import type { LibraryBook } from "../../schemas/library";
 import type { ReadingOpenResponse } from "../../schemas/readingSession";
 
+export type ReaderLocation = {
+  cfi?: string;
+  href?: string;
+  progression?: number;
+  displayedPage?: number;
+  displayedTotal?: number;
+  raw?: unknown;
+};
+
 export type OpenedBook = {
   book: LibraryBook;
   blob: Blob;

@@ -146,7 +146,13 @@ export default function App() {
               openedBook ? (
                 <section className="panel readerScreen">
                   <h2 className="panelTitle">Reader</h2>
-                  <ReaderArea openedBook={openedBook} onClose={handleCloseReader} />
+                  <ReaderArea
+                    openedBook={openedBook}
+                    onClose={handleCloseReader}
+                    apiBaseUrl={selectedProfile?.apiBaseUrl}
+                    accessToken={selectedProfile?.accessToken}
+                    tokenType={selectedProfile?.tokenType}
+                  />
                 </section>
               ) : (
                 <div className="libraryScreen">
