@@ -27,6 +27,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
    - Maps renderer events (selection/range, location) into:
      - reading session updates (server-owned)
      - W3C Web Annotation JSON-LD (canonical annotation form)
+   - See local read-only spec reference at `docs/specs/reading-session-annotation-profile`.
 
 7. **Local storage**
    - Stores connection profile(s) and user preferences (non-sensitive).

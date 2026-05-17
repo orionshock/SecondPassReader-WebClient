@@ -1,4 +1,4 @@
-# Agent instructions (SecondPassReadingClient)
+# Agent instructions (SecondPassReaderClient)
 
 This repo is a **standalone browser app**. Keep it statically deployable and independent of the Django server implementation.
 
@@ -31,4 +31,12 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - Prefer simple, boring, understandable code.
 - Keep layers explicit; avoid “magic” abstractions.
 - If a change would introduce a large new dependency or framework, ask first and explain why.
+
+## Spec junction (read-only reference)
+
+- `docs/specs/reading-session-annotation-profile` is a **Windows junction** / reference copy of a **server-owned** spec.
+- Do **not** edit files inside that folder from this client repo.
+- If the spec needs changes, stop and ask; changes must be made in the server/spec owner project first.
+- Client implementation may reference the spec, but runtime TypeScript types belong in `src/schemas/`.
+- Do not import runtime app code from `docs/` (docs are reference material only).
 

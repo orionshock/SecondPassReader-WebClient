@@ -23,3 +23,15 @@
 - Promoting or “editing” a historical annotation should create a **new** annotation derived from the old one (do not mutate history).
 - Keep provenance links/metadata as needed (server-defined).
 
+## Local spec reference (read-only)
+
+- Path: `docs/specs/reading-session-annotation-profile`
+- This folder is a **Windows junction** / reference copy of a **server-owned** spec.
+- Use it as reference material for:
+  - W3C Web Annotation JSON-LD conventions
+  - EPUB CFI selector usage
+  - reading sessions and layered sessions
+  - export/import expectations
+- Do **not** import runtime code from `docs/`.
+  - Runtime types should live in `src/schemas/`.
+  - Conversion/helpers should live in app code (e.g. `src/features/reader/` or a future annotation adapter module).
