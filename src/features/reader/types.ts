@@ -18,7 +18,7 @@ export type OpenedBook = {
   readingOpen?: ReadingOpenResponse;
 };
 
-// Local-only spike type (NOT canonical; will be replaced by W3C Web Annotation JSON-LD from server).
+// Local client annotation type (NOT canonical; server canonical form is W3C Web Annotation JSON-LD).
 export type LocalHighlight = {
   id: string;
   cfiRange: string;

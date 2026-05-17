@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { OpenedBook } from "./types";
-import { EpubReaderPanel } from "./EpubReaderPanel";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
-import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
-import type { ReadingOpenResponse, ReadingProgress, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
+import type { ReadingOpenResponse, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
+import { AnnotationPanel } from "./AnnotationPanel";
+import { EpubReaderPanel } from "./EpubReaderPanel";
+import { ProgressPanel, type ProgressSaveState } from "./ProgressPanel";
+import { ReaderDiagnostics } from "./ReaderDiagnostics";
 import {
   createLocalHighlightFromServerAnnotation,
   createServerAnnotationPayloadFromLocalHighlight,
 } from "./readingAnnotationAdapter";
+import type { LocalHighlight, PendingSelection, ReaderLocation, OpenedBook } from "./types";
 
 export function ReaderArea({
   openedBook,
@@ -23,92 +24,45 @@ export function ReaderArea({
   accessToken?: string;
   tokenType?: string;
 }) {
-  const [location, setLocation] = useState<string | null>(null);
+  const [locationString, setLocationString] = useState<string | null>(null);
   const [readerLocation, setReaderLocation] = useState<ReaderLocation | null>(null);
+
   const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
-  const [highlightSelectedId, setHighlightSelectedId] = useState<string | null>(null);
+  const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
+
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
-  const [saveState, setSaveState] = useState<
-    | { phase: "idle" }
-    | { phase: "saving" }
-    | { phase: "success"; savedAt: string; progress: ReadingProgress }
-    | { phase: "error"; message: string }
-  >({ phase: "idle" });
+
+  const [saveState, setSaveState] = useState<ProgressSaveState>({ phase: "idle" });
+
   const prevSessionKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    setLocation(null);
+    setLocationString(null);
     setReaderLocation(null);
     setSaveState({ phase: "idle" });
   }, [openedBook?.objectUrl]);
 
+  const readingOpen: ReadingOpenResponse | null = openedBook?.readingOpen ?? null;
+  const sessionId = readingOpen?.session?.id ?? null;
+  const effectiveProfileVersion = readingOpen?.profile_version ?? "0.1.0";
+
   useEffect(() => {
-    // Reset local-only UI state when switching sessions/books.
-    // Do NOT wipe highlights just because of re-renders or reopen of the same session.
-    const sid = openedBook?.readingOpen?.session?.id ?? null;
-    const bookId = openedBook?.book?.id ?? null;
+    if (!openedBook) return;
+    const sid = openedBook.readingOpen?.session?.id ?? null;
+    const bookId = openedBook.book?.id ?? null;
     const sessionKey = sid ? `${String(bookId)}:${sid}` : null;
 
     if (sessionKey && prevSessionKeyRef.current === sessionKey) return;
     prevSessionKeyRef.current = sessionKey;
 
     setHighlights([]);
-    setHighlightSelectedId(null);
+    setSelectedHighlightId(null);
     setPendingSelection(null);
     setNoteOpen(false);
     setNoteDraft("");
   }, [openedBook?.readingOpen?.session?.id, openedBook?.book?.id]);
-
-  function createLocalHighlight(input: { cfiRange: string; text: string; note?: string }) {
-    return {
-      id: `lh_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`,
-      cfiRange: input.cfiRange,
-      text: input.text,
-      note: input.note,
-      color: "yellow",
-      createdAt: new Date().toISOString(),
-      serverSaveStatus: "unsaved",
-    } satisfies LocalHighlight;
-  }
-
-  const selectionPreview = useMemo(() => {
-    if (!pendingSelection) return "";
-    const t = pendingSelection.text.trim();
-    return t.length > 80 ? `${t.slice(0, 80)}...` : t;
-  }, [pendingSelection]);
-
-  const handleHighlightClicked = useCallback((id: string) => {
-    setHighlightSelectedId(id);
-  }, []);
-
-  const handleRendererError = useCallback((msg: string) => {
-    // eslint-disable-next-line no-console
-    console.error("Renderer error:", msg);
-  }, []);
-
-  if (!openedBook) {
-    return <p className="muted">No book open. Select a book from the library.</p>;
-  }
-
-  const authors = (openedBook.book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
-  const w3cPreviewCount = highlights.length;
-
-  const readingOpen: ReadingOpenResponse | null = openedBook.readingOpen ?? null;
-  const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
-  const rehydratedCount = useMemo(() => {
-    const results = readingOpen?.annotations?.results;
-    return Array.isArray(results) ? results.length : 0;
-  }, [readingOpen?.annotations?.results]);
-  const initialCfi =
-    readingOpen?.progress?.current_location?.cfi ?? readingOpen?.progress?.current_location?.selector?.value ?? null;
-
-  const currentLocationCfi = readerLocation?.cfi ?? location;
-  const currentHref = readerLocation?.href;
-  const currentProgression = readerLocation?.progression;
-  const sessionId = readingOpen?.session?.id ?? null;
-  const effectiveProfileVersion = readingOpen?.profile_version ?? "0.1.0";
 
   useEffect(() => {
     const results = readingOpen?.annotations?.results;
@@ -117,7 +71,6 @@ export function ReaderArea({
     const converted = results
       .map((a) => createLocalHighlightFromServerAnnotation(a))
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
-
     if (converted.length === 0) return;
 
     setHighlights((prev) => {
@@ -131,116 +84,36 @@ export function ReaderArea({
     });
   }, [readingOpen?.session?.id, readingOpen?.annotations?.results]);
 
+  const authors = useMemo(
+    () => (openedBook?.book.authors ?? []).map((a) => a.name).filter(Boolean).join(", "),
+    [openedBook?.book.authors],
+  );
+
+  const initialCfi =
+    readingOpen?.progress?.current_location?.cfi ?? readingOpen?.progress?.current_location?.selector?.value ?? null;
+
+  const currentCfi = readerLocation?.cfi ?? locationString;
+  const currentHref = readerLocation?.href;
+  const currentProgression = readerLocation?.progression ?? null;
+
   const progressPayload: ReadingProgressUpdatePayload | null = useMemo(() => {
-    if (!currentLocationCfi) return null;
+    if (!currentCfi) return null;
     const payload: ReadingProgressUpdatePayload = {
       profile_version: effectiveProfileVersion,
       current_location: {
         format: "epub",
-        cfi: currentLocationCfi,
+        cfi: currentCfi,
       },
     };
-    if (currentHref) {
-      payload.current_location = { ...(payload.current_location ?? { format: "epub" }), href: currentHref };
-    }
+    if (currentHref) payload.current_location = { ...(payload.current_location ?? { format: "epub" }), href: currentHref };
     if (currentProgression != null) payload.progression = currentProgression;
     return payload;
-  }, [currentLocationCfi, currentHref, currentProgression, effectiveProfileVersion]);
+  }, [currentCfi, currentHref, currentProgression, effectiveProfileVersion]);
 
-  const canSaveProgress = Boolean(
-    apiBaseUrl && accessToken && sessionId && progressPayload && saveState.phase !== "saving",
-  );
+  const canSaveProgress = Boolean(apiBaseUrl && accessToken && sessionId && progressPayload && saveState.phase !== "saving");
 
-  async function handleSaveHighlightToSession(highlightId: string) {
-    if (!apiBaseUrl || !accessToken) return;
-    const sid = sessionId;
-    if (!sid) return;
-
-    const target = highlights.find((h) => h.id === highlightId);
-    if (!target) return;
-    if (target.serverSaveStatus === "saving" || target.serverSaveStatus === "saved") return;
-
-    setHighlights((prev) =>
-      prev.map((h) => (h.id === highlightId ? { ...h, serverSaveStatus: "saving", serverSaveError: undefined } : h)),
-    );
-
-    try {
-      const payload = createServerAnnotationPayloadFromLocalHighlight({
-        localHighlight: target,
-        sessionId: sid,
-        profileVersion: effectiveProfileVersion,
-      });
-
-      const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
-      const created = await api.createReadingAnnotation({
-        apiBaseUrl,
-        accessToken,
-        tokenType: tokenType ?? "Bearer",
-        payload,
-      });
-
-      const createdId = (created as { id?: unknown })?.id;
-      const now = new Date().toISOString();
-
-      setHighlights((prev) =>
-        prev.map((h) =>
-          h.id === highlightId
-            ? {
-                ...h,
-                serverAnnotationId: typeof createdId === "string" ? createdId : h.serverAnnotationId,
-                serverSavedAt: now,
-                serverSaveStatus: "saved",
-                serverSaveError: undefined,
-              }
-            : h,
-        ),
-      );
-    } catch (e) {
-      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
-        setHighlights((prev) =>
-          prev.map((h) =>
-            h.id === highlightId
-              ? {
-                  ...h,
-                  serverSaveStatus: "error",
-                  serverSaveError:
-                    "Could not save annotation. Your device token may be revoked or not allowed to access reading data.",
-                }
-              : h,
-          ),
-        );
-      } else if (e instanceof ApiError && e.status === 404) {
-        setHighlights((prev) =>
-          prev.map((h) =>
-            h.id === highlightId
-              ? {
-                  ...h,
-                  serverSaveStatus: "error",
-                  serverSaveError:
-                    "Could not save annotation. The reading session was not found or is no longer accessible.",
-                }
-              : h,
-          ),
-        );
-      } else {
-        setHighlights((prev) =>
-          prev.map((h) =>
-            h.id === highlightId
-              ? {
-                  ...h,
-                  serverSaveStatus: "error",
-                  serverSaveError: e instanceof Error ? e.message : "Failed to save annotation.",
-                }
-              : h,
-          ),
-        );
-      }
-    }
-  }
-
-  async function handleSaveProgress() {
+  const handleSaveProgress = useCallback(async () => {
     if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
-
     setSaveState({ phase: "saving" });
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
@@ -257,8 +130,7 @@ export function ReaderArea({
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setSaveState({
           phase: "error",
-          message:
-            "Could not save progress. Your device token may be revoked or not allowed to access reading data.",
+          message: "Could not save progress. Your device token may be revoked or not allowed to access reading data.",
         });
       } else if (e instanceof ApiError && e.status === 404) {
         setSaveState({
@@ -269,7 +141,92 @@ export function ReaderArea({
         setSaveState({ phase: "error", message: e instanceof Error ? e.message : "Failed to save progress." });
       }
     }
-  }
+  }, [apiBaseUrl, accessToken, sessionId, progressPayload, tokenType]);
+
+  const handleSaveHighlightToSession = useCallback(
+    async (highlightId: string) => {
+      if (!apiBaseUrl || !accessToken) return;
+      if (!sessionId) return;
+
+      const target = highlights.find((h) => h.id === highlightId);
+      if (!target) return;
+      if (target.serverSaveStatus === "saving" || target.serverSaveStatus === "saved" || target.serverAnnotationId) return;
+
+      setHighlights((prev) =>
+        prev.map((h) => (h.id === highlightId ? { ...h, serverSaveStatus: "saving", serverSaveError: undefined } : h)),
+      );
+
+      try {
+        const payload = createServerAnnotationPayloadFromLocalHighlight({
+          localHighlight: target,
+          sessionId,
+          profileVersion: effectiveProfileVersion,
+        });
+
+        const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+        const created = await api.createReadingAnnotation({
+          apiBaseUrl,
+          accessToken,
+          tokenType: tokenType ?? "Bearer",
+          payload,
+        });
+
+        const now = new Date().toISOString();
+        setHighlights((prev) =>
+          prev.map((h) =>
+            h.id === highlightId
+              ? {
+                  ...h,
+                  serverAnnotationId: created.id,
+                  serverSavedAt: now,
+                  serverSaveStatus: "saved",
+                  serverSaveError: undefined,
+                }
+              : h,
+          ),
+        );
+      } catch (e) {
+        const message =
+          e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+            ? "Could not save annotation. Your device token may be revoked or not allowed to access reading data."
+            : e instanceof ApiError && e.status === 404
+              ? "Could not save annotation. The reading session was not found or is no longer accessible."
+              : e instanceof Error
+                ? e.message
+                : "Failed to save annotation.";
+
+        setHighlights((prev) =>
+          prev.map((h) => (h.id === highlightId ? { ...h, serverSaveStatus: "error", serverSaveError: message } : h)),
+        );
+      }
+    },
+    [apiBaseUrl, accessToken, effectiveProfileVersion, highlights, sessionId, tokenType],
+  );
+
+  const createDraftHighlight = useCallback((input: { cfiRange: string; text: string; note?: string }) => {
+    const now = new Date().toISOString();
+    const h: LocalHighlight = {
+      id: `lh_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`,
+      cfiRange: input.cfiRange,
+      text: input.text,
+      note: input.note,
+      color: "yellow",
+      createdAt: now,
+      serverSaveStatus: "unsaved",
+    };
+    return h;
+  }, []);
+
+  const selectionPreview = useMemo(() => {
+    if (!pendingSelection) return "";
+    const t = pendingSelection.text.trim();
+    return t.length > 80 ? `${t.slice(0, 80)}...` : t;
+  }, [pendingSelection]);
+
+  if (!openedBook) return <p className="muted">No book open. Select a book from the library.</p>;
+
+  const serverAnnotationCount = readingOpen?.annotations?.count ?? null;
+  const rehydratedCount = Array.isArray(readingOpen?.annotations?.results) ? readingOpen!.annotations.results.length : 0;
 
   return (
     <div className="readerArea">
@@ -277,14 +234,12 @@ export function ReaderArea({
         <div>
           <div className="readerTitle">{openedBook.book.title}</div>
           {authors ? <div className="muted">{authors}</div> : null}
-          {location ? (
+          {locationString ? (
             <div className="muted">
-              location: <span className="mono">{location}</span>
+              location: <span className="mono">{locationString}</span>
             </div>
           ) : null}
-          <div className="muted">
-            local highlights: {highlights.length} · W3C previews: {w3cPreviewCount}
-          </div>
+          <div className="muted">annotations: {highlights.length}</div>
           {readingOpen ? (
             <div className="muted">
               session: <span className="mono">{readingOpen.session.id}</span>
@@ -300,164 +255,22 @@ export function ReaderArea({
         </div>
       </div>
 
-      <section className="panel progressPanel">
-        <h2 className="panelTitle">Progress</h2>
-        <div className="detailRow">
-          <span className="muted">Current CFI:</span>{" "}
-          {currentLocationCfi ? (
-            <span className="mono">{currentLocationCfi}</span>
-          ) : (
-            <span className="muted">No current location yet</span>
-          )}
-        </div>
-        <div className="detailRow">
-          <span className="muted">Href:</span>{" "}
-          {currentHref ? <span className="mono">{currentHref}</span> : <span className="muted">not available</span>}
-        </div>
-        <div className="detailRow">
-          <span className="muted">Progression:</span>{" "}
-          {currentProgression != null ? (
-            <span className="mono">{Math.round(currentProgression * 1000) / 10}%</span>
-          ) : (
-            <span className="muted">not available</span>
-          )}
-        </div>
-        {readerLocation?.displayedPage != null && readerLocation?.displayedTotal != null ? (
-          <div className="detailRow">
-            <span className="muted">Displayed:</span>{" "}
-            <span className="mono">
-              {readerLocation.displayedPage}/{readerLocation.displayedTotal}
-            </span>
-          </div>
-        ) : null}
+      <ProgressPanel
+        currentCfi={currentCfi}
+        currentHref={currentHref}
+        progression={currentProgression}
+        displayed={
+          readerLocation?.displayedPage != null && readerLocation?.displayedTotal != null
+            ? { page: readerLocation.displayedPage, total: readerLocation.displayedTotal }
+            : null
+        }
+        canSave={canSaveProgress}
+        saveState={saveState}
+        progressPayload={progressPayload}
+        onSave={handleSaveProgress}
+      />
 
-        <div className="formActions" style={{ marginTop: 8 }}>
-          <button
-            type="button"
-            className="button buttonPrimary"
-            onClick={() => void handleSaveProgress()}
-            disabled={!canSaveProgress}
-          >
-            {saveState.phase === "saving" ? "Saving..." : "Save progress"}
-          </button>
-        </div>
-
-        {saveState.phase === "success" ? (
-          <div className="muted" style={{ marginTop: 8 }}>
-            <span className="pill pillOk">Progress saved</span> <span className="mono">{saveState.savedAt}</span>
-          </div>
-        ) : null}
-        {saveState.phase === "error" ? (
-          <p className="errorText" style={{ marginTop: 8 }}>
-            {saveState.message}
-          </p>
-        ) : null}
-
-        <details style={{ marginTop: 10 }}>
-          <summary className="muted">Progress payload preview</summary>
-          <pre className="codeBlock">{JSON.stringify(progressPayload ?? { note: "No current location yet." }, null, 2)}</pre>
-        </details>
-
-        {saveState.phase === "success" ? (
-          <details style={{ marginTop: 10 }}>
-            <summary className="muted">Saved progress response</summary>
-            <pre className="codeBlock">{JSON.stringify(saveState.progress, null, 2)}</pre>
-          </details>
-        ) : null}
-      </section>
-
-      <details className="readerDiagBox">
-        <summary className="muted">Diagnostics</summary>
-        <div className="readerDiagBody">
-          {readingOpen ? (
-            <details className="readerDiagSubdetails">
-              <summary className="muted">Reading session payload</summary>
-              <div className="readerDiagBody">
-                <div className="detailRow">
-                  <span className="muted">profile_version:</span> <span className="mono">{readingOpen.profile_version}</span>
-                </div>
-                <div className="detailRow">
-                  <span className="muted">session id:</span> <span className="mono">{readingOpen.session.id}</span>
-                </div>
-                {"status" in readingOpen.session && readingOpen.session.status ? (
-                  <div className="detailRow">
-                    <span className="muted">session status:</span>{" "}
-                    <span className="mono">{String(readingOpen.session.status)}</span>
-                  </div>
-                ) : null}
-                {readingOpen.progress?.progression != null ? (
-                  <div className="detailRow">
-                    <span className="muted">progression:</span>{" "}
-                    <span className="mono">{String(readingOpen.progress.progression)}</span>
-                  </div>
-                ) : null}
-                {initialCfi ? (
-                  <div className="detailRow">
-                    <span className="muted">current_location cfi:</span> <span className="mono">{initialCfi}</span>
-                  </div>
-                ) : null}
-                {readingOpen.progress?.current_location ? (
-                  <details className="readerDiagSubdetails">
-                    <summary className="muted">current_location</summary>
-                    <pre className="codeBlock">{JSON.stringify(readingOpen.progress.current_location, null, 2)}</pre>
-                  </details>
-                ) : null}
-                <div className="detailRow">
-                  <span className="muted">annotations page:</span>{" "}
-                  <span className="mono">
-                    count={String(readingOpen.annotations?.count ?? "—")} results={String(readingOpen.annotations?.results?.length ?? 0)}
-                  </span>
-                </div>
-                {readingOpen.annotations?.next || readingOpen.annotations?.previous ? (
-                  <div className="detailRow">
-                    <span className="muted">page links:</span>{" "}
-                    <span className="mono">
-                      next={readingOpen.annotations.next ?? "—"} prev={readingOpen.annotations.previous ?? "—"}
-                    </span>
-                  </div>
-                ) : null}
-                {readingOpen.annotations?.results?.length ? (
-                  <details className="readerDiagSubdetails">
-                    <summary className="muted">Returned annotations (first page)</summary>
-                    <ul className="muted" style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                      {readingOpen.annotations.results.slice(0, 25).map((a) => (
-                        <li key={String(a.id)}>
-                          <span className="mono">{String(a.id)}</span>
-                          {a.motivation ? <span> · {String(a.motivation)}</span> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
-                <details className="readerDiagSubdetails">
-                  <summary className="muted">Raw open response (JSON)</summary>
-                  <pre className="codeBlock">{JSON.stringify(readingOpen, null, 2)}</pre>
-                </details>
-              </div>
-            </details>
-          ) : (
-            <div className="muted">No reading session payload attached to this opened book.</div>
-          )}
-
-          <details className="readerDiagSubdetails">
-            <summary className="muted">EPUB file (simplified)</summary>
-            <div className="readerDiagBody">
-              <div className="detailRow">
-                <span className="muted">blob size:</span> <span className="mono">{openedBook.blob.size}</span>
-              </div>
-              <div className="detailRow">
-                <span className="muted">blob type:</span> <span className="mono">{openedBook.blob.type || "—"}</span>
-              </div>
-              <div className="detailRow">
-                <span className="muted">object URL:</span>{" "}
-                <a href={openedBook.objectUrl} target="_blank" rel="noreferrer">
-                  Open object URL in new tab
-                </a>
-              </div>
-            </div>
-          </details>
-        </div>
-      </details>
+      <ReaderDiagnostics openedBook={openedBook} readingOpen={readingOpen} initialCfi={initialCfi} />
 
       {pendingSelection ? (
         <div className="annotationFloat">
@@ -474,20 +287,14 @@ export function ReaderArea({
                     setPendingSelection(null);
                     return;
                   }
-                  const h = createLocalHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text });
+                  const h = createDraftHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text });
                   setHighlights((prev) => [h, ...prev]);
                   setPendingSelection(null);
                 }}
               >
                 Highlight
               </button>
-              <button
-                type="button"
-                className="button buttonCompact"
-                onClick={() => {
-                  setNoteOpen(true);
-                }}
-              >
+              <button type="button" className="button buttonCompact" onClick={() => setNoteOpen(true)}>
                 Add note
               </button>
               <button
@@ -509,7 +316,7 @@ export function ReaderArea({
                 rows={3}
                 value={noteDraft}
                 onChange={(e) => setNoteDraft(e.target.value)}
-                placeholder="Note…"
+                placeholder="Note..."
               />
               <div className="annotationFloatActions">
                 <button
@@ -523,7 +330,7 @@ export function ReaderArea({
                       return;
                     }
                     const note = noteDraft.trim();
-                    const h = createLocalHighlight({
+                    const h = createDraftHighlight({
                       cfiRange: pendingSelection.cfiRange,
                       text: pendingSelection.text,
                       note: note || undefined,
@@ -553,112 +360,33 @@ export function ReaderArea({
         </div>
       ) : null}
 
-      <div className="panel">
-        <h2 className="panelTitle">Local highlights (spike)</h2>
-        {highlights.length === 0 ? (
-          <p className="muted">Select text in the reader to create a highlight.</p>
-        ) : (
-          <ul className="highlightList">
-            {highlights.map((h) => (
-              <li key={h.id} className={`highlightRow ${h.id === highlightSelectedId ? "highlightRowSelected" : ""}`}>
-                <div className="highlightMain">
-                  <div className="highlightText">{h.text}</div>
-                  {h.note ? <div className="muted">note: {h.note}</div> : null}
-                  <div className="muted">
-                    server:{" "}
-                    {h.serverSaveStatus === "saved" ? (
-                      <span className="pill pillOk">saved</span>
-                    ) : h.serverSaveStatus === "saving" ? (
-                      <span className="pill pillIdle">saving</span>
-                    ) : h.serverSaveStatus === "error" ? (
-                      <span className="pill pillWarn">error</span>
-                    ) : (
-                      <span className="pill pillIdle">unsaved</span>
-                    )}
-                    {h.serverAnnotationId ? <span className="mono"> · id={h.serverAnnotationId}</span> : null}
-                    {h.serverSavedAt ? <span className="mono"> · at={h.serverSavedAt}</span> : null}
-                  </div>
-                  {h.serverSaveStatus === "error" && h.serverSaveError ? (
-                    <div className="errorText">{h.serverSaveError}</div>
-                  ) : null}
-                  <details className="highlightDetails">
-                    <summary className="muted">details</summary>
-                    <div className="mono">cfi: {h.cfiRange}</div>
-                    <div className="mono">created: {h.createdAt}</div>
-                  </details>
-                  <details className="highlightDetails">
-                    <summary className="muted">Server annotation payload preview</summary>
-                    <pre className="codeBlock">
-                      {JSON.stringify(
-                        createServerAnnotationPayloadFromLocalHighlight({
-                          localHighlight: h,
-                          sessionId: sessionId ?? "missing-session",
-                          profileVersion: effectiveProfileVersion,
-                        }),
-                        null,
-                        2,
-                      )}
-                    </pre>
-                  </details>
-                  <details className="highlightDetails">
-                    <summary className="muted">W3C annotation preview</summary>
-                    <pre className="codeBlock">
-                      {JSON.stringify(
-                        createW3CAnnotationFromLocalHighlight({ localHighlight: h, book: openedBook.book }),
-                        null,
-                        2,
-                      )}
-                    </pre>
-                  </details>
-                </div>
-                <div className="highlightActions">
-                  <button
-                    type="button"
-                    className="button buttonPrimary buttonCompact"
-                    onClick={() => void handleSaveHighlightToSession(h.id)}
-                    disabled={
-                      !apiBaseUrl ||
-                      !accessToken ||
-                      !sessionId ||
-                      Boolean(h.serverAnnotationId) ||
-                      h.serverSaveStatus === "saving" ||
-                      h.serverSaveStatus === "saved"
-                    }
-                    title={!sessionId ? "No active reading session." : undefined}
-                  >
-                    Save to session
-                  </button>
-                  <button
-                    type="button"
-                    className="button buttonDanger buttonCompact"
-                    onClick={() => {
-                      setHighlights((prev) => prev.filter((x) => x.id !== h.id));
-                      if (highlightSelectedId === h.id) setHighlightSelectedId(null);
-                    }}
-                  >
-                    Remove locally
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <AnnotationPanel
+        highlights={highlights}
+        selectedId={selectedHighlightId}
+        onSelect={setSelectedHighlightId}
+        onRemoveLocal={(id) => {
+          setHighlights((prev) => prev.filter((x) => x.id !== id));
+          if (selectedHighlightId === id) setSelectedHighlightId(null);
+        }}
+        onSaveToSession={(id) => void handleSaveHighlightToSession(id)}
+        readingOpen={readingOpen}
+        book={openedBook.book}
+        apiReady={Boolean(apiBaseUrl && accessToken)}
+      />
 
       <EpubReaderPanel
         blob={openedBook.blob}
         highlights={highlights}
         initialLocation={initialCfi ?? undefined}
-        onLocationChanged={setLocation}
+        onLocationChanged={setLocationString}
         onReaderLocationChange={setReaderLocation}
-        onHighlightClicked={handleHighlightClicked}
+        onHighlightClicked={setSelectedHighlightId}
         onTextSelected={(sel) => {
           if (pendingSelection?.cfiRange === sel.cfiRange) return;
           setPendingSelection(sel);
           setNoteOpen(false);
           setNoteDraft("");
         }}
-        onRendererError={handleRendererError}
       />
     </div>
   );

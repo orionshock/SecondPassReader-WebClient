@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactReader } from "react-reader";
 import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
 
-// Renderer spike: keep react-reader usage isolated here.
-// TODO: Move renderer interactions behind ReaderBridge before adding annotations/sessions.
+// Renderer implementation: keep react-reader/epubjs usage isolated here.
+// TODO: Move renderer interactions behind ReaderBridge before adding more reader features.
 
 export function EpubReaderPanel({
   blob,
@@ -27,8 +27,6 @@ export function EpubReaderPanel({
   const [location, setLocation] = useState<string | number | null>(null);
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [renditionReady, setRenditionReady] = useState(false);
-  const [navStatus, setNavStatus] = useState<string>("idle");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renditionRef = useRef<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,13 +59,11 @@ export function EpubReaderPanel({
     setLoadError(null);
     setLocation(null);
     renditionRef.current = null;
-    setRenditionReady(false);
-    setNavStatus("idle");
     renderedCfisRef.current = new Set();
     locationsInitStartedRef.current = false;
     locationsInitForRef.current = null;
     // eslint-disable-next-line no-console
-    console.log("[reader] EpubReaderPanel: loading new blob");
+    console.log("[reader] loading new EPUB blob");
 
     void (async () => {
       try {
@@ -156,7 +152,7 @@ export function EpubReaderPanel({
   }
 
   if (!bookData) {
-    return <div className="muted" style={{ padding: 12 }}>Preparing EPUB…</div>;
+    return <div className="muted" style={{ padding: 12 }}>Preparing EPUB...</div>;
   }
 
   return (
@@ -178,20 +174,13 @@ export function EpubReaderPanel({
 
           try {
             if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
-              // eslint-disable-next-line no-console
-              console.log("[reader] next() via key");
-              setNavStatus("next() via key");
               void r.next();
             } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
-              // eslint-disable-next-line no-console
-              console.log("[reader] prev() via key");
-              setNavStatus("prev() via key");
               void r.prev();
             }
           } catch (e) {
             // eslint-disable-next-line no-console
             console.error("[reader] key navigation failed:", e);
-            setNavStatus(`key nav error: ${e instanceof Error ? e.message : String(e)}`);
             onRendererError?.(e instanceof Error ? e.message : "Key navigation failed.");
           }
         }}
@@ -202,7 +191,6 @@ export function EpubReaderPanel({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const r = rendition as any;
           renditionRef.current = r;
-          setRenditionReady(true);
           renderedCfisRef.current = new Set();
 
           // eslint-disable-next-line no-console
@@ -353,7 +341,7 @@ export function EpubReaderPanel({
               },
             });
           } catch {
-            // ignore theme issues in spike
+            // ignore theme issues
           }
 
           try {
@@ -425,73 +413,13 @@ export function EpubReaderPanel({
             console.error("Initial highlight render failed:", e);
           }
         }}
-        loadingView={<div className="muted" style={{ padding: 12 }}>Loading EPUB…</div>}
+        loadingView={<div className="muted" style={{ padding: 12 }}>Loading EPUB...</div>}
         errorView={
           <div className="errorText" style={{ padding: 12 }}>
             Error loading book. See diagnostics above.
           </div>
         }
       />
-      {renditionReady ? (
-        <div style={{ padding: 8, borderTop: "1px solid rgba(17, 24, 39, 0.12)" }}>
-          <span className="muted">Navigation debug:</span>{" "}
-          <button
-            type="button"
-            className="button buttonCompact"
-            onClick={() => {
-              const r = renditionRef.current;
-              // eslint-disable-next-line no-console
-              console.log("[reader] prev() clicked", { hasRendition: Boolean(r), hasManager: Boolean(r?.manager) });
-              setNavStatus("prev() clicked");
-              try {
-                const p = r?.prev?.();
-                // eslint-disable-next-line no-console
-                console.log("[reader] prev() return", p);
-                void Promise.resolve(p).catch((e) => {
-                  // eslint-disable-next-line no-console
-                  console.error("[reader] prev() promise rejected", e);
-                  setNavStatus(`prev() rejected: ${e instanceof Error ? e.message : String(e)}`);
-                });
-              } catch (e) {
-                // eslint-disable-next-line no-console
-                console.error("[reader] prev() failed", e);
-                setNavStatus(`prev() error: ${e instanceof Error ? e.message : String(e)}`);
-              }
-            }}
-          >
-            Prev
-          </button>{" "}
-          <button
-            type="button"
-            className="button buttonCompact"
-            onClick={() => {
-              const r = renditionRef.current;
-              // eslint-disable-next-line no-console
-              console.log("[reader] next() clicked", { hasRendition: Boolean(r), hasManager: Boolean(r?.manager) });
-              setNavStatus("next() clicked");
-              try {
-                const p = r?.next?.();
-                // eslint-disable-next-line no-console
-                console.log("[reader] next() return", p);
-                void Promise.resolve(p).catch((e) => {
-                  // eslint-disable-next-line no-console
-                  console.error("[reader] next() promise rejected", e);
-                  setNavStatus(`next() rejected: ${e instanceof Error ? e.message : String(e)}`);
-                });
-              } catch (e) {
-                // eslint-disable-next-line no-console
-                console.error("[reader] next() failed", e);
-                setNavStatus(`next() error: ${e instanceof Error ? e.message : String(e)}`);
-              }
-            }}
-          >
-            Next
-          </button>
-          <div className="muted" style={{ marginTop: 6 }}>
-            nav status: <span className="mono">{navStatus}</span>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
