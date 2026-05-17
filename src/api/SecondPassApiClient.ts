@@ -8,6 +8,7 @@ import type { BookFileDownloadResult, LibraryBook, PaginatedResponse } from "../
 import type {
   ReadingAnnotationCreatePayload,
   ReadingAnnotationPage,
+  ReadingAnnotation,
   ReadingOpenResponse,
   ReadingProgress,
   ReadingProgressUpdatePayload,
@@ -347,7 +348,7 @@ export class SecondPassApiClient {
     accessToken: string;
     tokenType?: string;
     payload: ReadingAnnotationCreatePayload;
-  }): Promise<unknown> {
+  }): Promise<ReadingAnnotation> {
     const tokenType = input.tokenType ?? "Bearer";
     const url = resolveUrl(input.apiBaseUrl, "/reading/annotations/");
 
@@ -367,6 +368,14 @@ export class SecondPassApiClient {
     if (res.status === 403) {
       throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot create reading annotations (403)." });
     }
+    if (res.status === 400) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: 400,
+        message: `Validation error (400)${text ? ` - ${text}` : ""}`,
+      });
+    }
     if (res.status === 404) {
       throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotations endpoint not found (404)." });
     }
@@ -379,7 +388,7 @@ export class SecondPassApiClient {
       });
     }
 
-    return (await res.json().catch(() => ({}))) as unknown;
+    return (await res.json()) as ReadingAnnotation;
   }
 
   async deleteReadingAnnotation(input: {

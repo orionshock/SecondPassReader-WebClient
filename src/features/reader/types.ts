@@ -26,6 +26,10 @@ export type LocalHighlight = {
   note?: string;
   color?: string;
   createdAt: string;
+  serverAnnotationId?: string;
+  serverSavedAt?: string;
+  serverSaveStatus?: "unsaved" | "saving" | "saved" | "error";
+  serverSaveError?: string;
 };
 
 export type PendingSelection = {

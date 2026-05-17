@@ -5,6 +5,7 @@ import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
 import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
 import type { ReadingOpenResponse, ReadingProgress, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
+import { createServerAnnotationPayloadFromLocalHighlight } from "./readingAnnotationAdapter";
 
 export function ReaderArea({
   openedBook,
@@ -56,6 +57,7 @@ export function ReaderArea({
       note: input.note,
       color: "yellow",
       createdAt: new Date().toISOString(),
+      serverSaveStatus: "unsaved",
     } satisfies LocalHighlight;
   }
 
@@ -111,6 +113,93 @@ export function ReaderArea({
   const canSaveProgress = Boolean(
     apiBaseUrl && accessToken && sessionId && progressPayload && saveState.phase !== "saving",
   );
+
+  async function handleSaveHighlightToSession(highlightId: string) {
+    if (!apiBaseUrl || !accessToken) return;
+    const sid = sessionId;
+    if (!sid) return;
+
+    const target = highlights.find((h) => h.id === highlightId);
+    if (!target) return;
+    if (target.serverSaveStatus === "saving" || target.serverSaveStatus === "saved") return;
+
+    setHighlights((prev) =>
+      prev.map((h) => (h.id === highlightId ? { ...h, serverSaveStatus: "saving", serverSaveError: undefined } : h)),
+    );
+
+    try {
+      const payload = createServerAnnotationPayloadFromLocalHighlight({
+        localHighlight: target,
+        sessionId: sid,
+        profileVersion: effectiveProfileVersion,
+      });
+
+      const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+      const created = await api.createReadingAnnotation({
+        apiBaseUrl,
+        accessToken,
+        tokenType: tokenType ?? "Bearer",
+        payload,
+      });
+
+      const createdId = (created as { id?: unknown })?.id;
+      const now = new Date().toISOString();
+
+      setHighlights((prev) =>
+        prev.map((h) =>
+          h.id === highlightId
+            ? {
+                ...h,
+                serverAnnotationId: typeof createdId === "string" ? createdId : h.serverAnnotationId,
+                serverSavedAt: now,
+                serverSaveStatus: "saved",
+                serverSaveError: undefined,
+              }
+            : h,
+        ),
+      );
+    } catch (e) {
+      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
+        setHighlights((prev) =>
+          prev.map((h) =>
+            h.id === highlightId
+              ? {
+                  ...h,
+                  serverSaveStatus: "error",
+                  serverSaveError:
+                    "Could not save annotation. Your device token may be revoked or not allowed to access reading data.",
+                }
+              : h,
+          ),
+        );
+      } else if (e instanceof ApiError && e.status === 404) {
+        setHighlights((prev) =>
+          prev.map((h) =>
+            h.id === highlightId
+              ? {
+                  ...h,
+                  serverSaveStatus: "error",
+                  serverSaveError:
+                    "Could not save annotation. The reading session was not found or is no longer accessible.",
+                }
+              : h,
+          ),
+        );
+      } else {
+        setHighlights((prev) =>
+          prev.map((h) =>
+            h.id === highlightId
+              ? {
+                  ...h,
+                  serverSaveStatus: "error",
+                  serverSaveError: e instanceof Error ? e.message : "Failed to save annotation.",
+                }
+              : h,
+          ),
+        );
+      }
+    }
+  }
 
   async function handleSaveProgress() {
     if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
@@ -437,10 +526,41 @@ export function ReaderArea({
                 <div className="highlightMain">
                   <div className="highlightText">{h.text}</div>
                   {h.note ? <div className="muted">note: {h.note}</div> : null}
+                  <div className="muted">
+                    server:{" "}
+                    {h.serverSaveStatus === "saved" ? (
+                      <span className="pill pillOk">saved</span>
+                    ) : h.serverSaveStatus === "saving" ? (
+                      <span className="pill pillIdle">saving</span>
+                    ) : h.serverSaveStatus === "error" ? (
+                      <span className="pill pillWarn">error</span>
+                    ) : (
+                      <span className="pill pillIdle">unsaved</span>
+                    )}
+                    {h.serverAnnotationId ? <span className="mono"> · id={h.serverAnnotationId}</span> : null}
+                    {h.serverSavedAt ? <span className="mono"> · at={h.serverSavedAt}</span> : null}
+                  </div>
+                  {h.serverSaveStatus === "error" && h.serverSaveError ? (
+                    <div className="errorText">{h.serverSaveError}</div>
+                  ) : null}
                   <details className="highlightDetails">
                     <summary className="muted">details</summary>
                     <div className="mono">cfi: {h.cfiRange}</div>
                     <div className="mono">created: {h.createdAt}</div>
+                  </details>
+                  <details className="highlightDetails">
+                    <summary className="muted">Server annotation payload preview</summary>
+                    <pre className="codeBlock">
+                      {JSON.stringify(
+                        createServerAnnotationPayloadFromLocalHighlight({
+                          localHighlight: h,
+                          sessionId: sessionId ?? "missing-session",
+                          profileVersion: effectiveProfileVersion,
+                        }),
+                        null,
+                        2,
+                      )}
+                    </pre>
                   </details>
                   <details className="highlightDetails">
                     <summary className="muted">W3C annotation preview</summary>
@@ -454,6 +574,21 @@ export function ReaderArea({
                   </details>
                 </div>
                 <div className="highlightActions">
+                  <button
+                    type="button"
+                    className="button buttonPrimary buttonCompact"
+                    onClick={() => void handleSaveHighlightToSession(h.id)}
+                    disabled={
+                      !apiBaseUrl ||
+                      !accessToken ||
+                      !sessionId ||
+                      h.serverSaveStatus === "saving" ||
+                      h.serverSaveStatus === "saved"
+                    }
+                    title={!sessionId ? "No active reading session." : undefined}
+                  >
+                    Save to session
+                  </button>
                   <button
                     type="button"
                     className="button buttonDanger buttonCompact"

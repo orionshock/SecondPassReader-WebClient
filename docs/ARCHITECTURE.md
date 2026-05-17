@@ -56,3 +56,8 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - The Open Reader flow bootstraps server reading state by calling `POST /reading/books/{book_id}/open/` (session + progress + first page of annotations) before downloading/rendering the EPUB.
 - Progress saving is manual in this phase (Save Progress button). Autosave and server annotation persistence are intentionally not wired yet.
 - Progress capture uses epub.js `rendition` `relocated` events when available (CFI + href + percentage progression), with CFI-only fallback.
+
+## Annotation adapters
+
+- `src/features/reader/w3cAnnotationAdapter.ts`: local W3C Web Annotation JSON-LD preview/export shape (not persisted yet).
+- `src/features/reader/readingAnnotationAdapter.ts`: tight Reading API `POST /reading/annotations/` create payload adapter (manual save only in this phase).
