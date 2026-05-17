@@ -53,7 +53,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## Reader launch
 
 - The Open Reader flow bootstraps server reading state by calling `POST /reading/books/{book_id}/open/` (session + progress + first page of annotations) before downloading/rendering the EPUB.
-- Progress saving is manual in this phase (Save Progress button). Autosave is future work.
+- Progress saving supports manual save (Save Progress) plus a debounced autosave (default on). The server upserts progress, and the client debounces writes to avoid chatty PATCH calls.
 - Progress capture uses epub.js `rendition` `relocated` events when available (CFI + href + percentage progression), with CFI-only fallback.
 
 ## Annotation adapters

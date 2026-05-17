@@ -6,6 +6,14 @@ export type ProgressSaveState =
   | { phase: "success"; savedAt: string; progress: ReadingProgress }
   | { phase: "error"; message: string };
 
+export type ProgressAutosaveState = {
+  enabled: boolean;
+  status: "idle" | "dirty" | "waiting" | "saving" | "saved" | "error";
+  lastAutosavedAt?: string;
+  lastAutosavedCfi?: string;
+  error?: string;
+};
+
 export function ProgressPanel({
   currentCfi,
   currentHref,
@@ -13,6 +21,8 @@ export function ProgressPanel({
   displayed,
   canSave,
   saveState,
+  autosave,
+  onToggleAutosave,
   progressPayload,
   onSave,
 }: {
@@ -22,6 +32,8 @@ export function ProgressPanel({
   displayed?: { page: number; total: number } | null;
   canSave: boolean;
   saveState: ProgressSaveState;
+  autosave: ProgressAutosaveState;
+  onToggleAutosave: (enabled: boolean) => void;
   progressPayload: ReadingProgressUpdatePayload | null;
   onSave: () => void;
 }) {
@@ -52,6 +64,38 @@ export function ProgressPanel({
           </span>
         </div>
       ) : null}
+
+      <div className="detailRow">
+        <span className="muted">Autosave:</span>{" "}
+        <label className="muted" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={autosave.enabled}
+            onChange={(e) => onToggleAutosave(e.target.checked)}
+          />
+          Autosave progress
+        </label>
+      </div>
+
+      <div className="detailRow">
+        <span className="muted">Status:</span>{" "}
+        {autosave.status === "saving" ? (
+          <span className="pill pillIdle">Autosaving</span>
+        ) : autosave.status === "waiting" ? (
+          <span className="pill pillIdle">Waiting to autosave</span>
+        ) : autosave.status === "dirty" ? (
+          <span className="pill pillIdle">Unsaved changes</span>
+        ) : autosave.status === "saved" ? (
+          <span className="pill pillOk">Autosaved</span>
+        ) : autosave.status === "error" ? (
+          <span className="pill pillWarn">Autosave error</span>
+        ) : (
+          <span className="muted">idle</span>
+        )}
+        {autosave.lastAutosavedAt ? <span className="mono"> · {autosave.lastAutosavedAt}</span> : null}
+      </div>
+
+      {autosave.status === "error" && autosave.error ? <div className="errorText">{autosave.error}</div> : null}
 
       <div className="formActions" style={{ marginTop: 8 }}>
         <button type="button" className="button buttonPrimary" onClick={onSave} disabled={!canSave}>
@@ -84,4 +128,3 @@ export function ProgressPanel({
     </section>
   );
 }
-

@@ -3,7 +3,7 @@ import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { ReadingOpenResponse, ReadingProgressUpdatePayload } from "../../schemas/readingSession";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { EpubReaderPanel } from "./EpubReaderPanel";
-import { ProgressPanel, type ProgressSaveState } from "./ProgressPanel";
+import { ProgressPanel, type ProgressAutosaveState, type ProgressSaveState } from "./ProgressPanel";
 import { ReaderDiagnostics } from "./ReaderDiagnostics";
 import {
   createLocalHighlightFromServerAnnotation,
@@ -25,6 +25,8 @@ export function ReaderArea({
   accessToken?: string;
   tokenType?: string;
 }) {
+  const PROGRESS_AUTOSAVE_DELAY_MS = 5000;
+
   const [locationString, setLocationString] = useState<string | null>(null);
   const [readerLocation, setReaderLocation] = useState<ReaderLocation | null>(null);
 
@@ -43,6 +45,11 @@ export function ReaderArea({
   const [noteDraft, setNoteDraft] = useState("");
 
   const [saveState, setSaveState] = useState<ProgressSaveState>({ phase: "idle" });
+  const [autosave, setAutosave] = useState<ProgressAutosaveState>({
+    enabled: true,
+    status: "idle",
+  });
+  const autosaveTimerRef = useRef<number | null>(null);
 
   const prevSessionKeyRef = useRef<string | null>(null);
 
@@ -50,6 +57,7 @@ export function ReaderArea({
     setLocationString(null);
     setReaderLocation(null);
     setSaveState({ phase: "idle" });
+    setAutosave((prev) => ({ ...prev, status: "idle", error: undefined }));
   }, [openedBook?.objectUrl]);
 
   const readingOpen: ReadingOpenResponse | null = openedBook?.readingOpen ?? null;
@@ -215,36 +223,109 @@ export function ReaderArea({
 
   const canSaveProgress = Boolean(apiBaseUrl && accessToken && sessionId && progressPayload && saveState.phase !== "saving");
 
-  const handleSaveProgress = useCallback(async () => {
-    if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
-    setSaveState({ phase: "saving" });
-    try {
-      const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
-      const progress = await api.updateReadingProgress({
-        apiBaseUrl,
-        accessToken,
-        tokenType: tokenType ?? "Bearer",
-        sessionId,
-        payload: progressPayload,
-        method: "PATCH",
-      });
-      setSaveState({ phase: "success", savedAt: new Date().toISOString(), progress });
-    } catch (e) {
-      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
-        setSaveState({
-          phase: "error",
-          message: "Could not save progress. Your device token may be revoked or not allowed to access reading data.",
+  const saveProgress = useCallback(
+    async (mode: "manual" | "autosave") => {
+      if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
+
+      if (mode === "manual") setSaveState({ phase: "saving" });
+      if (mode === "autosave") setAutosave((prev) => ({ ...prev, status: "saving", error: undefined }));
+
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
+        const progress = await api.updateReadingProgress({
+          apiBaseUrl,
+          accessToken,
+          tokenType: tokenType ?? "Bearer",
+          sessionId,
+          payload: progressPayload,
+          method: "PATCH",
         });
-      } else if (e instanceof ApiError && e.status === 404) {
-        setSaveState({
-          phase: "error",
-          message: "Could not save progress. The reading session was not found or is no longer accessible.",
-        });
-      } else {
-        setSaveState({ phase: "error", message: e instanceof Error ? e.message : "Failed to save progress." });
+
+        const savedAt = new Date().toISOString();
+        setSaveState({ phase: "success", savedAt, progress });
+        setAutosave((prev) => ({
+          ...prev,
+          status: mode === "autosave" ? "saved" : prev.status === "saving" ? "saved" : prev.status,
+          lastAutosavedAt: savedAt,
+          lastAutosavedCfi: currentCfi ?? prev.lastAutosavedCfi,
+          error: undefined,
+        }));
+      } catch (e) {
+        const message =
+          e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+            ? "Could not save progress. Your device token may be revoked or not allowed to access reading data."
+            : e instanceof ApiError && e.status === 404
+              ? "Could not save progress. The reading session was not found or is no longer accessible."
+              : e instanceof Error
+                ? e.message
+                : "Failed to save progress.";
+
+        if (mode === "manual") setSaveState({ phase: "error", message });
+        if (mode === "autosave") setAutosave((prev) => ({ ...prev, status: "error", error: message }));
       }
+    },
+    [accessToken, apiBaseUrl, currentCfi, progressPayload, sessionId, tokenType],
+  );
+
+  const handleSaveProgress = useCallback(() => void saveProgress("manual"), [saveProgress]);
+
+  useEffect(() => {
+    // Initialize autosave baseline for this opened session so we don't immediately re-save the same CFI.
+    if (!openedBook) return;
+    setAutosave((prev) => ({
+      ...prev,
+      lastAutosavedCfi: initialCfi ?? prev.lastAutosavedCfi,
+      status: "idle",
+      error: undefined,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openedBook?.readingOpen?.session?.id]);
+
+  useEffect(() => {
+    if (saveState.phase !== "saving") return;
+    if (!autosaveTimerRef.current) return;
+    window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = null;
+  }, [saveState.phase]);
+
+  useEffect(() => {
+    if (!autosave.enabled) {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+      return;
     }
-  }, [apiBaseUrl, accessToken, sessionId, progressPayload, tokenType]);
+    if (!currentCfi) return;
+    if (!apiBaseUrl || !accessToken || !sessionId || !progressPayload) return;
+    if (saveState.phase === "saving" || autosave.status === "saving") {
+      setAutosave((prev) => ({ ...prev, status: "dirty" }));
+      return;
+    }
+
+    if (autosave.lastAutosavedCfi && autosave.lastAutosavedCfi === currentCfi) return;
+
+    setAutosave((prev) => ({ ...prev, status: "waiting", error: undefined }));
+
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => {
+      void saveProgress("autosave");
+    }, PROGRESS_AUTOSAVE_DELAY_MS);
+
+    return () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    };
+  }, [
+    PROGRESS_AUTOSAVE_DELAY_MS,
+    accessToken,
+    apiBaseUrl,
+    autosave.enabled,
+    autosave.lastAutosavedCfi,
+    autosave.status,
+    currentCfi,
+    progressPayload,
+    saveProgress,
+    saveState.phase,
+    sessionId,
+  ]);
 
   const handleSaveHighlightToSession = useCallback(
     async (highlightId: string) => {
@@ -484,6 +565,10 @@ export function ReaderArea({
         }
         canSave={canSaveProgress}
         saveState={saveState}
+        autosave={autosave}
+        onToggleAutosave={(enabled) => {
+          setAutosave((prev) => ({ ...prev, enabled, status: enabled ? prev.status : "idle", error: undefined }));
+        }}
         progressPayload={progressPayload}
         onSave={handleSaveProgress}
       />
