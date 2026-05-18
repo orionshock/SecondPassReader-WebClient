@@ -72,7 +72,7 @@ export function AnnotationPanel({
   }, [highlights, pendingSaveId]);
 
   return (
-    <section className="panel">
+    <section className="panel readerAnnotationsPanel">
       <div className="panelHeaderRow">
         <h2 className="panelTitle">Annotations</h2>
         {serverPageInfo ? (

@@ -652,6 +652,10 @@ a {
 .readerArea {
   display: grid;
   gap: 10px;
+  margin: 0 auto;
+  width: min(1500px, calc(100vw - 48px));
+  padding: 10px 10px 12px;
+  border-radius: 16px;
 }
 
 .readerSettingsPanel {
@@ -684,12 +688,12 @@ a {
 }
 
 .readerThemeLight {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   color: inherit;
 }
 
 .readerThemeSepia {
-  background: rgba(244, 236, 216, 0.25);
+  background: rgba(244, 236, 216, 0.38);
 }
 
 .readerThemeDark {
@@ -705,22 +709,41 @@ a {
   background: #111111;
 }
 
-.readerWidthNarrow .epubContainer {
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+.readerThemeDark .button {
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-.readerWidthNormal .epubContainer {
-  width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
+.readerThemeDark .input,
+.readerThemeDark textarea,
+.readerThemeDark select {
+  background: rgba(17, 24, 39, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
 }
 
-.readerWidthWide .epubContainer {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+.readerThemeDark .panel {
+  background: rgba(17, 24, 39, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.readerThemeSepia .epubContainer {
+  background: rgba(244, 236, 216, 0.35);
+}
+
+.readerThemeSepia .panel {
+  background: rgba(244, 236, 216, 0.22);
+}
+
+.readerWidthNarrow {
+  width: min(980px, calc(100vw - 48px));
+}
+
+.readerWidthNormal {
+  width: min(1250px, calc(100vw - 48px));
+}
+
+.readerWidthWide {
+  width: min(1500px, calc(100vw - 48px));
 }
 
 .readerTopBar {
@@ -729,6 +752,7 @@ a {
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
+  padding: 2px 2px 0;
 }
 
 .readerTopLeft {
@@ -752,7 +776,7 @@ a {
 
 .readerTopRight {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
 }
 
@@ -844,8 +868,38 @@ a {
 
 .highlightActions {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+}
+
+.readerAnnotationsPanel {
+  padding: 12px;
+}
+
+.readerAnnotationsPanel .panelHeaderRow {
+  margin-bottom: 8px;
+}
+
+.readerAnnotationsPanel .highlightRow {
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.readerThemeSepia .readerAnnotationsPanel .highlightRow {
+  background: rgba(244, 236, 216, 0.35);
+}
+
+.readerThemeDark .readerAnnotationsPanel .highlightRow {
+  background: rgba(17, 24, 39, 0.55);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.readerAnnotationsPanel .highlightText {
+  font-size: 12.5px;
+}
+
+.readerAnnotationsPanel .highlightDetails summary {
+  font-size: 12px;
 }
 
 .annotationFloat {
@@ -905,6 +959,7 @@ a {
   height: 70vh;
   min-height: 420px;
   overflow: hidden;
+  width: 100%;
 }
 
 .srOnly {
