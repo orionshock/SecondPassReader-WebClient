@@ -177,65 +177,72 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
         <>
           <RecentReadingSection profile={profile} onOpenReader={handleOpenReader} />
 
-          <div className="libraryToolbar">
-            <label className="toolbarField toolbarSearch">
-              <span className="srOnly">Search</span>
-              <input
-                className="input inputCompact"
-                value={q}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setQ(next);
-                  onQueryChange?.(next);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
+          <div className="librarySearchSection">
+            <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
+              <div className="panelTitle" style={{ margin: 0 }}>
+                Search the Library
+              </div>
+            </div>
+            <div className="libraryToolbar">
+              <label className="toolbarField toolbarSearch">
+                <span className="srOnly">Search</span>
+                <input
+                  className="input inputCompact"
+                  value={q}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setQ(next);
+                    onQueryChange?.(next);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    onQueryCommit?.(q);
+                    void loadBooks(1);
+                  }}
+                  placeholder="Search..."
+                />
+              </label>
+
+              <label className="toolbarField">
+                <span className="srOnly">Ordering</span>
+                <select
+                  className="input inputCompact"
+                  value={ordering}
+                  onChange={(e) => setOrdering(e.target.value as Ordering)}
+                >
+                  <option value="-updated_at">Recently updated</option>
+                  <option value="title">Title</option>
+                  <option value="-created_at">Created</option>
+                  <option value="-published_date">Published</option>
+                </select>
+              </label>
+
+              <label className="toolbarField">
+                <span className="srOnly">Page size</span>
+                <select
+                  className="input inputCompact"
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+
+              <button
+                className="button buttonPrimary"
+                type="button"
+                onClick={() => {
                   onQueryCommit?.(q);
                   void loadBooks(1);
                 }}
-                placeholder="Search..."
-              />
-            </label>
-
-            <label className="toolbarField">
-              <span className="srOnly">Ordering</span>
-              <select
-                className="input inputCompact"
-                value={ordering}
-                onChange={(e) => setOrdering(e.target.value as Ordering)}
+                disabled={busy}
               >
-                <option value="-updated_at">Recently updated</option>
-                <option value="title">Title</option>
-                <option value="-created_at">Created</option>
-                <option value="-published_date">Published</option>
-              </select>
-            </label>
-
-            <label className="toolbarField">
-              <span className="srOnly">Page size</span>
-              <select
-                className="input inputCompact"
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-              >
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </label>
-
-            <button
-              className="button buttonPrimary"
-              type="button"
-              onClick={() => {
-                onQueryCommit?.(q);
-                void loadBooks(1);
-              }}
-              disabled={busy}
-            >
-              {busy ? "Searching..." : "Search"}
-            </button>
+                {busy ? "Searching..." : "Search"}
+              </button>
+            </div>
           </div>
 
           {error ? <p className="errorText">{error}</p> : null}
@@ -277,15 +284,13 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
                 <div className="muted">Select a book to view details.</div>
               )}
 
-              <BookList
-                books={data.results}
-                selectedBookId={selectedBook ? String(selectedBook.id) : null}
-                onSelectBook={handleSelectBook}
-              />
-            </>
-          ) : (
-            <p className="muted">Load the library to view books.</p>
-          )}
+               <BookList
+                 books={data.results}
+                 selectedBookId={selectedBook ? String(selectedBook.id) : null}
+                 onSelectBook={handleSelectBook}
+               />
+             </>
+           ) : null}
         </>
       ) : null}
     </section>

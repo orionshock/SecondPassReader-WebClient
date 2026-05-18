@@ -87,7 +87,7 @@ export function RecentReadingSection({
           Continue reading
         </div>
         <div className="muted">
-          {busy ? "Loading…" : data ? `showing ${data.count}` : null}
+          {busy ? "Loading…" : data && data.count > 1 ? `${data.count} recent` : null}
           {error ? (
             <>
               {" "}
