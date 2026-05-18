@@ -654,6 +654,75 @@ a {
   gap: 10px;
 }
 
+.readerSettingsPanel {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 10px;
+  background: rgba(17, 24, 39, 0.02);
+}
+
+.readerSettingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.readerSettingsLabel {
+  font-size: 13px;
+  color: var(--sp-muted);
+}
+
+.readerSettingsControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.readerThemeLight {
+  background: transparent;
+  color: inherit;
+}
+
+.readerThemeSepia {
+  background: rgba(244, 236, 216, 0.25);
+}
+
+.readerThemeDark {
+  background: rgba(17, 24, 39, 0.92);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.readerThemeDark .muted {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.readerThemeDark .epubContainer {
+  background: #111111;
+}
+
+.readerWidthNarrow .epubContainer {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.readerWidthNormal .epubContainer {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.readerWidthWide .epubContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .readerTopBar {
   display: flex;
   gap: 12px;

@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { ReadingOpenResponse } from "../../schemas/readingSession";
 import type { LibraryBook } from "../../schemas/library";
+import type { ReaderSettings } from "../../storage/readerSettings";
+import { getReaderSettings, normalizeReaderSettings, saveReaderSettings } from "../../storage/readerSettings";
 import { findNextBookInSeries } from "../library/seriesNavigation";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { NearEndBanner } from "./NearEndBanner";
 import { ProgressPanel } from "./ProgressPanel";
+import { ReaderSettingsPanel } from "./ReaderSettingsPanel";
 import {
   createLocalHighlightFromServerAnnotation,
   createServerAnnotationPayloadFromLocalHighlight,
@@ -58,6 +61,24 @@ export function ReaderArea({
   const [nearEndMessage, setNearEndMessage] = useState<string | null>(null);
   const [goToStartSignal, setGoToStartSignal] = useState(0);
   const [nextBookBusy, setNextBookBusy] = useState(false);
+
+  const [readerSettings, setReaderSettings] = useState(() => getReaderSettings());
+  const [readerSettingsOpen, setReaderSettingsOpen] = useState(false);
+
+  const readerThemeClass =
+    readerSettings.theme === "dark" ? "readerThemeDark" : readerSettings.theme === "sepia" ? "readerThemeSepia" : "readerThemeLight";
+  const readerWidthClass =
+    readerSettings.readerWidth === "narrow"
+      ? "readerWidthNarrow"
+      : readerSettings.readerWidth === "wide"
+        ? "readerWidthWide"
+        : "readerWidthNormal";
+
+  const handleReaderSettingsChange = useCallback((next: ReaderSettings) => {
+    const normalized = normalizeReaderSettings(next);
+    setReaderSettings(normalized);
+    saveReaderSettings(normalized);
+  }, []);
 
   useEffect(() => {
     setLocationString(null);
@@ -477,7 +498,7 @@ export function ReaderArea({
   const loadedServerAnnotations = highlights.filter((h) => Boolean(h.serverAnnotationId)).length;
 
   return (
-    <div className="readerArea">
+    <div className={`readerArea ${readerThemeClass} ${readerWidthClass}`}>
       <div className="readerTopBar">
         <div className="readerTopLeft">
           <div className="readerBookTitle">{openedBook.book.title}</div>
@@ -488,11 +509,20 @@ export function ReaderArea({
           </div>
         </div>
         <div className="readerTopRight">
+          <button
+            type="button"
+            className="button buttonCompact"
+            onClick={() => setReaderSettingsOpen((v) => !v)}
+          >
+            Reader settings
+          </button>
           <button type="button" className="button buttonCompact" onClick={onBackToLibrary}>
             Back to Library
           </button>
         </div>
       </div>
+
+      {readerSettingsOpen ? <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} /> : null}
 
       <ProgressPanel
         autosave={autosave}
@@ -774,6 +804,7 @@ export function ReaderArea({
         highlights={highlights}
         initialLocation={initialCfi ?? undefined}
         goToStartSignal={goToStartSignal}
+        settings={readerSettings}
         onLocationChanged={setLocationString}
         onReaderLocationChange={setReaderLocation}
         onHighlightClicked={setSelectedHighlightId}

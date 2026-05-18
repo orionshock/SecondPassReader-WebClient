@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactReader } from "react-reader";
 import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
+import type { ReaderSettings } from "../../storage/readerSettings";
 
 // Renderer implementation: keep react-reader/epubjs usage isolated here.
 // TODO: Move renderer interactions behind ReaderBridge before adding more reader features.
@@ -10,6 +11,7 @@ export function EpubReaderPanel({
   highlights,
   initialLocation,
   goToStartSignal,
+  settings,
   onLocationChanged,
   onReaderLocationChange,
   onHighlightClicked,
@@ -20,6 +22,7 @@ export function EpubReaderPanel({
   highlights: LocalHighlight[];
   initialLocation?: string | number;
   goToStartSignal?: number;
+  settings?: ReaderSettings;
   onLocationChanged?: (location: string) => void;
   onReaderLocationChange?: (loc: ReaderLocation) => void;
   onHighlightClicked?: (highlightId: string) => void;
@@ -29,6 +32,7 @@ export function EpubReaderPanel({
   const [location, setLocation] = useState<string | number | null>(null);
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [renditionVersion, setRenditionVersion] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renditionRef = useRef<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,6 +48,46 @@ export function EpubReaderPanel({
   const locationsInitForRef = useRef<ArrayBuffer | null>(null);
   const locationsInitStartedRef = useRef(false);
   const lastRelocatedRef = useRef<unknown>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const themesAttachedToRef = useRef<any | null>(null);
+  const themesRegisteredRef = useRef(false);
+
+  useEffect(() => {
+    const rendition = renditionRef.current;
+    if (!rendition || !settings) return;
+
+    try {
+      if (!themesRegisteredRef.current || themesAttachedToRef.current !== rendition) {
+        themesAttachedToRef.current = rendition;
+        themesRegisteredRef.current = true;
+
+        // Register simple themes once per rendition instance.
+        rendition.themes.register("sp-light", {
+          body: { background: "#ffffff", color: "#111111" },
+          a: { color: "#0b57d0" },
+        });
+        rendition.themes.register("sp-sepia", {
+          body: { background: "#f4ecd8", color: "#3b2f1c" },
+          a: { color: "#1f5faa" },
+        });
+        rendition.themes.register("sp-dark", {
+          body: { background: "#111111", color: "#f2f2f2" },
+          a: { color: "#8ab4f8" },
+        });
+      }
+
+      if (typeof settings.fontSizePercent === "number" && Number.isFinite(settings.fontSizePercent)) {
+        rendition.themes.fontSize(`${settings.fontSizePercent}%`);
+      }
+
+      const themeName =
+        settings.theme === "dark" ? "sp-dark" : settings.theme === "sepia" ? "sp-sepia" : "sp-light";
+      rendition.themes.select(themeName);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("[reader] failed to apply reader settings:", e);
+    }
+  }, [renditionVersion, settings?.fontSizePercent, settings?.theme]);
 
   const highlightIndex = useMemo(() => {
     const byCfi = new Map<string, LocalHighlight>();
@@ -207,6 +251,7 @@ export function EpubReaderPanel({
           const r = rendition as any;
           renditionRef.current = r;
           renderedCfisRef.current = new Set();
+          setRenditionVersion((v) => v + 1);
 
           // eslint-disable-next-line no-console
           console.log("[reader] rendition ready", {

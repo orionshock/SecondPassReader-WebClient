@@ -31,6 +31,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 
 7. **Local storage**
    - Stores connection profile(s) and user preferences (non-sensitive).
+   - Reader settings (font size/theme/width) are currently **local-only** browser preferences (Phase 1) and are not synced to the server.
    - Avoid storing password-equivalent tokens unless explicitly designed/encrypted.
 
 ## Source layout (current scaffold)
