@@ -89,38 +89,76 @@
   gap: 14px;
 }
 
-.libraryRecentBox {
+.recentReadingSection {
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
   background: rgba(17, 24, 39, 0.01);
 }
 
-.libraryRecentList {
-  display: grid;
-  gap: 8px;
+.recentCarousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x proximity;
 }
 
-.libraryRecentRow {
+.recentBookCard {
+  flex: 0 0 auto;
+  width: 160px;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.84);
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: center;
+  gap: 8px;
+  scroll-snap-align: start;
+}
+
+.recentCover {
+  width: 100%;
+  aspect-ratio: 2 / 3;
   border: 1px solid var(--sp-border);
   border-radius: 10px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
 }
 
-.libraryRecentTitle {
+.recentCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recentCoverPlaceholder {
+  font-size: 12px;
+  color: var(--sp-muted);
+}
+
+.recentBookTitle {
   font-size: 13px;
   font-weight: 600;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 34px;
 }
 
-.libraryRecentActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.recentBookMeta {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.recentResumeButton {
+  width: 100%;
+  justify-content: center;
 }
 
 .readerScreen {

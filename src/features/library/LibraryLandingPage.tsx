@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
-import type { ReadingRecentSessionsResponse } from "../../schemas/readingSession";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookDetailPanel } from "./BookDetailPanel";
 import { BookList } from "./BookList";
+import { RecentReadingSection } from "./RecentReadingSection";
 import type { OpenedBook } from "../reader";
 
 type Props = {
@@ -43,49 +43,10 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
     | { phase: "error"; message: string }
   >({ phase: "idle" });
 
-  const [recentBusy, setRecentBusy] = useState(false);
-  const [recentError, setRecentError] = useState<string | null>(null);
-  const [recent, setRecent] = useState<ReadingRecentSessionsResponse | null>(null);
-
   useEffect(() => {
     const next = initialQuery ?? "";
     setQ((prev) => (prev === next ? prev : next));
   }, [initialQuery]);
-
-  useEffect(() => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) {
-      setRecent(null);
-      setRecentError(null);
-      setRecentBusy(false);
-      return;
-    }
-    if (status !== "verified") return;
-
-    const apiBaseUrl = profile.apiBaseUrl;
-    const accessToken = profile.accessToken;
-    const tokenType = profile.tokenType ?? "Bearer";
-    const serverBaseUrl = profile.serverBaseUrl;
-
-    setRecentBusy(true);
-    setRecentError(null);
-    void (async () => {
-      try {
-        const api = new SecondPassApiClient({ serverBaseUrl });
-        const r = await api.listRecentReadingSessions({
-          apiBaseUrl,
-          accessToken,
-          tokenType,
-          limit: 10,
-        });
-        setRecent(r);
-      } catch (e) {
-        setRecent(null);
-        setRecentError(e instanceof Error ? e.message : "Failed to load recent sessions.");
-      } finally {
-        setRecentBusy(false);
-      }
-    })();
-  }, [profile?.apiBaseUrl, profile?.accessToken, profile?.serverBaseUrl, profile?.tokenType, status]);
 
   async function loadBooks(targetPage = page) {
     if (!profile) return;
@@ -210,53 +171,7 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
 
       {status === "verified" ? (
         <>
-          <div className="libraryRecentBox">
-            <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
-              <div className="panelTitle" style={{ margin: 0 }}>
-                Continue reading
-              </div>
-              {recent ? <div className="muted">showing {recent.count}</div> : null}
-            </div>
-            {recentBusy ? <div className="muted">Loading…</div> : null}
-            {recentError ? <div className="errorText">{recentError}</div> : null}
-            {!recentBusy && !recentError && recent?.results?.length ? (
-              <div className="libraryRecentList">
-                {recent.results.map((item) => (
-                  <div key={item.session.id} className="libraryRecentRow">
-                    <div className="libraryRecentMain">
-                      <div className="libraryRecentTitle">{item.book.title}</div>
-                      <div className="muted">Last activity: {new Date(item.last_activity_at).toLocaleString()}</div>
-                    </div>
-                    <div className="libraryRecentActions">
-                      <button
-                        type="button"
-                        className="button buttonCompact"
-                        onClick={async () => {
-                          if (!profile?.apiBaseUrl || !profile.accessToken) return;
-                          try {
-                            const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-                            const full = await api.getBook({
-                              apiBaseUrl: profile.apiBaseUrl,
-                              accessToken: profile.accessToken,
-                              tokenType: profile.tokenType ?? "Bearer",
-                              bookId: String(item.book.id),
-                            });
-                            await handleOpenReader(full);
-                          } catch (e) {
-                            setError(e instanceof Error ? e.message : "Failed to open book.");
-                          }
-                        }}
-                      >
-                        Resume
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : !recentBusy && !recentError ? (
-              <div className="muted">No recent sessions.</div>
-            ) : null}
-          </div>
+          <RecentReadingSection profile={profile} onOpenReader={handleOpenReader} />
 
           <div className="libraryToolbar">
             <label className="toolbarField toolbarSearch">
