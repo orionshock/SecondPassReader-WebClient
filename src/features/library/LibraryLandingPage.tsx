@@ -7,6 +7,7 @@ import { BookDetailPanel } from "./BookDetailPanel";
 import { BookList } from "./BookList";
 import { RecentReadingSection } from "./RecentReadingSection";
 import type { OpenedBook } from "../reader";
+import { navigateTo } from "../../app/navigation";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -111,6 +112,9 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
       setDownloadState({ phase: "error", message: "Profile is missing apiBaseUrl. Run discovery again." });
       return;
     }
+
+    // Update route immediately so App-level guards treat this as an intentional reader open.
+    navigateTo({ kind: "reader", bookId: String(book.id) });
 
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });

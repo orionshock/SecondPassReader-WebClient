@@ -4,6 +4,7 @@ import type { ReadingOpenResponse } from "../../schemas/readingSession";
 import type { LibraryBook } from "../../schemas/library";
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { getReaderSettings, normalizeReaderSettings, saveReaderSettings } from "../../storage/readerSettings";
+import { navigateTo } from "../../app/navigation";
 import { findNextBookInSeries } from "../library/seriesNavigation";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { EpubReaderPanel } from "./EpubReaderPanel";
@@ -516,7 +517,17 @@ export function ReaderArea({
           >
             Reader settings
           </button>
-          <button type="button" className="button buttonCompact" onClick={onBackToLibrary}>
+          <button
+            type="button"
+            className="button buttonCompact"
+            onClick={() => {
+              // Avoid relying on browser history navigation; always return to the app's library route.
+              // eslint-disable-next-line no-console
+              console.log("[nav] Back to Library clicked (ReaderArea)");
+              navigateTo({ kind: "library" });
+              onBackToLibrary();
+            }}
+          >
             Back to Library
           </button>
         </div>

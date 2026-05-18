@@ -42,12 +42,23 @@ export default function App() {
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
 
   const openingBookRef = useRef<string | null>(null);
+  const navSeqRef = useRef(0);
 
   useEffect(() => {
     const handler = () => setRoute(parseCurrentRoute());
     window.addEventListener("hashchange", handler);
     return () => window.removeEventListener("hashchange", handler);
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("[nav] route", route);
+  }, [route]);
+
+  // Bump a sequence number on any route change so async opens can be cancelled logically.
+  useEffect(() => {
+    navSeqRef.current += 1;
+  }, [route]);
 
   useEffect(() => {
     if (route?.kind === "settings") setView("settings");
@@ -111,6 +122,7 @@ export default function App() {
     openingBookRef.current = requestedBookId;
 
     void (async () => {
+      const seq = navSeqRef.current;
       try {
         const api = new SecondPassApiClient({ serverBaseUrl: selectedProfile.serverBaseUrl });
         const book = await api.getBook({
@@ -119,7 +131,9 @@ export default function App() {
           tokenType: selectedProfile.tokenType ?? "Bearer",
           bookId: requestedBookId,
         });
+        if (seq !== navSeqRef.current) return;
         const opened = await openBookForReader({ profile: selectedProfile, book });
+        if (seq !== navSeqRef.current) return;
         handleBookOpened(opened);
       } catch (e) {
         const message =
@@ -165,6 +179,8 @@ export default function App() {
   }
 
   function handleBookOpened(opened: OpenedBook) {
+    // If the user navigated away from the reader route while this book was opening, do not re-open it.
+    if (route?.kind !== "reader") return;
     setOpenedBook((prev) => {
       if (prev) URL.revokeObjectURL(prev.objectUrl);
       return opened;
@@ -174,15 +190,20 @@ export default function App() {
 
   async function handleOpenBookFromReader(book: LibraryBook) {
     if (!selectedProfile) throw new Error("No profile selected.");
+    // Make the route reflect the user's intent immediately so guards don't drop the open.
+    navigateTo({ kind: "reader", bookId: String(book.id) });
     const opened = await openBookForReader({ profile: selectedProfile, book });
     handleBookOpened(opened);
   }
 
   function handleCloseReader() {
+    // eslint-disable-next-line no-console
+    console.log("[nav] handleCloseReader()");
     setOpenedBook((prev) => {
       if (prev) URL.revokeObjectURL(prev.objectUrl);
       return null;
     });
+    openingBookRef.current = null;
   }
 
   function handleForgetServer() {
@@ -196,13 +217,13 @@ export default function App() {
   }
 
   return (
-    <div className={`appShell ${openedBook ? "appShellReader" : ""}`}>
-      {openedBook ? null : (
-          <AppHeader
-            profile={selectedProfile}
-            view={view}
-            readerOpen={Boolean(openedBook)}
-            onShowLibrary={() => {
+    <div className={`appShell ${openedBook && route?.kind === "reader" ? "appShellReader" : ""}`}>
+      {openedBook && route?.kind === "reader" ? null : (
+        <AppHeader
+          profile={selectedProfile}
+          view={view}
+          readerOpen={Boolean(openedBook)}
+          onShowLibrary={() => {
               navigateTo({ kind: "library" });
               handleCloseReader();
             }}
@@ -283,7 +304,7 @@ export default function App() {
                     </button>
                   </div>
                 </section>
-              ) : openedBook ? (
+              ) : openedBook && route?.kind === "reader" ? (
                 <section className="readerScreen">
                   <ReaderArea
                     openedBook={openedBook}

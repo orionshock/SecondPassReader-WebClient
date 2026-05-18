@@ -3,6 +3,7 @@ import { SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { LibraryBook } from "../../schemas/library";
 import type { ReadingRecentSessionsResponse } from "../../schemas/readingSession";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
+import { navigateTo } from "../../app/navigation";
 
 function formatLastActivity(isoUtc: string): string {
   try {
@@ -63,6 +64,7 @@ export function RecentReadingSection({
     setResumeBusyId(bookKey);
     setError(null);
     try {
+      navigateTo({ kind: "reader", bookId: bookKey });
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
       const full = await api.getBook({
         apiBaseUrl: profile.apiBaseUrl,
@@ -135,4 +137,3 @@ export function RecentReadingSection({
     </div>
   );
 }
-
