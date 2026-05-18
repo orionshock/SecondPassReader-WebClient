@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -10,14 +10,17 @@ import type { OpenedBook } from "../reader";
 type Props = {
   profile: ConnectionProfile | null;
   onBookOpened?: (opened: OpenedBook) => void;
+  initialQuery?: string;
+  onQueryChange?: (q: string) => void;
+  onQueryCommit?: (q: string) => void;
 };
 
 type Ordering = "-updated_at" | "title" | "-created_at" | "-published_date";
 
-export function LibraryLandingPage({ profile, onBookOpened }: Props) {
+export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQueryChange, onQueryCommit }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
 
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery ?? "");
   const [ordering, setOrdering] = useState<Ordering>("-updated_at");
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
@@ -38,6 +41,11 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
       }
     | { phase: "error"; message: string }
   >({ phase: "idle" });
+
+  useEffect(() => {
+    const next = initialQuery ?? "";
+    setQ((prev) => (prev === next ? prev : next));
+  }, [initialQuery]);
 
   async function loadBooks(targetPage = page) {
     if (!profile) return;
@@ -168,7 +176,17 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
               <input
                 className="input inputCompact"
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setQ(next);
+                  onQueryChange?.(next);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  onQueryCommit?.(q);
+                  void loadBooks(1);
+                }}
                 placeholder="Search..."
               />
             </label>
@@ -200,8 +218,16 @@ export function LibraryLandingPage({ profile, onBookOpened }: Props) {
               </select>
             </label>
 
-            <button className="button buttonPrimary" type="button" onClick={() => void loadBooks(1)} disabled={busy}>
-              {busy ? "Loading..." : "Load"}
+            <button
+              className="button buttonPrimary"
+              type="button"
+              onClick={() => {
+                onQueryCommit?.(q);
+                void loadBooks(1);
+              }}
+              disabled={busy}
+            >
+              {busy ? "Searching..." : "Search"}
             </button>
           </div>
 

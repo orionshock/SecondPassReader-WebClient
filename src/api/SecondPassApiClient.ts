@@ -174,6 +174,44 @@ export class SecondPassApiClient {
     return (await res.json()) as PaginatedResponse<LibraryBook>;
   }
 
+  async getBook(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    bookId: string;
+  }): Promise<LibraryBook> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = resolveUrl(input.apiBaseUrl, `/library/books/${encodeURIComponent(input.bookId)}/`);
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
+    }
+    if (res.status === 404) {
+      throw new ApiError({ kind: "http_error", status: 404, message: "Book not found or not accessible (404)." });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as LibraryBook;
+  }
+
   async closeReadingSession(input: {
     apiBaseUrl: string;
     accessToken: string;

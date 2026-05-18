@@ -1,11 +1,13 @@
 import "./App.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
 import { LibraryLandingPage } from "../features/library";
 import { ReaderArea, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { LibraryBook } from "../schemas/library";
+import type { AppRoute } from "./navigation";
+import { navigateTo, parseCurrentRoute } from "./navigation";
 import {
   deleteConnectionProfile,
   getConnectionProfile,
@@ -14,6 +16,7 @@ import {
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
+import { ApiError, SecondPassApiClient } from "../api/SecondPassApiClient";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -21,6 +24,8 @@ export default function App() {
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
   const [view, setView] = useState<"main" | "settings">("main");
+  const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
+  const [readerRestoreError, setReaderRestoreError] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(SELECTED_PROFILE_KEY);
@@ -35,6 +40,106 @@ export default function App() {
   }, [selectedProfileId, profilesVersion]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
+
+  const openingBookRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const handler = () => setRoute(parseCurrentRoute());
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+
+  useEffect(() => {
+    if (route?.kind === "settings") setView("settings");
+    else setView("main");
+  }, [route?.kind]);
+
+  useEffect(() => {
+    // Default route selection when hash is empty.
+    if (route) return;
+    if (workflowStep === "library_home") navigateTo({ kind: "library" }, { replace: true });
+    else navigateTo({ kind: "connect" }, { replace: true });
+  }, [route, workflowStep]);
+
+  useEffect(() => {
+    // Workflow still wins over invalid routes (never bypass auth/verification).
+    if (workflowStep === "connect_server") {
+      if (route?.kind !== "connect") navigateTo({ kind: "connect" }, { replace: true });
+      return;
+    }
+    if (workflowStep === "pair_device") {
+      if (route?.kind !== "pair") navigateTo({ kind: "pair" }, { replace: true });
+      return;
+    }
+    if (workflowStep === "verify_connection") {
+      if (route?.kind !== "verify") navigateTo({ kind: "verify" }, { replace: true });
+      return;
+    }
+
+    // Verified: allow library/settings/reader. Unknown routes fall back to library.
+    if (workflowStep === "library_home") {
+      if (!route || route.kind === "unknown") {
+        navigateTo({ kind: "library" }, { replace: true });
+        return;
+      }
+      if (route.kind === "connect" || route.kind === "pair" || route.kind === "verify") {
+        navigateTo({ kind: "library" }, { replace: true });
+      }
+    }
+  }, [route, workflowStep]);
+
+  useEffect(() => {
+    // Leaving reader route closes reader state (do not keep blobs around).
+    if (!openedBook) return;
+    if (route?.kind === "reader") return;
+    handleCloseReader();
+  }, [openedBook, route?.kind]);
+
+  useEffect(() => {
+    // Reader route restore/open: on reload (or direct navigation) open the requested book.
+    if (workflowStep !== "library_home") return;
+    if (!route || route.kind !== "reader") return;
+    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return;
+    const apiBaseUrl = selectedProfile.apiBaseUrl;
+    const accessToken = selectedProfile.accessToken;
+
+    const requestedBookId = route.bookId;
+    if (openedBook?.book?.id === requestedBookId) return;
+    if (openingBookRef.current === requestedBookId) return;
+
+    setReaderRestoreError(null);
+    openingBookRef.current = requestedBookId;
+
+    void (async () => {
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: selectedProfile.serverBaseUrl });
+        const book = await api.getBook({
+          apiBaseUrl,
+          accessToken,
+          tokenType: selectedProfile.tokenType ?? "Bearer",
+          bookId: requestedBookId,
+        });
+        const opened = await openBookForReader({ profile: selectedProfile, book });
+        handleBookOpened(opened);
+      } catch (e) {
+        const message =
+          e instanceof ApiError && e.status === 404
+            ? "That book could not be found or you do not have access to it."
+            : e instanceof Error
+              ? e.message
+              : "Failed to open book.";
+        setReaderRestoreError(message);
+        navigateTo({ kind: "library" });
+      } finally {
+        if (openingBookRef.current === requestedBookId) openingBookRef.current = null;
+      }
+    })();
+  }, [
+    openedBook?.book?.id,
+    route,
+    selectedProfile,
+    workflowStep,
+  ]);
 
   useEffect(() => {
     const profiles = listConnectionProfiles();
@@ -64,6 +169,7 @@ export default function App() {
       if (prev) URL.revokeObjectURL(prev.objectUrl);
       return opened;
     });
+    navigateTo({ kind: "reader", bookId: String(opened.book.id) });
   }
 
   async function handleOpenBookFromReader(book: LibraryBook) {
@@ -86,22 +192,29 @@ export default function App() {
     handleCloseReader();
     refreshProfiles();
     setView("main");
+    navigateTo({ kind: "connect" });
   }
 
   return (
     <div className={`appShell ${openedBook ? "appShellReader" : ""}`}>
       {openedBook ? null : (
-        <AppHeader
-          profile={selectedProfile}
-          view={view}
-          readerOpen={Boolean(openedBook)}
-          onShowLibrary={() => {
-            setView("main");
-            handleCloseReader();
-          }}
-          onBackToLibrary={() => handleCloseReader()}
-          onShowSettings={() => setView((v) => (v === "settings" ? "main" : "settings"))}
-        />
+          <AppHeader
+            profile={selectedProfile}
+            view={view}
+            readerOpen={Boolean(openedBook)}
+            onShowLibrary={() => {
+              navigateTo({ kind: "library" });
+              handleCloseReader();
+            }}
+            onBackToLibrary={() => {
+              navigateTo({ kind: "library" });
+              handleCloseReader();
+            }}
+            onShowSettings={() => {
+              if (view === "settings") navigateTo({ kind: "library" });
+              else navigateTo({ kind: "settings" });
+            }}
+          />
       )}
 
       <main className="appMain">
@@ -153,11 +266,31 @@ export default function App() {
             ) : null}
 
             {workflowStep === "library_home" ? (
-              openedBook ? (
+              route?.kind === "reader" && !openedBook ? (
+                <section className="panel workflowPanel">
+                  <h2 className="panelTitle">Opening book</h2>
+                  {readerRestoreError ? <div className="errorText">{readerRestoreError}</div> : <p className="muted">Restoring reader…</p>}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => {
+                        navigateTo({ kind: "library" });
+                        handleCloseReader();
+                      }}
+                    >
+                      Back to Library
+                    </button>
+                  </div>
+                </section>
+              ) : openedBook ? (
                 <section className="readerScreen">
                   <ReaderArea
                     openedBook={openedBook}
-                    onBackToLibrary={handleCloseReader}
+                    onBackToLibrary={() => {
+                      navigateTo({ kind: "library" });
+                      handleCloseReader();
+                    }}
                     apiBaseUrl={selectedProfile?.apiBaseUrl}
                     accessToken={selectedProfile?.accessToken}
                     tokenType={selectedProfile?.tokenType}
@@ -166,7 +299,20 @@ export default function App() {
                 </section>
               ) : (
                 <div className="libraryScreen">
-                  <LibraryLandingPage profile={selectedProfile} onBookOpened={handleBookOpened} />
+                  <LibraryLandingPage
+                    profile={selectedProfile}
+                    onBookOpened={handleBookOpened}
+                    initialQuery={route?.kind === "library" ? route.q ?? "" : ""}
+                    onQueryChange={(q) => {
+                      // Keep URL in sync without spamming history entries.
+                      const next = q.trim();
+                      navigateTo(next ? { kind: "library", q: next } : { kind: "library" }, { replace: true });
+                    }}
+                    onQueryCommit={(q) => {
+                      const next = q.trim();
+                      navigateTo(next ? { kind: "library", q: next } : { kind: "library" });
+                    }}
+                  />
                 </div>
               )
             ) : null}
