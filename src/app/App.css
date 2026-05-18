@@ -1,13 +1,22 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .appShell {
-  max-width: 920px;
+  width: max(0px, calc(100% - 48px));
+  max-width: 1200px;
   margin: 0 auto;
   padding: 32px 20px 48px;
+  box-sizing: border-box;
 }
 
 .appShellReader {
-  max-width: none;
-  width: min(1600px, calc(100vw - 48px));
+  width: max(0px, calc(100% - 48px));
+  max-width: 1600px;
   padding: 18px 24px 28px;
+  box-sizing: border-box;
 }
 
 .appHeader {
@@ -52,6 +61,11 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
+  min-width: 0;
+}
+
+.appMain > * {
+  min-width: 0;
 }
 
 .workflowPanel {
@@ -87,6 +101,11 @@
 .libraryScreen {
   display: grid;
   gap: 14px;
+  min-width: 0;
+}
+
+.libraryScreen > * {
+  min-width: 0;
 }
 
 .recentReadingSection {
@@ -95,6 +114,7 @@
   padding: 8px 10px;
   margin-bottom: 14px;
   background: rgba(17, 24, 39, 0.01);
+  min-width: 0;
 }
 
 .librarySearchSection {
@@ -102,14 +122,21 @@
   border-radius: 12px;
   padding: 8px 10px;
   background: rgba(17, 24, 39, 0.01);
+  min-width: 0;
 }
 
 .recentCarousel {
   display: flex;
   gap: 8px;
+  flex-wrap: nowrap;
   overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding-bottom: 2px;
   scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
 }
 
 .recentBookCard {
@@ -122,6 +149,11 @@
   display: grid;
   gap: 6px;
   scroll-snap-align: start;
+}
+
+.recentReadingSection,
+.librarySearchSection {
+  max-width: 100%;
 }
 
 .recentCover {
@@ -233,6 +265,7 @@
   border-radius: 12px;
   background: var(--sp-panel);
   padding: 16px;
+  min-width: 0;
 }
 
 .panelTitle {
@@ -548,6 +581,7 @@ a {
   gap: 10px;
   align-items: center;
   margin-bottom: 10px;
+  min-width: 0;
 }
 
 .toolbarField {
@@ -558,6 +592,10 @@ a {
 .toolbarSearch {
   flex: 1 1 260px;
   min-width: 200px;
+}
+
+.toolbarSearch input {
+  min-width: 0;
 }
 
 .inputCompact {
