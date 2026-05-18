@@ -57,6 +57,27 @@ export type ReadingOpenResponse = {
   annotations: ReadingAnnotationPage;
 };
 
+export type ReadingRecentSessionsItem = {
+  last_activity_at: string;
+  session: {
+    id: string;
+    status: "active" | string;
+    is_active: true | boolean;
+    [k: string]: unknown;
+  };
+  book: {
+    id: string | number;
+    title: string;
+    cover_url: string | null;
+    [k: string]: unknown;
+  };
+};
+
+export type ReadingRecentSessionsResponse = {
+  count: number;
+  results: ReadingRecentSessionsItem[];
+};
+
 export type ReadingProgressUpdatePayload = {
   profile_version: string;
   current_location?: ReadingCurrentLocation | null;

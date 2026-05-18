@@ -11,6 +11,7 @@ import type {
   ReadingAnnotation,
   ReadingAnnotationUpdatePayload,
   ReadingOpenResponse,
+  ReadingRecentSessionsResponse,
   ReadingProgress,
   ReadingProgressUpdatePayload,
   ReadingSession,
@@ -210,6 +211,46 @@ export class SecondPassApiClient {
     }
 
     return (await res.json()) as LibraryBook;
+  }
+
+  async listRecentReadingSessions(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    limit?: number;
+  }): Promise<ReadingRecentSessionsResponse> {
+    const tokenType = input.tokenType ?? "Bearer";
+    const url = new URL(resolveUrl(input.apiBaseUrl, "/reading/sessions/recent/"));
+    if (typeof input.limit === "number") url.searchParams.set("limit", String(input.limit));
+
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `${tokenType} ${input.accessToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+    }
+    if (res.status === 403) {
+      throw new ApiError({
+        kind: "forbidden",
+        status: 403,
+        message: "Token is not allowed to access reading sessions (403).",
+      });
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new ApiError({
+        kind: "http_error",
+        status: res.status,
+        message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+      });
+    }
+
+    return (await res.json()) as ReadingRecentSessionsResponse;
   }
 
   async closeReadingSession(input: {
