@@ -5,7 +5,6 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookDetailPanel } from "./BookDetailPanel";
 import { BookList } from "./BookList";
-import { RecentReadingSection } from "./RecentReadingSection";
 import type { OpenedBook } from "../reader";
 import { navigateTo } from "../../app/navigation";
 
@@ -167,7 +166,7 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
 
   return (
     <section className="panel">
-      <h2 className="panelTitle">Library</h2>
+      <h2 className="panelTitle">Search the Library</h2>
 
       {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
       {status === "configured" ? <p className="muted">Link this profile before loading the library.</p> : null}
@@ -175,14 +174,7 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
 
       {status === "verified" ? (
         <>
-          <RecentReadingSection profile={profile} onOpenReader={handleOpenReader} />
-
           <div className="librarySearchSection">
-            <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
-              <div className="panelTitle" style={{ margin: 0 }}>
-                Search the Library
-              </div>
-            </div>
             <div className="libraryToolbar">
               <label className="toolbarField toolbarSearch">
                 <span className="srOnly">Search</span>

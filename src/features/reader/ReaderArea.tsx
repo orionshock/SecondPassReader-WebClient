@@ -521,14 +521,14 @@ export function ReaderArea({
             type="button"
             className="button buttonCompact"
             onClick={() => {
-              // Avoid relying on browser history navigation; always return to the app's library route.
+              // Avoid relying on browser history navigation; always return to the app's home route.
               // eslint-disable-next-line no-console
-              console.log("[nav] Back to Library clicked (ReaderArea)");
-              navigateTo({ kind: "library" });
+              console.log("[nav] Home clicked (ReaderArea)");
+              navigateTo({ kind: "home" });
               onBackToLibrary();
             }}
           >
-            Back to Library
+            Home
           </button>
         </div>
       </div>

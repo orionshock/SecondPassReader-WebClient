@@ -2,7 +2,9 @@ export type AppRoute =
   | { kind: "connect" }
   | { kind: "pair" }
   | { kind: "verify" }
+  | { kind: "home" }
   | { kind: "library"; q?: string }
+  | { kind: "shelves" }
   | { kind: "settings" }
   | { kind: "reader"; bookId: string }
   | { kind: "unknown"; raw: string };
@@ -21,8 +23,12 @@ export function routeToHash(route: AppRoute): string {
       return "#/pair";
     case "verify":
       return "#/verify";
+    case "home":
+      return "#/home";
     case "library":
       return route.q ? `#/library?q=${encodeURIComponent(route.q)}` : "#/library";
+    case "shelves":
+      return "#/shelves";
     case "settings":
       return "#/settings";
     case "reader":
@@ -47,10 +53,12 @@ export function parseCurrentRoute(): AppRoute | null {
   if (head === "connect") return { kind: "connect" };
   if (head === "pair") return { kind: "pair" };
   if (head === "verify") return { kind: "verify" };
+  if (head === "home") return { kind: "home" };
   if (head === "library") {
     const q = queryParams.get("q")?.trim() ?? "";
     return q ? { kind: "library", q } : { kind: "library" };
   }
+  if (head === "shelves") return { kind: "shelves" };
   if (head === "settings") return { kind: "settings" };
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {
     try {

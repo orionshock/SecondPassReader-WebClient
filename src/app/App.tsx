@@ -2,6 +2,7 @@ import "./App.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
 import { LibraryLandingPage } from "../features/library";
+import { HomePage } from "../features/home/HomePage";
 import { ReaderArea, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
@@ -17,6 +18,7 @@ import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
 import { ApiError, SecondPassApiClient } from "../api/SecondPassApiClient";
+import { ShelvesPage } from "../features/shelves/ShelvesPage";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -68,7 +70,7 @@ export default function App() {
   useEffect(() => {
     // Default route selection when hash is empty.
     if (route) return;
-    if (workflowStep === "library_home") navigateTo({ kind: "library" }, { replace: true });
+    if (workflowStep === "library_home") navigateTo({ kind: "home" }, { replace: true });
     else navigateTo({ kind: "connect" }, { replace: true });
   }, [route, workflowStep]);
 
@@ -90,14 +92,51 @@ export default function App() {
     // Verified: allow library/settings/reader. Unknown routes fall back to library.
     if (workflowStep === "library_home") {
       if (!route || route.kind === "unknown") {
-        navigateTo({ kind: "library" }, { replace: true });
+        navigateTo({ kind: "home" }, { replace: true });
         return;
       }
       if (route.kind === "connect" || route.kind === "pair" || route.kind === "verify") {
-        navigateTo({ kind: "library" }, { replace: true });
+        navigateTo({ kind: "home" }, { replace: true });
       }
     }
   }, [route, workflowStep]);
+
+  useEffect(() => {
+    const base = "Second Pass Reader";
+    if (!route) {
+      document.title = base;
+      return;
+    }
+    switch (route.kind) {
+      case "home":
+        document.title = `${base} - Home`;
+        return;
+      case "library":
+        document.title = `${base} - Library`;
+        return;
+      case "shelves":
+        document.title = `${base} - Shelves`;
+        return;
+      case "settings":
+        document.title = `${base} - Settings`;
+        return;
+      case "reader":
+        document.title = openedBook?.book?.title ? `${base} - ${openedBook.book.title}` : `${base} - Reader`;
+        return;
+      case "connect":
+        document.title = `${base} - Connect`;
+        return;
+      case "pair":
+        document.title = `${base} - Pair`;
+        return;
+      case "verify":
+        document.title = `${base} - Verify`;
+        return;
+      case "unknown":
+        document.title = base;
+        return;
+    }
+  }, [openedBook?.book?.title, route]);
 
   useEffect(() => {
     // Leaving reader route closes reader state (do not keep blobs around).
@@ -222,20 +261,25 @@ export default function App() {
         <AppHeader
           profile={selectedProfile}
           view={view}
-          readerOpen={Boolean(openedBook)}
+          route={route}
+          canNavigate={workflowStep === "library_home"}
+          onShowHome={() => {
+            navigateTo({ kind: "home" });
+            handleCloseReader();
+          }}
           onShowLibrary={() => {
-              navigateTo({ kind: "library" });
-              handleCloseReader();
-            }}
-            onBackToLibrary={() => {
-              navigateTo({ kind: "library" });
-              handleCloseReader();
-            }}
-            onShowSettings={() => {
-              if (view === "settings") navigateTo({ kind: "library" });
-              else navigateTo({ kind: "settings" });
-            }}
-          />
+            navigateTo({ kind: "library" });
+            handleCloseReader();
+          }}
+          onShowShelves={() => {
+            navigateTo({ kind: "shelves" });
+            handleCloseReader();
+          }}
+          onShowSettings={() => {
+            if (view === "settings") navigateTo({ kind: "home" });
+            else navigateTo({ kind: "settings" });
+          }}
+        />
       )}
 
       <main className="appMain">
@@ -296,11 +340,11 @@ export default function App() {
                       type="button"
                       className="button buttonCompact"
                       onClick={() => {
-                        navigateTo({ kind: "library" });
+                        navigateTo({ kind: "home" });
                         handleCloseReader();
                       }}
                     >
-                      Back to Library
+                      Home
                     </button>
                   </div>
                 </section>
@@ -309,7 +353,7 @@ export default function App() {
                   <ReaderArea
                     openedBook={openedBook}
                     onBackToLibrary={() => {
-                      navigateTo({ kind: "library" });
+                      navigateTo({ kind: "home" });
                       handleCloseReader();
                     }}
                     apiBaseUrl={selectedProfile?.apiBaseUrl}
@@ -318,12 +362,16 @@ export default function App() {
                     onOpenBook={handleOpenBookFromReader}
                   />
                 </section>
-              ) : (
+              ) : route?.kind === "shelves" ? (
+                <div className="libraryScreen">
+                  <ShelvesPage />
+                </div>
+              ) : route?.kind === "library" ? (
                 <div className="libraryScreen">
                   <LibraryLandingPage
                     profile={selectedProfile}
                     onBookOpened={handleBookOpened}
-                    initialQuery={route?.kind === "library" ? route.q ?? "" : ""}
+                    initialQuery={route.q ?? ""}
                     onQueryChange={(q) => {
                       // Keep URL in sync without spamming history entries.
                       const next = q.trim();
@@ -334,6 +382,10 @@ export default function App() {
                       navigateTo(next ? { kind: "library", q: next } : { kind: "library" });
                     }}
                   />
+                </div>
+              ) : (
+                <div className="libraryScreen">
+                  <HomePage profile={selectedProfile} onBookOpened={handleBookOpened} />
                 </div>
               )
             ) : null}
