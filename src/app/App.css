@@ -622,6 +622,16 @@ a {
   gap: 8px;
 }
 
+.libraryMetaRowBottom {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  z-index: 2;
+}
+
 .bookList {
   margin-top: 12px;
   display: grid;

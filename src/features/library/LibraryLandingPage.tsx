@@ -280,29 +280,34 @@ export function LibraryLandingPage({
 
           {data ? (
             <>
-              <div className="libraryMetaRow">
-                <div className="muted">
-                  Showing page {page} · {data.count} total
-                </div>
-                <div className="pagerButtons">
-                  <button
-                    className="button buttonCompact"
-                    type="button"
-                    onClick={() => void loadBooks(Math.max(1, page - 1))}
-                    disabled={busy || !data.previous}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    className="button buttonCompact"
-                    type="button"
-                    onClick={() => void loadBooks(page + 1)}
-                    disabled={busy || !data.next}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil((data.count ?? 0) / pageSize));
+                return (
+                  <div className="libraryMetaRow">
+                    <div className="muted">
+                      Page {page} of {totalPages} · {data.count} books
+                    </div>
+                    <div className="pagerButtons">
+                      <button
+                        className="button buttonCompact"
+                        type="button"
+                        onClick={() => void loadBooks(Math.max(1, page - 1))}
+                        disabled={busy || !data.previous}
+                      >
+                        Previous
+                      </button>
+                      <button
+                        className="button buttonCompact"
+                        type="button"
+                        onClick={() => void loadBooks(page + 1)}
+                        disabled={busy || !data.next}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <BookList
                 books={data.results}
@@ -310,6 +315,35 @@ export function LibraryLandingPage({
                 selectedBookId={modalBookId ? String(modalBookId) : null}
                 onViewBook={handleViewBook}
               />
+
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil((data.count ?? 0) / pageSize));
+                return (
+                  <div className="libraryMetaRow libraryMetaRowBottom">
+                    <div className="muted">
+                      Page {page} of {totalPages} · {data.count} books
+                    </div>
+                    <div className="pagerButtons">
+                      <button
+                        className="button buttonCompact"
+                        type="button"
+                        onClick={() => void loadBooks(Math.max(1, page - 1))}
+                        disabled={busy || !data.previous}
+                      >
+                        Previous
+                      </button>
+                      <button
+                        className="button buttonCompact"
+                        type="button"
+                        onClick={() => void loadBooks(page + 1)}
+                        disabled={busy || !data.next}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <div className="muted" style={{ marginTop: 10 }}>
@@ -333,4 +367,3 @@ export function LibraryLandingPage({
     </section>
   );
 }
-
