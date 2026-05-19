@@ -268,6 +268,7 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
               {selectedBook ? (
                 <BookDetailPanel
                   book={selectedBook}
+                  serverBaseUrl={profile?.serverBaseUrl}
                   launchMessage={launchMessage}
                   onOpenReader={handleOpenReader}
                   downloadState={downloadState}
@@ -278,6 +279,7 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
 
                <BookList
                  books={data.results}
+                 serverBaseUrl={profile?.serverBaseUrl}
                  selectedBookId={selectedBook ? String(selectedBook.id) : null}
                  onSelectBook={handleSelectBook}
                />

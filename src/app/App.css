@@ -635,6 +635,39 @@ a {
   background: #fff;
 }
 
+.bookCardRow {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.bookCardCover {
+  width: 44px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
+}
+
+.bookCardCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bookCoverPlaceholderText {
+  font-size: 11px;
+  color: var(--sp-muted);
+}
+
+.bookCardMain {
+  min-width: 0;
+}
+
 .bookCardSelected {
   border-color: rgba(37, 99, 235, 0.35);
   background: rgba(37, 99, 235, 0.04);
@@ -691,17 +724,27 @@ a {
   margin-bottom: 8px;
 }
 
-.bookCoverPlaceholder {
-  width: 72px;
-  height: 96px;
-  border: 1px dashed var(--sp-border);
-  border-radius: 10px;
-  background: rgba(17, 24, 39, 0.02);
-  color: var(--sp-muted);
+.bookDetailCover {
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
   display: grid;
   place-items: center;
-  font-size: 12px;
   flex: 0 0 auto;
+}
+
+.bookDetailCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bookDetailCoverPlaceholder {
+  font-size: 12px;
+  color: var(--sp-muted);
 }
 
 .bookDetailHeaderText {
@@ -722,10 +765,15 @@ a {
   flex: 0 0 auto;
 }
 
-.bookDetailGrid {
-  display: grid;
-  gap: 4px;
-  margin-top: 8px;
+.bookDetailMetaLine {
+  margin-top: 4px;
+}
+
+.bookDetailSummary {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+  white-space: pre-wrap;
 }
 
 .detailRow {

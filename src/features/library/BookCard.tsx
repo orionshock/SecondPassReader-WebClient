@@ -1,4 +1,6 @@
+import { useMemo, useState } from "react";
 import type { LibraryBook } from "../../schemas/library";
+import { getBookCoverUrl } from "./coverUtils";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -12,10 +14,12 @@ function formatFileSize(bytes?: number | null) {
 
 export function BookCard({
   book,
+  serverBaseUrl,
   selected,
   onSelect,
 }: {
   book: LibraryBook;
+  serverBaseUrl?: string;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -26,28 +30,50 @@ export function BookCard({
   const hasFile = Boolean(book.file);
   const fileSize = formatFileSize(book.file?.file_size ?? null);
 
+  const [coverBroken, setCoverBroken] = useState(false);
+  const coverSrc = useMemo(
+    () => (coverBroken ? undefined : getBookCoverUrl(book, serverBaseUrl ?? null)),
+    [book, coverBroken, serverBaseUrl],
+  );
+
   return (
     <article className={`bookCard ${selected ? "bookCardSelected" : ""}`}>
-      <div className="bookTitleRow">
-        <div className="bookTitle">{book.title}</div>
+      <div className="bookCardRow">
+        <div className="bookCardCover">
+          {coverSrc ? (
+            <img
+              className="bookCardCoverImg"
+              src={coverSrc}
+              alt={`${book.title} cover`}
+              loading="lazy"
+              onError={() => setCoverBroken(true)}
+            />
+          ) : (
+            <div className="bookCoverPlaceholderText">No cover</div>
+          )}
+        </div>
+
+        <div className="bookCardMain">
+          <div className="bookTitle">{book.title}</div>
+          {book.subtitle ? <div className="bookSubtitle">{book.subtitle}</div> : null}
+
+          <div className="bookMeta">
+            {authors ? <div className="bookLine">{authors}</div> : null}
+            {seriesText ? <div className="bookLine">{seriesText}</div> : null}
+
+            <div className="bookLine muted">
+              {[book.language || null, book.published_date || null, hasFile && fileSize ? fileSize : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          </div>
+        </div>
+
         <div className="bookCardRight">
           <button type="button" className="button buttonCompact" onClick={onSelect}>
             {selected ? "Selected" : "View"}
           </button>
           {hasFile ? <span className="pill pillOk">EPUB</span> : <span className="pill pillIdle">No file</span>}
-        </div>
-      </div>
-
-      {book.subtitle ? <div className="bookSubtitle">{book.subtitle}</div> : null}
-
-      <div className="bookMeta">
-        {authors ? <div className="bookLine">{authors}</div> : null}
-        {seriesText ? <div className="bookLine">{seriesText}</div> : null}
-
-        <div className="bookLine muted">
-          {[book.language || null, book.published_date || null, hasFile && fileSize ? fileSize : null]
-            .filter(Boolean)
-            .join(" · ")}
         </div>
       </div>
     </article>

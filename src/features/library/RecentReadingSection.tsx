@@ -4,6 +4,7 @@ import type { LibraryBook } from "../../schemas/library";
 import type { ReadingRecentSessionsResponse } from "../../schemas/readingSession";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
+import { resolveCoverUrl } from "./coverUtils";
 
 function formatLastActivity(isoUtc: string): string {
   try {
@@ -25,6 +26,7 @@ export function RecentReadingSection({
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ReadingRecentSessionsResponse | null>(null);
   const [resumeBusyId, setResumeBusyId] = useState<string | null>(null);
+  const [brokenCoverIds, setBrokenCoverIds] = useState<Record<string, true>>({});
 
   const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
 
@@ -108,11 +110,18 @@ export function RecentReadingSection({
           {data.results.map((item) => {
             const id = String(item.book.id);
             const resumeBusy = resumeBusyId === id;
+            const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.cover_url, profile);
             return (
               <div key={item.session.id} className="recentBookCard">
                 <div className="recentCover">
-                  {item.book.cover_url ? (
-                    <img className="recentCoverImg" src={item.book.cover_url} alt="" loading="lazy" />
+                  {coverSrc ? (
+                    <img
+                      className="recentCoverImg"
+                      src={coverSrc}
+                      alt={`${item.book.title} cover`}
+                      loading="lazy"
+                      onError={() => setBrokenCoverIds((prev) => ({ ...prev, [id]: true }))}
+                    />
                   ) : (
                     <div className="recentCoverPlaceholder">No cover</div>
                   )}
