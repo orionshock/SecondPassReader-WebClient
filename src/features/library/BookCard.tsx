@@ -16,12 +16,12 @@ export function BookCard({
   book,
   serverBaseUrl,
   selected,
-  onSelect,
+  onView,
 }: {
   book: LibraryBook;
   serverBaseUrl?: string;
   selected: boolean;
-  onSelect: () => void;
+  onView: () => void;
 }) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
@@ -62,16 +62,14 @@ export function BookCard({
             {seriesText ? <div className="bookLine">{seriesText}</div> : null}
 
             <div className="bookLine muted">
-              {[book.language || null, book.published_date || null, hasFile && fileSize ? fileSize : null]
-                .filter(Boolean)
-                .join(" · ")}
+              {[book.language || null, book.published_date || null, hasFile && fileSize ? fileSize : null].filter(Boolean).join(" · ")}
             </div>
           </div>
         </div>
 
         <div className="bookCardRight">
-          <button type="button" className="button buttonCompact" onClick={onSelect}>
-            {selected ? "Selected" : "View"}
+          <button type="button" className="button buttonCompact" onClick={onView}>
+            View
           </button>
           {hasFile ? <span className="pill pillOk">EPUB</span> : <span className="pill pillIdle">No file</span>}
         </div>

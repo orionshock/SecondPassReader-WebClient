@@ -2,34 +2,46 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { getConnectionStatus } from "../connection/connectionStatus";
-import { BookDetailPanel } from "./BookDetailPanel";
-import { BookList } from "./BookList";
-import type { OpenedBook } from "../reader";
 import { navigateTo } from "../../app/navigation";
+import { getConnectionStatus } from "../connection/connectionStatus";
+import type { OpenedBook } from "../reader";
+import { BookDetailModal } from "./BookDetailModal";
+import { BookList } from "./BookList";
 
 type Props = {
   profile: ConnectionProfile | null;
   onBookOpened?: (opened: OpenedBook) => void;
   initialQuery?: string;
+  modalBookId?: string | null;
+  onCloseModal?: () => void;
   onQueryChange?: (q: string) => void;
   onQueryCommit?: (q: string) => void;
 };
 
 type Ordering = "-updated_at" | "title" | "-created_at" | "-published_date";
 
-export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQueryChange, onQueryCommit }: Props) {
+export function LibraryLandingPage({
+  profile,
+  onBookOpened,
+  initialQuery,
+  modalBookId,
+  onCloseModal,
+  onQueryChange,
+  onQueryCommit,
+}: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
 
   const [q, setQ] = useState(initialQuery ?? "");
-  const [ordering, setOrdering] = useState<Ordering>("-updated_at");
-  const [pageSize, setPageSize] = useState(20);
+  const [ordering, setOrdering] = useState<Ordering>("title");
+  const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(1);
+
+  // Only used for library requests, so typing doesn't auto-search on every keystroke.
+  const [committedQuery, setCommittedQuery] = useState((initialQuery ?? "").trim());
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<LibraryBook> | null>(null);
-  const [selectedBook, setSelectedBook] = useState<LibraryBook | null>(null);
   const [launchMessage, setLaunchMessage] = useState<string | null>(null);
   const [downloadState, setDownloadState] = useState<
     | { phase: "idle" }
@@ -46,12 +58,20 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
   useEffect(() => {
     const next = initialQuery ?? "";
     setQ((prev) => (prev === next ? prev : next));
+    // If we navigated to a URL with a query (e.g. Home search, or browser back), auto-load it once.
+    const trimmed = next.trim();
+    if (trimmed && trimmed !== committedQuery) {
+      setCommittedQuery(trimmed);
+      setData(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  async function loadBooks(targetPage = page) {
+  async function loadBooks(targetPage = page, opts?: { queryOverride?: string }) {
     if (!profile) return;
     if (!profile.apiBaseUrl || !profile.accessToken) return;
 
+    const effectiveQuery = (opts?.queryOverride ?? committedQuery).trim();
     setBusy(true);
     setError(null);
     try {
@@ -61,7 +81,7 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
         accessToken: profile.accessToken,
         tokenType: profile.tokenType ?? "Bearer",
         params: {
-          q: q.trim() || undefined,
+          q: effectiveQuery || undefined,
           ordering,
           page: targetPage,
           pageSize,
@@ -71,11 +91,6 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
       setPage(targetPage);
       setLaunchMessage(null);
       setDownloadState({ phase: "idle" });
-      setSelectedBook((prev) => {
-        if (!prev) return null;
-        const match = result.results.find((b) => String(b.id) === String(prev.id));
-        return match ?? null;
-      });
     } catch (e) {
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setError(
@@ -89,11 +104,13 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
     }
   }
 
-  function handleSelectBook(book: LibraryBook) {
-    setSelectedBook(book);
-    setLaunchMessage(null);
-    setDownloadState({ phase: "idle" });
-  }
+  useEffect(() => {
+    if (status !== "verified") return;
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (data) return;
+    void loadBooks(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, profile?.apiBaseUrl, profile?.accessToken, ordering, pageSize, committedQuery, data]);
 
   async function handleOpenReader(book: LibraryBook) {
     setLaunchMessage(null);
@@ -164,6 +181,16 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
     setLaunchMessage("Reader opened.");
   }
 
+  function handleViewBook(book: LibraryBook) {
+    const nextQ = q.trim();
+    navigateTo(
+      nextQ ? { kind: "libraryBook", bookId: String(book.id), q: nextQ } : { kind: "libraryBook", bookId: String(book.id) },
+    );
+  }
+
+  const modalInitialBook =
+    modalBookId && data?.results ? data.results.find((b) => String(b.id) === String(modalBookId)) ?? null : null;
+
   return (
     <section className="panel">
       <h2 className="panelTitle">Search the Library</h2>
@@ -189,8 +216,11 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return;
                     e.preventDefault();
+                    const next = q.trim();
                     onQueryCommit?.(q);
-                    void loadBooks(1);
+                    setCommittedQuery(next);
+                    setData(null);
+                    void loadBooks(1, { queryOverride: next });
                   }}
                   placeholder="Search..."
                 />
@@ -201,7 +231,10 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
                 <select
                   className="input inputCompact"
                   value={ordering}
-                  onChange={(e) => setOrdering(e.target.value as Ordering)}
+                  onChange={(e) => {
+                    setOrdering(e.target.value as Ordering);
+                    setData(null);
+                  }}
                 >
                   <option value="-updated_at">Recently updated</option>
                   <option value="title">Title</option>
@@ -215,7 +248,10 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
                 <select
                   className="input inputCompact"
                   value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setData(null);
+                  }}
                 >
                   <option value={20}>20</option>
                   <option value={50}>50</option>
@@ -227,8 +263,11 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
                 className="button buttonPrimary"
                 type="button"
                 onClick={() => {
+                  const next = q.trim();
                   onQueryCommit?.(q);
-                  void loadBooks(1);
+                  setCommittedQuery(next);
+                  setData(null);
+                  void loadBooks(1, { queryOverride: next });
                 }}
                 disabled={busy}
               >
@@ -265,28 +304,33 @@ export function LibraryLandingPage({ profile, onBookOpened, initialQuery, onQuer
                 </div>
               </div>
 
-              {selectedBook ? (
-                <BookDetailPanel
-                  book={selectedBook}
-                  serverBaseUrl={profile?.serverBaseUrl}
-                  launchMessage={launchMessage}
-                  onOpenReader={handleOpenReader}
-                  downloadState={downloadState}
-                />
-              ) : (
-                <div className="muted">Select a book to view details.</div>
-              )}
+              <BookList
+                books={data.results}
+                serverBaseUrl={profile?.serverBaseUrl}
+                selectedBookId={modalBookId ? String(modalBookId) : null}
+                onViewBook={handleViewBook}
+              />
+            </>
+          ) : (
+            <div className="muted" style={{ marginTop: 10 }}>
+              {busy ? "Loading…" : "No results yet."}
+            </div>
+          )}
 
-               <BookList
-                 books={data.results}
-                 serverBaseUrl={profile?.serverBaseUrl}
-                 selectedBookId={selectedBook ? String(selectedBook.id) : null}
-                 onSelectBook={handleSelectBook}
-               />
-             </>
-           ) : null}
+          {modalBookId ? (
+            <BookDetailModal
+              profile={profile}
+              bookId={String(modalBookId)}
+              initialBook={modalInitialBook}
+              onClose={() => onCloseModal?.()}
+              onOpenReader={handleOpenReader}
+              launchMessage={launchMessage}
+              downloadState={downloadState}
+            />
+          ) : null}
         </>
       ) : null}
     </section>
   );
 }
+

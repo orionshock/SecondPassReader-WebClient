@@ -4,12 +4,12 @@ import { BookCard } from "./BookCard";
 export function BookList({
   books,
   selectedBookId,
-  onSelectBook,
+  onViewBook,
   serverBaseUrl,
 }: {
   books: LibraryBook[];
   selectedBookId: string | null;
-  onSelectBook: (book: LibraryBook) => void;
+  onViewBook: (book: LibraryBook) => void;
   serverBaseUrl?: string;
 }) {
   if (books.length === 0) return <p className="muted">No books found.</p>;
@@ -21,7 +21,7 @@ export function BookList({
           book={b}
           serverBaseUrl={serverBaseUrl}
           selected={String(b.id) === selectedBookId}
-          onSelect={() => onSelectBook(b)}
+          onView={() => onViewBook(b)}
         />
       ))}
     </div>

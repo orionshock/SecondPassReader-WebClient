@@ -366,19 +366,32 @@ export default function App() {
                 <div className="libraryScreen">
                   <ShelvesPage />
                 </div>
-              ) : route?.kind === "library" ? (
+              ) : route?.kind === "library" || route?.kind === "libraryBook" ? (
                 <div className="libraryScreen">
                   <LibraryLandingPage
                     profile={selectedProfile}
                     onBookOpened={handleBookOpened}
-                    initialQuery={route.q ?? ""}
+                    initialQuery={route.kind === "libraryBook" ? route.q ?? "" : route.q ?? ""}
+                    modalBookId={route.kind === "libraryBook" ? route.bookId : null}
+                    onCloseModal={() => {
+                      const q = route.kind === "libraryBook" ? route.q : undefined;
+                      navigateTo(q ? { kind: "library", q } : { kind: "library" });
+                    }}
                     onQueryChange={(q) => {
                       // Keep URL in sync without spamming history entries.
                       const next = q.trim();
+                      if (route.kind === "libraryBook") {
+                        navigateTo(next ? { kind: "libraryBook", bookId: route.bookId, q: next } : { kind: "libraryBook", bookId: route.bookId }, { replace: true });
+                        return;
+                      }
                       navigateTo(next ? { kind: "library", q: next } : { kind: "library" }, { replace: true });
                     }}
                     onQueryCommit={(q) => {
                       const next = q.trim();
+                      if (route.kind === "libraryBook") {
+                        navigateTo(next ? { kind: "libraryBook", bookId: route.bookId, q: next } : { kind: "libraryBook", bookId: route.bookId });
+                        return;
+                      }
                       navigateTo(next ? { kind: "library", q: next } : { kind: "library" });
                     }}
                   />

@@ -805,6 +805,52 @@ a {
   gap: 4px;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 1000;
+}
+
+.modalPanel {
+  width: min(980px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  overflow: hidden;
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.modalHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-border);
+  background: rgba(17, 24, 39, 0.01);
+}
+
+.modalTitle {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modalBody {
+  padding: 12px;
+  overflow: auto;
+  min-height: 0;
+}
+
 .downloadResultBox {
   margin-top: 8px;
   border: 1px dashed var(--sp-border);

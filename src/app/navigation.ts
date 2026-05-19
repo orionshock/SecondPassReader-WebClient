@@ -4,6 +4,7 @@ export type AppRoute =
   | { kind: "verify" }
   | { kind: "home" }
   | { kind: "library"; q?: string }
+  | { kind: "libraryBook"; bookId: string; q?: string }
   | { kind: "shelves" }
   | { kind: "settings" }
   | { kind: "reader"; bookId: string }
@@ -27,6 +28,10 @@ export function routeToHash(route: AppRoute): string {
       return "#/home";
     case "library":
       return route.q ? `#/library?q=${encodeURIComponent(route.q)}` : "#/library";
+    case "libraryBook": {
+      const base = `#/library/${encodeURIComponent(route.bookId)}`;
+      return route.q ? `${base}?q=${encodeURIComponent(route.q)}` : base;
+    }
     case "shelves":
       return "#/shelves";
     case "settings":
@@ -56,6 +61,14 @@ export function parseCurrentRoute(): AppRoute | null {
   if (head === "home") return { kind: "home" };
   if (head === "library") {
     const q = queryParams.get("q")?.trim() ?? "";
+    if (typeof parts[1] === "string" && parts[1]) {
+      try {
+        const bookId = decodeURIComponent(parts[1]);
+        return q ? { kind: "libraryBook", bookId, q } : { kind: "libraryBook", bookId };
+      } catch {
+        return q ? { kind: "libraryBook", bookId: parts[1], q } : { kind: "libraryBook", bookId: parts[1] };
+      }
+    }
     return q ? { kind: "library", q } : { kind: "library" };
   }
   if (head === "shelves") return { kind: "shelves" };
