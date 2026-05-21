@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -30,9 +30,10 @@ export function BookDetailModal({
   const [book, setBook] = useState<LibraryBook | null>(initialBook);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fetchSeqRef = useRef(0);
 
   useEffect(() => {
-    setBook(initialBook);
+    setBook(initialBook ?? null);
     setError(null);
   }, [bookId, initialBook]);
 
@@ -52,12 +53,14 @@ export function BookDetailModal({
     if (!canFetch) return;
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
     if (!profile.serverBaseUrl) return;
-    if (book && String(book.id) === String(bookId)) return;
 
     const apiBaseUrl = profile.apiBaseUrl;
     const accessToken = profile.accessToken;
     const tokenType = profile.tokenType ?? "Bearer";
     const serverBaseUrl = profile.serverBaseUrl;
+
+    fetchSeqRef.current += 1;
+    const seq = fetchSeqRef.current;
 
     setBusy(true);
     setError(null);
@@ -70,8 +73,10 @@ export function BookDetailModal({
           tokenType,
           bookId,
         });
+        if (seq !== fetchSeqRef.current) return;
         setBook(full);
       } catch (e) {
+        if (seq !== fetchSeqRef.current) return;
         const message =
           e instanceof ApiError && e.status === 404
             ? "That book could not be found or you do not have access to it."
@@ -80,10 +85,11 @@ export function BookDetailModal({
               : "Failed to load book.";
         setError(message);
       } finally {
+        if (seq !== fetchSeqRef.current) return;
         setBusy(false);
       }
     })();
-  }, [book, bookId, canFetch, profile]);
+  }, [bookId, canFetch, profile]);
 
   const headerTitle = useMemo(() => (book?.title ? book.title : `Book ${bookId}`), [book?.title, bookId]);
 

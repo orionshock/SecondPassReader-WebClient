@@ -51,6 +51,36 @@ export function BookDetailPanel({
 
   const descriptionText = useMemo(() => getBookDescriptionText(book), [book]);
 
+  const identifiersText = useMemo(() => {
+    const raw = (book as unknown as { identifiers?: unknown }).identifiers;
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const lines = raw
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const scheme = (item as { scheme?: unknown }).scheme;
+        const value = (item as { value?: unknown }).value;
+        const s = typeof scheme === "string" ? scheme.trim() : "";
+        const v = typeof value === "string" ? value.trim() : "";
+        if (!s && !v) return null;
+        return s && v ? `${s}: ${v}` : v || s;
+      })
+      .filter((x): x is string => Boolean(x));
+    return lines.length ? lines : null;
+  }, [book]);
+
+  const groupsText = useMemo(() => {
+    const raw = (book as unknown as { groups?: unknown }).groups;
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const names = raw
+      .map((g) => {
+        if (!g || typeof g !== "object") return null;
+        const name = (g as { name?: unknown }).name;
+        return typeof name === "string" && name.trim() ? name.trim() : null;
+      })
+      .filter((x): x is string => Boolean(x));
+    return names.length ? names : null;
+  }, [book]);
+
   return (
     <div className="bookDetailPanel">
       <div className="bookDetailHeader">
@@ -89,7 +119,15 @@ export function BookDetailPanel({
         </div>
       </div>
 
-      {descriptionText ? <div className="bookDetailSummary">{descriptionText}</div> : null}
+      <div className="bookDetailSummary">
+        {descriptionText ? (
+          descriptionText
+        ) : (
+          <span className="muted">
+            <em>No Summary Provided</em>
+          </span>
+        )}
+      </div>
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
       {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}
@@ -118,6 +156,18 @@ export function BookDetailPanel({
         {book.isbn ? (
           <div className="detailRow">
             <span className="muted">ISBN:</span> <span className="mono">{book.isbn}</span>
+          </div>
+        ) : null}
+
+        {identifiersText ? (
+          <div className="detailRow">
+            <span className="muted">Identifiers:</span> {identifiersText.join(" · ")}
+          </div>
+        ) : null}
+
+        {groupsText ? (
+          <div className="detailRow">
+            <span className="muted">Groups:</span> {groupsText.join(" · ")}
           </div>
         ) : null}
 
