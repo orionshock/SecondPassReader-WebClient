@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { BookFileDownloadResult, LibraryBook } from "../../schemas/library";
 import { getBookCoverUrl } from "./coverUtils";
+import { getBookDescriptionText } from "./bookTextUtils";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -48,6 +49,8 @@ export function BookDetailPanel({
     [book, coverBroken, serverBaseUrl],
   );
 
+  const descriptionText = useMemo(() => getBookDescriptionText(book), [book]);
+
   return (
     <div className="bookDetailPanel">
       <div className="bookDetailHeader">
@@ -76,11 +79,6 @@ export function BookDetailPanel({
           <div className="bookDetailMetaLine muted">
             {[book.publisher || null, book.language || null, book.published_date || null].filter(Boolean).join(" · ")}
           </div>
-          {book.isbn ? (
-            <div className="bookDetailMetaLine muted">
-              <span>ISBN:</span> <span className="mono">{book.isbn}</span>
-            </div>
-          ) : null}
         </div>
 
         <div className="bookDetailActions">
@@ -91,7 +89,7 @@ export function BookDetailPanel({
         </div>
       </div>
 
-      {book.summary ? <div className="bookDetailSummary">{book.summary}</div> : null}
+      {descriptionText ? <div className="bookDetailSummary">{descriptionText}</div> : null}
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
       {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}
@@ -116,6 +114,12 @@ export function BookDetailPanel({
           {file?.format ? <span className="muted">({file.format})</span> : null}
           {fileSize ? <span className="muted"> · {fileSize}</span> : null}
         </div>
+
+        {book.isbn ? (
+          <div className="detailRow">
+            <span className="muted">ISBN:</span> <span className="mono">{book.isbn}</span>
+          </div>
+        ) : null}
 
         {book.subjects && book.subjects.length > 0 ? (
           <div className="detailRow">
@@ -144,4 +148,3 @@ export function BookDetailPanel({
     </div>
   );
 }
-

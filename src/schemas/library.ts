@@ -48,6 +48,7 @@ export type LibraryBook = {
   title: string;
   subtitle?: string | null;
   summary?: string | null;
+  description?: string | null;
   publisher?: string | null;
   language?: string | null;
   published_date?: string | null;

@@ -784,6 +784,7 @@ a {
   padding-top: 10px;
   border-top: 1px solid var(--sp-border);
   white-space: pre-wrap;
+  line-height: 1.4;
 }
 
 .detailRow {
