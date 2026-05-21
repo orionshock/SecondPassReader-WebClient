@@ -1,40 +1,16 @@
 import { useMemo, useState } from "react";
-import type { LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
-import { openBookForReader } from "../library/openBookForReader";
 import { RecentReadingSection } from "../library/RecentReadingSection";
-import type { OpenedBook } from "../reader";
 import { getConnectionStatus } from "../connection/connectionStatus";
 
 export function HomePage({
   profile,
-  onBookOpened,
 }: {
   profile: ConnectionProfile | null;
-  onBookOpened?: (opened: OpenedBook) => void;
 }) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const [homeSearch, setHomeSearch] = useState("");
-  const [resumeError, setResumeError] = useState<string | null>(null);
-  const [resumeBusy, setResumeBusy] = useState(false);
-
-  async function handleOpenReader(book: LibraryBook) {
-    if (!profile) return;
-    if (resumeBusy) return;
-    setResumeBusy(true);
-    setResumeError(null);
-    try {
-      navigateTo({ kind: "reader", bookId: String(book.id) });
-      const opened = await openBookForReader({ profile, book });
-      onBookOpened?.(opened);
-    } catch (e) {
-      setResumeError(e instanceof Error ? e.message : "Failed to open reader.");
-      navigateTo({ kind: "home" });
-    } finally {
-      setResumeBusy(false);
-    }
-  }
 
   return (
     <section className="panel">
@@ -46,8 +22,7 @@ export function HomePage({
 
       {status === "verified" ? (
         <>
-          {resumeError ? <div className="errorText">{resumeError}</div> : null}
-          <RecentReadingSection profile={profile} onOpenReader={handleOpenReader} />
+          <RecentReadingSection profile={profile} />
 
           <div style={{ marginTop: 16 }}>
             <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
@@ -84,7 +59,7 @@ export function HomePage({
                   placeholder="Search..."
                 />
               </label>
-              <button className="button buttonPrimary" type="submit" disabled={resumeBusy}>
+              <button className="button buttonPrimary" type="submit">
                 Search
               </button>
             </form>
@@ -94,4 +69,3 @@ export function HomePage({
     </section>
   );
 }
-

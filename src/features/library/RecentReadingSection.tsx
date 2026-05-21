@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { LibraryBook } from "../../schemas/library";
 import type { ReadingRecentSessionsResponse } from "../../schemas/readingSession";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
@@ -17,10 +16,8 @@ function formatLastActivity(isoUtc: string): string {
 
 export function RecentReadingSection({
   profile,
-  onOpenReader,
 }: {
   profile: ConnectionProfile | null;
-  onOpenReader: (book: LibraryBook) => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,21 +57,12 @@ export function RecentReadingSection({
   }, [canLoad, loadRecent]);
 
   async function handleResume(bookId: string | number) {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
     const bookKey = String(bookId);
     if (resumeBusyId) return;
     setResumeBusyId(bookKey);
     setError(null);
     try {
       navigateTo({ kind: "reader", bookId: bookKey });
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const full = await api.getBook({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        bookId: bookKey,
-      });
-      await onOpenReader(full);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to resume book.");
     } finally {

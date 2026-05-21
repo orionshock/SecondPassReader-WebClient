@@ -4,13 +4,11 @@ import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { getConnectionStatus } from "../connection/connectionStatus";
-import type { OpenedBook } from "../reader";
 import { BookDetailModal } from "./BookDetailModal";
 import { BookList } from "./BookList";
 
 type Props = {
   profile: ConnectionProfile | null;
-  onBookOpened?: (opened: OpenedBook) => void;
   initialQuery?: string;
   modalBookId?: string | null;
   onCloseModal?: () => void;
@@ -22,7 +20,6 @@ type Ordering = "-updated_at" | "title" | "-created_at" | "-published_date";
 
 export function LibraryLandingPage({
   profile,
-  onBookOpened,
   initialQuery,
   modalBookId,
   onCloseModal,
@@ -42,18 +39,6 @@ export function LibraryLandingPage({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PaginatedResponse<LibraryBook> | null>(null);
-  const [launchMessage, setLaunchMessage] = useState<string | null>(null);
-  const [downloadState, setDownloadState] = useState<
-    | { phase: "idle" }
-    | { phase: "opening_session" }
-    | { phase: "fetching" }
-    | { phase: "opening_reader" }
-    | {
-        phase: "success";
-        result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string };
-      }
-    | { phase: "error"; message: string }
-  >({ phase: "idle" });
 
   useEffect(() => {
     const next = initialQuery ?? "";
@@ -89,8 +74,6 @@ export function LibraryLandingPage({
       });
       setData(result);
       setPage(targetPage);
-      setLaunchMessage(null);
-      setDownloadState({ phase: "idle" });
     } catch (e) {
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setError(
@@ -113,72 +96,8 @@ export function LibraryLandingPage({
   }, [status, profile?.apiBaseUrl, profile?.accessToken, ordering, pageSize, committedQuery, data]);
 
   async function handleOpenReader(book: LibraryBook) {
-    setLaunchMessage(null);
-    setDownloadState({ phase: "idle" });
-
-    if (!profile?.accessToken) {
-      setDownloadState({ phase: "error", message: "Profile is not linked." });
-      return;
-    }
-    if (!book.file?.download_url) {
-      setDownloadState({ phase: "error", message: "No EPUB file available for this book." });
-      return;
-    }
-    if (!profile.apiBaseUrl) {
-      setDownloadState({ phase: "error", message: "Profile is missing apiBaseUrl. Run discovery again." });
-      return;
-    }
-
-    // Update route immediately so App-level guards treat this as an intentional reader open.
+    // Route is canonical: App's reader route effect owns opening/restoring the book.
     navigateTo({ kind: "reader", bookId: String(book.id) });
-
-    try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-
-      setDownloadState({ phase: "opening_session" });
-      const open = await api.openReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        bookId: book.id,
-      });
-
-      setDownloadState({ phase: "fetching" });
-      const result = await api.downloadBookFile({
-        downloadUrl: book.file.download_url,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-      });
-
-      setDownloadState({ phase: "opening_reader" });
-      const objectUrl = URL.createObjectURL(result.blob);
-      onBookOpened?.({
-        book,
-        blob: result.blob,
-        objectUrl,
-        openedAt: new Date().toISOString(),
-        readingOpen: open,
-      });
-      setDownloadState({ phase: "success", result });
-    } catch (e) {
-      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
-        setDownloadState({
-          phase: "error",
-          message:
-            "Could not open reading session or download this book file. Your device token may be revoked or not allowed to access reading data/files.",
-        });
-      } else if (e instanceof ApiError && e.status === 404) {
-        setDownloadState({
-          phase: "error",
-          message: "Could not open reading session. You may not have access to this book.",
-        });
-      } else {
-        setDownloadState({ phase: "error", message: e instanceof Error ? e.message : "Download failed." });
-      }
-      return;
-    }
-
-    setLaunchMessage("Reader opened.");
   }
 
   function handleViewBook(book: LibraryBook) {
@@ -358,8 +277,8 @@ export function LibraryLandingPage({
               initialBook={modalInitialBook}
               onClose={() => onCloseModal?.()}
               onOpenReader={handleOpenReader}
-              launchMessage={launchMessage}
-              downloadState={downloadState}
+              launchMessage={null}
+              downloadState={{ phase: "idle" }}
             />
           ) : null}
         </>

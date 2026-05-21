@@ -114,6 +114,9 @@ export default function App() {
       case "library":
         document.title = `${base} - Library`;
         return;
+      case "libraryBook":
+        document.title = `${base} - Library`;
+        return;
       case "shelves":
         document.title = `${base} - Shelves`;
         return;
@@ -182,7 +185,7 @@ export default function App() {
               ? e.message
               : "Failed to open book.";
         setReaderRestoreError(message);
-        navigateTo({ kind: "library" });
+        navigateTo({ kind: "home" });
       } finally {
         if (openingBookRef.current === requestedBookId) openingBookRef.current = null;
       }
@@ -228,11 +231,8 @@ export default function App() {
   }
 
   async function handleOpenBookFromReader(book: LibraryBook) {
-    if (!selectedProfile) throw new Error("No profile selected.");
-    // Make the route reflect the user's intent immediately so guards don't drop the open.
+    // Route is canonical; App's reader-route effect owns opening/restoring the book.
     navigateTo({ kind: "reader", bookId: String(book.id) });
-    const opened = await openBookForReader({ profile: selectedProfile, book });
-    handleBookOpened(opened);
   }
 
   function handleCloseReader() {
@@ -370,8 +370,7 @@ export default function App() {
                 <div className="libraryScreen">
                   <LibraryLandingPage
                     profile={selectedProfile}
-                    onBookOpened={handleBookOpened}
-                    initialQuery={route.kind === "libraryBook" ? route.q ?? "" : route.q ?? ""}
+                    initialQuery={route.q ?? ""}
                     modalBookId={route.kind === "libraryBook" ? route.bookId : null}
                     onCloseModal={() => {
                       const q = route.kind === "libraryBook" ? route.q : undefined;
@@ -398,7 +397,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="libraryScreen">
-                  <HomePage profile={selectedProfile} onBookOpened={handleBookOpened} />
+                  <HomePage profile={selectedProfile} />
                 </div>
               )
             ) : null}
