@@ -3,6 +3,7 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { RecentReadingSection } from "../library/RecentReadingSection";
 import { getConnectionStatus } from "../connection/connectionStatus";
+import { ShelvesPreviewSection } from "./ShelvesPreviewSection";
 
 export function HomePage({
   profile,
@@ -22,21 +23,7 @@ export function HomePage({
 
       {status === "verified" ? (
         <>
-          <RecentReadingSection profile={profile} />
-
-          <div style={{ marginTop: 16 }}>
-            <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
-              <div className="panelTitle" style={{ margin: 0 }}>
-                Shelves
-              </div>
-              <button type="button" className="button buttonCompact" onClick={() => navigateTo({ kind: "shelves" })}>
-                Open
-              </button>
-            </div>
-            <div className="muted">Shelves are not wired in this client yet.</div>
-          </div>
-
-          <div style={{ marginTop: 16 }}>
+          <div>
             <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
               <div className="panelTitle" style={{ margin: 0 }}>
                 Search the Library
@@ -64,6 +51,10 @@ export function HomePage({
               </button>
             </form>
           </div>
+
+          <RecentReadingSection profile={profile} />
+
+          <ShelvesPreviewSection profile={profile} />
         </>
       ) : null}
     </section>

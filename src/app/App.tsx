@@ -19,6 +19,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
 import { ApiError, SecondPassApiClient } from "../api/SecondPassApiClient";
 import { ShelvesPage } from "../features/shelves/ShelvesPage";
+import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -364,7 +365,11 @@ export default function App() {
                 </section>
               ) : route?.kind === "shelves" ? (
                 <div className="libraryScreen">
-                  <ShelvesPage />
+                  <ShelvesPage profile={selectedProfile} />
+                </div>
+              ) : route?.kind === "shelf" ? (
+                <div className="libraryScreen">
+                  <ShelfDetailPage profile={selectedProfile} shelfId={route.shelfId} />
                 </div>
               ) : route?.kind === "library" || route?.kind === "libraryBook" ? (
                 <div className="libraryScreen">
