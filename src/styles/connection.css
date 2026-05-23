@@ -1,0 +1,179 @@
+/* Extracted from src/app/App.css (audit pass 2) */
+
+.connectScreen {
+  max-width: 680px;
+}
+
+.connectAdvanced {
+  border: 1px dashed var(--sp-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(17, 24, 39, 0.01);
+}
+
+.connectAdvanced > summary {
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.debugDetails {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--sp-panel);
+}
+
+.debugDetails > summary {
+  cursor: pointer;
+  color: var(--sp-muted);
+  font-size: 13px;
+}
+
+.debugGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.serverSummary {
+  display: grid;
+  gap: 6px;
+}
+
+.connectionGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.statusList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.statusRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusRow dt {
+  color: var(--sp-muted);
+}
+
+.statusRow dd {
+  margin: 0;
+}
+
+.discoveryBox {
+  border: 1px dashed var(--sp-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+  background: rgba(17, 24, 39, 0.02);
+}
+
+.linkingBox {
+  margin-top: 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  background: rgba(17, 24, 39, 0.01);
+}
+
+.profileList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.profileRow {
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.profileRowSelected {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.profileTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profileLabel {
+  font-weight: 600;
+}
+
+.profileSelectedMark {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.08);
+  color: rgb(37, 99, 235);
+}
+
+.badgeRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-border);
+  background: #fff;
+}
+
+.badgeOk {
+  border-color: rgba(18, 140, 63, 0.35);
+  background: rgba(18, 140, 63, 0.08);
+  color: rgb(18, 140, 63);
+}
+
+.badgeWarn {
+  border-color: rgba(185, 106, 0, 0.35);
+  background: rgba(185, 106, 0, 0.08);
+  color: rgb(185, 106, 0);
+}
+
+.profileMeta {
+  margin-top: 6px;
+  display: grid;
+  gap: 2px;
+}
+
+.profileActions {
+  display: flex;
+  gap: 8px;
+}
+
+.selectedSummary {
+  display: grid;
+  gap: 6px;
+}
+
+.selectedRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

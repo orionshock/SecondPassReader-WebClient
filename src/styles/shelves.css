@@ -1,0 +1,75 @@
+/* Extracted from src/app/App.css (audit pass 2) */
+
+.shelvesSection {
+  min-width: 0;
+}
+
+.shelfList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.shelfCard {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.shelfCardTitle {
+  font-weight: 700;
+}
+
+.shelfDetail {
+  min-width: 0;
+}
+
+.shelfBookList {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.shelfBookCard {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.shelfBookCover {
+  width: 56px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
+}
+
+.shelfBookCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shelfBookMain {
+  min-width: 0;
+}
+
+.shelfBookActions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}

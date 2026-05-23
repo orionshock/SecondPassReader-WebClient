@@ -1,0 +1,363 @@
+/* Extracted from src/app/App.css (audit pass 2) */
+
+.readerScreen {
+  display: grid;
+  gap: 12px;
+}
+
+.progressLine {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--sp-text);
+}
+
+.nearEndBanner {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.02);
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.nearEndBanner .sep {
+  opacity: 0.7;
+}
+
+.nearEndLabel {
+  font-weight: 600;
+}
+
+.nearEndCheckbox {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--sp-muted);
+}
+
+.nearEndActions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nearEndMessage {
+  color: var(--sp-muted);
+  margin-left: 6px;
+}
+
+.readerArea {
+  display: grid;
+  gap: 10px;
+  margin: 0 auto;
+  width: min(1500px, calc(100vw - 48px));
+  padding: 10px 10px 12px;
+  border-radius: 16px;
+}
+
+.readerSettingsPanel {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 10px;
+  background: rgba(17, 24, 39, 0.02);
+}
+
+.readerSettingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.readerSettingsLabel {
+  font-size: 13px;
+  color: var(--sp-muted);
+}
+
+.readerSettingsControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.readerThemeLight {
+  background: rgba(255, 255, 255, 0.02);
+  color: inherit;
+}
+
+.readerThemeSepia {
+  background: rgba(244, 236, 216, 0.38);
+}
+
+.readerThemeDark {
+  background: rgba(17, 24, 39, 0.92);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.readerThemeDark .muted {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.readerThemeDark .epubContainer {
+  background: #111111;
+}
+
+.readerThemeDark .button {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.readerThemeDark .input,
+.readerThemeDark textarea,
+.readerThemeDark select {
+  background: rgba(17, 24, 39, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.readerThemeDark .panel {
+  background: rgba(17, 24, 39, 0.35);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.readerThemeSepia .epubContainer {
+  background: rgba(244, 236, 216, 0.35);
+}
+
+.readerThemeSepia .panel {
+  background: rgba(244, 236, 216, 0.22);
+}
+
+.readerWidthNarrow {
+  width: min(980px, calc(100vw - 48px));
+}
+
+.readerWidthNormal {
+  width: min(1250px, calc(100vw - 48px));
+}
+
+.readerWidthWide {
+  width: min(1500px, calc(100vw - 48px));
+}
+
+.readerTopBar {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 2px 2px 0;
+}
+
+.readerTopLeft {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.readerBookTitle {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.readerBookSubtitle {
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.readerTopRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.readerDiagBox {
+  border: 1px dashed var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  background: rgba(17, 24, 39, 0.02);
+}
+
+.readerDiagBox > summary {
+  cursor: pointer;
+}
+
+.readerDiagBody {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.readerDiagSubdetails > summary {
+  cursor: pointer;
+}
+
+.highlightList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.highlightRow {
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  background: #fff;
+}
+
+.highlightRowSelected {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.highlightMain {
+  min-width: 0;
+}
+
+.highlightText {
+  font-size: 13px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.highlightTextExpanded {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.highlightSelect {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.highlightSelect:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.highlightDetails summary {
+  cursor: pointer;
+}
+
+.highlightActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.readerAnnotationsPanel {
+  padding: 12px;
+}
+
+.readerAnnotationsPanel .panelHeaderRow {
+  margin-bottom: 8px;
+}
+
+.readerAnnotationsPanel .highlightRow {
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.readerThemeSepia .readerAnnotationsPanel .highlightRow {
+  background: rgba(244, 236, 216, 0.35);
+}
+
+.readerThemeDark .readerAnnotationsPanel .highlightRow {
+  background: rgba(17, 24, 39, 0.55);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.readerAnnotationsPanel .highlightText {
+  font-size: 12.5px;
+}
+
+.readerAnnotationsPanel .highlightDetails summary {
+  font-size: 12px;
+}
+
+.annotationFloat {
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.annotationFloatTitle {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sp-muted);
+}
+
+.annotationFloatText {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.annotationFloatActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.annotationFloatNote {
+  display: grid;
+  gap: 8px;
+}
+
+.codeBlock {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.02);
+  overflow: auto;
+  max-height: 240px;
+  font-size: 12px;
+  line-height: 1.35;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.epubContainer {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: #fff;
+  height: 70vh;
+  min-height: 420px;
+  overflow: hidden;
+  width: 100%;
+}

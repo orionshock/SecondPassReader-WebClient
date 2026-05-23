@@ -1,0 +1,286 @@
+/* Extracted from src/app/App.css (audit pass 2) */
+
+.libraryScreen {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.libraryScreen > * {
+  min-width: 0;
+}
+
+.librarySearchSection {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(17, 24, 39, 0.01);
+  min-width: 0;
+}
+
+.libraryToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.toolbarField {
+  display: flex;
+  align-items: center;
+}
+
+.toolbarSearch {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.toolbarSearch input {
+  min-width: 0;
+}
+
+.libraryMetaRow {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.pagerButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.libraryMetaRowBottom {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  z-index: 2;
+}
+
+.bookList {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.bookCard {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.bookCardRow {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.bookCardCover {
+  width: 44px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
+}
+
+.bookCardCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bookCoverPlaceholderText {
+  font-size: 11px;
+  color: var(--sp-muted);
+}
+
+.bookCardMain {
+  min-width: 0;
+}
+
+.bookCardSelected {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.bookTitle {
+  font-weight: 700;
+}
+
+.bookSubtitle {
+  margin-top: 2px;
+  color: var(--sp-muted);
+}
+
+.bookMeta {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.bookCardRight {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.bookLine {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookDetailPanel {
+  margin-top: 10px;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.01);
+  padding: 12px;
+}
+
+.bookDetailHeader {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.bookDetailCover {
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.bookDetailCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bookDetailCoverPlaceholder {
+  font-size: 12px;
+  color: var(--sp-muted);
+}
+
+.bookDetailHeaderText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bookDetailTitle {
+  font-weight: 800;
+}
+
+.bookDetailSubtitle {
+  margin-top: 2px;
+  color: var(--sp-muted);
+}
+
+.bookDetailActions {
+  flex: 0 0 auto;
+}
+
+.bookDetailMetaLine {
+  margin-top: 4px;
+}
+
+.bookDetailSummary {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.bookFilePanel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+}
+
+.bookFilePanel > summary {
+  cursor: pointer;
+}
+
+.bookFileGrid {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 1000;
+}
+
+.modalPanel {
+  width: min(980px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  overflow: hidden;
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.modalHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-border);
+  background: rgba(17, 24, 39, 0.01);
+}
+
+.modalTitle {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modalBody {
+  padding: 12px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.downloadResultBox {
+  margin-top: 8px;
+  border: 1px dashed var(--sp-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+  background: rgba(18, 140, 63, 0.04);
+}

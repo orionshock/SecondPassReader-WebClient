@@ -1,0 +1,25 @@
+/* Extracted from src/app/App.css (audit pass 2) */
+
+.settingsLayout {
+  display: grid;
+  gap: 14px;
+}
+
+.settingsGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.settingsActions {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.settingsAdvanced > summary {
+  cursor: pointer;
+}
+
+.settingsAdvancedBody {
+  margin-top: 12px;
+}
