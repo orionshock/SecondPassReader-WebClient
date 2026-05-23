@@ -29,6 +29,7 @@ export function EpubReaderPanel({
   onTextSelected?: (selection: PendingSelection) => void;
   onRendererError?: (message: string) => void;
 }) {
+  const DEBUG_READER = import.meta.env.DEV;
   const [location, setLocation] = useState<string | number | null>(null);
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -108,8 +109,10 @@ export function EpubReaderPanel({
     renderedCfisRef.current = new Set();
     locationsInitStartedRef.current = false;
     locationsInitForRef.current = null;
-    // eslint-disable-next-line no-console
-    console.log("[reader] loading new EPUB blob");
+    if (DEBUG_READER) {
+      // eslint-disable-next-line no-console
+      console.log("[reader] loading new EPUB blob");
+    }
 
     void (async () => {
       try {
@@ -177,8 +180,10 @@ export function EpubReaderPanel({
         rendered.add(h.cfiRange);
       }
 
-      // eslint-disable-next-line no-console
-      console.log("[reader] highlight reconcile", { highlights: highlights.length, rendered: rendered.size });
+      if (DEBUG_READER) {
+        // eslint-disable-next-line no-console
+        console.log("[reader] highlight reconcile", { highlights: highlights.length, rendered: rendered.size });
+      }
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error("Highlight reconcile failed:", e);
@@ -225,8 +230,10 @@ export function EpubReaderPanel({
         }}
         handleKeyPress={(event: KeyboardEvent) => {
           // Replace react-reader's default key handling so we can debug and avoid crashes.
-          // eslint-disable-next-line no-console
-          console.log("[reader] keyup:", { key: event.key, code: event.code, keyCode: event.keyCode });
+          if (DEBUG_READER) {
+            // eslint-disable-next-line no-console
+            console.log("[reader] keyup:", { key: event.key, code: event.code, keyCode: event.keyCode });
+          }
 
           const r = renditionRef.current;
           if (!r) return;
@@ -319,12 +326,16 @@ export function EpubReaderPanel({
 
             // Optional render debug; harmless.
             r.on?.("rendered", (section: unknown) => {
-              // eslint-disable-next-line no-console
-              console.log("[reader] rendered", section);
+              if (DEBUG_READER) {
+                // eslint-disable-next-line no-console
+                console.log("[reader] rendered", section);
+              }
             });
           } catch (e) {
-            // eslint-disable-next-line no-console
-            console.log("[reader] could not attach rendition events", e);
+            if (DEBUG_READER) {
+              // eslint-disable-next-line no-console
+              console.log("[reader] could not attach rendition events", e);
+            }
           }
 
           // Kick off locations generation once per opened book (enables percentageFromCfi / progression).
@@ -334,12 +345,16 @@ export function EpubReaderPanel({
               locationsInitForRef.current = bookData;
               const gen = r?.book?.locations?.generate;
               if (typeof gen === "function") {
-                // eslint-disable-next-line no-console
-                console.log("[reader] generating locations for progression...");
+                if (DEBUG_READER) {
+                  // eslint-disable-next-line no-console
+                  console.log("[reader] generating locations for progression...");
+                }
                 void Promise.resolve(gen.call(r.book.locations, 1600))
                   .then(() => {
-                    // eslint-disable-next-line no-console
-                    console.log("[reader] locations generated");
+                    if (DEBUG_READER) {
+                      // eslint-disable-next-line no-console
+                      console.log("[reader] locations generated");
+                    }
 
                     // After locations are generated, re-emit the current location so progression updates immediately
                     // (otherwise it won't change until the next navigation triggers relocated).
@@ -476,7 +491,7 @@ export function EpubReaderPanel({
         loadingView={<div className="muted" style={{ padding: 12 }}>Loading EPUB...</div>}
         errorView={
           <div className="errorText" style={{ padding: 12 }}>
-            Error loading book. See diagnostics above.
+            Error loading book.
           </div>
         }
       />

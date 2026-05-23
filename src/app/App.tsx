@@ -24,6 +24,7 @@ import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export default function App() {
+  const DEBUG_NAV = import.meta.env.DEV;
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
   const [view, setView] = useState<"main" | "settings">("main");
@@ -54,6 +55,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!DEBUG_NAV) return;
     // eslint-disable-next-line no-console
     console.log("[nav] route", route);
   }, [route]);
@@ -237,8 +239,10 @@ export default function App() {
   }
 
   function handleCloseReader() {
-    // eslint-disable-next-line no-console
-    console.log("[nav] handleCloseReader()");
+    if (DEBUG_NAV) {
+      // eslint-disable-next-line no-console
+      console.log("[nav] handleCloseReader()");
+    }
     setOpenedBook((prev) => {
       if (prev) URL.revokeObjectURL(prev.objectUrl);
       return null;

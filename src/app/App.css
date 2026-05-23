@@ -798,13 +798,6 @@ a {
   margin-top: 6px;
 }
 
-.bookTitleRow {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
 .bookCardRight {
   display: inline-flex;
   gap: 8px;
@@ -891,13 +884,6 @@ a {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.detailSummaryText {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .bookFilePanel {
