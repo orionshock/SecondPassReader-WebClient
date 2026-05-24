@@ -149,7 +149,6 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
           const authors = formatAuthors(it);
           const series =
             it.book.series?.name && it.book.series ? it.book.series.name : null;
-          const canRead = Boolean(it.book.has_file);
 
           return (
             <div key={it.id} className="shelfBookCard">
@@ -181,17 +180,13 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
                 >
                   View details
                 </button>
-                {canRead ? (
-                  <button
-                    type="button"
-                    className="button buttonPrimary buttonCompact"
-                    onClick={() => navigateTo({ kind: "reader", bookId: String(it.book.id) })}
-                  >
-                    Read
-                  </button>
-                ) : (
-                  <span className="pill pillIdle">No file</span>
-                )}
+                <button
+                  type="button"
+                  className="button buttonPrimary buttonCompact"
+                  onClick={() => navigateTo({ kind: "reader", bookId: String(it.book.id) })}
+                >
+                  Read
+                </button>
               </div>
             </div>
           );

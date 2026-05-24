@@ -27,7 +27,6 @@ export function BookCard({
   const seriesText =
     book.series?.name && book.series_index != null ? `${book.series.name} #${book.series_index}` : book.series?.name;
 
-  const hasFile = Boolean(book.file);
   const fileSize = formatFileSize(book.file?.file_size ?? null);
 
   const [coverBroken, setCoverBroken] = useState(false);
@@ -62,7 +61,7 @@ export function BookCard({
             {seriesText ? <div className="bookLine">{seriesText}</div> : null}
 
             <div className="bookLine muted">
-              {[book.language || null, book.published_date || null, hasFile && fileSize ? fileSize : null].filter(Boolean).join(" · ")}
+              {[book.language || null, book.published_date || null, fileSize || null].filter(Boolean).join(" · ")}
             </div>
           </div>
         </div>
@@ -71,10 +70,8 @@ export function BookCard({
           <button type="button" className="button buttonCompact" onClick={onView}>
             View
           </button>
-          {hasFile ? <span className="pill pillOk">EPUB</span> : <span className="pill pillIdle">No file</span>}
         </div>
       </div>
     </article>
   );
 }
-
