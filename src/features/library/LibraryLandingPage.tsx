@@ -1,101 +1,275 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
+import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookList } from "./BookList";
 
+type BrowseMode = "books" | "series" | "authors";
+
 type Props = {
   profile: ConnectionProfile | null;
-  initialQuery?: string;
+  route: {
+    q?: string;
+    browse?: BrowseMode;
+    seriesId?: string;
+    authorId?: string;
+  };
   selectedBookId?: string | null;
   onViewBook?: (bookId: string) => void;
-  onQueryCommit?: (q: string) => void;
+  onCommitSearch?: (q: string) => void;
+  onShowBooks?: () => void;
+  onShowSeries?: () => void;
+  onShowAuthors?: () => void;
+  onShowSeriesBooks?: (seriesId: string) => void;
+  onShowAuthorBooks?: (authorId: string) => void;
 };
 
 export function LibraryLandingPage({
   profile,
-  initialQuery,
+  route,
   selectedBookId,
   onViewBook,
-  onQueryCommit,
+  onCommitSearch,
+  onShowBooks,
+  onShowSeries,
+  onShowAuthors,
+  onShowSeriesBooks,
+  onShowAuthorBooks,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
+  const apiReady = Boolean(profile?.apiBaseUrl && profile?.accessToken);
 
-  const [q, setQ] = useState(initialQuery ?? "");
+  const qFromRoute = (route.q ?? "").trim();
+  const browseFromRoute = route.browse ?? "books";
+  const browseMode: BrowseMode = qFromRoute
+    ? "books"
+    : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "books"
+      ? browseFromRoute
+      : "books";
+
+  const [qDraft, setQDraft] = useState(qFromRoute);
   const [pageSize, setPageSize] = useState(20);
-  const [page, setPage] = useState(1);
 
-  // Only used for library requests, so typing doesn't auto-search on every keystroke.
-  const [committedQuery, setCommittedQuery] = useState((initialQuery ?? "").trim());
+  const [booksBusy, setBooksBusy] = useState(false);
+  const [booksError, setBooksError] = useState<string | null>(null);
+  const [booksPage, setBooksPage] = useState(1);
+  const [booksData, setBooksData] = useState<PaginatedResponse<LibraryBook> | null>(null);
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PaginatedResponse<LibraryBook> | null>(null);
+  const [seriesBusy, setSeriesBusy] = useState(false);
+  const [seriesError, setSeriesError] = useState<string | null>(null);
+  const [seriesPage, setSeriesPage] = useState(1);
+  const [seriesData, setSeriesData] = useState<PaginatedResponse<LibrarySeries> | null>(null);
+  const [selectedSeries, setSelectedSeries] = useState<LibrarySeries | null>(null);
+
+  const [authorsBusy, setAuthorsBusy] = useState(false);
+  const [authorsError, setAuthorsError] = useState<string | null>(null);
+  const [authorsPage, setAuthorsPage] = useState(1);
+  const [authorsData, setAuthorsData] = useState<PaginatedResponse<LibraryAuthor> | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<LibraryAuthor | null>(null);
 
   useEffect(() => {
-    const next = initialQuery ?? "";
-    setQ((prev) => (prev === next ? prev : next));
-    // If we navigated to a URL with a query (e.g. Home search, or browser back), auto-load it once.
-    const trimmed = next.trim();
-    if (trimmed !== committedQuery) {
-      setCommittedQuery(trimmed);
-      setData(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialQuery]);
+    setQDraft(qFromRoute);
+  }, [qFromRoute]);
 
-  async function loadBooks(targetPage = page, opts?: { queryOverride?: string }) {
-    if (!profile) return;
-    if (!profile.apiBaseUrl || !profile.accessToken) return;
+  const loadBooks = useCallback(
+    async (input: {
+      page: number;
+      q?: string;
+      seriesId?: string;
+      authorId?: string;
+      ordering: "title" | "series_index";
+    }) => {
+      if (!profile?.apiBaseUrl || !profile.accessToken) return;
 
-    const effectiveQuery = (opts?.queryOverride ?? committedQuery).trim();
-    setBusy(true);
-    setError(null);
-    try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const result = await api.listBooks({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        params: {
-          q: effectiveQuery || undefined,
-          ordering: "title",
-          page: targetPage,
-          pageSize,
-        },
-      });
-      setData(result);
-      setPage(targetPage);
-    } catch (e) {
-      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
-        setError(
-          "Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.",
-        );
-      } else {
-        setError(e instanceof Error ? e.message : "Failed to load library.");
+      setBooksBusy(true);
+      setBooksError(null);
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+        const result = await api.listBooks({
+          apiBaseUrl: profile.apiBaseUrl,
+          accessToken: profile.accessToken,
+          tokenType: profile.tokenType ?? "Bearer",
+          params: {
+            q: input.q?.trim() ? input.q.trim() : undefined,
+            series: input.seriesId,
+            author: input.authorId,
+            ordering: input.ordering,
+            page: input.page,
+            pageSize,
+          },
+        });
+        setBooksData(result);
+        setBooksPage(input.page);
+      } catch (e) {
+        if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
+          setBooksError(
+            "Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.",
+          );
+        } else {
+          setBooksError(e instanceof Error ? e.message : "Failed to load library.");
+        }
+        setBooksData(null);
+      } finally {
+        setBooksBusy(false);
       }
-    } finally {
-      setBusy(false);
-    }
-  }
+    },
+    [pageSize, profile],
+  );
+
+  const loadSeries = useCallback(
+    async (page: number) => {
+      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      setSeriesBusy(true);
+      setSeriesError(null);
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+        const r = await api.listSeries({
+          apiBaseUrl: profile.apiBaseUrl,
+          accessToken: profile.accessToken,
+          tokenType: profile.tokenType ?? "Bearer",
+          page,
+        });
+        setSeriesData(r);
+        setSeriesPage(page);
+      } catch (e) {
+        setSeriesData(null);
+        setSeriesError(e instanceof Error ? e.message : "Failed to load series.");
+      } finally {
+        setSeriesBusy(false);
+      }
+    },
+    [profile],
+  );
+
+  const loadAuthors = useCallback(
+    async (page: number) => {
+      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      setAuthorsBusy(true);
+      setAuthorsError(null);
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+        const r = await api.listAuthors({
+          apiBaseUrl: profile.apiBaseUrl,
+          accessToken: profile.accessToken,
+          tokenType: profile.tokenType ?? "Bearer",
+          page,
+        });
+        setAuthorsData(r);
+        setAuthorsPage(page);
+      } catch (e) {
+        setAuthorsData(null);
+        setAuthorsError(e instanceof Error ? e.message : "Failed to load authors.");
+      } finally {
+        setAuthorsBusy(false);
+      }
+    },
+    [profile],
+  );
+
+  useEffect(() => {
+    setBooksData(null);
+    setBooksError(null);
+    setBooksBusy(false);
+    setBooksPage(1);
+  }, [qFromRoute, browseMode, route.seriesId, route.authorId, pageSize]);
 
   useEffect(() => {
     if (status !== "verified") return;
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (data) return;
-    void loadBooks(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, profile?.apiBaseUrl, profile?.accessToken, pageSize, committedQuery, data]);
+    if (!apiReady) return;
 
-  function handleViewBook(book: LibraryBook) {
-    onViewBook?.(String(book.id));
-  }
+    // Global search wins over browse.
+    if (qFromRoute) {
+      void loadBooks({ page: 1, q: qFromRoute, ordering: "title" });
+      return;
+    }
+
+    if (browseMode === "series" && route.seriesId) {
+      void loadBooks({ page: 1, seriesId: route.seriesId, ordering: "series_index" });
+      return;
+    }
+
+    if (browseMode === "authors" && route.authorId) {
+      void loadBooks({ page: 1, authorId: route.authorId, ordering: "title" });
+      return;
+    }
+
+    if (browseMode === "books") {
+      void loadBooks({ page: 1, ordering: "title" });
+      return;
+    }
+
+    if (browseMode === "series" && !route.seriesId && !seriesData && !seriesBusy) void loadSeries(1);
+    if (browseMode === "authors" && !route.authorId && !authorsData && !authorsBusy) void loadAuthors(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId]);
+
+  useEffect(() => {
+    if (status !== "verified") return;
+    if (!apiReady) return;
+    if (qFromRoute) {
+      setSelectedSeries(null);
+      setSelectedAuthor(null);
+      return;
+    }
+
+    if (browseMode === "series" && route.seriesId) {
+      void (async () => {
+        try {
+          const api = new SecondPassApiClient({ serverBaseUrl: profile!.serverBaseUrl });
+          const s = await api.getSeries({
+            apiBaseUrl: profile!.apiBaseUrl!,
+            accessToken: profile!.accessToken!,
+            tokenType: profile!.tokenType ?? "Bearer",
+            seriesId: route.seriesId!,
+          });
+          setSelectedSeries(s);
+        } catch {
+          setSelectedSeries(null);
+        }
+      })();
+    } else {
+      setSelectedSeries(null);
+    }
+
+    if (browseMode === "authors" && route.authorId) {
+      void (async () => {
+        try {
+          const api = new SecondPassApiClient({ serverBaseUrl: profile!.serverBaseUrl });
+          const a = await api.getAuthor({
+            apiBaseUrl: profile!.apiBaseUrl!,
+            accessToken: profile!.accessToken!,
+            tokenType: profile!.tokenType ?? "Bearer",
+            authorId: route.authorId!,
+          });
+          setSelectedAuthor(a);
+        } catch {
+          setSelectedAuthor(null);
+        }
+      })();
+    } else {
+      setSelectedAuthor(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, apiReady, browseMode, route.seriesId, route.authorId, qFromRoute]);
+
+  const handleCommitSearch = useCallback(() => {
+    const next = qDraft.trim();
+    onCommitSearch?.(next);
+  }, [onCommitSearch, qDraft]);
+
+  const booksPager = useMemo(() => {
+    if (!booksData) return null;
+    const totalPages = Math.max(1, Math.ceil((booksData.count ?? 0) / pageSize));
+    return { totalPages };
+  }, [booksData, pageSize]);
+
+  const showBookList = Boolean(
+    qFromRoute || browseMode === "books" || (browseMode === "series" && route.seriesId) || (browseMode === "authors" && route.authorId),
+  );
 
   return (
     <section className="panel">
-      <h2 className="panelTitle">Search the Library</h2>
-
       {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
       {status === "configured" ? <p className="muted">Link this profile before loading the library.</p> : null}
       {status === "linked" ? <p className="muted">Verify this profile before loading the library.</p> : null}
@@ -108,21 +282,14 @@ export function LibraryLandingPage({
                 <span className="srOnly">Search</span>
                 <input
                   className="input inputCompact"
-                  value={q}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setQ(next);
-                  }}
+                  value={qDraft}
+                  onChange={(e) => setQDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return;
                     e.preventDefault();
-                    const next = q.trim();
-                    onQueryCommit?.(next);
-                    setCommittedQuery(next);
-                    setData(null);
-                    void loadBooks(1, { queryOverride: next });
+                    handleCommitSearch();
                   }}
-                  placeholder="Search..."
+                  placeholder="Search the library..."
                 />
               </label>
 
@@ -133,7 +300,6 @@ export function LibraryLandingPage({
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
-                    setData(null);
                   }}
                 >
                   <option value={20}>20</option>
@@ -142,99 +308,269 @@ export function LibraryLandingPage({
                 </select>
               </label>
 
-              <button
-                className="button buttonPrimary"
-                type="button"
-                onClick={() => {
-                  const next = q.trim();
-                  onQueryCommit?.(next);
-                  setCommittedQuery(next);
-                  setData(null);
-                  void loadBooks(1, { queryOverride: next });
-                }}
-                disabled={busy}
-              >
-                {busy ? "Searching..." : "Search"}
+              <button className="button buttonPrimary" type="button" onClick={handleCommitSearch} disabled={booksBusy}>
+                {booksBusy ? "Searching..." : "Search"}
               </button>
             </div>
           </div>
 
-          {error ? <p className="errorText">{error}</p> : null}
+          <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
+            <button
+              type="button"
+              className={`libraryBrowseTab ${browseMode === "books" ? "libraryBrowseTabActive" : ""}`}
+              onClick={() => onShowBooks?.()}
+            >
+              Books
+            </button>
+            <button
+              type="button"
+              className={`libraryBrowseTab ${browseMode === "series" ? "libraryBrowseTabActive" : ""}`}
+              onClick={() => onShowSeries?.()}
+            >
+              Series
+            </button>
+            <button
+              type="button"
+              className={`libraryBrowseTab ${browseMode === "authors" ? "libraryBrowseTabActive" : ""}`}
+              onClick={() => onShowAuthors?.()}
+            >
+              Authors
+            </button>
+          </div>
 
-          {data ? (
+          {booksError ? <p className="errorText">{booksError}</p> : null}
+
+          {showBookList ? (
             <>
-              {(() => {
-                const totalPages = Math.max(1, Math.ceil((data.count ?? 0) / pageSize));
-                return (
+              {browseMode === "series" && selectedSeries ? (
+                <div className="libraryBrowseHeader">
+                  <div>
+                    <div className="panelTitle" style={{ margin: 0 }}>
+                      {selectedSeries.name}
+                    </div>
+                    {typeof selectedSeries.book_count === "number" ? (
+                      <div className="muted">{selectedSeries.book_count} books</div>
+                    ) : null}
+                    {selectedSeries.summary ? <div className="muted">{selectedSeries.summary}</div> : null}
+                  </div>
+                  <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowSeries?.()}>
+                    All series
+                  </button>
+                </div>
+              ) : null}
+
+              {browseMode === "authors" && selectedAuthor ? (
+                <div className="libraryBrowseHeader">
+                  <div>
+                    <div className="panelTitle" style={{ margin: 0 }}>
+                      {selectedAuthor.name}
+                    </div>
+                    {typeof selectedAuthor.book_count === "number" ? (
+                      <div className="muted">{selectedAuthor.book_count} books</div>
+                    ) : null}
+                    {selectedAuthor.biography ? <div className="muted">{selectedAuthor.biography}</div> : null}
+                  </div>
+                  <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowAuthors?.()}>
+                    All authors
+                  </button>
+                </div>
+              ) : null}
+
+              {booksData ? (
+                <>
                   <div className="libraryMetaRow">
                     <div className="muted">
-                      Page {page} of {totalPages} · {data.count} books
+                      Page {booksPage} of {booksPager?.totalPages ?? 1} · {booksData.count} books
                     </div>
                     <div className="pagerButtons">
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() => void loadBooks(Math.max(1, page - 1))}
-                        disabled={busy || !data.previous}
+                        onClick={() =>
+                          void loadBooks({
+                            page: Math.max(1, booksPage - 1),
+                            q: qFromRoute || undefined,
+                            seriesId: browseMode === "series" ? route.seriesId : undefined,
+                            authorId: browseMode === "authors" ? route.authorId : undefined,
+                            ordering: browseMode === "series" ? "series_index" : "title",
+                          })
+                        }
+                        disabled={booksBusy || !booksData.previous}
                       >
                         Previous
                       </button>
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() => void loadBooks(page + 1)}
-                        disabled={busy || !data.next}
+                        onClick={() =>
+                          void loadBooks({
+                            page: booksPage + 1,
+                            q: qFromRoute || undefined,
+                            seriesId: browseMode === "series" ? route.seriesId : undefined,
+                            authorId: browseMode === "authors" ? route.authorId : undefined,
+                            ordering: browseMode === "series" ? "series_index" : "title",
+                          })
+                        }
+                        disabled={booksBusy || !booksData.next}
                       >
                         Next
                       </button>
                     </div>
                   </div>
-                );
-              })()}
 
-              <BookList
-                books={data.results}
-                serverBaseUrl={profile?.serverBaseUrl}
-                selectedBookId={selectedBookId ? String(selectedBookId) : null}
-                onViewBook={handleViewBook}
-              />
+                  <BookList
+                    books={booksData.results}
+                    serverBaseUrl={profile?.serverBaseUrl}
+                    selectedBookId={selectedBookId ? String(selectedBookId) : null}
+                    onViewBook={(b) => onViewBook?.(String(b.id))}
+                  />
 
-              {(() => {
-                const totalPages = Math.max(1, Math.ceil((data.count ?? 0) / pageSize));
-                return (
                   <div className="libraryMetaRow libraryMetaRowBottom">
                     <div className="muted">
-                      Page {page} of {totalPages} · {data.count} books
+                      Page {booksPage} of {booksPager?.totalPages ?? 1} · {booksData.count} books
                     </div>
                     <div className="pagerButtons">
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() => void loadBooks(Math.max(1, page - 1))}
-                        disabled={busy || !data.previous}
+                        onClick={() =>
+                          void loadBooks({
+                            page: Math.max(1, booksPage - 1),
+                            q: qFromRoute || undefined,
+                            seriesId: browseMode === "series" ? route.seriesId : undefined,
+                            authorId: browseMode === "authors" ? route.authorId : undefined,
+                            ordering: browseMode === "series" ? "series_index" : "title",
+                          })
+                        }
+                        disabled={booksBusy || !booksData.previous}
                       >
                         Previous
                       </button>
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() => void loadBooks(page + 1)}
-                        disabled={busy || !data.next}
+                        onClick={() =>
+                          void loadBooks({
+                            page: booksPage + 1,
+                            q: qFromRoute || undefined,
+                            seriesId: browseMode === "series" ? route.seriesId : undefined,
+                            authorId: browseMode === "authors" ? route.authorId : undefined,
+                            ordering: browseMode === "series" ? "series_index" : "title",
+                          })
+                        }
+                        disabled={booksBusy || !booksData.next}
                       >
                         Next
                       </button>
                     </div>
                   </div>
-                );
-              })()}
+                </>
+              ) : (
+                <div className="muted" style={{ marginTop: 10 }}>
+                  {booksBusy ? "Loading…" : "No results yet."}
+                </div>
+              )}
+            </>
+          ) : browseMode === "series" ? (
+            <>
+              {seriesError ? <p className="errorText">{seriesError}</p> : null}
+              {seriesBusy ? <div className="muted" style={{ marginTop: 10 }}>Loading…</div> : null}
+
+              {seriesData?.results?.length ? (
+                <div className="libraryEntityList">
+                  {seriesData.results.map((s) => (
+                    <div key={String(s.id)} className="libraryEntityCard">
+                      <div className="libraryEntityMain">
+                        <div className="libraryEntityTitle">{s.name}</div>
+                        {typeof s.book_count === "number" ? <div className="muted">{s.book_count} books</div> : null}
+                        {s.summary ? <div className="muted">{s.summary}</div> : null}
+                      </div>
+                      <button type="button" className="button buttonCompact" onClick={() => onShowSeriesBooks?.(String(s.id))}>
+                        View books
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {seriesData ? (
+                <div className="libraryMetaRow">
+                  <div className="muted">
+                    Page {seriesPage} · {seriesData.count} series
+                  </div>
+                  <div className="pagerButtons">
+                    <button
+                      className="button buttonCompact"
+                      type="button"
+                      onClick={() => void loadSeries(Math.max(1, seriesPage - 1))}
+                      disabled={seriesBusy || !seriesData.previous}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      className="button buttonCompact"
+                      type="button"
+                      onClick={() => void loadSeries(seriesPage + 1)}
+                      disabled={seriesBusy || !seriesData.next}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </>
           ) : (
-            <div className="muted" style={{ marginTop: 10 }}>
-              {busy ? "Loading…" : "No results yet."}
-            </div>
+            <>
+              {authorsError ? <p className="errorText">{authorsError}</p> : null}
+              {authorsBusy ? <div className="muted" style={{ marginTop: 10 }}>Loading…</div> : null}
+
+              {authorsData?.results?.length ? (
+                <div className="libraryEntityList">
+                  {authorsData.results.map((a) => (
+                    <div key={String(a.id)} className="libraryEntityCard">
+                      <div className="libraryEntityMain">
+                        <div className="libraryEntityTitle">{a.name}</div>
+                        {typeof a.book_count === "number" ? <div className="muted">{a.book_count} books</div> : null}
+                        {a.biography ? <div className="muted">{a.biography}</div> : null}
+                      </div>
+                      <button type="button" className="button buttonCompact" onClick={() => onShowAuthorBooks?.(String(a.id))}>
+                        View books
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {authorsData ? (
+                <div className="libraryMetaRow">
+                  <div className="muted">
+                    Page {authorsPage} · {authorsData.count} authors
+                  </div>
+                  <div className="pagerButtons">
+                    <button
+                      className="button buttonCompact"
+                      type="button"
+                      onClick={() => void loadAuthors(Math.max(1, authorsPage - 1))}
+                      disabled={authorsBusy || !authorsData.previous}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      className="button buttonCompact"
+                      type="button"
+                      onClick={() => void loadAuthors(authorsPage + 1)}
+                      disabled={authorsBusy || !authorsData.next}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </>
       ) : null}
     </section>
   );
 }
+

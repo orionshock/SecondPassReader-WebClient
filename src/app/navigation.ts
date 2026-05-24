@@ -3,7 +3,14 @@ export type AppRoute =
   | { kind: "pair" }
   | { kind: "verify" }
   | { kind: "home"; bookId?: string }
-  | { kind: "library"; q?: string; bookId?: string }
+  | {
+      kind: "library";
+      q?: string;
+      browse?: "books" | "series" | "authors";
+      seriesId?: string;
+      authorId?: string;
+      bookId?: string;
+    }
   | { kind: "shelves" }
   | { kind: "shelf"; shelfId: string; bookId?: string }
   | { kind: "settings" }
@@ -39,7 +46,13 @@ export function routeToHash(route: AppRoute): string {
     case "home":
       return `#/home${buildQuery({ book: route.bookId })}`;
     case "library":
-      return `#/library${buildQuery({ q: route.q, book: route.bookId })}`;
+      return `#/library${buildQuery({
+        q: route.q,
+        browse: !route.q && route.browse && route.browse !== "books" ? route.browse : undefined,
+        series: !route.q && route.browse === "series" ? route.seriesId : undefined,
+        author: !route.q && route.browse === "authors" ? route.authorId : undefined,
+        book: route.bookId,
+      })}`;
     case "shelves":
       return "#/shelves";
     case "shelf":
@@ -72,11 +85,37 @@ export function parseCurrentRoute(): AppRoute | null {
   if (head === "home") return bookId ? { kind: "home", bookId } : { kind: "home" };
   if (head === "library") {
     const q = queryParams.get("q")?.trim() ?? "";
+    const browseRaw = queryParams.get("browse")?.trim() ?? "";
+    const browse = browseRaw === "series" || browseRaw === "authors" || browseRaw === "books" ? browseRaw : "";
+    const seriesId = queryParams.get("series")?.trim() ?? "";
+    const authorId = queryParams.get("author")?.trim() ?? "";
     // Old route format `#/library/<bookId>` is intentionally not supported anymore.
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
-    if (q && bookId) return { kind: "library", q, bookId };
-    if (q) return { kind: "library", q };
-    return bookId ? { kind: "library", bookId } : { kind: "library" };
+
+    if (q) {
+      return bookId ? { kind: "library", q, bookId } : { kind: "library", q };
+    }
+
+    const effectiveBrowse: "books" | "series" | "authors" =
+      browse === "series" || browse === "authors" || browse === "books" ? (browse as any) : "books";
+
+    if (effectiveBrowse === "series") {
+      return {
+        kind: "library",
+        browse: "series",
+        seriesId: seriesId || undefined,
+        bookId: bookId || undefined,
+      };
+    }
+    if (effectiveBrowse === "authors") {
+      return {
+        kind: "library",
+        browse: "authors",
+        authorId: authorId || undefined,
+        bookId: bookId || undefined,
+      };
+    }
+    return bookId ? { kind: "library", browse: "books", bookId } : { kind: "library", browse: "books" };
   }
   if (head === "shelves") {
     if (typeof parts[1] === "string" && parts[1]) {

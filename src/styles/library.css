@@ -65,6 +65,65 @@
   z-index: 2;
 }
 
+.libraryBrowseTabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.libraryBrowseTab {
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.libraryBrowseTabActive {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.libraryEntityList {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.libraryEntityCard {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.libraryEntityMain {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.libraryEntityTitle {
+  font-weight: 700;
+}
+
+.libraryBrowseHeader {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-border);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 .bookList {
   margin-top: 12px;
   display: grid;

@@ -65,6 +65,26 @@ export type LibraryBook = {
   updated_at?: string;
 };
 
+export type LibrarySeries = {
+  id: string | number;
+  name: string;
+  summary?: string | null;
+  book_count?: number | null;
+  created_at?: string;
+  updated_at?: string;
+  [k: string]: unknown;
+};
+
+export type LibraryAuthor = {
+  id: string | number;
+  name: string;
+  biography?: string | null;
+  book_count?: number | null;
+  created_at?: string;
+  updated_at?: string;
+  [k: string]: unknown;
+};
+
 export type BookFileDownloadResult = {
   blob: Blob;
   contentType?: string;

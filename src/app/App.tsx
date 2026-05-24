@@ -377,14 +377,35 @@ export default function App() {
                 <div className="libraryScreen">
                   <LibraryLandingPage
                     profile={selectedProfile}
-                    initialQuery={route.q ?? ""}
+                    route={{
+                      q: route.q,
+                      browse: route.browse,
+                      seriesId: route.seriesId,
+                      authorId: route.authorId,
+                    }}
                     selectedBookId={route.bookId ?? null}
                     onViewBook={(bookId) => {
                       navigateTo(withBookModal(route, bookId));
                     }}
-                    onQueryCommit={(q) => {
+                    onCommitSearch={(q) => {
                       const next = q.trim();
+                      // Committing search clears browse/series/author.
                       navigateTo(next ? { kind: "library", q: next, bookId: route.bookId } : { kind: "library", bookId: route.bookId });
+                    }}
+                    onShowBooks={() => {
+                      navigateTo({ kind: "library", bookId: route.bookId });
+                    }}
+                    onShowSeries={() => {
+                      navigateTo({ kind: "library", browse: "series", bookId: route.bookId });
+                    }}
+                    onShowAuthors={() => {
+                      navigateTo({ kind: "library", browse: "authors", bookId: route.bookId });
+                    }}
+                    onShowSeriesBooks={(seriesId) => {
+                      navigateTo({ kind: "library", browse: "series", seriesId, bookId: route.bookId });
+                    }}
+                    onShowAuthorBooks={(authorId) => {
+                      navigateTo({ kind: "library", browse: "authors", authorId, bookId: route.bookId });
                     }}
                   />
                 </div>

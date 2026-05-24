@@ -4,7 +4,7 @@ import type {
   MePayload,
   SecondPassDiscovery,
 } from "../schemas/clientApiAuth";
-import type { BookFileDownloadResult, LibraryBook, PaginatedResponse } from "../schemas/library";
+import type { BookFileDownloadResult, LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "../schemas/library";
 import type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf } from "../schemas/shelves";
 import type {
   ReadingAnnotation,
@@ -21,7 +21,7 @@ import type {
 export { ApiError, type ApiErrorKind } from "./apiHttp";
 
 import { createLoginRequest, getMe, pollLoginRequest } from "./clientApiAuthApi";
-import { downloadBookFile, getBook, listBooks } from "./libraryApi";
+import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
 import {
   closeReadingSession,
   createReadingAnnotation,
@@ -69,12 +69,49 @@ export class SecondPassApiClient {
       q?: string;
       hasFiles?: boolean;
       series?: string | number;
+      author?: string | number;
       ordering?: string;
       page?: number;
       pageSize?: number;
     };
   }): Promise<PaginatedResponse<LibraryBook>> {
     return listBooks(input);
+  }
+
+  async listSeries(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    page?: number;
+  }): Promise<PaginatedResponse<LibrarySeries>> {
+    return listSeries(input);
+  }
+
+  async getSeries(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    seriesId: string;
+  }): Promise<LibrarySeries> {
+    return getSeries(input);
+  }
+
+  async listAuthors(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    page?: number;
+  }): Promise<PaginatedResponse<LibraryAuthor>> {
+    return listAuthors(input);
+  }
+
+  async getAuthor(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    authorId: string;
+  }): Promise<LibraryAuthor> {
+    return getAuthor(input);
   }
 
   async getBook(input: { apiBaseUrl: string; accessToken: string; tokenType?: string; bookId: string }): Promise<LibraryBook> {
@@ -195,4 +232,3 @@ export class SecondPassApiClient {
     return deleteReadingAnnotation(input);
   }
 }
-
