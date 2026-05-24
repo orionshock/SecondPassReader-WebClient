@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
 import { LibraryLandingPage } from "../features/library";
 import { HomePage } from "../features/home/HomePage";
@@ -13,6 +13,7 @@ import {
   deleteConnectionProfile,
   getConnectionProfile,
   listConnectionProfiles,
+  saveConnectionProfile,
 } from "../storage/connectionProfiles";
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
@@ -48,6 +49,7 @@ export default function App() {
 
   const openingBookRef = useRef<string | null>(null);
   const navSeqRef = useRef(0);
+  const lastMeCheckRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const handler = () => setRoute(parseCurrentRoute());
@@ -60,6 +62,73 @@ export default function App() {
     // eslint-disable-next-line no-console
     console.log("[nav] route", route);
   }, [route]);
+
+  const checkMe = useCallback(async () => {
+    // Keep verified user display fresh on page load and periodic focus changes.
+    if (workflowStep !== "library_home") return;
+    if (!selectedProfile?.id) return;
+    if (!selectedProfile.apiBaseUrl || !selectedProfile.accessToken) return;
+
+    const profileId = selectedProfile.id;
+    const now = Date.now();
+    const last = lastMeCheckRef.current[profileId] ?? 0;
+    if (now - last < 60_000) return; // throttle (avoid spamming)
+    lastMeCheckRef.current[profileId] = now;
+
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: selectedProfile.serverBaseUrl });
+      const me = await api.getMe({
+        apiBaseUrl: selectedProfile.apiBaseUrl,
+        accessToken: selectedProfile.accessToken,
+        tokenType: selectedProfile.tokenType ?? "Bearer",
+      });
+
+      const firstName = typeof (me as any)?.first_name === "string" ? ((me as any).first_name as string) : undefined;
+      const lastName = typeof (me as any)?.last_name === "string" ? ((me as any).last_name as string) : undefined;
+
+      const nextVerifiedUser = {
+        id: me.id,
+        username: me.username,
+        displayName: me.display_name,
+        firstName,
+        lastName,
+        email: me.email,
+      };
+
+      const prev = selectedProfile.verifiedUser;
+      const changed =
+        !prev ||
+        prev.username !== nextVerifiedUser.username ||
+        prev.displayName !== nextVerifiedUser.displayName ||
+        prev.firstName !== nextVerifiedUser.firstName ||
+        prev.lastName !== nextVerifiedUser.lastName ||
+        prev.email !== nextVerifiedUser.email;
+
+      if (!changed) return;
+
+      saveConnectionProfile({
+        ...selectedProfile,
+        verifiedUser: nextVerifiedUser,
+        lastUsedAt: new Date().toISOString(),
+      });
+      refreshProfiles();
+    } catch {
+      // ignore: keep existing verified identity if refresh fails
+    }
+  }, [selectedProfile, workflowStep]);
+
+  useEffect(() => {
+    void checkMe();
+  }, [checkMe]);
+
+  useEffect(() => {
+    if (workflowStep !== "library_home") return;
+    const onFocus = () => {
+      void checkMe();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [checkMe, workflowStep]);
 
   // Bump a sequence number on any route change so async opens can be cancelled logically.
   useEffect(() => {

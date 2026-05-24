@@ -21,6 +21,8 @@ function pickVerifiedUser(me: MePayload): ConnectionProfile["verifiedUser"] {
     id: me.id,
     username: me.username,
     displayName: me.display_name,
+    firstName: me.first_name,
+    lastName: me.last_name,
     email: me.email,
   };
 }

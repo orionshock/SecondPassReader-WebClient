@@ -15,6 +15,8 @@ export type ConnectionProfile = {
     id?: string | number;
     username: string;
     displayName?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
   };
   mustChangePassword?: boolean;
