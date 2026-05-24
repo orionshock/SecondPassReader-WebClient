@@ -5,7 +5,6 @@ import type { LibraryBook } from "../../schemas/library";
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { getReaderSettings, normalizeReaderSettings, saveReaderSettings } from "../../storage/readerSettings";
 import { navigateTo } from "../../app/navigation";
-import { findNextBookInSeries } from "../library/seriesNavigation";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { EpubReaderPanel } from "./EpubReaderPanel";
 import { NearEndBanner } from "./NearEndBanner";
@@ -19,6 +18,7 @@ import {
 import type { LocalHighlight, PendingSelection, ReaderLocation, OpenedBook } from "./types";
 import { createIdempotencyKey } from "./idempotency";
 import { useProgressAutosave } from "./useProgressAutosave";
+import { useNearEndLifecycle } from "./useNearEndLifecycle";
 
 export function ReaderArea({
   openedBook,
@@ -36,7 +36,6 @@ export function ReaderArea({
   onOpenBook?: (book: LibraryBook) => Promise<void>;
 }) {
   const PROGRESS_AUTOSAVE_DELAY_MS = 5000;
-  const NEAR_END_PROGRESSION_THRESHOLD = 0.98;
   const DEBUG_PROGRESS = import.meta.env.DEV;
 
   const [locationString, setLocationString] = useState<string | null>(null);
@@ -57,11 +56,7 @@ export function ReaderArea({
   const [noteDraft, setNoteDraft] = useState("");
 
   const prevSessionKeyRef = useRef<string | null>(null);
-  const [nearEndDismissed, setNearEndDismissed] = useState(false);
-  const [closeSessionFirst, setCloseSessionFirst] = useState(false);
-  const [nearEndMessage, setNearEndMessage] = useState<string | null>(null);
   const [goToStartSignal, setGoToStartSignal] = useState(0);
-  const [nextBookBusy, setNextBookBusy] = useState(false);
 
   const [readerSettings, setReaderSettings] = useState(() => getReaderSettings());
   const [readerSettingsOpen, setReaderSettingsOpen] = useState(false);
@@ -119,9 +114,6 @@ export function ReaderArea({
     setPendingSelection(null);
     setNoteOpen(false);
     setNoteDraft("");
-    setNearEndDismissed(false);
-    setCloseSessionFirst(false);
-    setNearEndMessage(null);
     setGoToStartSignal(0);
   }, [readingOpen?.session?.id, openedBook?.book?.id]);
 
@@ -274,21 +266,34 @@ export function ReaderArea({
     debug: DEBUG_PROGRESS,
   });
 
-  const nearEndActive =
-    currentProgression != null && Number.isFinite(currentProgression) && currentProgression >= NEAR_END_PROGRESSION_THRESHOLD;
   const nearEndProgressSaved =
     !autosave.enabled ||
     autosave.status === "error" ||
     (autosave.lastAutosavedCfi != null && currentCfi != null && autosave.lastAutosavedCfi === currentCfi);
-  const canResolveNextBook = Boolean(openedBook?.book.series?.id) && openedBook?.book.series_index !== null && openedBook?.book.series_index !== undefined && openedBook?.book.series_index !== "";
 
-  useEffect(() => {
-    if (!nearEndActive) {
-      setNearEndDismissed(false);
-      setNearEndMessage(null);
-      setCloseSessionFirst(false);
-    }
-  }, [nearEndActive]);
+  const nearEnd = useNearEndLifecycle({
+    openedBook,
+    currentProgression,
+    nearEndProgressSaved,
+    sessionId,
+    apiBaseUrl,
+    accessToken,
+    tokenType,
+    onOpenBook,
+    debug: DEBUG_PROGRESS,
+    readingOpenReplace: (next) => setReadingOpenState(next),
+    clearLocalReaderState: () => {
+      setLocationString(null);
+      setReaderLocation(null);
+      setHighlights([]);
+      setSelectedHighlightId(null);
+      setPendingSelection(null);
+      setNoteOpen(false);
+      setNoteDraft("");
+    },
+    bumpGoToStartSignal: () => setGoToStartSignal((v) => v + 1),
+    resetAutosaveForSessionSwap: (nextSessionId) => resetForSessionSwap(nextSessionId),
+  });
 
   const handleSaveHighlightToSession = useCallback(
     async (highlightId: string) => {
@@ -541,184 +546,21 @@ export function ReaderArea({
         progression={currentProgression}
       />
 
-       {nearEndActive && !nearEndDismissed && nearEndProgressSaved ? (
-         <NearEndBanner
-           closeSessionFirst={closeSessionFirst}
-           disabled={closeSessionFirst}
-           nextBookDisabled={!canResolveNextBook || !onOpenBook}
-           nextBookBusy={nextBookBusy}
-           message={nearEndMessage}
-           onToggleCloseSessionFirst={(checked) => {
-             setCloseSessionFirst(checked);
-             setNearEndMessage(null);
-           }}
-          onGoToStart={async () => {
-            setNearEndMessage(null);
-            if (!openedBook) return;
-
-            if (!closeSessionFirst) {
-              setGoToStartSignal((v) => v + 1);
-              setNearEndMessage("Returned to start.");
-              setNearEndDismissed(true);
-              return;
-            }
-
-            if (!apiBaseUrl || !accessToken) {
-              setNearEndMessage("Finish session + start over is not available.");
-              return;
-            }
-
-             try {
-               const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
-               if (DEBUG_PROGRESS) {
-                 // eslint-disable-next-line no-console
-                 console.log("[progress] start-over: request", { bookId: openedBook.book.id, priorSessionId: sessionId });
-               }
-              let next = await api.startOverReadingSession({
-                apiBaseUrl,
-                accessToken,
-                tokenType: tokenType ?? "Bearer",
-                bookId: openedBook.book.id,
-              });
-
-              const nextSessionId: string | null = (next as unknown as { session?: { id?: string } })?.session?.id ?? null;
-              if (!nextSessionId) {
-                // Some server variants may return a minimal payload; fall back to an explicit open to get a full session object.
-                if (DEBUG_PROGRESS) {
-                  // eslint-disable-next-line no-console
-                  console.warn("[progress] start-over: response missing session.id; falling back to openReadingSession", {
-                    keys: next && typeof next === "object" ? Object.keys(next as object) : typeof next,
-                  });
-                }
-                next = await api.openReadingSession({
-                  apiBaseUrl,
-                  accessToken,
-                  tokenType: tokenType ?? "Bearer",
-                  bookId: openedBook.book.id,
-                });
-              }
-              if (DEBUG_PROGRESS) {
-                // eslint-disable-next-line no-console
-                console.log("[progress] start-over: response", {
-                  newSessionId: (next as unknown as { session?: { id?: string } })?.session?.id ?? null,
-                  profileVersion: (next as unknown as { profile_version?: unknown })?.profile_version ?? null,
-                });
-              }
-
-               setReadingOpenState(next);
-               setLocationString(null);
-               setReaderLocation(null);
-               setHighlights([]);
-               setSelectedHighlightId(null);
-               setPendingSelection(null);
-               setNoteOpen(false);
-               setNoteDraft("");
-               setNearEndDismissed(true);
-               setCloseSessionFirst(false);
-               setNearEndMessage("Started a new session at the beginning.");
-               setGoToStartSignal((v) => v + 1);
-               {
-                 const sid = (next as unknown as { session?: { id?: string } })?.session?.id ?? null;
-                 if (sid) resetForSessionSwap(sid);
-               }
-             } catch (e) {
-              const message =
-                e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-                  ? "Could not start over. Your device token may be revoked or not allowed to access reading data."
-                  : e instanceof ApiError && e.status === 404
-                    ? "Could not start over. You may not have access to this book."
-                    : e instanceof Error
-                      ? e.message
-                      : "Failed to start over.";
-              setNearEndMessage(message);
-            }
+      {nearEnd.shouldShowNearEndBanner ? (
+        <NearEndBanner
+          closeSessionFirst={nearEnd.closeSessionFirst}
+          disabled={nearEnd.closeSessionFirst}
+          nextBookDisabled={!nearEnd.canResolveNextBook || !onOpenBook}
+          nextBookBusy={nearEnd.nextBookBusy}
+          message={nearEnd.nearEndMessage}
+          onToggleCloseSessionFirst={nearEnd.onToggleCloseSessionFirst}
+          onGoToStart={() => {
+            void nearEnd.handleGoToStart();
           }}
-          onNextBook={async () => {
-            if (nextBookBusy) return;
-            setNearEndMessage(null);
-            if (!openedBook) return;
-
-            const seriesId = openedBook.book.series?.id ?? null;
-            const currentSeriesIndex = openedBook.book.series_index;
-            if (!seriesId || currentSeriesIndex === null || currentSeriesIndex === undefined || currentSeriesIndex === "") {
-              setNearEndMessage("No series information for this book.");
-              return;
-            }
-            if (!onOpenBook) {
-              setNearEndMessage("Opening next book is not available.");
-              return;
-            }
-            if (!apiBaseUrl || !accessToken) {
-              setNearEndMessage("Opening next book is not available.");
-              return;
-            }
-
-            setNextBookBusy(true);
-            let phase: "lookup" | "close" | "open" = "lookup";
-            try {
-              const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
-              setNearEndMessage("Opening next book…");
-
-              const seriesBooks = await api.listBooks({
-                apiBaseUrl,
-                accessToken,
-                tokenType: tokenType ?? "Bearer",
-                params: {
-                  series: seriesId,
-                  ordering: "series_index",
-                  pageSize: 200,
-                },
-              });
-
-              const next = findNextBookInSeries(openedBook.book, seriesBooks.results);
-              if (!next) {
-                setNearEndMessage("No next book found.");
-                return;
-              }
-              if (!next.file?.download_url) {
-                setNearEndMessage("Next book has no EPUB file.");
-                return;
-              }
-
-              if (closeSessionFirst && sessionId) {
-                phase = "close";
-                setNearEndMessage("Closing session…");
-                await api.closeReadingSession({
-                  apiBaseUrl,
-                  accessToken,
-                  tokenType: tokenType ?? "Bearer",
-                  sessionId,
-                });
-              }
-
-              phase = "open";
-              setNearEndMessage("Opening next book…");
-              await onOpenBook(next);
-              setNearEndMessage("Opened next book.");
-              setNearEndDismissed(true);
-              setCloseSessionFirst(false);
-            } catch (e) {
-              const message =
-                e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-                  ? phase === "close"
-                    ? "Could not close session. Your device token may be revoked or not allowed to modify reading data."
-                    : "Could not open next book. Your device token may be revoked or not allowed to access reading data."
-                  : e instanceof ApiError && e.status === 404
-                    ? phase === "close"
-                      ? "Could not close session. It may already be unavailable."
-                      : "Could not open next book. You may not have access to it."
-                    : e instanceof Error
-                      ? e.message
-                      : "Failed to open next book.";
-              setNearEndMessage(message);
-            } finally {
-              setNextBookBusy(false);
-            }
+          onNextBook={() => {
+            void nearEnd.handleNextBook();
           }}
-          onResume={() => {
-            setNearEndDismissed(true);
-            setNearEndMessage(null);
-          }}
+          onResume={nearEnd.handleResumeNearEnd}
         />
       ) : null}
 
