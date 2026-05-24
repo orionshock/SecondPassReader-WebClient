@@ -28,8 +28,6 @@ export function AppHeader({
       ? "Home"
       : route?.kind === "library"
         ? "Library"
-        : route?.kind === "libraryBook"
-          ? "Library"
         : route?.kind === "shelves"
           ? "Shelves"
           : view === "settings"

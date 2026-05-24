@@ -2,11 +2,10 @@ export type AppRoute =
   | { kind: "connect" }
   | { kind: "pair" }
   | { kind: "verify" }
-  | { kind: "home" }
-  | { kind: "library"; q?: string }
-  | { kind: "libraryBook"; bookId: string; q?: string }
+  | { kind: "home"; bookId?: string }
+  | { kind: "library"; q?: string; bookId?: string }
   | { kind: "shelves" }
-  | { kind: "shelf"; shelfId: string }
+  | { kind: "shelf"; shelfId: string; bookId?: string }
   | { kind: "settings" }
   | { kind: "reader"; bookId: string }
   | { kind: "unknown"; raw: string };
@@ -15,6 +14,18 @@ function normalizeHash(hash: string): string {
   const h = (hash ?? "").trim();
   if (!h) return "";
   return h.startsWith("#") ? h.slice(1) : h;
+}
+
+function buildQuery(params: Record<string, string | undefined>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (!v) continue;
+    const trimmed = v.trim();
+    if (!trimmed) continue;
+    qs.set(k, trimmed);
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
 }
 
 export function routeToHash(route: AppRoute): string {
@@ -26,17 +37,13 @@ export function routeToHash(route: AppRoute): string {
     case "verify":
       return "#/verify";
     case "home":
-      return "#/home";
+      return `#/home${buildQuery({ book: route.bookId })}`;
     case "library":
-      return route.q ? `#/library?q=${encodeURIComponent(route.q)}` : "#/library";
-    case "libraryBook": {
-      const base = `#/library/${encodeURIComponent(route.bookId)}`;
-      return route.q ? `${base}?q=${encodeURIComponent(route.q)}` : base;
-    }
+      return `#/library${buildQuery({ q: route.q, book: route.bookId })}`;
     case "shelves":
       return "#/shelves";
     case "shelf":
-      return `#/shelves/${encodeURIComponent(route.shelfId)}`;
+      return `#/shelves/${encodeURIComponent(route.shelfId)}${buildQuery({ book: route.bookId })}`;
     case "settings":
       return "#/settings";
     case "reader":
@@ -56,30 +63,27 @@ export function parseCurrentRoute(): AppRoute | null {
   if (parts.length === 0) return null;
 
   const queryParams = new URLSearchParams(queryPart ?? "");
+  const bookId = queryParams.get("book")?.trim() ?? "";
 
   const head = parts[0];
   if (head === "connect") return { kind: "connect" };
   if (head === "pair") return { kind: "pair" };
   if (head === "verify") return { kind: "verify" };
-  if (head === "home") return { kind: "home" };
+  if (head === "home") return bookId ? { kind: "home", bookId } : { kind: "home" };
   if (head === "library") {
     const q = queryParams.get("q")?.trim() ?? "";
-    if (typeof parts[1] === "string" && parts[1]) {
-      try {
-        const bookId = decodeURIComponent(parts[1]);
-        return q ? { kind: "libraryBook", bookId, q } : { kind: "libraryBook", bookId };
-      } catch {
-        return q ? { kind: "libraryBook", bookId: parts[1], q } : { kind: "libraryBook", bookId: parts[1] };
-      }
-    }
-    return q ? { kind: "library", q } : { kind: "library" };
+    // Old route format `#/library/<bookId>` is intentionally not supported anymore.
+    if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
+    if (q && bookId) return { kind: "library", q, bookId };
+    if (q) return { kind: "library", q };
+    return bookId ? { kind: "library", bookId } : { kind: "library" };
   }
   if (head === "shelves") {
     if (typeof parts[1] === "string" && parts[1]) {
       try {
-        return { kind: "shelf", shelfId: decodeURIComponent(parts[1]) };
+        return bookId ? { kind: "shelf", shelfId: decodeURIComponent(parts[1]), bookId } : { kind: "shelf", shelfId: decodeURIComponent(parts[1]) };
       } catch {
-        return { kind: "shelf", shelfId: parts[1] };
+        return bookId ? { kind: "shelf", shelfId: parts[1], bookId } : { kind: "shelf", shelfId: parts[1] };
       }
     }
     return { kind: "shelves" };
@@ -105,4 +109,38 @@ export function navigateTo(route: AppRoute, options?: { replace?: boolean }): vo
     return;
   }
   window.location.hash = hash;
+}
+
+export function withBookModal(route: AppRoute, bookId: string): AppRoute {
+  const id = bookId.trim();
+  if (!id) return route;
+  switch (route.kind) {
+    case "home":
+      return { ...route, bookId: id };
+    case "library":
+      return { ...route, bookId: id };
+    case "shelf":
+      return { ...route, bookId: id };
+    default:
+      return route;
+  }
+}
+
+export function withoutBookModal(route: AppRoute): AppRoute {
+  switch (route.kind) {
+    case "home": {
+      const { bookId: _bookId, ...rest } = route;
+      return rest;
+    }
+    case "library": {
+      const { bookId: _bookId, ...rest } = route;
+      return rest;
+    }
+    case "shelf": {
+      const { bookId: _bookId, ...rest } = route;
+      return rest;
+    }
+    default:
+      return route;
+  }
 }

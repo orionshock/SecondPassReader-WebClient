@@ -2,16 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { PaginatedResponse, LibraryBook } from "../../schemas/library";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo } from "../../app/navigation";
 import { getConnectionStatus } from "../connection/connectionStatus";
-import { BookDetailModal } from "./BookDetailModal";
 import { BookList } from "./BookList";
 
 type Props = {
   profile: ConnectionProfile | null;
   initialQuery?: string;
-  modalBookId?: string | null;
-  onCloseModal?: () => void;
+  selectedBookId?: string | null;
+  onViewBook?: (bookId: string) => void;
   onQueryChange?: (q: string) => void;
   onQueryCommit?: (q: string) => void;
 };
@@ -21,8 +19,8 @@ type Ordering = "-updated_at" | "title" | "-created_at" | "-published_date";
 export function LibraryLandingPage({
   profile,
   initialQuery,
-  modalBookId,
-  onCloseModal,
+  selectedBookId,
+  onViewBook,
   onQueryChange,
   onQueryCommit,
 }: Props) {
@@ -95,20 +93,9 @@ export function LibraryLandingPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, profile?.apiBaseUrl, profile?.accessToken, ordering, pageSize, committedQuery, data]);
 
-  async function handleOpenReader(book: LibraryBook) {
-    // Route is canonical: App's reader route effect owns opening/restoring the book.
-    navigateTo({ kind: "reader", bookId: String(book.id) });
-  }
-
   function handleViewBook(book: LibraryBook) {
-    const nextQ = q.trim();
-    navigateTo(
-      nextQ ? { kind: "libraryBook", bookId: String(book.id), q: nextQ } : { kind: "libraryBook", bookId: String(book.id) },
-    );
+    onViewBook?.(String(book.id));
   }
-
-  const modalInitialBook =
-    modalBookId && data?.results ? data.results.find((b) => String(b.id) === String(modalBookId)) ?? null : null;
 
   return (
     <section className="panel">
@@ -231,7 +218,7 @@ export function LibraryLandingPage({
               <BookList
                 books={data.results}
                 serverBaseUrl={profile?.serverBaseUrl}
-                selectedBookId={modalBookId ? String(modalBookId) : null}
+                selectedBookId={selectedBookId ? String(selectedBookId) : null}
                 onViewBook={handleViewBook}
               />
 
@@ -269,18 +256,6 @@ export function LibraryLandingPage({
               {busy ? "Loading…" : "No results yet."}
             </div>
           )}
-
-          {modalBookId ? (
-            <BookDetailModal
-              profile={profile}
-              bookId={String(modalBookId)}
-              initialBook={modalInitialBook}
-              onClose={() => onCloseModal?.()}
-              onOpenReader={handleOpenReader}
-              launchMessage={null}
-              downloadState={{ phase: "idle" }}
-            />
-          ) : null}
         </>
       ) : null}
     </section>

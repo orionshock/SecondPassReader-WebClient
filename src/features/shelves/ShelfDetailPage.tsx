@@ -177,7 +177,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
                 <button
                   type="button"
                   className="button buttonCompact"
-                  onClick={() => navigateTo({ kind: "libraryBook", bookId: String(it.book.id) })}
+                  onClick={() => navigateTo({ kind: "shelf", shelfId, bookId: String(it.book.id) })}
                 >
                   View details
                 </button>
@@ -208,4 +208,3 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     </section>
   );
 }
-

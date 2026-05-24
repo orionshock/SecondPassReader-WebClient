@@ -8,7 +8,7 @@ import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { LibraryBook } from "../schemas/library";
 import type { AppRoute } from "./navigation";
-import { navigateTo, parseCurrentRoute } from "./navigation";
+import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
 import {
   deleteConnectionProfile,
   getConnectionProfile,
@@ -20,6 +20,7 @@ import { openBookForReader } from "../features/library/openBookForReader";
 import { ApiError, SecondPassApiClient } from "../api/SecondPassApiClient";
 import { ShelvesPage } from "../features/shelves/ShelvesPage";
 import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
+import { BookDetailModal } from "../features/library/BookDetailModal";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -115,9 +116,6 @@ export default function App() {
         document.title = `${base} - Home`;
         return;
       case "library":
-        document.title = `${base} - Library`;
-        return;
-      case "libraryBook":
         document.title = `${base} - Library`;
         return;
       case "shelves":
@@ -375,32 +373,23 @@ export default function App() {
                 <div className="libraryScreen">
                   <ShelfDetailPage profile={selectedProfile} shelfId={route.shelfId} />
                 </div>
-              ) : route?.kind === "library" || route?.kind === "libraryBook" ? (
+              ) : route?.kind === "library" ? (
                 <div className="libraryScreen">
                   <LibraryLandingPage
                     profile={selectedProfile}
                     initialQuery={route.q ?? ""}
-                    modalBookId={route.kind === "libraryBook" ? route.bookId : null}
-                    onCloseModal={() => {
-                      const q = route.kind === "libraryBook" ? route.q : undefined;
-                      navigateTo(q ? { kind: "library", q } : { kind: "library" });
+                    selectedBookId={route.bookId ?? null}
+                    onViewBook={(bookId) => {
+                      navigateTo(withBookModal(route, bookId));
                     }}
                     onQueryChange={(q) => {
                       // Keep URL in sync without spamming history entries.
                       const next = q.trim();
-                      if (route.kind === "libraryBook") {
-                        navigateTo(next ? { kind: "libraryBook", bookId: route.bookId, q: next } : { kind: "libraryBook", bookId: route.bookId }, { replace: true });
-                        return;
-                      }
-                      navigateTo(next ? { kind: "library", q: next } : { kind: "library" }, { replace: true });
+                      navigateTo(next ? { kind: "library", q: next, bookId: route.bookId } : { kind: "library", bookId: route.bookId }, { replace: true });
                     }}
                     onQueryCommit={(q) => {
                       const next = q.trim();
-                      if (route.kind === "libraryBook") {
-                        navigateTo(next ? { kind: "libraryBook", bookId: route.bookId, q: next } : { kind: "libraryBook", bookId: route.bookId });
-                        return;
-                      }
-                      navigateTo(next ? { kind: "library", q: next } : { kind: "library" });
+                      navigateTo(next ? { kind: "library", q: next, bookId: route.bookId } : { kind: "library", bookId: route.bookId });
                     }}
                   />
                 </div>
@@ -413,6 +402,30 @@ export default function App() {
           </>
         )}
       </main>
+
+      {workflowStep === "library_home" && route?.kind !== "reader" ? (
+        (() => {
+          const modalBookId =
+            route?.kind === "home" ? route.bookId ?? null : route?.kind === "library" ? route.bookId ?? null : route?.kind === "shelf" ? route.bookId ?? null : null;
+          if (!modalBookId) return null;
+          return (
+            <BookDetailModal
+              profile={selectedProfile}
+              bookId={modalBookId}
+              initialBook={null}
+              onClose={() => {
+                if (!route) return;
+                navigateTo(withoutBookModal(route), { replace: true });
+              }}
+              onOpenReader={(book) => {
+                navigateTo({ kind: "reader", bookId: String(book.id) });
+              }}
+              launchMessage={null}
+              downloadState={{ phase: "idle" }}
+            />
+          );
+        })()
+      ) : null}
     </div>
   );
 }
