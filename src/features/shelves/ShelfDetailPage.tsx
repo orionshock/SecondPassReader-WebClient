@@ -184,7 +184,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
                 {canRead ? (
                   <button
                     type="button"
-                    className="button buttonPrimary"
+                    className="button buttonPrimary buttonCompact"
                     onClick={() => navigateTo({ kind: "reader", bookId: String(it.book.id) })}
                   >
                     Read

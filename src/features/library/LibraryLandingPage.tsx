@@ -10,25 +10,20 @@ type Props = {
   initialQuery?: string;
   selectedBookId?: string | null;
   onViewBook?: (bookId: string) => void;
-  onQueryChange?: (q: string) => void;
   onQueryCommit?: (q: string) => void;
 };
-
-type Ordering = "-updated_at" | "title" | "-created_at" | "-published_date";
 
 export function LibraryLandingPage({
   profile,
   initialQuery,
   selectedBookId,
   onViewBook,
-  onQueryChange,
   onQueryCommit,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
 
   const [q, setQ] = useState(initialQuery ?? "");
-  const [ordering, setOrdering] = useState<Ordering>("title");
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
 
   // Only used for library requests, so typing doesn't auto-search on every keystroke.
@@ -43,7 +38,7 @@ export function LibraryLandingPage({
     setQ((prev) => (prev === next ? prev : next));
     // If we navigated to a URL with a query (e.g. Home search, or browser back), auto-load it once.
     const trimmed = next.trim();
-    if (trimmed && trimmed !== committedQuery) {
+    if (trimmed !== committedQuery) {
       setCommittedQuery(trimmed);
       setData(null);
     }
@@ -65,7 +60,7 @@ export function LibraryLandingPage({
         tokenType: profile.tokenType ?? "Bearer",
         params: {
           q: effectiveQuery || undefined,
-          ordering,
+          ordering: "title",
           page: targetPage,
           pageSize,
         },
@@ -91,7 +86,7 @@ export function LibraryLandingPage({
     if (data) return;
     void loadBooks(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, profile?.apiBaseUrl, profile?.accessToken, ordering, pageSize, committedQuery, data]);
+  }, [status, profile?.apiBaseUrl, profile?.accessToken, pageSize, committedQuery, data]);
 
   function handleViewBook(book: LibraryBook) {
     onViewBook?.(String(book.id));
@@ -117,36 +112,18 @@ export function LibraryLandingPage({
                   onChange={(e) => {
                     const next = e.target.value;
                     setQ(next);
-                    onQueryChange?.(next);
                   }}
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return;
                     e.preventDefault();
                     const next = q.trim();
-                    onQueryCommit?.(q);
+                    onQueryCommit?.(next);
                     setCommittedQuery(next);
                     setData(null);
                     void loadBooks(1, { queryOverride: next });
                   }}
                   placeholder="Search..."
                 />
-              </label>
-
-              <label className="toolbarField">
-                <span className="srOnly">Ordering</span>
-                <select
-                  className="input inputCompact"
-                  value={ordering}
-                  onChange={(e) => {
-                    setOrdering(e.target.value as Ordering);
-                    setData(null);
-                  }}
-                >
-                  <option value="-updated_at">Recently updated</option>
-                  <option value="title">Title</option>
-                  <option value="-created_at">Created</option>
-                  <option value="-published_date">Published</option>
-                </select>
               </label>
 
               <label className="toolbarField">
@@ -170,7 +147,7 @@ export function LibraryLandingPage({
                 type="button"
                 onClick={() => {
                   const next = q.trim();
-                  onQueryCommit?.(q);
+                  onQueryCommit?.(next);
                   setCommittedQuery(next);
                   setData(null);
                   void loadBooks(1, { queryOverride: next });

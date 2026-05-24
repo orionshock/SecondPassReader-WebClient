@@ -42,16 +42,16 @@
   padding: 10px 12px;
   background: #fff;
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-columns: 44px 1fr auto;
   gap: 12px;
   align-items: start;
 }
 
 .shelfBookCover {
-  width: 56px;
+  width: 44px;
   aspect-ratio: 2 / 3;
   border: 1px solid var(--sp-border);
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
   background: rgba(17, 24, 39, 0.03);
   display: grid;
@@ -69,7 +69,9 @@
 }
 
 .shelfBookActions {
-  display: grid;
+  display: inline-flex;
   gap: 8px;
-  justify-items: end;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }

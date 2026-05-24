@@ -382,11 +382,6 @@ export default function App() {
                     onViewBook={(bookId) => {
                       navigateTo(withBookModal(route, bookId));
                     }}
-                    onQueryChange={(q) => {
-                      // Keep URL in sync without spamming history entries.
-                      const next = q.trim();
-                      navigateTo(next ? { kind: "library", q: next, bookId: route.bookId } : { kind: "library", bookId: route.bookId }, { replace: true });
-                    }}
                     onQueryCommit={(q) => {
                       const next = q.trim();
                       navigateTo(next ? { kind: "library", q: next, bookId: route.bookId } : { kind: "library", bookId: route.bookId });
