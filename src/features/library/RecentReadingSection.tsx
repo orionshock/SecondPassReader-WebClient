@@ -22,7 +22,6 @@ export function RecentReadingSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ReadingRecentSessionsResponse | null>(null);
-  const [resumeBusyId, setResumeBusyId] = useState<string | null>(null);
   const [brokenCoverIds, setBrokenCoverIds] = useState<Record<string, true>>({});
 
   const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
@@ -56,17 +55,13 @@ export function RecentReadingSection({
     void loadRecent();
   }, [canLoad, loadRecent]);
 
-  async function handleResume(bookId: string | number) {
+  function handleResume(bookId: string | number) {
     const bookKey = String(bookId);
-    if (resumeBusyId) return;
-    setResumeBusyId(bookKey);
     setError(null);
     try {
       navigateTo({ kind: "reader", bookId: bookKey });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to resume book.");
-    } finally {
-      setResumeBusyId(null);
     }
   }
 
@@ -97,11 +92,23 @@ export function RecentReadingSection({
         <div className="recentCarousel" role="region" aria-label="Recent reading">
           {data.results.map((item) => {
             const id = String(item.book.id);
-            const resumeBusy = resumeBusyId === id;
             const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.cover_url, profile);
+            const rawProgression = item.session?.progression;
+            const progression =
+              typeof rawProgression === "number" && Number.isFinite(rawProgression) ? Math.min(1, Math.max(0, rawProgression)) : null;
+            const progressionPercent = progression != null ? Math.round(progression * 100) : null;
+            const ariaLabel = `Resume ${item.book.title}${progressionPercent != null ? `, ${progressionPercent}% complete` : ""}`;
             return (
-              <div key={item.session.id} className="recentBookCard">
-                <div className="recentCover">
+              <button
+                key={item.session.id}
+                type="button"
+                className="recentBookCard"
+                onClick={() => handleResume(item.book.id)}
+                disabled={!canLoad}
+                aria-label={ariaLabel}
+                title={ariaLabel}
+              >
+                <div className="recentCoverWrap">
                   {coverSrc ? (
                     <img
                       className="recentCoverImg"
@@ -113,20 +120,14 @@ export function RecentReadingSection({
                   ) : (
                     <div className="recentCoverPlaceholder">No cover</div>
                   )}
+                  {progressionPercent != null ? <div className="recentProgressBadge">{progressionPercent}%</div> : null}
                 </div>
                 <div className="recentBookTitle" title={item.book.title}>
                   {item.book.title}
                 </div>
-                <div className="recentBookMeta muted">Last activity: {formatLastActivity(item.last_activity_at)}</div>
-                <button
-                  type="button"
-                  className="button buttonCompact recentResumeButton"
-                  onClick={() => void handleResume(item.book.id)}
-                  disabled={!canLoad || resumeBusy}
-                >
-                  {resumeBusy ? "Resuming…" : "Resume"}
-                </button>
-              </div>
+                {item.session?.name ? <div className="recentSessionName muted">{item.session.name}</div> : null}
+                <div className="recentBookMeta muted">Last read: {formatLastActivity(item.last_activity_at)}</div>
+              </button>
             );
           })}
         </div>

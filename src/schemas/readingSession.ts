@@ -61,8 +61,10 @@ export type ReadingRecentSessionsItem = {
   last_activity_at: string;
   session: {
     id: string;
+    name?: string | null;
     status: "active" | string;
     is_active: true | boolean;
+    progression?: number | null;
     [k: string]: unknown;
   };
   book: {
