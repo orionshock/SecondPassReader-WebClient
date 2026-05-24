@@ -479,16 +479,20 @@ export function LibraryLandingPage({
               {seriesData?.results?.length ? (
                 <div className="libraryEntityList">
                   {seriesData.results.map((s) => (
-                    <div key={String(s.id)} className="libraryEntityCard">
+                    <button
+                      key={String(s.id)}
+                      type="button"
+                      className="libraryEntityCard libraryEntityCardButton"
+                      onClick={() => onShowSeriesBooks?.(String(s.id))}
+                      aria-label={`View books in ${s.name}`}
+                      title={`View books in ${s.name}`}
+                    >
                       <div className="libraryEntityMain">
                         <div className="libraryEntityTitle">{s.name}</div>
                         {typeof s.book_count === "number" ? <div className="muted">{s.book_count} books</div> : null}
                         {s.summary ? <div className="muted">{s.summary}</div> : null}
                       </div>
-                      <button type="button" className="button buttonCompact" onClick={() => onShowSeriesBooks?.(String(s.id))}>
-                        View books
-                      </button>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -527,16 +531,20 @@ export function LibraryLandingPage({
               {authorsData?.results?.length ? (
                 <div className="libraryEntityList">
                   {authorsData.results.map((a) => (
-                    <div key={String(a.id)} className="libraryEntityCard">
+                    <button
+                      key={String(a.id)}
+                      type="button"
+                      className="libraryEntityCard libraryEntityCardButton"
+                      onClick={() => onShowAuthorBooks?.(String(a.id))}
+                      aria-label={`View books by ${a.name}`}
+                      title={`View books by ${a.name}`}
+                    >
                       <div className="libraryEntityMain">
                         <div className="libraryEntityTitle">{a.name}</div>
                         {typeof a.book_count === "number" ? <div className="muted">{a.book_count} books</div> : null}
                         {a.biography ? <div className="muted">{a.biography}</div> : null}
                       </div>
-                      <button type="button" className="button buttonCompact" onClick={() => onShowAuthorBooks?.(String(a.id))}>
-                        View books
-                      </button>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -573,4 +581,3 @@ export function LibraryLandingPage({
     </section>
   );
 }
-

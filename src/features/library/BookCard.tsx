@@ -36,7 +36,13 @@ export function BookCard({
   );
 
   return (
-    <article className={`bookCard ${selected ? "bookCardSelected" : ""}`}>
+    <button
+      type="button"
+      className={`bookCard bookCardButton ${selected ? "bookCardSelected" : ""}`}
+      onClick={onView}
+      aria-label={`View details for ${book.title}`}
+      title={`View details for ${book.title}`}
+    >
       <div className="bookCardRow">
         <div className="bookCardCover">
           {coverSrc ? (
@@ -65,13 +71,7 @@ export function BookCard({
             </div>
           </div>
         </div>
-
-        <div className="bookCardRight">
-          <button type="button" className="button buttonCompact" onClick={onView}>
-            View
-          </button>
-        </div>
       </div>
-    </article>
+    </button>
   );
 }
