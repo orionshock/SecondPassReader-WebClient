@@ -40,8 +40,6 @@ export function BookDetailPanel({
   const canOpen = Boolean(file?.download_url);
   const busy =
     downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
-  const fileSize = formatFileSize(file?.file_size ?? null);
-  const fileStatus = file ? "EPUB available" : "No file";
 
   const [coverBroken, setCoverBroken] = useState(false);
   const coverSrc = useMemo(
@@ -50,36 +48,7 @@ export function BookDetailPanel({
   );
 
   const descriptionText = useMemo(() => getBookDescriptionText(book), [book]);
-
-  const identifiersText = useMemo(() => {
-    const raw = (book as unknown as { identifiers?: unknown }).identifiers;
-    if (!Array.isArray(raw) || raw.length === 0) return null;
-    const lines = raw
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const scheme = (item as { scheme?: unknown }).scheme;
-        const value = (item as { value?: unknown }).value;
-        const s = typeof scheme === "string" ? scheme.trim() : "";
-        const v = typeof value === "string" ? value.trim() : "";
-        if (!s && !v) return null;
-        return s && v ? `${s}: ${v}` : v || s;
-      })
-      .filter((x): x is string => Boolean(x));
-    return lines.length ? lines : null;
-  }, [book]);
-
-  const groupsText = useMemo(() => {
-    const raw = (book as unknown as { groups?: unknown }).groups;
-    if (!Array.isArray(raw) || raw.length === 0) return null;
-    const names = raw
-      .map((g) => {
-        if (!g || typeof g !== "object") return null;
-        const name = (g as { name?: unknown }).name;
-        return typeof name === "string" && name.trim() ? name.trim() : null;
-      })
-      .filter((x): x is string => Boolean(x));
-    return names.length ? names : null;
-  }, [book]);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   return (
     <div className="bookDetailPanel">
@@ -112,22 +81,43 @@ export function BookDetailPanel({
         </div>
 
         <div className="bookDetailActions">
-          <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={!canOpen || busy}>
+          <button
+            type="button"
+            className="button buttonPrimary bookDetailActionButton"
+            onClick={() => onOpenReader(book)}
+            disabled={!canOpen || busy}
+          >
             Open reader
           </button>
-          {!canOpen ? <div className="muted" style={{ marginTop: 6 }}>No EPUB file available.</div> : null}
+          <button
+            type="button"
+            className="button buttonPrimary bookDetailActionButton"
+            disabled
+            title="Session management is not implemented in this client yet."
+            aria-label="Session management (not implemented)"
+          >
+            Session Management
+          </button>
         </div>
       </div>
 
-      <div className="bookDetailSummary">
-        {descriptionText ? (
-          descriptionText
-        ) : (
+      {descriptionText ? (
+        <button
+          type="button"
+          className={`bookDetailSummary ${descriptionExpanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
+          onClick={() => setDescriptionExpanded((v) => !v)}
+          title={descriptionExpanded ? "Click to collapse" : "Click to expand"}
+          aria-label={descriptionExpanded ? "Collapse summary" : "Expand summary"}
+        >
+          {descriptionText}
+        </button>
+      ) : (
+        <div className="bookDetailSummary">
           <span className="muted">
             <em>No Summary Provided</em>
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
       {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}
@@ -144,57 +134,6 @@ export function BookDetailPanel({
           {downloadState.result.filename ? <div className="muted">filename: {downloadState.result.filename}</div> : null}
         </div>
       ) : null}
-
-      <details className="bookFilePanel">
-        <summary className="muted">Technical details</summary>
-        <div className="detailRow">
-          <span className="muted">File status:</span> {fileStatus}
-          {file?.format ? <span className="muted">({file.format})</span> : null}
-          {fileSize ? <span className="muted"> · {fileSize}</span> : null}
-        </div>
-
-        {book.isbn ? (
-          <div className="detailRow">
-            <span className="muted">ISBN:</span> <span className="mono">{book.isbn}</span>
-          </div>
-        ) : null}
-
-        {identifiersText ? (
-          <div className="detailRow">
-            <span className="muted">Identifiers:</span> {identifiersText.join(" · ")}
-          </div>
-        ) : null}
-
-        {groupsText ? (
-          <div className="detailRow">
-            <span className="muted">Groups:</span> {groupsText.join(" · ")}
-          </div>
-        ) : null}
-
-        {book.subjects && book.subjects.length > 0 ? (
-          <div className="detailRow">
-            <span className="muted">Subjects:</span> {book.subjects.join(", ")}
-          </div>
-        ) : null}
-
-        {file ? (
-          <div className="bookFileGrid">
-            <div className="detailRow">
-              <span className="muted">id:</span> <span className="mono">{String(file.id)}</span>
-            </div>
-            {file.checksum_short ? (
-              <div className="detailRow">
-                <span className="muted">checksum:</span> <span className="mono">{file.checksum_short}</span>
-              </div>
-            ) : null}
-            {file.download_url ? (
-              <div className="detailRow">
-                <span className="muted">download_url:</span> <span className="mono">{file.download_url}</span>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </details>
     </div>
   );
 }

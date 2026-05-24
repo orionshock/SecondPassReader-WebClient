@@ -103,9 +103,23 @@ export function parseCurrentRoute(): AppRoute | null {
 export function navigateTo(route: AppRoute, options?: { replace?: boolean }): void {
   const hash = routeToHash(route);
   if (options?.replace) {
+    const oldUrl = window.location.href;
+    const oldHash = window.location.hash;
     window.history.replaceState(null, "", hash);
-    // Ensure listeners fire consistently across browsers.
-    if (window.location.hash !== hash) window.location.hash = hash;
+
+    // `replaceState()` does not fire `hashchange`, but this app's route state is driven by `hashchange`.
+    // Manually dispatch so UI updates (e.g., closing query-param modals) without pushing history entries.
+    const newHash = window.location.hash;
+    if (oldHash !== newHash) {
+      const newUrl = window.location.href;
+      try {
+        // eslint-disable-next-line no-new
+        const evt = new HashChangeEvent("hashchange", { oldURL: oldUrl, newURL: newUrl });
+        window.dispatchEvent(evt);
+      } catch {
+        window.dispatchEvent(new Event("hashchange"));
+      }
+    }
     return;
   }
   window.location.hash = hash;

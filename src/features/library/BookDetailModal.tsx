@@ -27,10 +27,12 @@ export function BookDetailModal({
     | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
 }) {
+  const DEBUG_BOOK_DETAIL = import.meta.env.DEV;
   const [book, setBook] = useState<LibraryBook | null>(initialBook);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchSeqRef = useRef(0);
+  const loggedBookIdsRef = useRef<Record<string, true>>({});
 
   useEffect(() => {
     setBook(initialBook ?? null);
@@ -75,6 +77,31 @@ export function BookDetailModal({
         });
         if (seq !== fetchSeqRef.current) return;
         setBook(full);
+        if (DEBUG_BOOK_DETAIL && !loggedBookIdsRef.current[bookId]) {
+          loggedBookIdsRef.current[bookId] = true;
+          const anyFull = full as unknown as {
+            isbn?: unknown;
+            identifiers?: unknown;
+            groups?: unknown;
+            subjects?: unknown;
+            cover_url?: unknown;
+            file?: unknown;
+          };
+          const identifiersCount = Array.isArray(anyFull.identifiers) ? anyFull.identifiers.length : null;
+          const groupsCount = Array.isArray(anyFull.groups) ? anyFull.groups.length : null;
+          const subjectsCount = Array.isArray(anyFull.subjects) ? anyFull.subjects.length : null;
+          // eslint-disable-next-line no-console
+          console.debug("[book-detail] loaded", {
+            id: full.id,
+            title: full.title,
+            hasIsbn: Boolean(anyFull.isbn),
+            identifiersCount,
+            groupsCount,
+            subjectsCount,
+            coverUrlType: typeof anyFull.cover_url,
+            hasFile: Boolean(anyFull.file),
+          });
+        }
       } catch (e) {
         if (seq !== fetchSeqRef.current) return;
         const message =
@@ -99,12 +126,12 @@ export function BookDetailModal({
       role="dialog"
       aria-modal="true"
       aria-label={headerTitle}
-      onMouseDown={(e) => {
+      onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="modalPanel" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modalPanel" onClick={(e) => e.stopPropagation()}>
         <div className="modalHeaderRow">
           <div className="modalTitle" title={headerTitle}>
             {headerTitle}

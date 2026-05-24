@@ -145,11 +145,11 @@
 }
 
 .bookDetailPanel {
-  margin-top: 10px;
-  border: 1px solid var(--sp-border);
-  border-radius: 12px;
-  background: rgba(17, 24, 39, 0.01);
-  padding: 12px;
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .bookDetailHeader {
@@ -199,7 +199,17 @@
 
 .bookDetailActions {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
+
+.bookDetailActionButton {
+  width: 140px;
+  display: block;
+}
+
 
 .bookDetailMetaLine {
   margin-top: 4px;
@@ -211,6 +221,26 @@
   border-top: 1px solid var(--sp-border);
   white-space: pre-wrap;
   line-height: 1.4;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  font: inherit;
+}
+
+.bookDetailSummaryCollapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.bookDetailSummaryExpanded {
+  cursor: pointer;
 }
 
 .bookFilePanel {
