@@ -1,8 +1,5 @@
 import type { ReadingOpenResponse, ReadingSessionSummary } from "../../schemas/readingSession";
-import type { LibraryBook } from "../../schemas/library";
 import type { LocalHighlight } from "./types";
-import { createW3CAnnotationFromLocalHighlight } from "./w3cAnnotationAdapter";
-import { createServerAnnotationPayloadFromLocalHighlight } from "./readingAnnotationAdapter";
 import { useEffect, useState } from "react";
 import { SecondPassApiClient } from "../../api/SecondPassApiClient";
 import { DEFAULT_HIGHLIGHT_COLOR, highlightColorLabel, highlightColorToClassName, isHighlightColor } from "./highlightColors";
@@ -25,7 +22,6 @@ export function AnnotationPanel({
   serverPageInfo,
   onLoadMoreSavedAnnotations,
   readingOpen,
-  book,
   apiReady,
   apiBaseUrl,
   accessToken,
@@ -47,15 +43,12 @@ export function AnnotationPanel({
   } | null;
   onLoadMoreSavedAnnotations: () => void;
   readingOpen: ReadingOpenResponse | null;
-  book: LibraryBook;
   apiReady: boolean;
   apiBaseUrl?: string;
   accessToken?: string;
   tokenType?: string;
 }) {
   const sessionId = readingOpen?.session?.id ?? null;
-  const profileVersion = readingOpen?.profile_version ?? "0.1.0";
-  const devDiagnostics = import.meta.env.DEV;
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -129,6 +122,12 @@ export function AnnotationPanel({
     }
   }
 
+  function truncateOneLine(text: string, max: number): string {
+    const t = text.replace(/\s+/g, " ").trim();
+    if (t.length <= max) return t;
+    return `${t.slice(0, Math.max(0, max - 1))}\u2026`;
+  }
+
   function formatWhen(raw?: string | null): string | null {
     if (!raw) return null;
     const d = new Date(raw);
@@ -167,7 +166,7 @@ export function AnnotationPanel({
       {sessionId ? (
         <div className="readerSessionMeta">
           <div className="readerSessionMetaRow">
-            <div className="readerSessionMetaLabel muted">Active session</div>
+            <div className="readerSessionMetaLabel muted">Session Name:</div>
             <div className="readerSessionMetaValue">
               {!editingSessionName ? (
                 <>
@@ -223,13 +222,19 @@ export function AnnotationPanel({
           </div>
 
           <div className="readerSessionMetaRow">
-            <div className="readerSessionMetaLabel muted">Notes</div>
+            <div className="readerSessionMetaLabel muted">Notes:</div>
             <div className="readerSessionMetaValue">
               {!editingSessionNotes ? (
                 <>
-                  <span className={(sessionMeta?.notes ?? "").trim() ? "" : "muted"}>
-                    {(sessionMeta?.notes ?? "").trim() || "No notes"}
-                  </span>
+                  {(() => {
+                    const raw = (sessionMeta?.notes ?? "").trim();
+                    const display = raw ? truncateOneLine(raw, 64) : "No notes";
+                    return (
+                      <span className={raw ? "" : "muted"} title={raw || undefined}>
+                        {display}
+                      </span>
+                    );
+                  })()}
                   <button
                     type="button"
                     className="button buttonCompact"
@@ -246,39 +251,35 @@ export function AnnotationPanel({
                   </button>
                 </>
               ) : (
-                <div className="readerSessionEditBlock">
-                  <textarea
-                    className="input"
-                    cols={40}
-                    rows={4}
-                    maxLength={500}
+                <div className="readerSessionEditRow">
+                  <input
+                    className="input inputCompact"
+                    style={{ width: "64ch" }}
                     value={sessionNotesDraft}
+                    maxLength={500}
                     onChange={(e) => setSessionNotesDraft(e.target.value)}
                     aria-label="Session notes"
                   />
-                  <div className="readerSessionEditActions">
-                    <span className="muted">{sessionNotesDraft.length}/500</span>
-                    <button
-                      type="button"
-                      className="button buttonCompact"
-                      disabled={sessionSaving}
-                      onClick={() => void saveSessionMeta({ notes: sessionNotesDraft.trim() })}
-                      aria-label="Save session notes"
-                      title="Save"
-                    >
-                      {"\u2713"}
-                    </button>
-                    <button
-                      type="button"
-                      className="button buttonCompact"
-                      disabled={sessionSaving}
-                      onClick={() => setEditingSessionNotes(false)}
-                      aria-label="Cancel"
-                      title="Cancel"
-                    >
-                      {"\u2715"}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="button buttonCompact"
+                    disabled={sessionSaving}
+                    onClick={() => void saveSessionMeta({ notes: sessionNotesDraft.trim() })}
+                    aria-label="Save session notes"
+                    title="Save"
+                  >
+                    {"\u2713"}
+                  </button>
+                  <button
+                    type="button"
+                    className="button buttonCompact"
+                    disabled={sessionSaving}
+                    onClick={() => setEditingSessionNotes(false)}
+                    aria-label="Cancel"
+                    title="Cancel"
+                  >
+                    {"\u2715"}
+                  </button>
                 </div>
               )}
             </div>
@@ -293,7 +294,6 @@ export function AnnotationPanel({
           {highlights.map((h) => {
             const state = getAnnotationStateLabel(h);
             const isSaved = state.kind === "saved";
-            const canSave = apiReady && Boolean(sessionId) && !isSaved && state.kind !== "saving";
             const isDeleting = h.serverDeleteStatus === "deleting";
             const canDelete = apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting;
             const isEditing = editingId === h.id;
@@ -388,36 +388,6 @@ export function AnnotationPanel({
                     <div className="errorText">{h.serverUpdateError}</div>
                   ) : null}
 
-                  {devDiagnostics ? (
-                    <details className="highlightDetails">
-                      <summary className="muted">Details (dev)</summary>
-                      <div className="mono">cfi: {h.cfiRange}</div>
-                      <div className="mono">created: {h.createdAt}</div>
-                      {h.serverAnnotationId ? <div className="mono">server id: {h.serverAnnotationId}</div> : null}
-                      {h.serverSavedAt ? <div className="mono">server saved: {h.serverSavedAt}</div> : null}
-                      {h.serverUpdatedAt ? <div className="mono">server updated: {h.serverUpdatedAt}</div> : null}
-                      <details className="highlightDetails">
-                        <summary className="muted">Server create payload preview</summary>
-                        <pre className="codeBlock">
-                          {JSON.stringify(
-                            createServerAnnotationPayloadFromLocalHighlight({
-                              localHighlight: h,
-                              sessionId: sessionId ?? "missing-session",
-                              profileVersion,
-                            }),
-                            null,
-                            2,
-                          )}
-                        </pre>
-                      </details>
-                      <details className="highlightDetails">
-                        <summary className="muted">W3C annotation preview</summary>
-                        <pre className="codeBlock">
-                          {JSON.stringify(createW3CAnnotationFromLocalHighlight({ localHighlight: h, book }), null, 2)}
-                        </pre>
-                      </details>
-                    </details>
-                  ) : null}
                 </div>
 
                 <div className="highlightActions">
@@ -441,16 +411,18 @@ export function AnnotationPanel({
                       {isUpdating ? "..." : isEditing ? "\u2715" : "\u270E"}
                     </button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="button buttonPrimary buttonCompact"
-                    onClick={() => onSaveToSession(h.id)}
-                    disabled={!canSave}
-                    title={!sessionId ? "No active reading session." : undefined}
-                    aria-label="Save to session"
-                  >
-                    {"\u{1F4BE}"}
-                  </button>
+                  {state.kind === "error" && !isSaved ? (
+                    <button
+                      type="button"
+                      className="button buttonPrimary buttonCompact"
+                      onClick={() => onSaveToSession(h.id)}
+                      disabled={!apiReady || !sessionId}
+                      title={!sessionId ? "No active reading session." : "Retry save"}
+                      aria-label="Retry save"
+                    >
+                      Retry
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="button buttonDanger buttonCompact"
@@ -461,7 +433,7 @@ export function AnnotationPanel({
                         onRemoveLocal(h.id);
                       }
                     }}
-                    disabled={isSaved ? !canDelete : false}
+                    disabled={isSaved ? !canDelete : state.kind === "saving"}
                     aria-label={isSaved ? "Delete from session" : "Remove draft"}
                     title={isSaved ? "Delete from session" : "Remove draft"}
                   >

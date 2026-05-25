@@ -39,6 +39,7 @@ export function useReaderAnnotations(input: {
   const [pendingColor, setPendingColor] = useState<HighlightColor>(DEFAULT_HIGHLIGHT_COLOR);
 
   const prevSessionKeyRef = useRef<string | null>(null);
+  const autosaveInFlightRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const sid = readingOpen?.session?.id ?? null;
@@ -238,6 +239,24 @@ export function useReaderAnnotations(input: {
     },
     [highlights, input.accessToken, input.apiBaseUrl, input.tokenType, profileVersion, sessionId],
   );
+
+  // Autosave newly created draft annotations (created from selection toolbar).
+  useEffect(() => {
+    if (!input.apiBaseUrl || !input.accessToken) return;
+    if (!sessionId) return;
+
+    for (const h of highlights) {
+      if (h.readOnly) continue;
+      if (h.serverAnnotationId) continue;
+      if (h.serverSaveStatus !== "unsaved") continue;
+      if (autosaveInFlightRef.current.has(h.id)) continue;
+
+      autosaveInFlightRef.current.add(h.id);
+      void saveHighlightToSession(h.id).finally(() => {
+        autosaveInFlightRef.current.delete(h.id);
+      });
+    }
+  }, [highlights, input.accessToken, input.apiBaseUrl, saveHighlightToSession, sessionId]);
 
   const deleteHighlightFromSession = useCallback(
     async (highlightId: string) => {

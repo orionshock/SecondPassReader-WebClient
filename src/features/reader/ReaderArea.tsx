@@ -316,7 +316,6 @@ export function ReaderArea({
         serverPageInfo={annotations.serverPageInfo ? { ...annotations.serverPageInfo, loaded: loadedServerAnnotations } : null}
         onLoadMoreSavedAnnotations={() => void annotations.loadMoreSavedAnnotations()}
         readingOpen={readingOpen}
-        book={openedBook.book}
         apiReady={Boolean(apiBaseUrl && accessToken)}
         apiBaseUrl={apiBaseUrl}
         accessToken={accessToken}

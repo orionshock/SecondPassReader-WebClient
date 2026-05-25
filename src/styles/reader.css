@@ -350,9 +350,15 @@
 
 .readerSessionMetaRow {
   display: grid;
-  grid-template-columns: 90px 1fr;
+  grid-template-columns: 120px 1fr;
   gap: 10px;
-  align-items: start;
+  align-items: center;
+}
+
+.readerSessionMetaLabel {
+  white-space: nowrap;
+  justify-self: end;
+  font-size: 12px;
 }
 
 .readerSessionMetaValue {
@@ -360,6 +366,11 @@
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.readerSessionMeta .inputCompact {
+  font-size: 12px;
+  padding: 6px 8px;
 }
 
 .readerSessionEditRow {
