@@ -170,6 +170,11 @@ export function ReaderArea({
           >
             Reader settings
           </button>
+          {readerSettingsOpen ? (
+            <div className="readerSettingsPopover" role="dialog" aria-label="Reader settings">
+              <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} />
+            </div>
+          ) : null}
           <button
             type="button"
             className="button buttonCompact"
@@ -185,8 +190,6 @@ export function ReaderArea({
           </button>
         </div>
       </div>
-
-      {readerSettingsOpen ? <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} /> : null}
 
       <ProgressPanel
         autosave={autosave}
@@ -212,47 +215,37 @@ export function ReaderArea({
         />
       ) : null}
 
-      {annotations.pendingSelection ? (
-        <div className="annotationFloat">
-          <div className="annotationFloatTitle">Selection</div>
-          <div className="annotationFloatText mono">{annotations.selectionPreview || "(no text captured)"}</div>
+      <div className="readerEpubStack">
+        <EpubReaderPanel
+          blob={openedBook.blob}
+          highlights={annotations.highlights}
+          initialLocation={initialCfi ?? undefined}
+          goToStartSignal={goToStartSignal}
+          settings={readerSettings}
+          onLocationChanged={setLocationString}
+          onReaderLocationChange={setReaderLocation}
+          onHighlightClicked={annotations.setSelectedHighlightId}
+          onTextSelected={(sel) => {
+            annotations.onTextSelected(sel);
+          }}
+        />
 
-          {!annotations.noteOpen ? (
-            <div className="annotationFloatActions">
-              <button
-                type="button"
-                className="button buttonPrimary buttonCompact"
-                onClick={annotations.createHighlightFromPending}
-              >
-                Highlight
-              </button>
-              <button type="button" className="button buttonCompact" onClick={() => annotations.setNoteOpen(true)}>
-                Add note
-              </button>
-              <button
-                type="button"
-                className="button buttonCompact"
-                onClick={annotations.cancelPendingSelection}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <div className="annotationFloatNote">
-              <textarea
-                className="input"
-                rows={3}
-                value={annotations.noteDraft}
-                onChange={(e) => annotations.setNoteDraft(e.target.value)}
-                placeholder="Note..."
-              />
+        {annotations.pendingSelection ? (
+          <div className="annotationFloat annotationFloatOverlay">
+            <div className="annotationFloatTitle">Selection</div>
+            <div className="annotationFloatText mono">{annotations.selectionPreview || "(no text captured)"}</div>
+
+            {!annotations.noteOpen ? (
               <div className="annotationFloatActions">
                 <button
                   type="button"
                   className="button buttonPrimary buttonCompact"
-                  onClick={annotations.createNoteFromPending}
+                  onClick={annotations.createHighlightFromPending}
                 >
-                  Save note
+                  Highlight
+                </button>
+                <button type="button" className="button buttonCompact" onClick={() => annotations.setNoteOpen(true)}>
+                  Add note
                 </button>
                 <button
                   type="button"
@@ -262,24 +255,36 @@ export function ReaderArea({
                   Cancel
                 </button>
               </div>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      <EpubReaderPanel
-        blob={openedBook.blob}
-        highlights={annotations.highlights}
-        initialLocation={initialCfi ?? undefined}
-        goToStartSignal={goToStartSignal}
-        settings={readerSettings}
-        onLocationChanged={setLocationString}
-        onReaderLocationChange={setReaderLocation}
-        onHighlightClicked={annotations.setSelectedHighlightId}
-        onTextSelected={(sel) => {
-          annotations.onTextSelected(sel);
-        }}
-      />
+            ) : (
+              <div className="annotationFloatNote">
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={annotations.noteDraft}
+                  onChange={(e) => annotations.setNoteDraft(e.target.value)}
+                  placeholder="Note..."
+                />
+                <div className="annotationFloatActions">
+                  <button
+                    type="button"
+                    className="button buttonPrimary buttonCompact"
+                    onClick={annotations.createNoteFromPending}
+                  >
+                    Save note
+                  </button>
+                  <button
+                    type="button"
+                    className="button buttonCompact"
+                    onClick={annotations.cancelPendingSelection}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       <AnnotationPanel
         highlights={annotations.highlights}
