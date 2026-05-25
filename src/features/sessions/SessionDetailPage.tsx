@@ -37,17 +37,47 @@ function formatAnnotationCount(n?: number | null): string | null {
   return count === 1 ? "1 annotation" : `${count} annotations`;
 }
 
-function getAnnotationExcerpt(annotation: unknown): string | null {
+function getAnnotationTexts(annotation: unknown): { quote: string | null; note: string | null } {
   const bodies = (annotation as any)?.body;
-  if (!Array.isArray(bodies)) return null;
+  if (!Array.isArray(bodies)) return { quote: null, note: null };
+
+  const textBodies: Array<{ purpose: string | null; value: string }> = [];
   for (const b of bodies) {
-    const value = b && typeof b === "object" ? (b as any).value : null;
-    if (typeof value === "string" && value.trim()) {
-      const text = value.replace(/\s+/g, " ").trim();
-      return text.length > 180 ? `${text.slice(0, 177)}${"\u2026"}` : text;
-    }
+    if (!b || typeof b !== "object") continue;
+    const type = (b as any).type;
+    if (typeof type === "string" && type !== "TextualBody") continue;
+
+    const value = (b as any).value;
+    if (typeof value !== "string") continue;
+    const trimmed = value.replace(/\s+/g, " ").trim();
+    if (!trimmed) continue;
+    const purposeRaw = (b as any).purpose;
+    const purpose = typeof purposeRaw === "string" ? purposeRaw.trim().toLowerCase() : null;
+    textBodies.push({ purpose, value: trimmed });
   }
-  return null;
+
+  if (!textBodies.length) return { quote: null, note: null };
+
+  const quote = textBodies.find((tb) => tb.purpose === "describing")?.value ?? null;
+  const note = textBodies.find((tb) => tb.purpose === "commenting")?.value ?? null;
+  if (quote || note) return { quote, note };
+
+  const rawMotivation = (annotation as any)?.motivation;
+  const motivations: string[] = Array.isArray(rawMotivation)
+    ? rawMotivation.filter((x): x is string => typeof x === "string")
+    : typeof rawMotivation === "string"
+      ? [rawMotivation]
+      : [];
+  const isHighlight = motivations.includes("highlighting");
+  const isComment = motivations.includes("commenting");
+
+  // Minimal fallbacks (explicit):
+  // - Highlight-only: use first textual body as quote.
+  // - Comment-only: if there is only one textual body, treat it as note-only.
+  if (isHighlight) return { quote: textBodies[0]?.value ?? null, note: null };
+  if (isComment && textBodies.length === 1) return { quote: null, note: textBodies[0]?.value ?? null };
+
+  return { quote: textBodies[0]?.value ?? null, note: null };
 }
 
 export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
@@ -66,6 +96,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
 
   const [closeBusy, setCloseBusy] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   const [annoBusy, setAnnoBusy] = useState(false);
   const [annoError, setAnnoError] = useState<string | null>(null);
@@ -151,7 +182,9 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
   const statusText = normalizeStatus(typeof session?.status === "string" ? session.status : null, session?.is_active ?? null);
   const annoText = formatAnnotationCount(session?.annotation_count ?? null);
 
-  const headerTitle = session?.book?.title ? `Session for ${session.book.title}` : "Session";
+  const headerTitle = session?.book?.title
+    ? `Marginalia for ${"\u201C"}${session.book.title}${"\u201D"}`
+    : "Marginalia";
 
   const handleSaveName = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
@@ -218,6 +251,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     if (!sessionId) return;
     setCloseBusy(true);
     setCloseError(null);
+    setConfirmClose(false);
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
       await api.closeReadingSession({
@@ -327,9 +361,35 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                 Open reader
               </button>
               {isActive ? (
-                <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
-                  {closeBusy ? `Closing${"\u2026"}` : "Close session"}
-                </button>
+                <>
+                  {!confirmClose ? (
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => {
+                        setCloseError(null);
+                        setConfirmClose(true);
+                      }}
+                      disabled={closeBusy}
+                    >
+                      Close session
+                    </button>
+                  ) : (
+                    <div className="sessionCloseConfirm" role="group" aria-label="Close session confirmation">
+                      <div className="sessionCloseConfirmText muted">
+                        Close this session? Name, notes, progress, and annotations become read-only.
+                      </div>
+                      <div className="sessionCloseConfirmActions">
+                        <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
+                          {closeBusy ? `Closing${"\u2026"}` : "Confirm close"}
+                        </button>
+                        <button type="button" className="button buttonCompact" onClick={() => setConfirmClose(false)} disabled={closeBusy}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : null}
             </div>
           </div>
@@ -455,7 +515,9 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             </div>
           ) : (
             <div className="sessionReadOnly">
-              <p className="muted">This session is closed. Name, notes, and annotations are read-only.</p>
+              <div className="sessionClosedNotice muted">
+                This session is closed. Name, notes, and annotations are read-only.
+              </div>
               {session.name ? (
                 <div className="detailRow">
                   <span className="muted">Name:</span> {session.name}
@@ -486,18 +548,35 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                   const { icon, label } = getAnnotationDisplay(a);
                   const updated = (a.updated_at as any) || (a.modified as any) || (a.created_at as any) || (a.created as any);
                   const when = typeof updated === "string" ? formatIso(updated) : null;
-                  const excerpt = getAnnotationExcerpt(a);
+                  const { quote, note } = getAnnotationTexts(a);
+                  const metaBits = [when ? when : null].filter(Boolean);
                   return (
-                    <div key={a.id} className="sessionAnnoRow">
-                      <div className="sessionAnnoIcon" aria-hidden="true">
-                        {icon}
+                    <div
+                      key={a.id}
+                      className="sessionAnnoRow"
+                    >
+                      <div className="sessionAnnoIcon" aria-hidden="true" title={label}>
+                        <span title={label}>{icon}</span>
                       </div>
                       <div className="sessionAnnoMain">
-                        <div className="sessionAnnoTitleRow">
-                          <div className="sessionAnnoTitle">{label}</div>
-                          {when ? <div className="sessionAnnoWhen muted">{when}</div> : null}
-                        </div>
-                        {excerpt ? <div className="sessionAnnoExcerpt muted">{excerpt}</div> : null}
+                        {quote ? (
+                          <div className="sessionAnnoQuote">{quote}</div>
+                        ) : null}
+                        {note ? (
+                          <div className="sessionAnnoNote">{note}</div>
+                        ) : !quote ? (
+                          <div className="sessionAnnoNote">{label}</div>
+                        ) : null}
+                        {metaBits.length ? (
+                          <div className="sessionAnnoMeta muted">
+                            {metaBits.map((m, idx) => (
+                              <span key={idx}>
+                                {idx > 0 ? ` ${"\u00B7"} ` : null}
+                                {m}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   );

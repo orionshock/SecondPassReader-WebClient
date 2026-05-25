@@ -204,6 +204,33 @@
   margin-top: 12px;
 }
 
+.sessionClosedNotice {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.sessionCloseConfirm {
+  margin-top: 8px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(17, 24, 39, 0.02);
+  max-width: 360px;
+}
+
+.sessionCloseConfirmText {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.sessionCloseConfirmActions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .sessionAnnotations {
   margin-top: 14px;
 }
@@ -234,22 +261,40 @@
   min-width: 0;
 }
 
-.sessionAnnoTitle {
+.sessionAnnoExcerpt {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.sessionAnnoPrimary {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sessionAnnoQuote {
+  padding: 8px 10px;
+  border-left: 3px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.04);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
   font-weight: 600;
 }
 
-.sessionAnnoTitleRow {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  justify-content: space-between;
+.sessionAnnoNote {
+  margin-top: 6px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--sp-muted);
 }
 
-.sessionAnnoWhen {
-  flex: 0 0 auto;
-}
-
-.sessionAnnoExcerpt {
+.sessionAnnoMeta {
   margin-top: 4px;
+  font-size: 12px;
+  font-style: italic;
   overflow-wrap: anywhere;
 }
