@@ -8,6 +8,8 @@ export type W3CTextualBody = {
   purpose?: "describing" | "highlighting" | "commenting" | string;
   format?: "text/plain" | string;
   language?: string;
+  // Server extension used for highlight semantic tokens (yellow/green/etc.).
+  color?: string;
 };
 
 export type W3CFragmentSelector = {

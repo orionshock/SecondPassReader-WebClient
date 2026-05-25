@@ -13,6 +13,7 @@ import type { ReaderLocation, OpenedBook } from "./types";
 import { useProgressAutosave } from "./useProgressAutosave";
 import { useNearEndLifecycle } from "./useNearEndLifecycle";
 import { useReaderAnnotations } from "./useReaderAnnotations";
+import { SelectionToolbar } from "./SelectionToolbar";
 
 export function ReaderArea({
   openedBook,
@@ -231,57 +232,19 @@ export function ReaderArea({
         />
 
         {annotations.pendingSelection ? (
-          <div className="annotationFloat annotationFloatOverlay">
-            <div className="annotationFloatTitle">Selection</div>
-            <div className="annotationFloatText mono">{annotations.selectionPreview || "(no text captured)"}</div>
-
-            {!annotations.noteOpen ? (
-              <div className="annotationFloatActions">
-                <button
-                  type="button"
-                  className="button buttonPrimary buttonCompact"
-                  onClick={annotations.createHighlightFromPending}
-                >
-                  Highlight
-                </button>
-                <button type="button" className="button buttonCompact" onClick={() => annotations.setNoteOpen(true)}>
-                  Add note
-                </button>
-                <button
-                  type="button"
-                  className="button buttonCompact"
-                  onClick={annotations.cancelPendingSelection}
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="annotationFloatNote">
-                <textarea
-                  className="input"
-                  rows={3}
-                  value={annotations.noteDraft}
-                  onChange={(e) => annotations.setNoteDraft(e.target.value)}
-                  placeholder="Note..."
-                />
-                <div className="annotationFloatActions">
-                  <button
-                    type="button"
-                    className="button buttonPrimary buttonCompact"
-                    onClick={annotations.createNoteFromPending}
-                  >
-                    Save note
-                  </button>
-                  <button
-                    type="button"
-                    className="button buttonCompact"
-                    onClick={annotations.cancelPendingSelection}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+          <div className="annotationFloatOverlay">
+            <SelectionToolbar
+              previewText={annotations.selectionPreview || ""}
+              color={annotations.pendingColor}
+              noteOpen={annotations.noteOpen}
+              noteDraft={annotations.noteDraft}
+              onChangeColor={annotations.setPendingColor}
+              onHighlight={(c) => annotations.createHighlightFromPending(c)}
+              onOpenNote={() => annotations.setNoteOpen(true)}
+              onChangeNoteDraft={annotations.setNoteDraft}
+              onSaveNote={(c) => annotations.createNoteFromPending(c)}
+              onCancel={annotations.cancelPendingSelection}
+            />
           </div>
         ) : null}
       </div>

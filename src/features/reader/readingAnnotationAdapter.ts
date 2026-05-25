@@ -2,6 +2,7 @@ import type { ReadingAnnotationCreatePayload } from "../../schemas/readingSessio
 import type { ReadingAnnotation } from "../../schemas/readingSession";
 import type { ReadingAnnotationUpdatePayload } from "../../schemas/readingSession";
 import type { LocalHighlight } from "./types";
+import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor, type HighlightColor } from "./highlightColors";
 
 const EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html";
 
@@ -12,12 +13,13 @@ export function createServerAnnotationPayloadFromLocalHighlight(input: {
 }): ReadingAnnotationCreatePayload {
   const note = input.localHighlight.note?.trim() ?? "";
   const motivation = note ? "commenting" : "highlighting";
-  const color = input.localHighlight.color ?? "yellow";
+  const rawColor = input.localHighlight.color;
+  const color: HighlightColor = isHighlightColor(rawColor) ? rawColor : DEFAULT_HIGHLIGHT_COLOR;
 
   const body: ReadingAnnotationCreatePayload["body"] = [
     {
       type: "TextualBody",
-      purpose: "highlighting",
+      purpose: "describing",
       value: input.localHighlight.text,
       color,
     },
@@ -56,15 +58,7 @@ export function createServerAnnotationUpdatePayloadFromLocalHighlight(input: {
 }
 
 function looksLikeColor(value: string): boolean {
-  const v = value.trim().toLowerCase();
-  if (!v) return false;
-  if (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) return true;
-  if (/^rgba?\(/.test(v)) return true;
-  // common named colors
-  if (["yellow", "red", "blue", "green", "orange", "purple", "pink", "black", "white", "gray", "grey"].includes(v)) {
-    return true;
-  }
-  return false;
+  return isHighlightColor(value);
 }
 
 function tryGetCfi(annotation: ReadingAnnotation): string | null {
@@ -100,17 +94,21 @@ function parseBody(annotation: ReadingAnnotation): { text?: string; note?: strin
     const value = typeof item.value === "string" ? item.value : undefined;
     const itemColor = typeof item.color === "string" ? item.color : undefined;
 
-    if (itemColor && !color) color = itemColor;
+    if (itemColor && !color && isHighlightColor(itemColor)) color = itemColor;
 
     if (purpose === "commenting" && value && !note) {
       note = value;
       continue;
     }
 
-    if ((purpose === "highlighting" || purpose === "describing") && value) {
-      // Some servers put selected text in highlighting/describing. Avoid treating colors as text.
+    if (purpose === "describing" && value) {
+      if (!selectedText) selectedText = value;
+      continue;
+    }
+
+    if (purpose === "highlighting" && value) {
+      // legacy server bodies: treat as selected text only if it isn't a color token
       if (!selectedText && !looksLikeColor(value)) selectedText = value;
-      // Some servers might put a named color in value.
       if (!color && looksLikeColor(value)) color = value;
     }
   }
@@ -133,7 +131,7 @@ export function createLocalHighlightFromServerAnnotation(annotation: ReadingAnno
     cfiRange,
     text: text?.trim() || "[server annotation]",
     note: note?.trim() || undefined,
-    color: color?.trim() || "yellow",
+    color: isHighlightColor(color) ? color : DEFAULT_HIGHLIGHT_COLOR,
     createdAt,
     serverAnnotationId: id,
     serverSavedAt: savedAt ?? createdAt,

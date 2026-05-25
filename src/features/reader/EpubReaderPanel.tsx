@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactReader } from "react-reader";
 import type { LocalHighlight, PendingSelection, ReaderLocation } from "./types";
 import type { ReaderSettings } from "../../storage/readerSettings";
+import { DEFAULT_HIGHLIGHT_COLOR, highlightColorToClassName, isHighlightColor } from "./highlightColors";
 
 // Renderer implementation: keep react-reader/epubjs usage isolated here.
 // TODO: Move renderer interactions behind ReaderBridge before adding more reader features.
@@ -171,11 +172,12 @@ export function EpubReaderPanel({
       // Add new highlights that aren't rendered yet.
       for (const h of highlights) {
         if (rendered.has(h.cfiRange)) continue;
+        const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
         rendition.annotations.highlight(
           h.cfiRange,
           { id: h.id },
           () => onHighlightClicked?.(h.id),
-          "sp-local-highlight",
+          `sp-local-highlight ${highlightColorToClassName(token)}`,
         );
         rendered.add(h.cfiRange);
       }
@@ -412,8 +414,14 @@ export function EpubReaderPanel({
           try {
             r.themes?.default?.({
               ".sp-local-highlight": {
-                "background-color": "rgba(255, 235, 59, 0.55)",
+                "border-radius": "2px",
               },
+              ".sp-local-highlight.highlightColorYellow": { "background-color": "rgba(255, 235, 59, 0.55)" },
+              ".sp-local-highlight.highlightColorGreen": { "background-color": "rgba(34, 197, 94, 0.40)" },
+              ".sp-local-highlight.highlightColorBlue": { "background-color": "rgba(59, 130, 246, 0.35)" },
+              ".sp-local-highlight.highlightColorPink": { "background-color": "rgba(236, 72, 153, 0.28)" },
+              ".sp-local-highlight.highlightColorPurple": { "background-color": "rgba(168, 85, 247, 0.26)" },
+              ".sp-local-highlight.highlightColorOrange": { "background-color": "rgba(249, 115, 22, 0.32)" },
             });
           } catch {
             // ignore theme issues
@@ -475,11 +483,12 @@ export function EpubReaderPanel({
           // Ensure existing highlights are rendered once rendition is ready.
           try {
             for (const h of highlights) {
+              const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
               r.annotations.highlight(
                 h.cfiRange,
                 { id: h.id },
                 () => onHighlightClicked?.(h.id),
-                "sp-local-highlight",
+                `sp-local-highlight ${highlightColorToClassName(token)}`,
               );
               renderedCfisRef.current.add(h.cfiRange);
             }

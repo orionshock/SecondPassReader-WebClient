@@ -8,6 +8,7 @@ import {
   createServerAnnotationUpdatePayloadFromLocalHighlight,
 } from "./readingAnnotationAdapter";
 import type { LocalHighlight, PendingSelection } from "./types";
+import { DEFAULT_HIGHLIGHT_COLOR, type HighlightColor } from "./highlightColors";
 
 type ServerAnnotationPaging = {
   count: number;
@@ -35,6 +36,7 @@ export function useReaderAnnotations(input: {
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
+  const [pendingColor, setPendingColor] = useState<HighlightColor>(DEFAULT_HIGHLIGHT_COLOR);
 
   const prevSessionKeyRef = useRef<string | null>(null);
 
@@ -50,6 +52,7 @@ export function useReaderAnnotations(input: {
     setPendingSelection(null);
     setNoteOpen(false);
     setNoteDraft("");
+    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
   }, [input.openedBookKey, readingOpen?.session?.id]);
 
   useEffect(() => {
@@ -346,14 +349,14 @@ export function useReaderAnnotations(input: {
     [highlights, input.accessToken, input.apiBaseUrl, input.tokenType, profileVersion, sessionId],
   );
 
-  const createDraftHighlight = useCallback((draft: { cfiRange: string; text: string; note?: string }) => {
+  const createDraftHighlight = useCallback((draft: { cfiRange: string; text: string; note?: string; color?: HighlightColor }) => {
     const now = new Date().toISOString();
     const h: LocalHighlight = {
       id: `lh_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`,
       cfiRange: draft.cfiRange,
       text: draft.text,
       note: draft.note,
-      color: "yellow",
+      color: draft.color ?? DEFAULT_HIGHLIGHT_COLOR,
       createdAt: now,
       createIdempotencyKey: createIdempotencyKey(),
       serverSaveStatus: "unsaved",
@@ -369,31 +372,35 @@ export function useReaderAnnotations(input: {
 
   const onTextSelected = useCallback((sel: PendingSelection) => {
     setPendingSelection((prev) => (prev?.cfiRange === sel.cfiRange ? prev : sel));
+    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
     setNoteOpen(false);
     setNoteDraft("");
   }, []);
 
   const cancelPendingSelection = useCallback(() => {
     setPendingSelection(null);
+    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
     setNoteOpen(false);
     setNoteDraft("");
   }, []);
 
-  const createHighlightFromPending = useCallback(() => {
+  const createHighlightFromPending = useCallback((color?: HighlightColor) => {
     if (!pendingSelection) return;
     if (highlights.some((h) => h.cfiRange === pendingSelection.cfiRange)) {
       setPendingSelection(null);
       return;
     }
-    const h = createDraftHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text });
+    const h = createDraftHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text, color: color ?? pendingColor });
     setHighlights((prev) => [h, ...prev]);
     setPendingSelection(null);
-  }, [createDraftHighlight, highlights, pendingSelection]);
+    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
+  }, [createDraftHighlight, highlights, pendingColor, pendingSelection]);
 
-  const createNoteFromPending = useCallback(() => {
+  const createNoteFromPending = useCallback((color?: HighlightColor) => {
     if (!pendingSelection) return;
     if (highlights.some((h) => h.cfiRange === pendingSelection.cfiRange)) {
       setPendingSelection(null);
+      setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
       setNoteOpen(false);
       setNoteDraft("");
       return;
@@ -403,12 +410,14 @@ export function useReaderAnnotations(input: {
       cfiRange: pendingSelection.cfiRange,
       text: pendingSelection.text,
       note: note || undefined,
+      color: color ?? pendingColor,
     });
     setHighlights((prev) => [h, ...prev]);
     setPendingSelection(null);
+    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
     setNoteOpen(false);
     setNoteDraft("");
-  }, [createDraftHighlight, highlights, noteDraft, pendingSelection]);
+  }, [createDraftHighlight, highlights, noteDraft, pendingColor, pendingSelection]);
 
   const removeLocalAnnotation = useCallback(
     (id: string) => {
@@ -422,6 +431,7 @@ export function useReaderAnnotations(input: {
     setHighlights([]);
     setSelectedHighlightId(null);
     setPendingSelection(null);
+    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
     setNoteOpen(false);
     setNoteDraft("");
     setServerAnnotationPaging(null);
@@ -450,6 +460,8 @@ export function useReaderAnnotations(input: {
     selectedHighlightId,
     setSelectedHighlightId,
     pendingSelection,
+    pendingColor,
+    setPendingColor,
     noteOpen,
     setNoteOpen,
     noteDraft,

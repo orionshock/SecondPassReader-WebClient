@@ -1,6 +1,7 @@
 import type { LibraryBook } from "../../schemas/library";
 import type { W3CAnnotation, W3CFragmentSelector, W3CTextualBody } from "../../schemas/w3cAnnotation";
 import type { LocalHighlight } from "./types";
+import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor } from "./highlightColors";
 
 const EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html";
 
@@ -24,16 +25,10 @@ export function createW3CAnnotationFromLocalHighlight(input: {
     purpose: "describing",
     format: "text/plain",
     value: input.localHighlight.text,
+    color: isHighlightColor(input.localHighlight.color) ? input.localHighlight.color : DEFAULT_HIGHLIGHT_COLOR,
   };
 
-  const colorBody: W3CTextualBody = {
-    type: "TextualBody",
-    purpose: "highlighting",
-    format: "text/plain",
-    value: input.localHighlight.color ?? "yellow",
-  };
-
-  const bodies: W3CTextualBody[] = [textBody, colorBody];
+  const bodies: W3CTextualBody[] = [textBody];
   const motivations: string[] = ["highlighting"];
 
   if (input.localHighlight.note) {
@@ -65,4 +60,3 @@ function bestEffortBookSourceId(book: LibraryBook): string {
   // TODO: Use server-provided artifact id / epub UID when available.
   return `book:${book.id}`;
 }
-

@@ -1,5 +1,6 @@
 import type { LibraryBook } from "../../schemas/library";
 import type { ReadingOpenResponse } from "../../schemas/readingSession";
+import type { HighlightColor } from "./highlightColors";
 
 export type ReaderLocation = {
   cfi?: string;
@@ -24,7 +25,7 @@ export type LocalHighlight = {
   cfiRange: string;
   text: string;
   note?: string;
-  color?: string;
+  color?: HighlightColor;
   createdAt: string;
   createIdempotencyKey?: string;
   serverAnnotationId?: string;
