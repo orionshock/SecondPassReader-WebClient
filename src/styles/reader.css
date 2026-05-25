@@ -190,6 +190,24 @@
   position: relative;
 }
 
+.readerChrome {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sp-border);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.readerThemeSepia .readerChrome {
+  background: rgba(244, 236, 216, 0.96);
+}
+
+.readerThemeDark .readerChrome {
+  background: rgba(17, 24, 39, 0.96);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 .readerSettingsPopover {
   position: absolute;
   top: 38px;
@@ -324,20 +342,113 @@
   min-width: 0;
 }
 
+.readerSessionMeta {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.readerSessionMetaRow {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.readerSessionMetaValue {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.readerSessionEditRow {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.readerSessionEditBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.readerSessionEditActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.annoQuote {
+  border-left: 3px solid rgba(37, 99, 235, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(17, 24, 39, 0.02);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.annoNote {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.01);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.annoMeta {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.annoMetaWhen {
+  opacity: 0.85;
+}
+
+/* Color-aware quote accents (semantic tokens only) */
+.annoQuote.highlightColorYellow {
+  border-left-color: rgba(255, 235, 59, 0.65);
+  background: rgba(255, 235, 59, 0.10);
+}
+.annoQuote.highlightColorGreen {
+  border-left-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.08);
+}
+.annoQuote.highlightColorBlue {
+  border-left-color: rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.08);
+}
+.annoQuote.highlightColorPink {
+  border-left-color: rgba(236, 72, 153, 0.50);
+  background: rgba(236, 72, 153, 0.06);
+}
+.annoQuote.highlightColorPurple {
+  border-left-color: rgba(168, 85, 247, 0.50);
+  background: rgba(168, 85, 247, 0.06);
+}
+.annoQuote.highlightColorOrange {
+  border-left-color: rgba(249, 115, 22, 0.55);
+  background: rgba(249, 115, 22, 0.07);
+}
+
 .highlightText {
   font-size: 13px;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.highlightTextExpanded {
-  -webkit-line-clamp: unset;
-  overflow: visible;
 }
 
 .highlightSelect {

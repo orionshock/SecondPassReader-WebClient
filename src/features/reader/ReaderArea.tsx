@@ -171,71 +171,69 @@ export function ReaderArea({
 
   return (
     <div className={`readerArea ${readerThemeClass} ${readerWidthClass}`}>
-      <div className="readerTopBar">
-        <div className="readerTopLeft">
-          <div className="readerBookTitle">{openedBook.book.title}</div>
-          <div className="readerBookSubtitle muted">
-            {seriesLine ? <span>{seriesLine}</span> : null}
-            {seriesLine && authors ? <span className="sep"> {"\u00B7"} </span> : null}
-            {authors ? <span>{authors}</span> : null}
+      <div className="readerChrome">
+        <div className="readerTopBar">
+          <div className="readerTopLeft">
+            <div className="readerBookTitle">{openedBook.book.title}</div>
+            <div className="readerBookSubtitle muted">
+              {seriesLine ? <span>{seriesLine}</span> : null}
+              {seriesLine && authors ? <span className="sep"> {"\u00B7"} </span> : null}
+              {authors ? <span>{authors}</span> : null}
+            </div>
+          </div>
+          <div className="readerTopRight">
+            <button
+              type="button"
+              className="button buttonCompact"
+              onClick={() => {
+                setReaderSettingsOpen(false);
+                setMarginaliaOpen((v) => !v);
+              }}
+            >
+              Marginalia
+            </button>
+            <button
+              type="button"
+              className="button buttonCompact"
+              onClick={() => {
+                setMarginaliaOpen(false);
+                setReaderSettingsOpen((v) => !v);
+              }}
+            >
+              Reader settings
+            </button>
+            {readerSettingsOpen ? (
+              <div className="readerSettingsPopover" role="dialog" aria-label="Reader settings">
+                <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} />
+              </div>
+            ) : null}
+            {marginaliaOpen ? (
+              <div className="readerMarginaliaPopover" role="dialog" aria-label="Marginalia layers">
+                <MarginaliaLayersPanel
+                  loading={previousLayers.sessionsLoading}
+                  error={previousLayers.sessionsError}
+                  layers={previousLayers.layers}
+                  onToggle={previousLayers.toggleLayer}
+                  onLoadMore={(sid) => void previousLayers.loadMore(sid)}
+                />
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="button buttonCompact"
+              onClick={() => {
+                // Avoid relying on browser history navigation; always return to the app's home route.
+                navigateTo({ kind: "home" });
+                onBackToLibrary();
+              }}
+            >
+              Home
+            </button>
           </div>
         </div>
-        <div className="readerTopRight">
-          <button
-            type="button"
-            className="button buttonCompact"
-            onClick={() => {
-              setReaderSettingsOpen(false);
-              setMarginaliaOpen((v) => !v);
-            }}
-          >
-            Marginalia
-          </button>
-          <button
-            type="button"
-            className="button buttonCompact"
-            onClick={() => {
-              setMarginaliaOpen(false);
-              setReaderSettingsOpen((v) => !v);
-            }}
-          >
-            Reader settings
-          </button>
-          {readerSettingsOpen ? (
-            <div className="readerSettingsPopover" role="dialog" aria-label="Reader settings">
-              <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} />
-            </div>
-          ) : null}
-          {marginaliaOpen ? (
-            <div className="readerMarginaliaPopover" role="dialog" aria-label="Marginalia layers">
-              <MarginaliaLayersPanel
-                loading={previousLayers.sessionsLoading}
-                error={previousLayers.sessionsError}
-                layers={previousLayers.layers}
-                onToggle={previousLayers.toggleLayer}
-                onLoadMore={(sid) => void previousLayers.loadMore(sid)}
-              />
-            </div>
-          ) : null}
-          <button
-            type="button"
-            className="button buttonCompact"
-            onClick={() => {
-              // Avoid relying on browser history navigation; always return to the app's home route.
-              navigateTo({ kind: "home" });
-              onBackToLibrary();
-            }}
-          >
-            Home
-          </button>
-        </div>
-      </div>
 
-      <ProgressPanel
-        autosave={autosave}
-        currentHref={currentHref}
-        progression={currentProgression}
-      />
+        <ProgressPanel autosave={autosave} currentHref={currentHref} progression={currentProgression} />
+      </div>
 
       {nearEnd.shouldShowNearEndBanner ? (
         <NearEndBanner
@@ -320,6 +318,9 @@ export function ReaderArea({
         readingOpen={readingOpen}
         book={openedBook.book}
         apiReady={Boolean(apiBaseUrl && accessToken)}
+        apiBaseUrl={apiBaseUrl}
+        accessToken={accessToken}
+        tokenType={tokenType}
       />
     </div>
   );
