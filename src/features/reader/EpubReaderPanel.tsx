@@ -108,6 +108,34 @@ export function EpubReaderPanel({
         rendition.themes.fontSize(`${settings.fontSizePercent}%`);
       }
 
+      const lineHeight =
+        settings.lineHeight === "compact"
+          ? "1.25"
+          : settings.lineHeight === "relaxed"
+            ? "1.65"
+            : settings.lineHeight === "loose"
+              ? "1.85"
+              : "1.45";
+
+      const pageMargin = settings.pageMargin === "compact" ? "5%" : settings.pageMargin === "wide" ? "12%" : "8%";
+
+      const serifStack = `Georgia, "Times New Roman", serif`;
+      const sansStack = `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      const fontFamily =
+        settings.fontFamily === "serif" ? serifStack : settings.fontFamily === "sans" ? sansStack : undefined;
+
+      // Apply typography/padding inside the EPUB iframe. Avoid overriding publisher fonts when set to "publisher".
+      const baseBody: Record<string, string> = {
+        "line-height": lineHeight,
+        "padding-left": pageMargin,
+        "padding-right": pageMargin,
+      };
+      if (fontFamily) baseBody["font-family"] = fontFamily;
+
+      rendition.themes.default({
+        body: baseBody,
+      });
+
       const themeName =
         settings.theme === "dark" ? "sp-dark" : settings.theme === "sepia" ? "sp-sepia" : "sp-light";
       rendition.themes.select(themeName);
@@ -115,7 +143,14 @@ export function EpubReaderPanel({
       // eslint-disable-next-line no-console
       console.warn("[reader] failed to apply reader settings:", e);
     }
-  }, [renditionVersion, settings?.fontSizePercent, settings?.theme]);
+  }, [
+    renditionVersion,
+    settings?.fontSizePercent,
+    settings?.theme,
+    settings?.lineHeight,
+    settings?.fontFamily,
+    settings?.pageMargin,
+  ]);
 
   const highlightIndex = useMemo(() => {
     const byCfi = new Map<string, LocalHighlight>();

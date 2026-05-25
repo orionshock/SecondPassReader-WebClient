@@ -1,21 +1,21 @@
-# Architecture (intended)
+﻿# Architecture (intended)
 
 This app is a standalone static web client that talks to a Second Pass Library server over HTTP.
 
 ## Layers
 
 1. **App shell**
-   - Product workflow shell (connect → pair → verify → library → reader/settings), global error handling, basic persistence (connection profile, preferences).
+   - Product workflow shell (connect -> pair -> verify -> library -> reader/settings), global error handling, basic persistence (connection profile, preferences).
 
 2. **Connection & auth flow**
-   - UI/state for “pick server URL” + Client API linking flow.
+   - UI/state for "pick server URL" + Client API linking flow.
 
 3. **`ServerBridge` / API client**
    - Typed client for server endpoints.
    - Owns request/response shaping, auth headers, pagination patterns, and error normalization.
 
 4. **`ReaderBridge`**
-   - Stable interface the rest of the app uses for “open book”, “go to location”, “get current location”, “create highlight”, etc.
+   - Stable interface the rest of the app uses for "open book", "go to location", "get current location", "create highlight", etc.
    - Hides renderer quirks and provides events in app-owned types.
 
 5. **EPUB renderer implementation**
@@ -31,7 +31,9 @@ This app is a standalone static web client that talks to a Second Pass Library s
 
 7. **Local storage**
    - Stores connection profile(s) and user preferences (non-sensitive).
-   - Reader settings (font size/theme/width) are currently **local-only** browser preferences (Phase 1) and are not synced to the server.
+   - Reader settings are currently **local-only** browser preferences and are not synced to the server:
+     - Phase 1: font size, theme, reader width
+     - Phase 2: line height, font family, page margin
    - Avoid storing password-equivalent tokens unless explicitly designed/encrypted.
 
 ## Source layout (current scaffold)
@@ -48,11 +50,11 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## App workflow
 
 - The app derives a workflow step from the selected connection profile and only renders one primary step at a time:
-  - connect server → pair device → verify connection → library home → reader mode (when a book is open)
+  - connect server -> pair device -> verify connection -> library home -> reader mode (when a book is open)
 - Debug/internal state is shown in a collapsible DebugDetails panel (no tokens displayed).
 - Reader mode uses a book-focused layout and hides the normal app header to keep reading focused.
 - Session lifecycle UI is intentionally surfaced only near end-of-book (currently a compact banner; actions are placeholders except Resume).
-- Banner supports same-session “Go to start”; “close session first + Go to start” uses `POST /reading/books/{book_id}/start-over/` when available.
+- Banner supports same-session "Go to start"; "close session first + Go to start" uses `POST /reading/books/{book_id}/start-over/` when available.
 
 ## Reader launch
 

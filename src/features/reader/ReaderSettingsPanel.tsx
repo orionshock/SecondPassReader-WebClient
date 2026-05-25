@@ -41,6 +41,58 @@ export function ReaderSettingsPanel({
 
       <div className="readerSettingsRow">
         <label className="readerSettingsLabel">
+          <span className="muted">Line height</span>
+          <select
+            className="input inputCompact"
+            value={settings.lineHeight}
+            onChange={(e) =>
+              onChange(normalizeReaderSettings({ ...settings, lineHeight: e.target.value as ReaderSettings["lineHeight"] }))
+            }
+          >
+            <option value="compact">Compact</option>
+            <option value="normal">Normal</option>
+            <option value="relaxed">Relaxed</option>
+            <option value="loose">Loose</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="readerSettingsRow">
+        <label className="readerSettingsLabel">
+          <span className="muted">Font</span>
+          <select
+            className="input inputCompact"
+            value={settings.fontFamily}
+            onChange={(e) =>
+              onChange(normalizeReaderSettings({ ...settings, fontFamily: e.target.value as ReaderSettings["fontFamily"] }))
+            }
+          >
+            <option value="publisher">Publisher</option>
+            <option value="serif">Serif</option>
+            <option value="sans">Sans</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="readerSettingsRow">
+        <label className="readerSettingsLabel">
+          <span className="muted">Page margin</span>
+          <select
+            className="input inputCompact"
+            value={settings.pageMargin}
+            onChange={(e) =>
+              onChange(normalizeReaderSettings({ ...settings, pageMargin: e.target.value as ReaderSettings["pageMargin"] }))
+            }
+          >
+            <option value="compact">Compact</option>
+            <option value="normal">Normal</option>
+            <option value="wide">Wide</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="readerSettingsRow">
+        <label className="readerSettingsLabel">
           <span className="muted">Theme</span>
           <select
             className="input inputCompact"
@@ -85,4 +137,3 @@ export function ReaderSettingsPanel({
     </div>
   );
 }
-
