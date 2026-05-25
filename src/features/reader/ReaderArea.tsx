@@ -15,6 +15,7 @@ import { useNearEndLifecycle } from "./useNearEndLifecycle";
 import { useReaderAnnotations } from "./useReaderAnnotations";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { usePreviousSessionLayers } from "./usePreviousSessionLayers";
+import { MarginaliaLayersPanel } from "./MarginaliaLayersPanel";
 
 export function ReaderArea({
   openedBook,
@@ -40,6 +41,7 @@ export function ReaderArea({
 
   const [readerSettings, setReaderSettings] = useState(() => getReaderSettings());
   const [readerSettingsOpen, setReaderSettingsOpen] = useState(false);
+  const [marginaliaOpen, setMarginaliaOpen] = useState(false);
 
   const readerThemeClass =
     readerSettings.theme === "dark" ? "readerThemeDark" : readerSettings.theme === "sepia" ? "readerThemeSepia" : "readerThemeLight";
@@ -59,6 +61,12 @@ export function ReaderArea({
   useEffect(() => {
     setLocationString(null);
     setReaderLocation(null);
+  }, [openedBook?.objectUrl]);
+
+  useEffect(() => {
+    // Close popovers when switching books.
+    setReaderSettingsOpen(false);
+    setMarginaliaOpen(false);
   }, [openedBook?.objectUrl]);
 
   const [readingOpenState, setReadingOpenState] = useState<ReadingOpenResponse | null>(openedBook?.readingOpen ?? null);
@@ -176,26 +184,36 @@ export function ReaderArea({
           <button
             type="button"
             className="button buttonCompact"
-            onClick={() => setReaderSettingsOpen((v) => !v)}
+            onClick={() => {
+              setReaderSettingsOpen(false);
+              setMarginaliaOpen((v) => !v);
+            }}
+          >
+            Marginalia
+          </button>
+          <button
+            type="button"
+            className="button buttonCompact"
+            onClick={() => {
+              setMarginaliaOpen(false);
+              setReaderSettingsOpen((v) => !v);
+            }}
           >
             Reader settings
           </button>
           {readerSettingsOpen ? (
             <div className="readerSettingsPopover" role="dialog" aria-label="Reader settings">
-              <ReaderSettingsPanel
-                settings={readerSettings}
-                onChange={handleReaderSettingsChange}
-                marginaliaLayers={
-                  previousLayers.apiReady
-                    ? {
-                        loading: previousLayers.sessionsLoading,
-                        error: previousLayers.sessionsError,
-                        layers: previousLayers.layers,
-                        onToggle: previousLayers.toggleLayer,
-                        onLoadMore: (sid) => void previousLayers.loadMore(sid),
-                      }
-                    : undefined
-                }
+              <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} />
+            </div>
+          ) : null}
+          {marginaliaOpen ? (
+            <div className="readerMarginaliaPopover" role="dialog" aria-label="Marginalia layers">
+              <MarginaliaLayersPanel
+                loading={previousLayers.sessionsLoading}
+                error={previousLayers.sessionsError}
+                layers={previousLayers.layers}
+                onToggle={previousLayers.toggleLayer}
+                onLoadMore={(sid) => void previousLayers.loadMore(sid)}
               />
             </div>
           ) : null}

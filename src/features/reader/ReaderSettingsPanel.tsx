@@ -1,21 +1,12 @@
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { FONT_SIZE_MAX, FONT_SIZE_MIN, normalizeReaderSettings, resetReaderSettings } from "../../storage/readerSettings";
-import type { PreviousSessionLayer } from "./usePreviousSessionLayers";
 
 export function ReaderSettingsPanel({
   settings,
   onChange,
-  marginaliaLayers,
 }: {
   settings: ReaderSettings;
   onChange: (next: ReaderSettings) => void;
-  marginaliaLayers?: {
-    loading: boolean;
-    error: string | null;
-    layers: PreviousSessionLayer[];
-    onToggle: (sessionId: string) => void;
-    onLoadMore: (sessionId: string) => void;
-  };
 }) {
   const step = 5;
 
@@ -131,64 +122,6 @@ export function ReaderSettingsPanel({
           </select>
         </label>
       </div>
-
-      {marginaliaLayers ? (
-        <div className="readerSettingsSection">
-          <div className="readerSettingsSectionTitle">Marginalia layers</div>
-          {marginaliaLayers.loading ? <div className="muted">Loading previous sessions...</div> : null}
-          {marginaliaLayers.error ? <div className="errorText">{marginaliaLayers.error}</div> : null}
-          {!marginaliaLayers.loading && !marginaliaLayers.error && marginaliaLayers.layers.length === 0 ? (
-            <div className="muted">No previous sessions for this book.</div>
-          ) : null}
-          {marginaliaLayers.layers.length ? (
-            <div className="readerLayersList">
-              {marginaliaLayers.layers.map((layer) => {
-                const s = layer.session;
-                const sid = String(s.id);
-                const label = (s.name ?? "").trim() || sid;
-                return (
-                  <div key={sid} className="readerLayerRow">
-                    <label className="readerLayerLabel">
-                      <input
-                        type="checkbox"
-                        checked={layer.checked}
-                        onChange={() => marginaliaLayers.onToggle(sid)}
-                        aria-label={`Toggle marginalia layer ${label}`}
-                      />
-                      <span className={s.name ? "" : "mono muted"}>{label}</span>
-                    </label>
-                    <span className="muted readerLayerMeta">
-                      {s.status}
-                      {"\u00B7"} {s.annotation_count ?? 0} annotations
-                    </span>
-                    {layer.checked ? (
-                      <div className="readerLayerMetaRow">
-                        {layer.loading ? <span className="muted">Loading…</span> : null}
-                        {layer.error ? <span className="errorText">{layer.error}</span> : null}
-                        {layer.hasMore ? (
-                          <button
-                            type="button"
-                            className="button buttonCompact"
-                            onClick={() => marginaliaLayers.onLoadMore(sid)}
-                            disabled={layer.loading}
-                          >
-                            Load more
-                          </button>
-                        ) : null}
-                        {layer.totalCount !== undefined && layer.loadedCount < layer.totalCount ? (
-                          <span className="muted">
-                            Showing {layer.loadedCount} of {layer.totalCount}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       <div className="readerSettingsRow">
         <button
