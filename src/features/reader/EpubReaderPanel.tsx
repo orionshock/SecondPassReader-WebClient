@@ -7,6 +7,32 @@ import { DEFAULT_HIGHLIGHT_COLOR, highlightColorToClassName, isHighlightColor } 
 // Renderer implementation: keep react-reader/epubjs usage isolated here.
 // TODO: Move renderer interactions behind ReaderBridge before adding more reader features.
 
+function highlightStylesForToken(token: string): Record<string, string> {
+  // epub.js highlights are rendered via SVG shapes; CSS background-color won't apply.
+  // Provide explicit SVG-friendly style values derived from the allowed semantic tokens.
+  switch (token) {
+    case "green":
+      return { fill: "rgb(34, 197, 94)", "fill-opacity": "0.32" };
+    case "blue":
+      return { fill: "rgb(59, 130, 246)", "fill-opacity": "0.30" };
+    case "pink":
+      return { fill: "rgb(236, 72, 153)", "fill-opacity": "0.26" };
+    case "purple":
+      return { fill: "rgb(168, 85, 247)", "fill-opacity": "0.26" };
+    case "orange":
+      return { fill: "rgb(249, 115, 22)", "fill-opacity": "0.28" };
+    case "yellow":
+    default:
+      return { fill: "rgb(255, 235, 59)", "fill-opacity": "0.40" };
+  }
+}
+
+function highlightClassForToken(token: string): string {
+  // epub.js passes this through to `classList.add(className)` so it must be a single token (no spaces).
+  const safeToken = isHighlightColor(token) ? token : DEFAULT_HIGHLIGHT_COLOR;
+  return `spHl_${highlightColorToClassName(safeToken)}`;
+}
+
 export function EpubReaderPanel({
   blob,
   highlights,
@@ -177,7 +203,8 @@ export function EpubReaderPanel({
           h.cfiRange,
           { id: h.id },
           () => onHighlightClicked?.(h.id),
-          `sp-local-highlight ${highlightColorToClassName(token)}`,
+          highlightClassForToken(token),
+          highlightStylesForToken(token),
         );
         rendered.add(h.cfiRange);
       }
@@ -413,15 +440,13 @@ export function EpubReaderPanel({
 
           try {
             r.themes?.default?.({
-              ".sp-local-highlight": {
-                "border-radius": "2px",
-              },
-              ".sp-local-highlight.highlightColorYellow": { "background-color": "rgba(255, 235, 59, 0.55)" },
-              ".sp-local-highlight.highlightColorGreen": { "background-color": "rgba(34, 197, 94, 0.40)" },
-              ".sp-local-highlight.highlightColorBlue": { "background-color": "rgba(59, 130, 246, 0.35)" },
-              ".sp-local-highlight.highlightColorPink": { "background-color": "rgba(236, 72, 153, 0.28)" },
-              ".sp-local-highlight.highlightColorPurple": { "background-color": "rgba(168, 85, 247, 0.26)" },
-              ".sp-local-highlight.highlightColorOrange": { "background-color": "rgba(249, 115, 22, 0.32)" },
+              // These selectors are a fallback only; epub.js highlights are SVG so we primarily color via style.
+              ".spHl_highlightColorYellow": { "border-radius": "2px" },
+              ".spHl_highlightColorGreen": { "border-radius": "2px" },
+              ".spHl_highlightColorBlue": { "border-radius": "2px" },
+              ".spHl_highlightColorPink": { "border-radius": "2px" },
+              ".spHl_highlightColorPurple": { "border-radius": "2px" },
+              ".spHl_highlightColorOrange": { "border-radius": "2px" },
             });
           } catch {
             // ignore theme issues
@@ -488,7 +513,8 @@ export function EpubReaderPanel({
                 h.cfiRange,
                 { id: h.id },
                 () => onHighlightClicked?.(h.id),
-                `sp-local-highlight ${highlightColorToClassName(token)}`,
+                highlightClassForToken(token),
+                highlightStylesForToken(token),
               );
               renderedCfisRef.current.add(h.cfiRange);
             }

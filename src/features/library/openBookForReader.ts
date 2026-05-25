@@ -14,18 +14,39 @@ export async function openBookForReader(input: {
   if (!book.file?.download_url) throw new Error("No EPUB file available for this book.");
 
   const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-  const open = await api.openReadingSession({
-    apiBaseUrl: profile.apiBaseUrl,
-    accessToken: profile.accessToken,
-    tokenType: profile.tokenType ?? "Bearer",
-    bookId: book.id,
-  });
 
-  const download = await api.downloadBookFile({
-    downloadUrl: book.file.download_url,
-    accessToken: profile.accessToken,
-    tokenType: profile.tokenType ?? "Bearer",
-  });
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<T>((_resolve, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s.`)), ms);
+    });
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  };
+
+  const open = await withTimeout(
+    api.openReadingSession({
+      apiBaseUrl: profile.apiBaseUrl,
+      accessToken: profile.accessToken,
+      tokenType: profile.tokenType ?? "Bearer",
+      bookId: book.id,
+    }),
+    45_000,
+    "Opening reading session",
+  );
+
+  const download = await withTimeout(
+    api.downloadBookFile({
+      downloadUrl: book.file.download_url,
+      accessToken: profile.accessToken,
+      tokenType: profile.tokenType ?? "Bearer",
+    }),
+    120_000,
+    "Downloading EPUB",
+  );
 
   const objectUrl = URL.createObjectURL(download.blob);
   return {
@@ -36,4 +57,3 @@ export async function openBookForReader(input: {
     readingOpen: open,
   };
 }
-

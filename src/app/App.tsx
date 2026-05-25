@@ -34,6 +34,7 @@ export default function App() {
   const [view, setView] = useState<"main" | "settings">("main");
   const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
   const [readerRestoreError, setReaderRestoreError] = useState<string | null>(null);
+  const [readerRestoreAttempt, setReaderRestoreAttempt] = useState(0);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(SELECTED_PROFILE_KEY);
@@ -244,21 +245,45 @@ export default function App() {
     setReaderRestoreError(null);
     openingBookRef.current = requestedBookId;
 
+    // React dev StrictMode intentionally mounts/unmounts components twice to detect unsafe effects.
+    // Guard async work so the first mount's async does not "win" or interfere with the second mount.
+    let cancelled = false;
+
     void (async () => {
       const seq = navSeqRef.current;
       try {
         const api = new SecondPassApiClient({ serverBaseUrl: selectedProfile.serverBaseUrl });
-        const book = await api.getBook({
-          apiBaseUrl,
-          accessToken,
-          tokenType: selectedProfile.tokenType ?? "Bearer",
-          bookId: requestedBookId,
-        });
+
+        const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+          let timeoutId: ReturnType<typeof setTimeout> | undefined;
+          const timeoutPromise = new Promise<T>((_resolve, reject) => {
+            timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s.`)), ms);
+          });
+          try {
+            return await Promise.race([promise, timeoutPromise]);
+          } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+          }
+        };
+
+        const book = await withTimeout(
+          api.getBook({
+            apiBaseUrl,
+            accessToken,
+            tokenType: selectedProfile.tokenType ?? "Bearer",
+            bookId: requestedBookId,
+          }),
+          30_000,
+          "Loading book details",
+        );
+        if (cancelled) return;
         if (seq !== navSeqRef.current) return;
         const opened = await openBookForReader({ profile: selectedProfile, book });
+        if (cancelled) return;
         if (seq !== navSeqRef.current) return;
         handleBookOpened(opened);
       } catch (e) {
+        if (cancelled) return;
         const message =
           e instanceof ApiError && e.status === 404
             ? "That book could not be found or you do not have access to it."
@@ -271,11 +296,21 @@ export default function App() {
         if (openingBookRef.current === requestedBookId) openingBookRef.current = null;
       }
     })();
+
+    return () => {
+      cancelled = true;
+      // In React StrictMode (dev), effects are mounted/unmounted twice. If we leave the guard set
+      // during the simulated unmount, the second mount run will be incorrectly blocked.
+      if (openingBookRef.current === requestedBookId) {
+        openingBookRef.current = null;
+      }
+    };
   }, [
     openedBook?.book?.id,
     route,
     selectedProfile,
     workflowStep,
+    readerRestoreAttempt,
   ]);
 
   useEffect(() => {
@@ -432,6 +467,18 @@ export default function App() {
                       }}
                     >
                       Home
+                    </button>
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => {
+                        // Force re-run of the reader restore effect by clearing the in-flight guard.
+                        openingBookRef.current = null;
+                        setReaderRestoreError(null);
+                        setReaderRestoreAttempt((v) => v + 1);
+                      }}
+                    >
+                      Retry
                     </button>
                   </div>
                 </section>
