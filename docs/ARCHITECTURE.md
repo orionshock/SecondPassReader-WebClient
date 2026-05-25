@@ -13,6 +13,9 @@ This app is a standalone static web client that talks to a Second Pass Library s
 3. **`ServerBridge` / API client**
    - Typed client for server endpoints.
    - Owns request/response shaping, auth headers, pagination patterns, and error normalization.
+   - **Boundary rule:** feature/UI code should import and call the public facade `src/api/SecondPassApiClient.ts`.
+     - Files in `src/api/*Api.ts` (e.g. `readingApi.ts`, `libraryApi.ts`) are **private implementation details** of that facade.
+     - No `fetch()` calls should exist outside `src/api/`.
 
 4. **`ReaderBridge`**
    - Stable interface the rest of the app uses for "open book", "go to location", "get current location", "create highlight", etc.
@@ -46,6 +49,24 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - `schemas/` Shared TypeScript types for API/data shapes (no validation libs yet)
 - `storage/` Local persistence (connection profiles, preferences)
 - `styles/` Minimal global/app CSS (no framework)
+
+## API boundary (SPL)
+
+`src/api/SecondPassApiClient.ts` is the app-facing "Second Pass Library" (SPL) boundary:
+- Feature modules (`src/features/*`) should call `SecondPassApiClient` methods and not depend on endpoint URLs, headers, auth construction, or pagination details.
+- Endpoint modules in `src/api/` (`clientApiAuthApi.ts`, `libraryApi.ts`, `readingApi.ts`, `shelvesApi.ts`) are free to change internally as long as the facade remains stable.
+- Schema/types live in `src/schemas/` and are shared by both the facade and features.
+
+Future (optional): if the facade grows too endpoint-shaped, we can introduce a dedicated `src/spl/` package for app-facing domain methods while keeping `src/api/` as the raw endpoint layer.
+
+### Potential future app events (not implemented)
+
+The current app uses promise-returning request/response calls, not an event bus. If we later add lightweight events, likely candidates:
+- `pairing.completed`
+- `profile.changed`
+- `auth.expired`
+- `session.closed`
+- `annotation.saved`
 
 ## App workflow
 

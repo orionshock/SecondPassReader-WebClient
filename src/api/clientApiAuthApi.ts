@@ -6,6 +6,11 @@ import type {
 } from "../schemas/clientApiAuth";
 import { ApiError, requestJsonUrl, resolveUrl } from "./apiHttp";
 
+export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
+  const url = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
+  return requestJsonUrl<SecondPassDiscovery>({ url, method: "GET" });
+}
+
 export async function createLoginRequest(
   discovery: SecondPassDiscovery,
   input?: { clientName?: string; clientType?: string },
@@ -56,4 +61,3 @@ export async function getMe(input: { apiBaseUrl: string; accessToken: string; to
 
   return (await res.json()) as MePayload;
 }
-

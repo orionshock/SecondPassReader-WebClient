@@ -21,7 +21,7 @@ import type {
 
 export { ApiError, type ApiErrorKind } from "./apiHttp";
 
-import { createLoginRequest, getMe, pollLoginRequest } from "./clientApiAuthApi";
+import { createLoginRequest, discoverSecondPass as discoverSecondPassImpl, getMe, pollLoginRequest } from "./clientApiAuthApi";
 import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
 import {
   closeReadingSession,
@@ -49,6 +49,10 @@ export class SecondPassApiClient {
   }
 
   // --- Client API auth / linking ---
+  static async discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
+    return discoverSecondPassImpl(serverBaseUrl);
+  }
+
   async createLoginRequest(
     discovery: SecondPassDiscovery,
     input?: { clientName?: string; clientType?: string },
