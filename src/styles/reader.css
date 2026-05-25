@@ -75,6 +75,54 @@
   flex-wrap: wrap;
 }
 
+.readerSettingsSection {
+  display: grid;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--sp-border);
+}
+
+.readerSettingsSectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.readerLayersList {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.readerLayerRow {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(17, 24, 39, 0.02);
+}
+
+.readerLayerLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.readerLayerMeta {
+  font-size: 12px;
+}
+
+.readerLayerMetaRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .readerSettingsLabel {
   font-size: 13px;
   color: var(--sp-muted);

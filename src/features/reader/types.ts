@@ -26,6 +26,9 @@ export type LocalHighlight = {
   text: string;
   note?: string;
   color?: HighlightColor;
+  readOnly?: boolean;
+  sourceSessionId?: string;
+  sourceSessionLabel?: string;
   createdAt: string;
   createIdempotencyKey?: string;
   serverAnnotationId?: string;

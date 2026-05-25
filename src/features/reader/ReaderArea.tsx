@@ -14,6 +14,7 @@ import { useProgressAutosave } from "./useProgressAutosave";
 import { useNearEndLifecycle } from "./useNearEndLifecycle";
 import { useReaderAnnotations } from "./useReaderAnnotations";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { usePreviousSessionLayers } from "./usePreviousSessionLayers";
 
 export function ReaderArea({
   openedBook,
@@ -87,6 +88,14 @@ export function ReaderArea({
     tokenType,
     sessionId,
     profileVersion: effectiveProfileVersion,
+  });
+
+  const previousLayers = usePreviousSessionLayers({
+    bookId: openedBook?.book?.id ?? null,
+    currentSessionId: sessionId,
+    apiBaseUrl,
+    accessToken,
+    tokenType,
   });
 
   const authors = useMemo(
@@ -173,7 +182,21 @@ export function ReaderArea({
           </button>
           {readerSettingsOpen ? (
             <div className="readerSettingsPopover" role="dialog" aria-label="Reader settings">
-              <ReaderSettingsPanel settings={readerSettings} onChange={handleReaderSettingsChange} />
+              <ReaderSettingsPanel
+                settings={readerSettings}
+                onChange={handleReaderSettingsChange}
+                marginaliaLayers={
+                  previousLayers.apiReady
+                    ? {
+                        loading: previousLayers.sessionsLoading,
+                        error: previousLayers.sessionsError,
+                        layers: previousLayers.layers,
+                        onToggle: previousLayers.toggleLayer,
+                        onLoadMore: (sid) => void previousLayers.loadMore(sid),
+                      }
+                    : undefined
+                }
+              />
             </div>
           ) : null}
           <button
@@ -217,9 +240,26 @@ export function ReaderArea({
       ) : null}
 
       <div className="readerEpubStack">
+        {(() => {
+          // Avoid duplicate CFIs across layers/current highlights (epub.js can only render one highlight per CFI).
+          const seen = new Set<string>();
+          const merged = [];
+          for (const h of annotations.highlights) {
+            if (!h.cfiRange) continue;
+            if (seen.has(h.cfiRange)) continue;
+            seen.add(h.cfiRange);
+            merged.push(h);
+          }
+          for (const h of previousLayers.layeredHighlights) {
+            if (!h.cfiRange) continue;
+            if (seen.has(h.cfiRange)) continue;
+            seen.add(h.cfiRange);
+            merged.push(h);
+          }
+          return (
         <EpubReaderPanel
           blob={openedBook.blob}
-          highlights={annotations.highlights}
+          highlights={merged}
           initialLocation={initialCfi ?? undefined}
           goToStartSignal={goToStartSignal}
           settings={readerSettings}
@@ -230,6 +270,8 @@ export function ReaderArea({
             annotations.onTextSelected(sel);
           }}
         />
+          );
+        })()}
 
         {annotations.pendingSelection ? (
           <div className="annotationFloatOverlay">

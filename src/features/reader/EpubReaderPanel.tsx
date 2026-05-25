@@ -7,30 +7,34 @@ import { DEFAULT_HIGHLIGHT_COLOR, highlightColorToClassName, isHighlightColor } 
 // Renderer implementation: keep react-reader/epubjs usage isolated here.
 // TODO: Move renderer interactions behind ReaderBridge before adding more reader features.
 
-function highlightStylesForToken(token: string): Record<string, string> {
+function highlightStylesForToken(token: string, opts?: { readOnly?: boolean }): Record<string, string> {
   // epub.js highlights are rendered via SVG shapes; CSS background-color won't apply.
   // Provide explicit SVG-friendly style values derived from the allowed semantic tokens.
+  const ro = Boolean(opts?.readOnly);
+  const fillOpacity = ro ? "0.18" : undefined;
+  const strokeOpacity = ro ? "0.35" : undefined;
   switch (token) {
     case "green":
-      return { fill: "rgb(34, 197, 94)", "fill-opacity": "0.32" };
+      return { fill: "rgb(34, 197, 94)", "fill-opacity": fillOpacity ?? "0.32", stroke: "rgb(34, 197, 94)", "stroke-opacity": strokeOpacity ?? "0" };
     case "blue":
-      return { fill: "rgb(59, 130, 246)", "fill-opacity": "0.30" };
+      return { fill: "rgb(59, 130, 246)", "fill-opacity": fillOpacity ?? "0.30", stroke: "rgb(59, 130, 246)", "stroke-opacity": strokeOpacity ?? "0" };
     case "pink":
-      return { fill: "rgb(236, 72, 153)", "fill-opacity": "0.26" };
+      return { fill: "rgb(236, 72, 153)", "fill-opacity": fillOpacity ?? "0.26", stroke: "rgb(236, 72, 153)", "stroke-opacity": strokeOpacity ?? "0" };
     case "purple":
-      return { fill: "rgb(168, 85, 247)", "fill-opacity": "0.26" };
+      return { fill: "rgb(168, 85, 247)", "fill-opacity": fillOpacity ?? "0.26", stroke: "rgb(168, 85, 247)", "stroke-opacity": strokeOpacity ?? "0" };
     case "orange":
-      return { fill: "rgb(249, 115, 22)", "fill-opacity": "0.28" };
+      return { fill: "rgb(249, 115, 22)", "fill-opacity": fillOpacity ?? "0.28", stroke: "rgb(249, 115, 22)", "stroke-opacity": strokeOpacity ?? "0" };
     case "yellow":
     default:
-      return { fill: "rgb(255, 235, 59)", "fill-opacity": "0.40" };
+      return { fill: "rgb(255, 235, 59)", "fill-opacity": fillOpacity ?? "0.40", stroke: "rgb(255, 235, 59)", "stroke-opacity": strokeOpacity ?? "0" };
   }
 }
 
-function highlightClassForToken(token: string): string {
+function highlightClassForToken(token: string, opts?: { readOnly?: boolean }): string {
   // epub.js passes this through to `classList.add(className)` so it must be a single token (no spaces).
   const safeToken = isHighlightColor(token) ? token : DEFAULT_HIGHLIGHT_COLOR;
-  return `spHl_${highlightColorToClassName(safeToken)}`;
+  const prefix = opts?.readOnly ? "spPrevHl" : "spHl";
+  return `${prefix}_${highlightColorToClassName(safeToken)}`;
 }
 
 export function EpubReaderPanel({
@@ -258,9 +262,9 @@ export function EpubReaderPanel({
         rendition.annotations.highlight(
           h.cfiRange,
           { id: h.id },
-          () => onHighlightClicked?.(h.id),
-          highlightClassForToken(token),
-          highlightStylesForToken(token),
+          h.readOnly ? undefined : () => onHighlightClicked?.(h.id),
+          highlightClassForToken(token, { readOnly: h.readOnly }),
+          highlightStylesForToken(token, { readOnly: h.readOnly }),
         );
         rendered.add(h.cfiRange);
       }
@@ -575,9 +579,9 @@ export function EpubReaderPanel({
               r.annotations.highlight(
                 h.cfiRange,
                 { id: h.id },
-                () => onHighlightClicked?.(h.id),
-                highlightClassForToken(token),
-                highlightStylesForToken(token),
+                h.readOnly ? undefined : () => onHighlightClicked?.(h.id),
+                highlightClassForToken(token, { readOnly: h.readOnly }),
+                highlightStylesForToken(token, { readOnly: h.readOnly }),
               );
               renderedCfisRef.current.add(h.cfiRange);
             }
