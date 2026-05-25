@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReadingOpenResponse } from "../../schemas/readingSession";
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook, ReadingOpenResponse } from "@secondpass/client";
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { getReaderSettings, normalizeReaderSettings, saveReaderSettings } from "../../storage/readerSettings";
 import { navigateTo } from "../../app/navigation";

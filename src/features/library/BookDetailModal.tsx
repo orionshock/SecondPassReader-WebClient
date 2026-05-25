@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { LibraryBook } from "../../schemas/library";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import type { LibraryBook } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailPanel } from "./BookDetailPanel";
 

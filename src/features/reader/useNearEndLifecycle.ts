@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { ReadingOpenResponse } from "../../schemas/readingSession";
-import type { LibraryBook } from "../../schemas/library";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import type { LibraryBook, ReadingOpenResponse } from "@secondpass/client";
 import { findNextBookInSeries } from "../library/seriesNavigation";
 
 export function useNearEndLifecycle(input: {

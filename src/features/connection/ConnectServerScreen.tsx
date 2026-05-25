@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { SecondPassDiscovery } from "../../schemas/clientApiAuth";
+import type { SecondPassDiscovery } from "@secondpass/client";
 import {
   listConnectionProfiles,
   saveConnectionProfile,

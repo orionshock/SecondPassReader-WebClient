@@ -1,6 +1,6 @@
-import { SecondPassApiClient } from "../../api/SecondPassApiClient";
+import { SecondPassApiClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 import type { OpenedBook } from "../reader";
 
 export async function openBookForReader(input: {

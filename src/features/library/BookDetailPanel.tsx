@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BookFileDownloadResult, LibraryBook } from "../../schemas/library";
+import type { BookFileDownloadResult, LibraryBook } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 

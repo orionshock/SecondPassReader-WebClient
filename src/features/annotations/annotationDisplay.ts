@@ -1,4 +1,4 @@
-import type { ReadingAnnotation } from "../../schemas/readingSession";
+import type { ReadingAnnotation } from "@secondpass/client";
 
 export function getAnnotationDisplay(annotation: ReadingAnnotation): { icon: string; label: string } {
   const rawMotivation = (annotation as any)?.motivation;

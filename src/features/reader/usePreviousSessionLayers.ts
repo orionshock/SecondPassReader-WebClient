@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { ReadingSessionSummary, ReadingAnnotationPage } from "../../schemas/readingSession";
+import { SecondPassApiClient } from "@secondpass/client";
+import type { ReadingAnnotationPage, ReadingSessionSummary } from "@secondpass/client";
 import type { LocalHighlight } from "./types";
 import { createLocalHighlightFromServerAnnotation } from "./readingAnnotationAdapter";
 
@@ -261,4 +261,3 @@ export function usePreviousSessionLayers(input: {
     layeredHighlights,
   };
 }
-

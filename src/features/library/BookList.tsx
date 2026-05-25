@@ -1,4 +1,4 @@
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 import { BookCard } from "./BookCard";
 
 export function BookList({

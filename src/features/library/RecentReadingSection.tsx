@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useState } from "react";
-import { SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { ReadingRecentSessionsResponse } from "../../schemas/readingSession";
+import { SecondPassApiClient } from "@secondpass/client";
+import type { ReadingRecentSessionsResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "./coverUtils";

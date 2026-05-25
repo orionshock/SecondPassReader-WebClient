@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
-import type { Shelf, ShelfItem } from "../../schemas/shelves";
+import type { Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
 

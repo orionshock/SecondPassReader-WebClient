@@ -1,7 +1,7 @@
-import type { ReadingOpenResponse, ReadingSessionSummary } from "../../schemas/readingSession";
+import type { ReadingOpenResponse, ReadingSessionSummary } from "@secondpass/client";
 import type { LocalHighlight } from "./types";
 import { useEffect, useState } from "react";
-import { SecondPassApiClient } from "../../api/SecondPassApiClient";
+import { SecondPassApiClient } from "@secondpass/client";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
   HIGHLIGHT_COLORS,

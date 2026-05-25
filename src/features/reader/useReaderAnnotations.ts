@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { ReadingOpenResponse } from "../../schemas/readingSession";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import type { ReadingOpenResponse } from "@secondpass/client";
 import { createIdempotencyKey } from "./idempotency";
 import {
   createLocalHighlightFromServerAnnotation,

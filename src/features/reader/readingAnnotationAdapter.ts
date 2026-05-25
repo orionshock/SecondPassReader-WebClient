@@ -1,6 +1,4 @@
-import type { ReadingAnnotationCreatePayload } from "../../schemas/readingSession";
-import type { ReadingAnnotation } from "../../schemas/readingSession";
-import type { ReadingAnnotationUpdatePayload } from "../../schemas/readingSession";
+import type { ReadingAnnotation, ReadingAnnotationCreatePayload, ReadingAnnotationUpdatePayload } from "@secondpass/client";
 import type { LocalHighlight } from "./types";
 import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor, type HighlightColor } from "./highlightColors";
 

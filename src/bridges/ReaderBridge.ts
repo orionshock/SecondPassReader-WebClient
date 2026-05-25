@@ -1,5 +1,4 @@
-import type { BookFile } from "../schemas/library";
-import type { W3CAnnotation } from "../schemas/w3cAnnotation";
+import type { BookFile, W3CAnnotation } from "@secondpass/client";
 
 export type ReaderLocation = {
   epubCfi: string;
@@ -21,4 +20,3 @@ export interface ReaderBridge {
   renderAnnotation(annotation: W3CAnnotation): Promise<void>;
   removeAnnotation(annotationId: string): Promise<void>;
 }
-

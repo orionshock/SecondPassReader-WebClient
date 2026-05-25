@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "../../schemas/library";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookList } from "./BookList";

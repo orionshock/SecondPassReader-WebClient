@@ -1,6 +1,4 @@
-import type { Book, BookFile } from "../schemas/library";
-import type { ReadingSession } from "../schemas/readingSession";
-import type { W3CAnnotation } from "../schemas/w3cAnnotation";
+import type { Book, BookFile, ReadingSession, W3CAnnotation } from "@secondpass/client";
 
 export type ServerMe = {
   id: string;
@@ -37,4 +35,3 @@ export interface ServerBridge {
   updateAnnotation(input: { annotationId: string; patch: Partial<W3CAnnotation> }): Promise<W3CAnnotation>;
   deleteAnnotation(annotationId: string): Promise<void>;
 }
-

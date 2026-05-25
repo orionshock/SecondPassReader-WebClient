@@ -1,5 +1,5 @@
-import type { SecondPassDiscovery } from "../../schemas/clientApiAuth";
-import { SecondPassApiClient } from "../../api/SecondPassApiClient";
+import type { SecondPassDiscovery } from "@secondpass/client";
+import { SecondPassApiClient } from "@secondpass/client";
 
 export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string } {
   const trimmed = input.trim();

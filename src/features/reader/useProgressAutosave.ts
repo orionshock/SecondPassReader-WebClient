@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { ReadingProgressUpdatePayload } from "../../schemas/readingSession";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import type { ReadingProgressUpdatePayload } from "@secondpass/client";
 import type { ProgressAutosaveState, ProgressSaveState } from "./ProgressPanel";
 
 export function useProgressAutosave(input: {
@@ -296,4 +296,3 @@ export function useProgressAutosave(input: {
 
   return { autosave, saveState, progressPayload, setAutosave, setSaveState, kickAutosaveForSession, resetForSessionSwap };
 }
-

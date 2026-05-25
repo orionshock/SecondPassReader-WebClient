@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { SecondPassApiClient, ApiError } from "../../api/SecondPassApiClient";
+import { SecondPassApiClient, ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
-import type { Shelf } from "../../schemas/shelves";
+import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 
 function shelfOwnerLabel(shelf: Shelf): string {

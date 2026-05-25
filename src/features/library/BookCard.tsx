@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 
 function formatFileSize(bytes?: number | null) {

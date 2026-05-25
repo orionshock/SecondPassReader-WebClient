@@ -1,5 +1,4 @@
-import type { LibraryBook } from "../../schemas/library";
-import type { ReadingOpenResponse } from "../../schemas/readingSession";
+import type { LibraryBook, ReadingOpenResponse } from "@secondpass/client";
 import type { HighlightColor } from "./highlightColors";
 
 export type ReaderLocation = {

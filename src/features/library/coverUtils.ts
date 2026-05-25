@@ -1,5 +1,5 @@
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 
 export function resolveCoverUrl(
   coverUrl: string | null | undefined,

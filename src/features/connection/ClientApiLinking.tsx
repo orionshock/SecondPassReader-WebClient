@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type {
-  ClientApiLoginRequestResponse,
-  ClientApiPollResponse,
-  SecondPassDiscovery,
-} from "../../schemas/clientApiAuth";
+import { SecondPassApiClient } from "@secondpass/client";
+import type { ClientApiLoginRequestResponse, ClientApiPollResponse, SecondPassDiscovery } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { isProfileLinked } from "./connectionStatus";
 

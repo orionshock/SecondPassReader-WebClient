@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
-import type { MePayload } from "../../schemas/clientApiAuth";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import type { MePayload } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 
 type Props = {

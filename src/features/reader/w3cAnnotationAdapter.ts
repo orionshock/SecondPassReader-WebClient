@@ -1,5 +1,4 @@
-import type { LibraryBook } from "../../schemas/library";
-import type { W3CAnnotation, W3CFragmentSelector, W3CTextualBody } from "../../schemas/w3cAnnotation";
+import type { LibraryBook, W3CAnnotation, W3CFragmentSelector, W3CTextualBody } from "@secondpass/client";
 import type { LocalHighlight } from "./types";
 import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor } from "./highlightColors";
 

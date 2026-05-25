@@ -1,4 +1,4 @@
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 
 function parseSeriesIndex(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -34,4 +34,3 @@ export function findNextBookInSeries(currentBook: LibraryBook, seriesBooks: Libr
   }
   return null;
 }
-

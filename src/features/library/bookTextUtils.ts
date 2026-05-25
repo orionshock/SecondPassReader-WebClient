@@ -1,4 +1,4 @@
-import type { LibraryBook } from "../../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 
 function decodeBasicEntities(text: string): string {
   return text
@@ -48,4 +48,3 @@ export function getBookDescriptionText(book: Pick<LibraryBook, "summary" | "desc
   const text = stripHtmlToText(raw);
   return text ? text : undefined;
 }
-

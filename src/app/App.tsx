@@ -6,7 +6,7 @@ import { HomePage } from "../features/home/HomePage";
 import { ReaderArea, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
-import type { LibraryBook } from "../schemas/library";
+import type { LibraryBook } from "@secondpass/client";
 import type { AppRoute } from "./navigation";
 import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
 import {
@@ -18,7 +18,7 @@ import {
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
-import { ApiError, SecondPassApiClient } from "../api/SecondPassApiClient";
+import { ApiError, SecondPassApiClient } from "@secondpass/client";
 import { ShelvesPage } from "../features/shelves/ShelvesPage";
 import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
 import { BookDetailModal } from "../features/library/BookDetailModal";
