@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { ReadingSessionSummary } from "../../schemas/readingSession";
 import type { PaginatedResponse } from "../../schemas/library";
@@ -33,6 +33,21 @@ function formatProgress(p?: number | null): string | null {
   if (typeof p !== "number" || !Number.isFinite(p)) return null;
   const clamped = Math.min(1, Math.max(0, p));
   return `${Math.round(clamped * 100)}%`;
+}
+
+function normalizeStatus(status?: string | null, isActive?: boolean | null): "active" | "completed" | "archived" | string {
+  if (isActive === true) return "active";
+  const raw = typeof status === "string" ? status.trim().toLowerCase() : "";
+  if (raw === "active" || raw === "completed" || raw === "archived") return raw;
+  if (raw) return raw;
+  if (isActive === false) return "completed";
+  return "active";
+}
+
+function formatAnnotationCount(n?: number | null): string | null {
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  const count = Math.max(0, Math.floor(n));
+  return count === 1 ? "1 annotation" : `${count} annotations`;
 }
 
 type Filter = "all" | "active" | "closed";
@@ -121,7 +136,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
         <>
           <div className="libraryMetaRow">
             <div className="muted">
-              Page {page} · {data.count} sessions
+              Page {page} {"\u00B7"} {data.count} sessions
             </div>
             <div className="pagerButtons">
               <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
@@ -139,10 +154,11 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
               const authors = formatAuthors(s);
               const series = formatSeries(s);
               const progress = formatProgress(s.progression);
-              const updated = formatIso(s.updated_at ?? s.started_at ?? s.created_at ?? null);
-              const state = typeof s.status === "string" && s.status.trim() ? s.status.trim() : s.is_active ? "active" : "closed";
+              const updated = formatIso(s.updated_at ?? null);
+              const state = normalizeStatus(typeof s.status === "string" ? s.status : null, s.is_active);
               const statusLine = state;
               const sessionName = typeof s.name === "string" ? s.name.trim() : "";
+              const annoText = formatAnnotationCount(s.annotation_count);
               const titleBits = [
                 s.book?.title ? s.book.title : "Book",
                 authors ? `<${authors}>` : null,
@@ -172,16 +188,16 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
                     </div>
                     <div className="sessionsMeta muted">
                       {sessionName ? <span className="mono">{sessionName}</span> : null}
-                      {sessionName ? <span className="sep">·</span> : null}
+                      {sessionName ? <span className="sep">{"\u00B7"}</span> : null}
                       <span className="sessionsId">{s.id}</span>
                     </div>
                     <div className="sessionsMeta muted">
                       {statusLine ? <span>{statusLine}</span> : null}
-                      {statusLine && progress ? <span className="sep">·</span> : null}
+                      {statusLine && progress ? <span className="sep">{"\u00B7"}</span> : null}
                       {progress ? <span>{progress}</span> : null}
-                      {(statusLine || progress) && typeof s.annotation_count === "number" ? <span className="sep">·</span> : null}
-                      {typeof s.annotation_count === "number" ? <span>{s.annotation_count} annotations</span> : null}
-                      {(statusLine || progress || typeof s.annotation_count === "number") && updated ? <span className="sep">·</span> : null}
+                      {(statusLine || progress) && annoText ? <span className="sep">{"\u00B7"}</span> : null}
+                      {annoText ? <span>{annoText}</span> : null}
+                      {(statusLine || progress || annoText) && updated ? <span className="sep">{"\u00B7"}</span> : null}
                       {updated ? <span>{updated}</span> : null}
                     </div>
                   </div>
@@ -192,7 +208,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
 
           <div className="libraryMetaRow libraryMetaRowBottom">
             <div className="muted">
-              Page {page} · {data.count} sessions
+              Page {page} {"\u00B7"} {data.count} sessions
             </div>
             <div className="pagerButtons">
               <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
@@ -206,7 +222,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
         </>
       ) : (
         <div className="muted" style={{ marginTop: 10 }}>
-          {busy ? "Loading…" : "No sessions yet."}
+          {busy ? `Loading${"\u2026"}` : "No sessions yet."}
         </div>
       )}
     </section>

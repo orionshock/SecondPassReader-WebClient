@@ -58,7 +58,7 @@ export function ShelvesPreviewSection({ profile }: { profile: ConnectionProfile 
       </div>
 
       {!canLoad ? <div className="muted">Select a verified profile first.</div> : null}
-      {busy ? <div className="muted">Loading…</div> : null}
+      {busy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
       {error ? (
         <div className="muted">
           {error}{" "}
@@ -89,4 +89,3 @@ export function ShelvesPreviewSection({ profile }: { profile: ConnectionProfile 
     </div>
   );
 }
-

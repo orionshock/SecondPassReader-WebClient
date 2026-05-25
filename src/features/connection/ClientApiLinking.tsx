@@ -190,7 +190,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           onClick={() => void startLinking()}
           disabled={!discovery || state.phase === "starting" || state.phase === "waiting"}
         >
-          {state.phase === "starting" ? "Starting…" : state.phase === "waiting" ? "Linking…" : "Start linking"}
+          {state.phase === "starting" ? `Starting${"\u2026"}` : state.phase === "waiting" ? `Linking${"\u2026"}` : "Start linking"}
         </button>
         {state.phase !== "idle" ? (
           <button type="button" className="button" onClick={resetLocal}>
@@ -249,7 +249,7 @@ async function pollUntilDone(input: {
 
   while (!input.signal.aborted) {
     const result = await input.api.pollLoginRequest(input.loginRequest.poll_url);
-    input.onUpdate(result.status, `Polling every ${intervalSeconds}s…`);
+    input.onUpdate(result.status, `Polling every ${intervalSeconds}s${"\u2026"}`);
 
     if (result.status === "approved") {
       input.onApproved(result);

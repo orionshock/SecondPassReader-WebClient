@@ -122,7 +122,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     if (shelf.owner_type === "group" && shelf.owner_group?.name) parts.push(`Group: ${shelf.owner_group.name}`);
     if (shelf.owner_type === "user") parts.push((shelf.visibility ?? "private").toString());
     if (typeof shelf.item_count === "number") parts.push(`${shelf.item_count} items`);
-    return parts.filter(Boolean).join(" · ");
+    return parts.filter(Boolean).join(` ${"\u00B7"} `);
   }, [shelf]);
 
   return (
@@ -137,7 +137,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
       </div>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy ? <p className="muted">Loading…</p> : null}
+      {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 
       {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
@@ -196,7 +196,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
       {nextUrl ? (
         <div style={{ marginTop: 12 }}>
           <button type="button" className="button buttonCompact" onClick={() => void loadMore()} disabled={loadMoreBusy}>
-            {loadMoreBusy ? "Loading…" : "Load more"}
+            {loadMoreBusy ? `Loading${"\u2026"}` : "Load more"}
           </button>
         </div>
       ) : null}

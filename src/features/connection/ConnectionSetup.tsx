@@ -170,7 +170,7 @@ export function ConnectionSetup({
 
           <div className="formActions">
             <button className="button buttonPrimary" type="submit" disabled={busy !== null}>
-              {busy === "save" ? "Saving…" : "Save profile"}
+              {busy === "save" ? `Saving${"\u2026"}` : "Save profile"}
             </button>
             <button
               className="button"
@@ -178,7 +178,7 @@ export function ConnectionSetup({
               onClick={() => void handleTestDiscovery()}
               disabled={busy !== null}
             >
-              {busy === "discover" ? "Testing…" : "Test discovery"}
+              {busy === "discover" ? `Testing${"\u2026"}` : "Test discovery"}
             </button>
           </div>
 

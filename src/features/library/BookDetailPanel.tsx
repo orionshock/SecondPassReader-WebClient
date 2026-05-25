@@ -76,7 +76,7 @@ export function BookDetailPanel({
           {seriesText ? <div className="muted">{seriesText}</div> : null}
 
           <div className="bookDetailMetaLine muted">
-            {[book.publisher || null, book.language || null, book.published_date || null].filter(Boolean).join(" · ")}
+            {[book.publisher || null, book.language || null, book.published_date || null].filter(Boolean).join(` ${"\u00B7"} `)}
           </div>
         </div>
 

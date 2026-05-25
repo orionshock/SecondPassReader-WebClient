@@ -100,7 +100,7 @@ export function AppHeader({
               <span>{serverName}</span>
             </>
           ) : null}
-          {serverName && userLabel ? <span className="sep">·</span> : null}
+          {serverName && userLabel ? <span className="sep">{"\u00B7"}</span> : null}
           {userLabel ? <span className="mono">{userLabel}</span> : null}
         </div>
       </div>
@@ -124,7 +124,7 @@ export function AppHeader({
               title="Settings"
               aria-label="Settings"
             >
-              ⚙
+              {"\u2699"}
             </button>
           </>
         ) : null}

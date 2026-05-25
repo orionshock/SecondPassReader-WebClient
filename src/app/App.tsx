@@ -418,7 +418,7 @@ export default function App() {
               route?.kind === "reader" && !openedBook ? (
                 <section className="panel workflowPanel">
                   <h2 className="panelTitle">Opening book</h2>
-                  {readerRestoreError ? <div className="errorText">{readerRestoreError}</div> : <p className="muted">Restoring reader…</p>}
+                  {readerRestoreError ? <div className="errorText">{readerRestoreError}</div> : <p className="muted">{`Restoring reader${"\u2026"}`}</p>}
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
                       type="button"

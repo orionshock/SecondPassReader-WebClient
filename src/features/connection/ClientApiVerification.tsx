@@ -158,7 +158,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
           onClick={() => void verify()}
           disabled={state.phase === "verifying"}
         >
-          {state.phase === "verifying" ? "Verifying…" : "Verify connection"}
+          {state.phase === "verifying" ? `Verifying${"\u2026"}` : "Verify connection"}
         </button>
       </div>
 

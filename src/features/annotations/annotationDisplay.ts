@@ -16,9 +16,8 @@ export function getAnnotationDisplay(annotation: ReadingAnnotation): { icon: str
   const isHighlight = motivations.includes("highlighting");
   const isComment = motivations.includes("commenting");
 
-  if (isHighlight && hasTextBody) return { icon: "✎", label: "Highlight + note" };
-  if (isHighlight) return { icon: "✦", label: "Highlight" };
-  if (isComment || hasTextBody) return { icon: "🗒", label: "Note" };
-  return { icon: "🔖", label: "Bookmark" };
+  if (isHighlight && hasTextBody) return { icon: "\u270E", label: "Highlight + note" };
+  if (isHighlight) return { icon: "\u2726", label: "Highlight" };
+  if (isComment || hasTextBody) return { icon: "\u{1F5D2}", label: "Note" };
+  return { icon: "\u{1F516}", label: "Bookmark" };
 }
-

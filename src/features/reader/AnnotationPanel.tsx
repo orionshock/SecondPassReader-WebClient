@@ -88,7 +88,7 @@ export function AnnotationPanel({
                   disabled={!apiReady || !sessionId || serverPageInfo.loading}
                   title={!sessionId ? "No active reading session." : undefined}
                 >
-                  {serverPageInfo.loading ? "Loading…" : "Load more saved annotations"}
+                  {serverPageInfo.loading ? `Loading${"\u2026"}` : "Load more saved annotations"}
                 </button>
               </>
             ) : null}

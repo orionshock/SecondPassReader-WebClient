@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { ReadingAnnotationPage, ReadingSessionSummary } from "../../schemas/readingSession";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -20,6 +20,34 @@ function formatProgress(p?: number | null): string | null {
   if (typeof p !== "number" || !Number.isFinite(p)) return null;
   const clamped = Math.min(1, Math.max(0, p));
   return `${Math.round(clamped * 100)}%`;
+}
+
+function normalizeStatus(status?: string | null, isActive?: boolean | null): "active" | "completed" | "archived" | string {
+  if (isActive === true) return "active";
+  const raw = typeof status === "string" ? status.trim().toLowerCase() : "";
+  if (raw === "active" || raw === "completed" || raw === "archived") return raw;
+  if (raw) return raw;
+  if (isActive === false) return "completed";
+  return "active";
+}
+
+function formatAnnotationCount(n?: number | null): string | null {
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  const count = Math.max(0, Math.floor(n));
+  return count === 1 ? "1 annotation" : `${count} annotations`;
+}
+
+function getAnnotationExcerpt(annotation: unknown): string | null {
+  const bodies = (annotation as any)?.body;
+  if (!Array.isArray(bodies)) return null;
+  for (const b of bodies) {
+    const value = b && typeof b === "object" ? (b as any).value : null;
+    if (typeof value === "string" && value.trim()) {
+      const text = value.replace(/\s+/g, " ").trim();
+      return text.length > 180 ? `${text.slice(0, 177)}${"\u2026"}` : text;
+    }
+  }
+  return null;
 }
 
 export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
@@ -120,6 +148,8 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
   const isActive = Boolean(session?.is_active);
   const progressText = formatProgress(session?.progression ?? null);
   const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile);
+  const statusText = normalizeStatus(typeof session?.status === "string" ? session.status : null, session?.is_active ?? null);
+  const annoText = formatAnnotationCount(session?.annotation_count ?? null);
 
   const headerTitle = session?.book?.title ? `Session for ${session.book.title}` : "Session";
 
@@ -131,14 +161,20 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setSaveError(null);
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const updated = await api.updateReadingSession({
+      await api.updateReadingSession({
         apiBaseUrl: profile.apiBaseUrl,
         accessToken: profile.accessToken,
         tokenType: profile.tokenType ?? "Bearer",
         sessionId,
         payload: { name: draftName },
       });
-      setSession(updated);
+      const refreshed = await api.getReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+      });
+      setSession(refreshed);
       setEditingName(false);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save session.");
@@ -155,14 +191,20 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setSaveError(null);
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const updated = await api.updateReadingSession({
+      await api.updateReadingSession({
         apiBaseUrl: profile.apiBaseUrl,
         accessToken: profile.accessToken,
         tokenType: profile.tokenType ?? "Bearer",
         sessionId,
         payload: { notes: draftNotes },
       });
-      setSession(updated);
+      const refreshed = await api.getReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+      });
+      setSession(refreshed);
       setEditingNotes(false);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save session.");
@@ -178,22 +220,30 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setCloseError(null);
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const closed = await api.closeReadingSession({
+      await api.closeReadingSession({
         apiBaseUrl: profile.apiBaseUrl,
         accessToken: profile.accessToken,
         tokenType: profile.tokenType ?? "Bearer",
         sessionId,
       });
-      // closeReadingSession returns ReadingSession (older type). Re-fetch summary to keep UI consistent.
-      void closed;
-      await load();
+      const refreshed = await api.getReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+      });
+      setSession(refreshed);
+      setDraftName(typeof refreshed.name === "string" ? refreshed.name : "");
+      setDraftNotes(typeof refreshed.notes === "string" ? refreshed.notes : "");
+      setEditingName(false);
+      setEditingNotes(false);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to close session.";
       setCloseError(message);
     } finally {
       setCloseBusy(false);
     }
-  }, [load, profile, sessionId]);
+  }, [profile, sessionId]);
 
   const handleLoadMoreAnnotations = useCallback(async () => {
     if (annoLoadingMore) return;
@@ -239,7 +289,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     const seriesName = session?.book?.series?.name ?? null;
     const idx = session?.book?.series_index;
     const series = seriesName ? (idx === null || idx === undefined || idx === "" ? seriesName : `${seriesName} #${idx}`) : null;
-    return [authors || null, series || null].filter(Boolean).join(" · ");
+    return [authors || null, series || null].filter(Boolean).join(` ${"\u00B7"} `);
   }, [session?.book?.authors, session?.book?.series?.name, session?.book?.series_index]);
 
   const canOpenReader = Boolean(session?.book?.id);
@@ -250,13 +300,10 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
         <h2 className="panelTitle" style={{ margin: 0 }}>
           {headerTitle}
         </h2>
-        <button type="button" className="button buttonCompact" onClick={() => navigateTo({ kind: "sessions" })}>
-          All sessions
-        </button>
       </div>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy ? <p className="muted">Loading…</p> : null}
+      {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 
       {session ? (
@@ -272,11 +319,8 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                 <span className="sessionsId">{session.id}</span>
               </div>
               <div className="muted">
-                {[session.status || null, session.is_active ? "active" : session.is_active === false ? "closed" : null, progressText || null]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {[statusText || null, progressText || null, annoText || null].filter(Boolean).join(` ${"\u00B7"} `)}
               </div>
-              {typeof session.annotation_count === "number" ? <div className="muted">{session.annotation_count} annotations</div> : null}
             </div>
             <div className="sessionHeaderActions">
               <button type="button" className="button buttonPrimary" onClick={() => navigateTo({ kind: "reader", bookId: String(session.book?.id ?? "") })} disabled={!canOpenReader}>
@@ -284,7 +328,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
               </button>
               {isActive ? (
                 <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
-                  {closeBusy ? "Closing…" : "Close session"}
+                  {closeBusy ? `Closing${"\u2026"}` : "Close session"}
                 </button>
               ) : null}
             </div>
@@ -304,7 +348,11 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                 <div className="sessionInlineEditLabel">Name</div>
                 {!editingName ? (
                   <div className="sessionInlineEditFieldRow">
-                    <div className="sessionInlineEditValue">{session.name ?? ""}</div>
+                    {session.name && session.name.trim() ? (
+                      <div className="sessionInlineEditValue">{session.name}</div>
+                    ) : (
+                      <div className="sessionInlineEditValue muted">Unnamed session</div>
+                    )}
                     <button
                       type="button"
                       className="button buttonCompact sessionInlineEditButton"
@@ -315,7 +363,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                       aria-label="Edit session name"
                       title="Edit"
                     >
-                      ✎
+                      {"\u270E"}
                     </button>
                   </div>
                 ) : (
@@ -350,7 +398,11 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                 <div className="sessionInlineEditLabel">Notes</div>
                 {!editingNotes ? (
                   <div className="sessionInlineEditFieldRow">
-                    <div className="sessionInlineEditValue muted">{session.notes ?? ""}</div>
+                    {session.notes && session.notes.trim() ? (
+                      <div className="sessionInlineEditValue">{session.notes}</div>
+                    ) : (
+                      <div className="sessionInlineEditValue muted">No notes</div>
+                    )}
                     <button
                       type="button"
                       className="button buttonCompact sessionInlineEditButton"
@@ -361,7 +413,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                       aria-label="Edit session notes"
                       title="Edit"
                     >
-                      ✎
+                      {"\u270E"}
                     </button>
                   </div>
                 ) : (
@@ -373,7 +425,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                         rows={4}
                         value={draftNotes}
                         onChange={(e) => setDraftNotes(e.target.value.slice(0, 500))}
-                        placeholder="Notes…"
+                        placeholder={`Notes${"\u2026"}`}
                         maxLength={500}
                       />
                       <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/500</div>
@@ -426,7 +478,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             </div>
 
             {annoError ? <div className="errorText">{annoError}</div> : null}
-            {annoBusy ? <div className="muted">Loading…</div> : null}
+            {annoBusy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
 
             {annoPage?.results?.length ? (
               <div className="sessionAnnoList">
@@ -434,16 +486,18 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                   const { icon, label } = getAnnotationDisplay(a);
                   const updated = (a.updated_at as any) || (a.modified as any) || (a.created_at as any) || (a.created as any);
                   const when = typeof updated === "string" ? formatIso(updated) : null;
+                  const excerpt = getAnnotationExcerpt(a);
                   return (
                     <div key={a.id} className="sessionAnnoRow">
                       <div className="sessionAnnoIcon" aria-hidden="true">
                         {icon}
                       </div>
                       <div className="sessionAnnoMain">
-                        <div className="sessionAnnoTitle">
-                          {label} <span className="mono muted">{a.id}</span>
+                        <div className="sessionAnnoTitleRow">
+                          <div className="sessionAnnoTitle">{label}</div>
+                          {when ? <div className="sessionAnnoWhen muted">{when}</div> : null}
                         </div>
-                        {when ? <div className="muted">Updated: {when}</div> : null}
+                        {excerpt ? <div className="sessionAnnoExcerpt muted">{excerpt}</div> : null}
                       </div>
                     </div>
                   );
@@ -456,7 +510,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             {annoPage?.next ? (
               <div style={{ marginTop: 10 }}>
                 <button type="button" className="button buttonCompact" onClick={() => void handleLoadMoreAnnotations()} disabled={annoLoadingMore}>
-                  {annoLoadingMore ? "Loading…" : "Load more"}
+                  {annoLoadingMore ? `Loading${"\u2026"}` : "Load more"}
                 </button>
               </div>
             ) : null}

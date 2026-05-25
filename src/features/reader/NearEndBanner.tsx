@@ -22,7 +22,7 @@ export function NearEndBanner({
   return (
     <div className="nearEndBanner" role="note" aria-label="Near end of book actions">
       <span className="nearEndLabel">Near the end</span>
-      <span className="sep">·</span>
+      <span className="sep">{"\u00B7"}</span>
 
       <label className="nearEndCheckbox">
         <input
@@ -33,7 +33,7 @@ export function NearEndBanner({
         close this session first
       </label>
 
-      <span className="sep">·</span>
+      <span className="sep">{"\u00B7"}</span>
 
       <div className="nearEndActions">
         <button type="button" className="button buttonCompact" onClick={onGoToStart}>
@@ -50,7 +50,7 @@ export function NearEndBanner({
         </button>
       </div>
 
-      <span className="sep">·</span>
+      <span className="sep">{"\u00B7"}</span>
 
       <button type="button" className="button buttonCompact" onClick={onResume} disabled={disabled}>
         Resume

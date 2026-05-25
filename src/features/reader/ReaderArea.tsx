@@ -158,7 +158,7 @@ export function ReaderArea({
           <div className="readerBookTitle">{openedBook.book.title}</div>
           <div className="readerBookSubtitle muted">
             {seriesLine ? <span>{seriesLine}</span> : null}
-            {seriesLine && authors ? <span className="sep"> · </span> : null}
+            {seriesLine && authors ? <span className="sep"> {"\u00B7"} </span> : null}
             {authors ? <span>{authors}</span> : null}
           </div>
         </div>

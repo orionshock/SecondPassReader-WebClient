@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { SecondPassApiClient } from "../../api/SecondPassApiClient";
 import type { ReadingRecentSessionsResponse } from "../../schemas/readingSession";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -72,7 +72,7 @@ export function RecentReadingSection({
           Continue reading
         </div>
         <div className="muted">
-          {busy ? "Loading…" : data && data.count > 1 ? `${data.count} recent` : null}
+          {busy ? `Loading${"\u2026"}` : data && data.count > 1 ? `${data.count} recent` : null}
           {error ? (
             <>
               {" "}

@@ -67,7 +67,7 @@ export function BookCard({
             {seriesText ? <div className="bookLine">{seriesText}</div> : null}
 
             <div className="bookLine muted">
-              {[book.language || null, book.published_date || null, fileSize || null].filter(Boolean).join(" · ")}
+              {[book.language || null, book.published_date || null, fileSize || null].filter(Boolean).join(` ${"\u00B7"} `)}
             </div>
           </div>
         </div>

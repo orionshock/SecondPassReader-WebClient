@@ -380,7 +380,7 @@ export function LibraryLandingPage({
                 <>
                   <div className="libraryMetaRow">
                     <div className="muted">
-                      Page {booksPage} of {booksPager?.totalPages ?? 1} · {booksData.count} books
+                      Page {booksPage} of {booksPager?.totalPages ?? 1} {"\u00B7"} {booksData.count} books
                     </div>
                     <div className="pagerButtons">
                       <button
@@ -427,7 +427,7 @@ export function LibraryLandingPage({
 
                   <div className="libraryMetaRow libraryMetaRowBottom">
                     <div className="muted">
-                      Page {booksPage} of {booksPager?.totalPages ?? 1} · {booksData.count} books
+                      Page {booksPage} of {booksPager?.totalPages ?? 1} {"\u00B7"} {booksData.count} books
                     </div>
                     <div className="pagerButtons">
                       <button
@@ -467,14 +467,14 @@ export function LibraryLandingPage({
                 </>
               ) : (
                 <div className="muted" style={{ marginTop: 10 }}>
-                  {booksBusy ? "Loading…" : "No results yet."}
+                  {booksBusy ? `Loading${"\u2026"}` : "No results yet."}
                 </div>
               )}
             </>
           ) : browseMode === "series" ? (
             <>
               {seriesError ? <p className="errorText">{seriesError}</p> : null}
-              {seriesBusy ? <div className="muted" style={{ marginTop: 10 }}>Loading…</div> : null}
+              {seriesBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
 
               {seriesData?.results?.length ? (
                 <div className="libraryEntityList">
@@ -500,7 +500,7 @@ export function LibraryLandingPage({
               {seriesData ? (
                 <div className="libraryMetaRow">
                   <div className="muted">
-                    Page {seriesPage} · {seriesData.count} series
+                    Page {seriesPage} {"\u00B7"} {seriesData.count} series
                   </div>
                   <div className="pagerButtons">
                     <button
@@ -526,7 +526,7 @@ export function LibraryLandingPage({
           ) : (
             <>
               {authorsError ? <p className="errorText">{authorsError}</p> : null}
-              {authorsBusy ? <div className="muted" style={{ marginTop: 10 }}>Loading…</div> : null}
+              {authorsBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
 
               {authorsData?.results?.length ? (
                 <div className="libraryEntityList">
@@ -552,7 +552,7 @@ export function LibraryLandingPage({
               {authorsData ? (
                 <div className="libraryMetaRow">
                   <div className="muted">
-                    Page {authorsPage} · {authorsData.count} authors
+                    Page {authorsPage} {"\u00B7"} {authorsData.count} authors
                   </div>
                   <div className="pagerButtons">
                     <button

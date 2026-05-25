@@ -169,7 +169,7 @@ export function useNearEndLifecycle(input: {
     let phase: "lookup" | "close" | "open" = "lookup";
     try {
       const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
-      setNearEndMessage("Opening next book…");
+      setNearEndMessage(`Opening next book${"\u2026"}`);
 
       const seriesBooks = await api.listBooks({
         apiBaseUrl: input.apiBaseUrl,
@@ -194,7 +194,7 @@ export function useNearEndLifecycle(input: {
 
       if (closeSessionFirst && input.sessionId) {
         phase = "close";
-        setNearEndMessage("Closing session…");
+        setNearEndMessage(`Closing session${"\u2026"}`);
         await api.closeReadingSession({
           apiBaseUrl: input.apiBaseUrl,
           accessToken: input.accessToken,
@@ -204,7 +204,7 @@ export function useNearEndLifecycle(input: {
       }
 
       phase = "open";
-      setNearEndMessage("Opening next book…");
+      setNearEndMessage(`Opening next book${"\u2026"}`);
       await input.onOpenBook(next);
       setNearEndMessage("Opened next book.");
       setNearEndDismissed(true);

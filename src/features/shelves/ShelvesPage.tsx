@@ -66,7 +66,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
       <h2 className="panelTitle">Shelves</h2>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy ? <p className="muted">Loading…</p> : null}
+      {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? (
         <div className="errorText">
           {error}{" "}
@@ -95,8 +95,8 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
                 <div className="shelfCardTitle">{s.name}</div>
                 {s.description ? <div className="muted">{s.description}</div> : null}
                 <div className="muted">
-                  {(s.item_count ?? 0).toString()} items · {shelfOwnerLabel(s)}
-                  {s.can_edit ? " · can edit" : ""}
+                  {(s.item_count ?? 0).toString()} items {"\u00B7"} {shelfOwnerLabel(s)}
+                  {s.can_edit ? ` ${"\u00B7"} can edit` : ""}
                 </div>
               </button>
             ))}
@@ -117,8 +117,8 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
                 <div className="shelfCardTitle">{s.name}</div>
                 {s.description ? <div className="muted">{s.description}</div> : null}
                 <div className="muted">
-                  {(s.item_count ?? 0).toString()} items · {shelfOwnerLabel(s)}
-                  {s.can_edit ? " · can edit" : ""}
+                  {(s.item_count ?? 0).toString()} items {"\u00B7"} {shelfOwnerLabel(s)}
+                  {s.can_edit ? ` ${"\u00B7"} can edit` : ""}
                 </div>
               </button>
             ))}
@@ -128,4 +128,3 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     </section>
   );
 }
-

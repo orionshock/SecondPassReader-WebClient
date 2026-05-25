@@ -38,10 +38,10 @@ export function ProgressPanel({
     <div className="progressLine">
       <span className="muted">Progress:</span>{" "}
       <span>{statusLabel}</span>
-      {progressPct ? <span className="muted"> · {progressPct}</span> : null}
-      {currentHref ? <span className="muted"> · {currentHref}</span> : null}
-      {autosave.lastAutosavedAt ? <span className="muted"> · {autosave.lastAutosavedAt}</span> : null}
-      {autosave.status === "error" && autosave.error ? <span className="errorText"> · {autosave.error}</span> : null}
+      {progressPct ? <span className="muted"> {"\u00B7"} {progressPct}</span> : null}
+      {currentHref ? <span className="muted"> {"\u00B7"} {currentHref}</span> : null}
+      {autosave.lastAutosavedAt ? <span className="muted"> {"\u00B7"} {autosave.lastAutosavedAt}</span> : null}
+      {autosave.status === "error" && autosave.error ? <span className="errorText"> {"\u00B7"} {autosave.error}</span> : null}
     </div>
   );
 }
