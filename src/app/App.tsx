@@ -164,7 +164,7 @@ export default function App() {
       return;
     }
 
-    // Verified: allow library/settings/reader. Unknown routes fall back to library.
+    // Verified: allow main app routes. Unknown routes fall back to home.
     if (workflowStep === "library_home") {
       if (!route || route.kind === "unknown") {
         navigateTo({ kind: "home" }, { replace: true });
@@ -190,6 +190,9 @@ export default function App() {
         document.title = `${base} - Library`;
         return;
       case "shelves":
+        document.title = `${base} - Shelves`;
+        return;
+      case "shelf":
         document.title = `${base} - Shelves`;
         return;
       case "sessions":
