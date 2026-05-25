@@ -347,6 +347,26 @@
   min-width: 0;
 }
 
+.highlightEditBox {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.highlightEditActionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.highlightEditButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .readerSessionMeta {
   display: grid;
   gap: 10px;

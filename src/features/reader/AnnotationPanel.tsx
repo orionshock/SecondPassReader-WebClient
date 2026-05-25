@@ -340,7 +340,36 @@ export function AnnotationPanel({
                         onChange={(e) => setNoteDraft(e.target.value)}
                         placeholder="Note..."
                       />
-                      <div className="highlightEditActions">
+                      <div className="highlightEditActionsRow">
+                        <div className="highlightEditButtons">
+                          <button
+                            type="button"
+                            className="button buttonPrimary buttonCompact"
+                            disabled={!canEdit}
+                            onClick={() => {
+                              if (!editingId) return;
+                              setPendingSaveId(editingId);
+                              onUpdateNote(editingId, noteDraft, editColorDraft);
+                            }}
+                            aria-label="Save note"
+                            title="Save note"
+                          >
+                            {isUpdating ? "..." : "\u2713"}
+                          </button>
+                          <button
+                            type="button"
+                            className="button buttonCompact"
+                            onClick={() => {
+                              setEditingId(null);
+                              setNoteDraft("");
+                            }}
+                            disabled={isUpdating}
+                            aria-label="Cancel"
+                            title="Cancel"
+                          >
+                            {"\u2715"}
+                          </button>
+                        </div>
                         <div className="selectionSwatches" aria-label="Highlight color">
                           {HIGHLIGHT_COLORS.map((c) => (
                             <button
@@ -355,33 +384,6 @@ export function AnnotationPanel({
                             />
                           ))}
                         </div>
-                        <button
-                          type="button"
-                          className="button buttonPrimary buttonCompact"
-                          disabled={!canEdit}
-                          onClick={() => {
-                            if (!editingId) return;
-                            setPendingSaveId(editingId);
-                            onUpdateNote(editingId, noteDraft, editColorDraft);
-                          }}
-                          aria-label="Save note"
-                          title="Save note"
-                        >
-                          {isUpdating ? "..." : "\u2713"}
-                        </button>
-                        <button
-                          type="button"
-                          className="button buttonCompact"
-                          onClick={() => {
-                            setEditingId(null);
-                            setNoteDraft("");
-                          }}
-                          disabled={isUpdating}
-                          aria-label="Cancel"
-                          title="Cancel"
-                        >
-                          {"\u2715"}
-                        </button>
                       </div>
                     </div>
                   ) : null}

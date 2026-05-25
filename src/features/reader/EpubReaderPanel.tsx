@@ -77,7 +77,8 @@ export function EpubReaderPanel({
   const relocatedHandlerRef = useRef<((loc: any) => void) | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const relocatedAttachedToRef = useRef<any | null>(null);
-  const renderedCfisRef = useRef<Set<string>>(new Set());
+  // Track which CFIs are rendered and with what "signature" so we can re-render when color/readOnly changes.
+  const renderedCfisRef = useRef<Map<string, string>>(new Map());
   const highlightByCfiRef = useRef<Map<string, LocalHighlight>>(new Map());
   const locationsInitForRef = useRef<ArrayBuffer | null>(null);
   const locationsInitStartedRef = useRef(false);
@@ -150,7 +151,7 @@ export function EpubReaderPanel({
       // so they realign to the new DOM geometry.
       try {
         const rendered = renderedCfisRef.current;
-        for (const cfi of Array.from(rendered)) {
+        for (const cfi of Array.from(rendered.keys())) {
           rendition.annotations.remove(cfi, "highlight");
         }
         rendered.clear();
@@ -193,7 +194,7 @@ export function EpubReaderPanel({
     setLoadError(null);
     setLocation(null);
     renditionRef.current = null;
-    renderedCfisRef.current = new Set();
+    renderedCfisRef.current = new Map();
     locationsInitStartedRef.current = false;
     locationsInitForRef.current = null;
     if (DEBUG_READER) {
@@ -245,20 +246,25 @@ export function EpubReaderPanel({
     if (!rendition) return;
     try {
       const rendered = renderedCfisRef.current;
-      const next = new Set<string>(highlights.map((h) => h.cfiRange));
+      const next = new Map<string, string>();
+      for (const h of highlights) {
+        const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
+        next.set(h.cfiRange, `${token}|${h.readOnly ? "ro" : "rw"}`);
+      }
 
       // Remove any previously-rendered highlights that no longer exist.
-      for (const cfi of Array.from(rendered)) {
-        if (!next.has(cfi)) {
+      for (const [cfi, sig] of Array.from(rendered.entries())) {
+        if (next.get(cfi) !== sig) {
           rendition.annotations.remove(cfi, "highlight");
           rendered.delete(cfi);
         }
       }
 
-      // Add new highlights that aren't rendered yet.
+      // Add new highlights or re-render changed ones.
       for (const h of highlights) {
-        if (rendered.has(h.cfiRange)) continue;
         const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
+        const sig = `${token}|${h.readOnly ? "ro" : "rw"}`;
+        if (rendered.get(h.cfiRange) === sig) continue;
         rendition.annotations.highlight(
           h.cfiRange,
           { id: h.id },
@@ -266,7 +272,7 @@ export function EpubReaderPanel({
           highlightClassForToken(token, { readOnly: h.readOnly }),
           highlightStylesForToken(token, { readOnly: h.readOnly }),
         );
-        rendered.add(h.cfiRange);
+        rendered.set(h.cfiRange, sig);
       }
 
       if (DEBUG_READER) {
@@ -346,7 +352,7 @@ async function extractSelectedText(cfiRange: string): Promise<string> {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const r = rendition as any;
           renditionRef.current = r;
-          renderedCfisRef.current = new Set();
+          renderedCfisRef.current = new Map();
           setRenditionVersion((v) => v + 1);
 
           if (DEBUG_READER) {
@@ -587,6 +593,7 @@ async function extractSelectedText(cfiRange: string): Promise<string> {
           try {
             for (const h of highlights) {
               const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
+              const sig = `${token}|${h.readOnly ? "ro" : "rw"}`;
               r.annotations.highlight(
                 h.cfiRange,
                 { id: h.id },
@@ -594,7 +601,7 @@ async function extractSelectedText(cfiRange: string): Promise<string> {
                 highlightClassForToken(token, { readOnly: h.readOnly }),
                 highlightStylesForToken(token, { readOnly: h.readOnly }),
               );
-              renderedCfisRef.current.add(h.cfiRange);
+              renderedCfisRef.current.set(h.cfiRange, sig);
             }
           } catch (e) {
             // eslint-disable-next-line no-console
