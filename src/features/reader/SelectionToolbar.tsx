@@ -1,30 +1,22 @@
-import { DEFAULT_HIGHLIGHT_COLOR, HIGHLIGHT_COLORS, highlightColorLabel, highlightColorToClassName, type HighlightColor } from "./highlightColors";
+import { HIGHLIGHT_COLORS, highlightColorLabel, highlightColorToClassName, type HighlightColor } from "./highlightColors";
 
 export function SelectionToolbar({
-  previewText,
-  color,
   noteOpen,
   noteDraft,
-  onChangeColor,
   onHighlight,
   onOpenNote,
   onChangeNoteDraft,
   onSaveNote,
   onCancel,
 }: {
-  previewText: string;
-  color: HighlightColor;
   noteOpen: boolean;
   noteDraft: string;
-  onChangeColor: (next: HighlightColor) => void;
   onHighlight: (color: HighlightColor) => void;
   onOpenNote: () => void;
   onChangeNoteDraft: (next: string) => void;
   onSaveNote: (color: HighlightColor) => void;
   onCancel: () => void;
 }) {
-  const effectiveColor = color ?? DEFAULT_HIGHLIGHT_COLOR;
-
   return (
     <div className="selectionToolbar" role="region" aria-label="Selection toolbar">
       {!noteOpen ? (
@@ -33,12 +25,11 @@ export function SelectionToolbar({
             <div className="selectionSwatches" role="group" aria-label="Highlight color">
               {HIGHLIGHT_COLORS.map((c) => {
                 const label = highlightColorLabel(c);
-                const isActive = c === effectiveColor;
                 return (
                   <button
                     key={c}
                     type="button"
-                    className={`selectionSwatch ${highlightColorToClassName(c)} ${isActive ? "selectionSwatchActive" : ""}`}
+                    className={`selectionSwatch ${highlightColorToClassName(c)}`}
                     onClick={() => onHighlight(c)}
                     aria-label={`Highlight ${label.toLowerCase()}`}
                     title={`Highlight ${label.toLowerCase()}`}
@@ -67,8 +58,6 @@ export function SelectionToolbar({
               {"\u00D7"}
             </button>
           </div>
-
-          {previewText ? <div className="selectionPreview mono">{previewText}</div> : null}
         </>
       ) : (
         <>
@@ -76,29 +65,18 @@ export function SelectionToolbar({
             <div className="selectionSwatches" role="group" aria-label="Highlight color">
               {HIGHLIGHT_COLORS.map((c) => {
                 const label = highlightColorLabel(c);
-                const isActive = c === effectiveColor;
                 return (
                   <button
                     key={c}
                     type="button"
-                    className={`selectionSwatch ${highlightColorToClassName(c)} ${isActive ? "selectionSwatchActive" : ""}`}
-                    onClick={() => onChangeColor(c)}
-                    aria-label={`Set highlight color ${label.toLowerCase()}`}
-                    title={`Set highlight color ${label.toLowerCase()}`}
+                    className={`selectionSwatch ${highlightColorToClassName(c)}`}
+                    onClick={() => onSaveNote(c)}
+                    aria-label={`Save note with ${label.toLowerCase()} highlight`}
+                    title={`Save note with ${label.toLowerCase()} highlight`}
                   />
                 );
               })}
             </div>
-
-            <button
-              type="button"
-              className="button buttonPrimary buttonCompact"
-              onClick={() => onSaveNote(effectiveColor)}
-              aria-label="Save note"
-              title="Save note"
-            >
-              Save note
-            </button>
 
             <button
               type="button"
@@ -107,18 +85,16 @@ export function SelectionToolbar({
               aria-label="Cancel selection"
               title="Cancel selection"
             >
-              Cancel
+              {"\u00D7"}
             </button>
           </div>
-
-          {previewText ? <div className="selectionPreview mono">{previewText}</div> : null}
 
           <textarea
             className="input selectionNoteInput"
             rows={3}
             value={noteDraft}
             onChange={(e) => onChangeNoteDraft(e.target.value)}
-            aria-label="Note text"
+            aria-label="Annotation note"
             placeholder={`Note${"\u2026"}`}
           />
         </>
@@ -126,4 +102,3 @@ export function SelectionToolbar({
     </div>
   );
 }
-

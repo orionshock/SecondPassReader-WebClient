@@ -46,4 +46,7 @@ export type PendingSelection = {
   cfiRange: string;
   text: string;
   createdAt: string;
+  // Optional viewport-relative anchor point for contextual UI (e.g. selection toolbar).
+  // Numbers are in CSS pixels in the top-level window coordinate space.
+  anchor?: { x: number; y: number };
 };

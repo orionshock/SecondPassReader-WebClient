@@ -2,7 +2,14 @@ import type { ReadingOpenResponse, ReadingSessionSummary } from "../../schemas/r
 import type { LocalHighlight } from "./types";
 import { useEffect, useState } from "react";
 import { SecondPassApiClient } from "../../api/SecondPassApiClient";
-import { DEFAULT_HIGHLIGHT_COLOR, highlightColorLabel, highlightColorToClassName, isHighlightColor } from "./highlightColors";
+import {
+  DEFAULT_HIGHLIGHT_COLOR,
+  HIGHLIGHT_COLORS,
+  highlightColorLabel,
+  highlightColorToClassName,
+  isHighlightColor,
+  type HighlightColor,
+} from "./highlightColors";
 
 function getAnnotationStateLabel(h: LocalHighlight): { label: string; kind: "draft" | "saving" | "saved" | "error" } {
   if (h.serverSaveStatus === "saving") return { label: "Saving", kind: "saving" };
@@ -33,7 +40,7 @@ export function AnnotationPanel({
   onRemoveLocal: (id: string) => void;
   onSaveToSession: (id: string) => void;
   onDeleteFromSession: (id: string) => void;
-  onUpdateNote: (id: string, note: string) => void;
+  onUpdateNote: (id: string, note: string, color?: HighlightColor) => void;
   serverPageInfo: {
     count: number;
     loaded: number;
@@ -53,6 +60,7 @@ export function AnnotationPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [pendingSaveId, setPendingSaveId] = useState<string | null>(null);
+  const [editColorDraft, setEditColorDraft] = useState<HighlightColor>(DEFAULT_HIGHLIGHT_COLOR);
 
   const [sessionMeta, setSessionMeta] = useState<ReadingSessionSummary | null>(null);
   const [editingSessionName, setEditingSessionName] = useState(false);
@@ -333,6 +341,20 @@ export function AnnotationPanel({
                         placeholder="Note..."
                       />
                       <div className="highlightEditActions">
+                        <div className="selectionSwatches" aria-label="Highlight color">
+                          {HIGHLIGHT_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              className={`selectionSwatch ${highlightColorToClassName(c)} ${
+                                c === editColorDraft ? "selectionSwatchActive" : ""
+                              }`}
+                              onClick={() => setEditColorDraft(c)}
+                              title={`Highlight ${highlightColorLabel(c)}`}
+                              aria-label={`Highlight ${highlightColorLabel(c)}`}
+                            />
+                          ))}
+                        </div>
                         <button
                           type="button"
                           className="button buttonPrimary buttonCompact"
@@ -340,7 +362,7 @@ export function AnnotationPanel({
                           onClick={() => {
                             if (!editingId) return;
                             setPendingSaveId(editingId);
-                            onUpdateNote(editingId, noteDraft);
+                            onUpdateNote(editingId, noteDraft, editColorDraft);
                           }}
                           aria-label="Save note"
                           title="Save note"
@@ -403,6 +425,8 @@ export function AnnotationPanel({
                         }
                         setEditingId(h.id);
                         setNoteDraft(h.note ?? "");
+                        const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
+                        setEditColorDraft(token);
                       }}
                       disabled={!canEdit}
                       title={!sessionId ? "No active reading session." : undefined}

@@ -280,7 +280,7 @@ export function EpubReaderPanel({
     }
   }, [highlights, highlightIndex, highlightReflowSignal, onHighlightClicked, onRendererError]);
 
-  async function extractSelectedText(cfiRange: string): Promise<string> {
+async function extractSelectedText(cfiRange: string): Promise<string> {
     // Prefer epubjs range extraction if available; fallback to DOM selection.
     const rendition = renditionRef.current;
     try {
@@ -532,7 +532,7 @@ export function EpubReaderPanel({
               }
 
               const handler = async (cfiRange: string) => {
-              try {
+                try {
                 if (highlightByCfiRef.current.has(cfiRange)) {
                   // prevent duplicates
                   try {
@@ -543,23 +543,34 @@ export function EpubReaderPanel({
                   return;
                 }
                 const text = await extractSelectedText(cfiRange);
+                const anchor = tryGetSelectionAnchorFromRendition(r);
                 const selection: PendingSelection = {
                   cfiRange,
                   text: text || "(no text captured)",
                   createdAt: new Date().toISOString(),
+                  anchor,
                 };
 
                 onTextSelected?.(selection);
                 try {
+                  // Clear selection in the iframe document (preferred) and in the outer window (best-effort).
+                  try {
+                    for (const c of (typeof r?.getContents === "function" ? r.getContents() : []) ?? []) {
+                      const w = c?.window ?? c?.document?.defaultView ?? null;
+                      w?.getSelection?.()?.removeAllRanges?.();
+                    }
+                  } catch {
+                    // ignore
+                  }
                   window.getSelection()?.removeAllRanges();
                 } catch {
                   // ignore
                 }
-              } catch (err) {
+                } catch (err) {
                 // eslint-disable-next-line no-console
                 console.error("Selection/highlight failed:", err);
                 onRendererError?.(err instanceof Error ? err.message : "Selection capture failed.");
-              }
+                }
               };
 
               selectedHandlerRef.current = handler;
@@ -599,4 +610,33 @@ export function EpubReaderPanel({
       />
     </div>
   );
+}
+
+function tryGetSelectionAnchorFromRendition(rendition: any): { x: number; y: number } | undefined {
+  try {
+    const contents = typeof rendition?.getContents === "function" ? rendition.getContents() : [];
+    if (!Array.isArray(contents)) return undefined;
+
+    for (const c of contents) {
+      const win = c?.window ?? c?.document?.defaultView ?? null;
+      if (!win || typeof win.getSelection !== "function") continue;
+      const sel = win.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) continue;
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect?.();
+      if (!rect || !Number.isFinite(rect.left) || !Number.isFinite(rect.top)) continue;
+
+      const iframe: HTMLElement | null = c?.iframe ?? (win.frameElement as any) ?? null;
+      if (!iframe || typeof iframe.getBoundingClientRect !== "function") continue;
+      const iframeRect = iframe.getBoundingClientRect();
+
+      const x = iframeRect.left + rect.left + rect.width / 2;
+      const y = iframeRect.top + rect.top;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      return { x, y };
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
 }

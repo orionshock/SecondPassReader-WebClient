@@ -8,7 +8,7 @@ import {
   createServerAnnotationUpdatePayloadFromLocalHighlight,
 } from "./readingAnnotationAdapter";
 import type { LocalHighlight, PendingSelection } from "./types";
-import { DEFAULT_HIGHLIGHT_COLOR, type HighlightColor } from "./highlightColors";
+import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor, type HighlightColor } from "./highlightColors";
 
 type ServerAnnotationPaging = {
   count: number;
@@ -37,6 +37,7 @@ export function useReaderAnnotations(input: {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [pendingColor, setPendingColor] = useState<HighlightColor>(DEFAULT_HIGHLIGHT_COLOR);
+  const [previewHighlightId, setPreviewHighlightId] = useState<string | null>(null);
 
   const prevSessionKeyRef = useRef<string | null>(null);
   const autosaveInFlightRef = useRef<Set<string>>(new Set());
@@ -299,7 +300,7 @@ export function useReaderAnnotations(input: {
   );
 
   const updateSavedAnnotationNote = useCallback(
-    async (highlightId: string, newNoteText: string) => {
+    async (highlightId: string, newNoteText: string, nextColor?: HighlightColor) => {
       if (!input.apiBaseUrl || !input.accessToken) return;
       if (!sessionId) return;
 
@@ -312,7 +313,13 @@ export function useReaderAnnotations(input: {
       );
 
       const trimmed = newNoteText.trim();
-      const nextHighlight: LocalHighlight = { ...target, note: trimmed ? trimmed : undefined };
+      const safeColor =
+        typeof nextColor === "string" && isHighlightColor(nextColor)
+          ? nextColor
+          : isHighlightColor(target.color)
+            ? target.color
+            : DEFAULT_HIGHLIGHT_COLOR;
+      const nextHighlight: LocalHighlight = { ...target, note: trimmed ? trimmed : undefined, color: safeColor };
 
       try {
         const payload = createServerAnnotationUpdatePayloadFromLocalHighlight({
@@ -341,6 +348,7 @@ export function useReaderAnnotations(input: {
               ? {
                   ...h,
                   note: nextHighlight.note,
+                  color: nextHighlight.color,
                   serverUpdateStatus: undefined,
                   serverUpdateError: undefined,
                   serverUpdatedAt: updatedAt,
@@ -383,59 +391,100 @@ export function useReaderAnnotations(input: {
     return h;
   }, []);
 
-  const selectionPreview = useMemo(() => {
-    if (!pendingSelection) return "";
-    const t = pendingSelection.text.trim();
-    return t.length > 80 ? `${t.slice(0, 80)}...` : t;
-  }, [pendingSelection]);
+  const onTextSelected = useCallback(
+    (sel: PendingSelection) => {
+      setPendingSelection((prev) => (prev?.cfiRange === sel.cfiRange ? prev : sel));
+      setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
+      setNoteOpen(false);
+      setNoteDraft("");
 
-  const onTextSelected = useCallback((sel: PendingSelection) => {
-    setPendingSelection((prev) => (prev?.cfiRange === sel.cfiRange ? prev : sel));
-    setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
-    setNoteOpen(false);
-    setNoteDraft("");
-  }, []);
+      // Create a local-only preview highlight immediately so the selection remains visible even if
+      // the browser selection highlight clears when focus shifts.
+      const preview = createDraftHighlight({
+        cfiRange: sel.cfiRange,
+        text: sel.text,
+        color: DEFAULT_HIGHLIGHT_COLOR,
+      });
+      const previewHighlight: LocalHighlight = { ...preview, serverSaveStatus: undefined };
+
+      setHighlights((prev) => {
+        if (prev.some((h) => h.cfiRange === sel.cfiRange)) return prev;
+        return [previewHighlight, ...prev];
+      });
+      setPreviewHighlightId(previewHighlight.id);
+    },
+    [createDraftHighlight],
+  );
 
   const cancelPendingSelection = useCallback(() => {
+    if (previewHighlightId) {
+      setHighlights((prev) => prev.filter((h) => h.id !== previewHighlightId));
+    }
     setPendingSelection(null);
     setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
     setNoteOpen(false);
     setNoteDraft("");
-  }, []);
+    setPreviewHighlightId(null);
+  }, [previewHighlightId]);
 
   const createHighlightFromPending = useCallback((color?: HighlightColor) => {
     if (!pendingSelection) return;
-    if (highlights.some((h) => h.cfiRange === pendingSelection.cfiRange)) {
-      setPendingSelection(null);
-      return;
-    }
-    const h = createDraftHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text, color: color ?? pendingColor });
-    setHighlights((prev) => [h, ...prev]);
+    const finalColor = color ?? pendingColor;
+    setHighlights((prev) => {
+      // Upgrade preview highlight if present, otherwise create new.
+      if (previewHighlightId) {
+        return prev.map((h) =>
+          h.id === previewHighlightId
+            ? {
+                ...h,
+                color: finalColor,
+                serverSaveStatus: "unsaved",
+                createIdempotencyKey: h.createIdempotencyKey ?? createIdempotencyKey(),
+              }
+            : h,
+        );
+      }
+      if (prev.some((h) => h.cfiRange === pendingSelection.cfiRange)) return prev;
+      const h = createDraftHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text, color: finalColor });
+      return [h, ...prev];
+    });
     setPendingSelection(null);
     setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
+    setPreviewHighlightId(null);
   }, [createDraftHighlight, highlights, pendingColor, pendingSelection]);
 
   const createNoteFromPending = useCallback((color?: HighlightColor) => {
     if (!pendingSelection) return;
-    if (highlights.some((h) => h.cfiRange === pendingSelection.cfiRange)) {
-      setPendingSelection(null);
-      setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
-      setNoteOpen(false);
-      setNoteDraft("");
-      return;
-    }
     const note = noteDraft.trim();
-    const h = createDraftHighlight({
-      cfiRange: pendingSelection.cfiRange,
-      text: pendingSelection.text,
-      note: note || undefined,
-      color: color ?? pendingColor,
+    const finalColor = color ?? pendingColor;
+    setHighlights((prev) => {
+      if (previewHighlightId) {
+        return prev.map((h) =>
+          h.id === previewHighlightId
+            ? {
+                ...h,
+                note: note || undefined,
+                color: finalColor,
+                serverSaveStatus: "unsaved",
+                createIdempotencyKey: h.createIdempotencyKey ?? createIdempotencyKey(),
+              }
+            : h,
+        );
+      }
+      if (prev.some((h) => h.cfiRange === pendingSelection.cfiRange)) return prev;
+      const h = createDraftHighlight({
+        cfiRange: pendingSelection.cfiRange,
+        text: pendingSelection.text,
+        note: note || undefined,
+        color: finalColor,
+      });
+      return [h, ...prev];
     });
-    setHighlights((prev) => [h, ...prev]);
     setPendingSelection(null);
     setPendingColor(DEFAULT_HIGHLIGHT_COLOR);
     setNoteOpen(false);
     setNoteDraft("");
+    setPreviewHighlightId(null);
   }, [createDraftHighlight, highlights, noteDraft, pendingColor, pendingSelection]);
 
   const removeLocalAnnotation = useCallback(
@@ -485,7 +534,6 @@ export function useReaderAnnotations(input: {
     setNoteOpen,
     noteDraft,
     setNoteDraft,
-    selectionPreview,
     onTextSelected,
     cancelPendingSelection,
     createHighlightFromPending,

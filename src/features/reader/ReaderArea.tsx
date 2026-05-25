@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReadingOpenResponse } from "../../schemas/readingSession";
 import type { LibraryBook } from "../../schemas/library";
 import type { ReaderSettings } from "../../storage/readerSettings";
@@ -42,6 +42,7 @@ export function ReaderArea({
   const [readerSettings, setReaderSettings] = useState(() => getReaderSettings());
   const [readerSettingsOpen, setReaderSettingsOpen] = useState(false);
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
+  const epubStackRef = useRef<HTMLDivElement | null>(null);
 
   const readerThemeClass =
     readerSettings.theme === "dark" ? "readerThemeDark" : readerSettings.theme === "sepia" ? "readerThemeSepia" : "readerThemeLight";
@@ -253,7 +254,7 @@ export function ReaderArea({
         />
       ) : null}
 
-      <div className="readerEpubStack">
+      <div ref={epubStackRef} className="readerEpubStack">
         {(() => {
           // Avoid duplicate CFIs across layers/current highlights (epub.js can only render one highlight per CFI).
           const seen = new Set<string>();
@@ -288,13 +289,28 @@ export function ReaderArea({
         })()}
 
         {annotations.pendingSelection ? (
-          <div className="annotationFloatOverlay">
+          <div
+            className="selectionToolbarAnchor"
+            style={(() => {
+              const anchor = annotations.pendingSelection?.anchor;
+              const host = epubStackRef.current;
+              if (!anchor || !host) return undefined;
+              const hostRect = host.getBoundingClientRect();
+              const x = anchor.x - hostRect.left;
+              const y = anchor.y - hostRect.top;
+              const bubbleW = 240;
+              const pad = 8;
+              let left = x - bubbleW / 2;
+              left = Math.max(pad, Math.min(left, hostRect.width - bubbleW - pad));
+              let top = y - 52;
+              if (top < pad) top = y + 18;
+              top = Math.max(pad, Math.min(top, hostRect.height - 80));
+              return { left, top };
+            })()}
+          >
             <SelectionToolbar
-              previewText={annotations.selectionPreview || ""}
-              color={annotations.pendingColor}
               noteOpen={annotations.noteOpen}
               noteDraft={annotations.noteDraft}
-              onChangeColor={annotations.setPendingColor}
               onHighlight={(c) => annotations.createHighlightFromPending(c)}
               onOpenNote={() => annotations.setNoteOpen(true)}
               onChangeNoteDraft={annotations.setNoteDraft}
@@ -312,7 +328,7 @@ export function ReaderArea({
         onRemoveLocal={annotations.removeLocalAnnotation}
         onSaveToSession={(id) => void annotations.saveHighlightToSession(id)}
         onDeleteFromSession={(id) => void annotations.deleteHighlightFromSession(id)}
-        onUpdateNote={(id, note) => void annotations.updateSavedAnnotationNote(id, note)}
+        onUpdateNote={(id, note, color) => void annotations.updateSavedAnnotationNote(id, note, color)}
         serverPageInfo={annotations.serverPageInfo ? { ...annotations.serverPageInfo, loaded: loadedServerAnnotations } : null}
         onLoadMoreSavedAnnotations={() => void annotations.loadMoreSavedAnnotations()}
         readingOpen={readingOpen}
