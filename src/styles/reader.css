@@ -64,7 +64,7 @@
   padding: 10px 12px;
   display: grid;
   gap: 10px;
-  background: rgba(17, 24, 39, 0.02);
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .readerSettingsRow {
@@ -126,12 +126,21 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 
+.readerThemeDark .readerSettingsPanel {
+  background: rgba(17, 24, 39, 0.92);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
 .readerThemeSepia .epubContainer {
   background: rgba(244, 236, 216, 0.35);
 }
 
 .readerThemeSepia .panel {
   background: rgba(244, 236, 216, 0.22);
+}
+
+.readerThemeSepia .readerSettingsPanel {
+  background: rgba(244, 236, 216, 0.96);
 }
 
 .readerWidthNarrow {

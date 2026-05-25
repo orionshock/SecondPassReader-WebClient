@@ -61,6 +61,8 @@ export function EpubReaderPanel({
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [renditionVersion, setRenditionVersion] = useState(0);
+  const [highlightReflowSignal, setHighlightReflowSignal] = useState(0);
+  const pendingHighlightReflowRef = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renditionRef = useRef<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,6 +141,25 @@ export function EpubReaderPanel({
       const themeName =
         settings.theme === "dark" ? "sp-dark" : settings.theme === "sepia" ? "sp-sepia" : "sp-light";
       rendition.themes.select(themeName);
+
+      // Changing typography/margins can shift text layout; force highlight overlays to be re-injected
+      // so they realign to the new DOM geometry.
+      try {
+        const rendered = renderedCfisRef.current;
+        for (const cfi of Array.from(rendered)) {
+          rendition.annotations.remove(cfi, "highlight");
+        }
+        rendered.clear();
+      } catch {
+        // ignore highlight reflow issues; reconcile effect will retry.
+      }
+      pendingHighlightReflowRef.current = true;
+      // Fallback: if epub.js doesn't emit relocated for this change, reflow anyway shortly after.
+      window.setTimeout(() => {
+        if (!pendingHighlightReflowRef.current) return;
+        pendingHighlightReflowRef.current = false;
+        setHighlightReflowSignal((v) => v + 1);
+      }, 150);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn("[reader] failed to apply reader settings:", e);
@@ -253,7 +274,7 @@ export function EpubReaderPanel({
       console.error("Highlight reconcile failed:", e);
       onRendererError?.(e instanceof Error ? e.message : "Highlight reconcile failed.");
     }
-  }, [highlights, highlightIndex, onHighlightClicked, onRendererError]);
+  }, [highlights, highlightIndex, highlightReflowSignal, onHighlightClicked, onRendererError]);
 
   async function extractSelectedText(cfiRange: string): Promise<string> {
     // Prefer epubjs range extraction if available; fallback to DOM selection.
@@ -324,12 +345,14 @@ export function EpubReaderPanel({
           renderedCfisRef.current = new Set();
           setRenditionVersion((v) => v + 1);
 
-          // eslint-disable-next-line no-console
-          console.log("[reader] rendition ready", {
-            hasAnnotations: Boolean(r?.annotations),
-            hasManager: Boolean(r?.manager),
-            keys: Object.keys(r ?? {}).slice(0, 30),
-          });
+          if (DEBUG_READER) {
+            // eslint-disable-next-line no-console
+            console.log("[reader] rendition ready", {
+              hasAnnotations: Boolean(r?.annotations),
+              hasManager: Boolean(r?.manager),
+              keys: Object.keys(r ?? {}).slice(0, 30),
+            });
+          }
 
           try {
             // Attach a single relocated handler per rendition instance.
@@ -377,6 +400,11 @@ export function EpubReaderPanel({
                     raw: loc,
                   };
                   onReaderLocationChange?.(readerLoc);
+
+                  if (pendingHighlightReflowRef.current) {
+                    pendingHighlightReflowRef.current = false;
+                    setHighlightReflowSignal((v) => v + 1);
+                  }
                 } catch (e) {
                   // eslint-disable-next-line no-console
                   console.error("[reader] relocated handler failed:", e);
