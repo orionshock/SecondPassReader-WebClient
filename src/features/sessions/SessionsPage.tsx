@@ -1,0 +1,214 @@
+import { useCallback, useEffect, useState } from "react";
+import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
+import type { ReadingSessionSummary } from "../../schemas/readingSession";
+import type { PaginatedResponse } from "../../schemas/library";
+import type { ConnectionProfile } from "../../storage/connectionProfiles";
+import { navigateTo } from "../../app/navigation";
+import { resolveCoverUrl } from "../library/coverUtils";
+
+function formatAuthors(session: ReadingSessionSummary): string {
+  const authors = session.book?.authors ?? [];
+  return (authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
+}
+
+function formatSeries(session: ReadingSessionSummary): string | null {
+  const seriesName = session.book?.series?.name ?? null;
+  const idx = session.book?.series_index;
+  if (!seriesName) return null;
+  if (idx === null || idx === undefined || idx === "") return seriesName;
+  return `${seriesName} #${idx}`;
+}
+
+function formatIso(iso?: string | null): string | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    return Number.isFinite(d.getTime()) ? d.toLocaleString() : iso;
+  } catch {
+    return iso;
+  }
+}
+
+function formatProgress(p?: number | null): string | null {
+  if (typeof p !== "number" || !Number.isFinite(p)) return null;
+  const clamped = Math.min(1, Math.max(0, p));
+  return `${Math.round(clamped * 100)}%`;
+}
+
+type Filter = "all" | "active" | "closed";
+
+export function SessionsPage({ profile }: { profile: ConnectionProfile | null }) {
+  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [pageSize, setPageSize] = useState(20);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<PaginatedResponse<ReadingSessionSummary> | null>(null);
+
+  const load = useCallback(
+    async (targetPage: number) => {
+      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+        const r = await api.listReadingSessions({
+          apiBaseUrl: profile.apiBaseUrl,
+          accessToken: profile.accessToken,
+          tokenType: profile.tokenType ?? "Bearer",
+          page: targetPage,
+          pageSize,
+          isActive: filter === "active" ? true : filter === "closed" ? false : undefined,
+        });
+        setData(r);
+        setPage(targetPage);
+      } catch (e) {
+        const message =
+          e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+            ? "Could not load sessions. Your device token may be revoked or not allowed to access reading data."
+            : e instanceof Error
+              ? e.message
+              : "Failed to load sessions.";
+        setError(message);
+        setData(null);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [filter, pageSize, profile],
+  );
+
+  useEffect(() => {
+    setData(null);
+    setError(null);
+    setBusy(false);
+    setPage(1);
+    if (!canLoad) return;
+    void load(1);
+  }, [canLoad, filter, load, pageSize]);
+
+  return (
+    <section className="panel sessionsPage">
+      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
+      {error ? <div className="errorText">{error}</div> : null}
+
+      <div className="sessionsToolbar">
+        <div className="sessionsFilters" role="tablist" aria-label="Session filter">
+          <button type="button" className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("all")}>
+            All
+          </button>
+          <button type="button" className={`sessionsFilter ${filter === "active" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("active")}>
+            Active
+          </button>
+          <button type="button" className={`sessionsFilter ${filter === "closed" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("closed")}>
+            Closed
+          </button>
+        </div>
+
+        <label className="toolbarField">
+          <span className="srOnly">Page size</span>
+          <select className="input inputCompact" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} disabled={busy}>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </label>
+      </div>
+
+      {data ? (
+        <>
+          <div className="libraryMetaRow">
+            <div className="muted">
+              Page {page} · {data.count} sessions
+            </div>
+            <div className="pagerButtons">
+              <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
+                Previous
+              </button>
+              <button type="button" className="button buttonCompact" onClick={() => void load(page + 1)} disabled={busy || !data.next}>
+                Next
+              </button>
+            </div>
+          </div>
+
+          <div className="sessionsList">
+            {(data.results ?? []).map((s) => {
+              const coverSrc = resolveCoverUrl(s.book?.cover_url ?? null, profile);
+              const authors = formatAuthors(s);
+              const series = formatSeries(s);
+              const progress = formatProgress(s.progression);
+              const updated = formatIso(s.updated_at ?? s.started_at ?? s.created_at ?? null);
+              const state = typeof s.status === "string" && s.status.trim() ? s.status.trim() : s.is_active ? "active" : "closed";
+              const statusLine = state;
+              const sessionName = typeof s.name === "string" ? s.name.trim() : "";
+              const titleBits = [
+                s.book?.title ? s.book.title : "Book",
+                authors ? `<${authors}>` : null,
+                series ? `[${series}]` : null,
+              ].filter(Boolean);
+
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className="sessionsRow"
+                  onClick={() => navigateTo({ kind: "session", sessionId: s.id })}
+                  aria-label={`Manage session ${s.id}`}
+                  title={`Session ${s.id}`}
+                >
+                  <div className="sessionsCover">
+                    {coverSrc ? (
+                      <img className="sessionsCoverImg" src={coverSrc} alt={`${s.book?.title ?? "Book"} cover`} loading="lazy" />
+                    ) : (
+                      <div className="bookCoverPlaceholderText">No cover</div>
+                    )}
+                  </div>
+
+                  <div className="sessionsMain">
+                    <div className="sessionsTitleLine">
+                      <span className="bookTitle">{titleBits.join(" ")}</span>
+                    </div>
+                    <div className="sessionsMeta muted">
+                      {sessionName ? <span className="mono">{sessionName}</span> : null}
+                      {sessionName ? <span className="sep">·</span> : null}
+                      <span className="sessionsId">{s.id}</span>
+                    </div>
+                    <div className="sessionsMeta muted">
+                      {statusLine ? <span>{statusLine}</span> : null}
+                      {statusLine && progress ? <span className="sep">·</span> : null}
+                      {progress ? <span>{progress}</span> : null}
+                      {(statusLine || progress) && typeof s.annotation_count === "number" ? <span className="sep">·</span> : null}
+                      {typeof s.annotation_count === "number" ? <span>{s.annotation_count} annotations</span> : null}
+                      {(statusLine || progress || typeof s.annotation_count === "number") && updated ? <span className="sep">·</span> : null}
+                      {updated ? <span>{updated}</span> : null}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="libraryMetaRow libraryMetaRowBottom">
+            <div className="muted">
+              Page {page} · {data.count} sessions
+            </div>
+            <div className="pagerButtons">
+              <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
+                Previous
+              </button>
+              <button type="button" className="button buttonCompact" onClick={() => void load(page + 1)} disabled={busy || !data.next}>
+                Next
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="muted" style={{ marginTop: 10 }}>
+          {busy ? "Loading…" : "No sessions yet."}
+        </div>
+      )}
+    </section>
+  );
+}

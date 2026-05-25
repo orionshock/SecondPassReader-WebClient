@@ -11,6 +11,8 @@ export type AppRoute =
       authorId?: string;
       bookId?: string;
     }
+  | { kind: "sessions" }
+  | { kind: "session"; sessionId: string }
   | { kind: "shelves" }
   | { kind: "shelf"; shelfId: string; bookId?: string }
   | { kind: "settings" }
@@ -53,6 +55,10 @@ export function routeToHash(route: AppRoute): string {
         author: !route.q && route.browse === "authors" ? route.authorId : undefined,
         book: route.bookId,
       })}`;
+    case "sessions":
+      return "#/sessions";
+    case "session":
+      return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
       return "#/shelves";
     case "shelf":
@@ -116,6 +122,16 @@ export function parseCurrentRoute(): AppRoute | null {
       };
     }
     return bookId ? { kind: "library", browse: "books", bookId } : { kind: "library", browse: "books" };
+  }
+  if (head === "sessions") {
+    if (typeof parts[1] === "string" && parts[1]) {
+      try {
+        return { kind: "session", sessionId: decodeURIComponent(parts[1]) };
+      } catch {
+        return { kind: "session", sessionId: parts[1] };
+      }
+    }
+    return { kind: "sessions" };
   }
   if (head === "shelves") {
     if (typeof parts[1] === "string" && parts[1]) {

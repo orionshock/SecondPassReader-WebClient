@@ -22,6 +22,8 @@ import { ApiError, SecondPassApiClient } from "../api/SecondPassApiClient";
 import { ShelvesPage } from "../features/shelves/ShelvesPage";
 import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
 import { BookDetailModal } from "../features/library/BookDetailModal";
+import { SessionsPage } from "../features/sessions/SessionsPage";
+import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -190,6 +192,12 @@ export default function App() {
       case "shelves":
         document.title = `${base} - Shelves`;
         return;
+      case "sessions":
+        document.title = `${base} - Session Management`;
+        return;
+      case "session":
+        document.title = `${base} - Session Management`;
+        return;
       case "settings":
         document.title = `${base} - Settings`;
         return;
@@ -343,6 +351,10 @@ export default function App() {
             navigateTo({ kind: "library" });
             handleCloseReader();
           }}
+          onShowSessions={() => {
+            navigateTo({ kind: "sessions" });
+            handleCloseReader();
+          }}
           onShowShelves={() => {
             navigateTo({ kind: "shelves" });
             handleCloseReader();
@@ -441,6 +453,14 @@ export default function App() {
               ) : route?.kind === "shelf" ? (
                 <div className="libraryScreen">
                   <ShelfDetailPage profile={selectedProfile} shelfId={route.shelfId} />
+                </div>
+              ) : route?.kind === "sessions" ? (
+                <div className="libraryScreen">
+                  <SessionsPage profile={selectedProfile} />
+                </div>
+              ) : route?.kind === "session" ? (
+                <div className="libraryScreen">
+                  <SessionDetailPage profile={selectedProfile} sessionId={route.sessionId} />
                 </div>
               ) : route?.kind === "library" ? (
                 <div className="libraryScreen">

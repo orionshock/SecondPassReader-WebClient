@@ -15,6 +15,7 @@ import type {
   ReadingProgress,
   ReadingProgressUpdatePayload,
   ReadingRecentSessionsResponse,
+  ReadingSessionSummary,
   ReadingSession,
 } from "../schemas/readingSession";
 
@@ -26,10 +27,13 @@ import {
   closeReadingSession,
   createReadingAnnotation,
   deleteReadingAnnotation,
+  getReadingSession,
   listReadingAnnotations,
+  listReadingSessions,
   listRecentReadingSessions,
   openReadingSession,
   startOverReadingSession,
+  updateReadingSession,
   updateReadingAnnotation,
   updateReadingProgress,
 } from "./readingApi";
@@ -201,6 +205,38 @@ export class SecondPassApiClient {
     page?: number;
   }): Promise<ReadingAnnotationPage> {
     return listReadingAnnotations(input);
+  }
+
+  async listReadingSessions(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    page?: number;
+    pageSize?: number;
+    bookId?: string | number;
+    status?: "active" | "completed" | "archived" | string;
+    isActive?: boolean;
+  }): Promise<PaginatedResponse<ReadingSessionSummary>> {
+    return listReadingSessions(input);
+  }
+
+  async getReadingSession(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    sessionId: string;
+  }): Promise<ReadingSessionSummary> {
+    return getReadingSession(input);
+  }
+
+  async updateReadingSession(input: {
+    apiBaseUrl: string;
+    accessToken: string;
+    tokenType?: string;
+    sessionId: string;
+    payload: { name?: string; notes?: string };
+  }): Promise<ReadingSessionSummary> {
+    return updateReadingSession(input);
   }
 
   async createReadingAnnotation(input: {

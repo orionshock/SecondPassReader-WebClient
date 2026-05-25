@@ -8,6 +8,7 @@ export function AppHeader({
   canNavigate,
   onShowHome,
   onShowLibrary,
+  onShowSessions,
   onShowShelves,
   onShowSettings,
 }: {
@@ -17,6 +18,7 @@ export function AppHeader({
   canNavigate: boolean;
   onShowHome: () => void;
   onShowLibrary: () => void;
+  onShowSessions: () => void;
   onShowShelves: () => void;
   onShowSettings: () => void;
 }) {
@@ -38,11 +40,34 @@ export function AppHeader({
       ? "Home"
       : route?.kind === "library"
         ? "Library"
-        : route?.kind === "shelves"
+        : route?.kind === "sessions" || route?.kind === "session"
+          ? "Session Management"
+        : route?.kind === "shelves" || route?.kind === "shelf"
           ? "Shelves"
           : view === "settings"
             ? "Settings"
             : null;
+
+  const onGoSectionHome = (() => {
+    if (!pageLabel) return null;
+    if (view === "settings") return onShowSettings;
+    switch (route?.kind) {
+      case "home":
+        return onShowHome;
+      case "library":
+        return onShowLibrary;
+      case "shelves":
+      case "shelf":
+        return onShowShelves;
+      case "sessions":
+      case "session":
+        return onShowSessions;
+      case "settings":
+        return onShowSettings;
+      default:
+        return null;
+    }
+  })();
 
   return (
     <header className="appHeader">
@@ -56,7 +81,18 @@ export function AppHeader({
         >
           Second Pass Reader
         </button>
-        {pageLabel ? <div className="muted">{pageLabel}</div> : null}
+        {pageLabel ? (
+          <button
+            type="button"
+            className="appSectionButton muted"
+            onClick={onGoSectionHome ?? undefined}
+            disabled={!onGoSectionHome}
+            aria-label={`Go to ${pageLabel}`}
+            title={`Go to ${pageLabel}`}
+          >
+            {pageLabel}
+          </button>
+        ) : null}
         <div className="appHeaderMeta muted">
           {serverName ? (
             <>
@@ -77,6 +113,9 @@ export function AppHeader({
             </button>
             <button type="button" className="button buttonCompact" onClick={onShowShelves}>
               Shelves
+            </button>
+            <button type="button" className="button buttonCompact" onClick={onShowSessions}>
+              Sessions
             </button>
             <button
               type="button"

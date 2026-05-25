@@ -1,0 +1,468 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ApiError, SecondPassApiClient } from "../../api/SecondPassApiClient";
+import type { ReadingAnnotationPage, ReadingSessionSummary } from "../../schemas/readingSession";
+import type { ConnectionProfile } from "../../storage/connectionProfiles";
+import { navigateTo } from "../../app/navigation";
+import { resolveCoverUrl } from "../library/coverUtils";
+import { getAnnotationDisplay } from "../annotations/annotationDisplay";
+
+function formatIso(iso?: string | null): string | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    return Number.isFinite(d.getTime()) ? d.toLocaleString() : iso;
+  } catch {
+    return iso;
+  }
+}
+
+function formatProgress(p?: number | null): string | null {
+  if (typeof p !== "number" || !Number.isFinite(p)) return null;
+  const clamped = Math.min(1, Math.max(0, p));
+  return `${Math.round(clamped * 100)}%`;
+}
+
+export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
+  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<ReadingSessionSummary | null>(null);
+
+  const [draftName, setDraftName] = useState("");
+  const [draftNotes, setDraftNotes] = useState("");
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+
+  const [closeBusy, setCloseBusy] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+
+  const [annoBusy, setAnnoBusy] = useState(false);
+  const [annoError, setAnnoError] = useState<string | null>(null);
+  const [annoPage, setAnnoPage] = useState<ReadingAnnotationPage | null>(null);
+  const [annoLoadingMore, setAnnoLoadingMore] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+      const s = await api.getReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+      });
+      setSession(s);
+      setDraftName(typeof s.name === "string" ? s.name : "");
+      setDraftNotes(typeof s.notes === "string" ? s.notes : "");
+      setEditingName(false);
+      setEditingNotes(false);
+    } catch (e) {
+      const message =
+        e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
+          ? "Could not load session. Your device token may be revoked or not allowed to access reading data."
+          : e instanceof ApiError && e.status === 404
+            ? "Session not found or not accessible."
+            : e instanceof Error
+              ? e.message
+              : "Failed to load session.";
+      setError(message);
+      setSession(null);
+    } finally {
+      setBusy(false);
+    }
+  }, [profile, sessionId]);
+
+  const loadAnnotations = useCallback(
+    async (page = 1) => {
+      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      setAnnoBusy(true);
+      setAnnoError(null);
+      try {
+        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+        const p = await api.listReadingAnnotations({
+          apiBaseUrl: profile.apiBaseUrl,
+          accessToken: profile.accessToken,
+          tokenType: profile.tokenType ?? "Bearer",
+          sessionId,
+          page,
+        });
+        setAnnoPage(p);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Failed to load annotations.";
+        setAnnoError(message);
+        setAnnoPage(null);
+      } finally {
+        setAnnoBusy(false);
+      }
+    },
+    [profile, sessionId],
+  );
+
+  useEffect(() => {
+    setSession(null);
+    setError(null);
+    setBusy(false);
+    setSaveError(null);
+    setCloseError(null);
+    setAnnoPage(null);
+    setAnnoError(null);
+    setAnnoBusy(false);
+    if (!canLoad) return;
+    void load();
+    void loadAnnotations(1);
+  }, [canLoad, load, loadAnnotations]);
+
+  const isActive = Boolean(session?.is_active);
+  const progressText = formatProgress(session?.progression ?? null);
+  const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile);
+
+  const headerTitle = session?.book?.title ? `Session for ${session.book.title}` : "Session";
+
+  const handleSaveName = useCallback(async () => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!session) return;
+    if (!isActive) return;
+    setSaveBusy(true);
+    setSaveError(null);
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+      const updated = await api.updateReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+        payload: { name: draftName },
+      });
+      setSession(updated);
+      setEditingName(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Failed to save session.");
+    } finally {
+      setSaveBusy(false);
+    }
+  }, [draftName, isActive, profile, session, sessionId]);
+
+  const handleSaveNotes = useCallback(async () => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!session) return;
+    if (!isActive) return;
+    setSaveBusy(true);
+    setSaveError(null);
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+      const updated = await api.updateReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+        payload: { notes: draftNotes },
+      });
+      setSession(updated);
+      setEditingNotes(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Failed to save session.");
+    } finally {
+      setSaveBusy(false);
+    }
+  }, [draftNotes, isActive, profile, session, sessionId]);
+
+  const handleClose = useCallback(async () => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!sessionId) return;
+    setCloseBusy(true);
+    setCloseError(null);
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+      const closed = await api.closeReadingSession({
+        apiBaseUrl: profile.apiBaseUrl,
+        accessToken: profile.accessToken,
+        tokenType: profile.tokenType ?? "Bearer",
+        sessionId,
+      });
+      // closeReadingSession returns ReadingSession (older type). Re-fetch summary to keep UI consistent.
+      void closed;
+      await load();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to close session.";
+      setCloseError(message);
+    } finally {
+      setCloseBusy(false);
+    }
+  }, [load, profile, sessionId]);
+
+  const handleLoadMoreAnnotations = useCallback(async () => {
+    if (annoLoadingMore) return;
+    const nextUrl = annoPage?.next ?? null;
+    if (!nextUrl) return;
+    let nextPage: number | null = null;
+    try {
+      const u = new URL(nextUrl);
+      const raw = u.searchParams.get("page");
+      if (raw) {
+        const n = Number(raw);
+        nextPage = Number.isFinite(n) && n > 0 ? n : null;
+      }
+    } catch {
+      nextPage = null;
+    }
+    if (!nextPage) return;
+
+    setAnnoLoadingMore(true);
+    setAnnoError(null);
+    try {
+      const api = new SecondPassApiClient({ serverBaseUrl: profile!.serverBaseUrl });
+      const p = await api.listReadingAnnotations({
+        apiBaseUrl: profile!.apiBaseUrl!,
+        accessToken: profile!.accessToken!,
+        tokenType: profile!.tokenType ?? "Bearer",
+        sessionId,
+        page: nextPage,
+      });
+      setAnnoPage((prev) => {
+        if (!prev) return p;
+        return { ...p, results: [...(prev.results ?? []), ...(p.results ?? [])] };
+      });
+    } catch (e) {
+      setAnnoError(e instanceof Error ? e.message : "Failed to load more annotations.");
+    } finally {
+      setAnnoLoadingMore(false);
+    }
+  }, [annoLoadingMore, annoPage, profile, sessionId]);
+
+  const bookLine = useMemo(() => {
+    const authors = (session?.book?.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
+    const seriesName = session?.book?.series?.name ?? null;
+    const idx = session?.book?.series_index;
+    const series = seriesName ? (idx === null || idx === undefined || idx === "" ? seriesName : `${seriesName} #${idx}`) : null;
+    return [authors || null, series || null].filter(Boolean).join(" · ");
+  }, [session?.book?.authors, session?.book?.series?.name, session?.book?.series_index]);
+
+  const canOpenReader = Boolean(session?.book?.id);
+
+  return (
+    <section className="panel sessionDetailPage">
+      <div className="panelHeaderRow">
+        <h2 className="panelTitle" style={{ margin: 0 }}>
+          {headerTitle}
+        </h2>
+        <button type="button" className="button buttonCompact" onClick={() => navigateTo({ kind: "sessions" })}>
+          All sessions
+        </button>
+      </div>
+
+      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
+      {busy ? <p className="muted">Loading…</p> : null}
+      {error ? <div className="errorText">{error}</div> : null}
+
+      {session ? (
+        <>
+          <div className="sessionHeader">
+            <div className="sessionCover">
+              {coverSrc ? <img className="sessionCoverImg" src={coverSrc} alt={`${session.book?.title ?? "Book"} cover`} loading="lazy" /> : <div className="bookCoverPlaceholderText">No cover</div>}
+            </div>
+            <div className="sessionHeaderMain">
+              <div className="bookTitle">{session.book?.title ?? "Book"}</div>
+              {bookLine ? <div className="muted">{bookLine}</div> : null}
+              <div className="muted">
+                <span className="sessionsId">{session.id}</span>
+              </div>
+              <div className="muted">
+                {[session.status || null, session.is_active ? "active" : session.is_active === false ? "closed" : null, progressText || null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+              {typeof session.annotation_count === "number" ? <div className="muted">{session.annotation_count} annotations</div> : null}
+            </div>
+            <div className="sessionHeaderActions">
+              <button type="button" className="button buttonPrimary" onClick={() => navigateTo({ kind: "reader", bookId: String(session.book?.id ?? "") })} disabled={!canOpenReader}>
+                Open reader
+              </button>
+              {isActive ? (
+                <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
+                  {closeBusy ? "Closing…" : "Close session"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {closeError ? <div className="errorText">{closeError}</div> : null}
+
+          <div className="sessionMetaGrid">
+            {session.started_at ? <div className="detailRow"><span className="muted">Started:</span> {formatIso(session.started_at)}</div> : null}
+            {session.updated_at ? <div className="detailRow"><span className="muted">Updated:</span> {formatIso(session.updated_at)}</div> : null}
+            {session.completed_at ? <div className="detailRow"><span className="muted">Completed:</span> {formatIso(session.completed_at)}</div> : null}
+          </div>
+
+          {isActive ? (
+            <div className="sessionEdit">
+              <div className="sessionInlineEditRow">
+                <div className="sessionInlineEditLabel">Name</div>
+                {!editingName ? (
+                  <div className="sessionInlineEditFieldRow">
+                    <div className="sessionInlineEditValue">{session.name ?? ""}</div>
+                    <button
+                      type="button"
+                      className="button buttonCompact sessionInlineEditButton"
+                      onClick={() => {
+                        setDraftName(typeof session.name === "string" ? session.name : "");
+                        setEditingName(true);
+                      }}
+                      aria-label="Edit session name"
+                      title="Edit"
+                    >
+                      ✎
+                    </button>
+                  </div>
+                ) : (
+                  <div className="sessionInlineEditFieldRow">
+                    <input
+                      className="input inputCompact sessionInlineEditInput"
+                      value={draftName}
+                      onChange={(e) => setDraftName(e.target.value)}
+                      placeholder="Session name"
+                      maxLength={255}
+                    />
+                    <button type="button" className="button buttonPrimary buttonCompact" onClick={() => void handleSaveName()} disabled={saveBusy}>
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => {
+                        setEditingName(false);
+                        setDraftName(typeof session.name === "string" ? session.name : "");
+                        setSaveError(null);
+                      }}
+                      disabled={saveBusy}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="sessionInlineEditRow">
+                <div className="sessionInlineEditLabel">Notes</div>
+                {!editingNotes ? (
+                  <div className="sessionInlineEditFieldRow">
+                    <div className="sessionInlineEditValue muted">{session.notes ?? ""}</div>
+                    <button
+                      type="button"
+                      className="button buttonCompact sessionInlineEditButton"
+                      onClick={() => {
+                        setDraftNotes(typeof session.notes === "string" ? session.notes : "");
+                        setEditingNotes(true);
+                      }}
+                      aria-label="Edit session notes"
+                      title="Edit"
+                    >
+                      ✎
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="sessionInlineEditNotesWrap">
+                      <textarea
+                        className="input sessionInlineEditTextarea"
+                        cols={40}
+                        rows={4}
+                        value={draftNotes}
+                        onChange={(e) => setDraftNotes(e.target.value.slice(0, 500))}
+                        placeholder="Notes…"
+                        maxLength={500}
+                      />
+                      <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/500</div>
+                    </div>
+                    <div className="sessionInlineEditFieldRow">
+                      <button type="button" className="button buttonPrimary buttonCompact" onClick={() => void handleSaveNotes()} disabled={saveBusy}>
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="button buttonCompact"
+                        onClick={() => {
+                          setEditingNotes(false);
+                          setDraftNotes(typeof session.notes === "string" ? session.notes : "");
+                          setSaveError(null);
+                        }}
+                        disabled={saveBusy}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {saveError ? <div className="errorText">{saveError}</div> : null}
+            </div>
+          ) : (
+            <div className="sessionReadOnly">
+              <p className="muted">This session is closed. Name, notes, and annotations are read-only.</p>
+              {session.name ? (
+                <div className="detailRow">
+                  <span className="muted">Name:</span> {session.name}
+                </div>
+              ) : null}
+              {session.notes ? (
+                <div className="detailRow">
+                  <span className="muted">Notes:</span> {session.notes}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div className="sessionAnnotations">
+            <div className="panelHeaderRow" style={{ marginTop: 10 }}>
+              <div className="panelTitle" style={{ margin: 0 }}>
+                Annotations
+              </div>
+              {annoPage ? <div className="muted">{annoPage.count ?? 0} total</div> : null}
+            </div>
+
+            {annoError ? <div className="errorText">{annoError}</div> : null}
+            {annoBusy ? <div className="muted">Loading…</div> : null}
+
+            {annoPage?.results?.length ? (
+              <div className="sessionAnnoList">
+                {annoPage.results.map((a) => {
+                  const { icon, label } = getAnnotationDisplay(a);
+                  const updated = (a.updated_at as any) || (a.modified as any) || (a.created_at as any) || (a.created as any);
+                  const when = typeof updated === "string" ? formatIso(updated) : null;
+                  return (
+                    <div key={a.id} className="sessionAnnoRow">
+                      <div className="sessionAnnoIcon" aria-hidden="true">
+                        {icon}
+                      </div>
+                      <div className="sessionAnnoMain">
+                        <div className="sessionAnnoTitle">
+                          {label} <span className="mono muted">{a.id}</span>
+                        </div>
+                        {when ? <div className="muted">Updated: {when}</div> : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : !annoBusy ? (
+              <div className="muted">No annotations yet.</div>
+            ) : null}
+
+            {annoPage?.next ? (
+              <div style={{ marginTop: 10 }}>
+                <button type="button" className="button buttonCompact" onClick={() => void handleLoadMoreAnnotations()} disabled={annoLoadingMore}>
+                  {annoLoadingMore ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+}

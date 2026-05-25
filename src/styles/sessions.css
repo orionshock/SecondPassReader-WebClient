@@ -1,0 +1,239 @@
+/* Sessions activity (list + detail) */
+
+.sessionsToolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.sessionsFilters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sessionsFilter {
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sessionsFilterActive {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.sessionsList {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.sessionsRow {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.sessionsRow:hover {
+  background: rgba(17, 24, 39, 0.01);
+}
+
+.sessionsRow:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: 2px;
+}
+
+.sessionsCover {
+  width: 52px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
+}
+
+.sessionsTitleLine {
+  margin-bottom: 2px;
+  min-width: 0;
+}
+
+.sessionsCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sessionsMain {
+  min-width: 0;
+}
+
+.sessionsMeta {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sessionsId {
+  color: var(--sp-muted);
+  font-style: italic;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.sessionHeader {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.sessionCover {
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.03);
+  display: grid;
+  place-items: center;
+}
+
+.sessionCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sessionHeaderMain {
+  min-width: 0;
+}
+
+.sessionHeaderActions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.sessionMetaGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.sessionEdit {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.sessionInlineEditRow {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.sessionInlineEditLabel {
+  font-weight: 600;
+}
+
+.sessionInlineEditValue {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sessionInlineEditFieldRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.sessionInlineEditButton {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.sessionInlineEditInput {
+  width: 32ch;
+  max-width: 100%;
+}
+
+.sessionInlineEditTextarea {
+  width: 40ch;
+  max-width: 100%;
+  resize: vertical;
+}
+
+.sessionInlineEditNotesWrap {
+  margin-top: 6px;
+}
+
+.sessionInlineEditNotesFooter {
+  margin-top: 4px;
+}
+
+.sessionReadOnly {
+  margin-top: 12px;
+}
+
+.sessionAnnotations {
+  margin-top: 14px;
+}
+
+.sessionAnnoList {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.sessionAnnoRow {
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.sessionAnnoIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sessionAnnoMain {
+  min-width: 0;
+}
+
+.sessionAnnoTitle {
+  font-weight: 600;
+}

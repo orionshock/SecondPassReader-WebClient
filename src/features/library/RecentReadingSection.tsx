@@ -97,6 +97,7 @@ export function RecentReadingSection({
             const progression =
               typeof rawProgression === "number" && Number.isFinite(rawProgression) ? Math.min(1, Math.max(0, rawProgression)) : null;
             const progressionPercent = progression != null ? Math.round(progression * 100) : null;
+            const sessionName = typeof item.session?.name === "string" ? item.session.name.trim() : "";
             const ariaLabel = `Resume ${item.book.title}${progressionPercent != null ? `, ${progressionPercent}% complete` : ""}`;
             return (
               <button
@@ -106,7 +107,7 @@ export function RecentReadingSection({
                 onClick={() => handleResume(item.book.id)}
                 disabled={!canLoad}
                 aria-label={ariaLabel}
-                title={ariaLabel}
+                title={sessionName ? `${ariaLabel}\n${sessionName}` : ariaLabel}
               >
                 <div className="recentCoverWrap">
                   {coverSrc ? (
@@ -125,7 +126,6 @@ export function RecentReadingSection({
                 <div className="recentBookTitle" title={item.book.title}>
                   {item.book.title}
                 </div>
-                {item.session?.name ? <div className="recentSessionName muted">{item.session.name}</div> : null}
                 <div className="recentBookMeta muted">Last read: {formatLastActivity(item.last_activity_at)}</div>
               </button>
             );

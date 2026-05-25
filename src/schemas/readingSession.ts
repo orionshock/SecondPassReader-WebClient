@@ -23,6 +23,33 @@ export type ReadingSession = {
   [k: string]: unknown;
 };
 
+export type ReadingSessionBookSummary = {
+  id: string | number;
+  title: string;
+  authors?: Array<{ id: string | number; name: string }> | null;
+  series?: { id: string | number; name: string } | null;
+  series_index?: number | string | null;
+  cover_url?: string | null;
+  [k: string]: unknown;
+};
+
+export type ReadingSessionSummary = {
+  id: string;
+  name?: string | null;
+  status?: string | null;
+  is_active?: boolean | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  notes?: string | null;
+  progression?: number | null;
+  annotation_count?: number | null;
+  book_id?: string | number | null;
+  book?: ReadingSessionBookSummary | null;
+  [k: string]: unknown;
+};
+
 export type ReadingProgress = {
   id?: string;
   profile_version?: string;
