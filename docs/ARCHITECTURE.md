@@ -62,6 +62,13 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - Progress saving supports manual save (Save Progress) plus a debounced autosave (default on). The server upserts progress, and the client debounces writes to avoid chatty PATCH calls.
 - Progress capture uses epub.js `rendition` `relocated` events when available (CFI + href + percentage progression), with CFI-only fallback.
 
+## Reader architecture (practical)
+
+- **Renderer boundary:** `src/features/reader/EpubReaderPanel.tsx` is the intended replaceable boundary for react-reader/epub.js. It is responsible for CFI selection capture, highlight injection/reflow, and applying local reader settings into the renderer.
+- **Domain hooks:** `useReaderAnnotations.ts` (current session + drafts) and `usePreviousSessionLayers.ts` (read-only historical session layers) work in app-owned/domain types (`LocalHighlight`, semantic color tokens, CFI strings). They call the API client, but do not touch epub.js/renderer internals.
+- **Server adapters:** `readingAnnotationAdapter.ts` and `w3cAnnotationAdapter.ts` own the mapping between server/W3C-ish payload shapes and the local domain types so UI components do not parse raw `body[]` arrays directly.
+- **UI components:** `ReaderArea.tsx` orchestrates and wires together the hooks, panels, and renderer; panels like `SelectionToolbar.tsx`, `AnnotationPanel.tsx`, `ReaderSettingsPanel.tsx`, and `MarginaliaLayersPanel.tsx` are presentational and should not depend on renderer internals.
+
 ## Annotation adapters
 
 - `src/features/reader/w3cAnnotationAdapter.ts`: local W3C Web Annotation JSON-LD preview/export shape (not persisted yet).
