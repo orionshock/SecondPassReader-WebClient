@@ -15,3 +15,17 @@ yarn-error.log*
 pnpm-debug.log*
 docs/specs*
 out
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# Package tarballs
+*.tgz
+
+# Alternative package manager stores
+.pnpm-store/
+.yarn/
