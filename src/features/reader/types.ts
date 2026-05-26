@@ -18,8 +18,9 @@ export type OpenedBook = {
   readingOpen?: ReadingOpenResponse;
 };
 
-// Local client annotation type (NOT canonical; server canonical form is W3C Web Annotation JSON-LD).
+// Local client annotation types (NOT canonical; server canonical form is W3C Web Annotation JSON-LD).
 export type LocalHighlight = {
+  kind: "highlight";
   id: string;
   cfiRange: string;
   text: string;
@@ -40,6 +41,25 @@ export type LocalHighlight = {
   serverUpdateError?: string;
   serverUpdatedAt?: string;
 };
+
+export type LocalBookmark = {
+  kind: "bookmark";
+  id: string;
+  cfi: string;
+  readOnly?: boolean;
+  sourceSessionId?: string;
+  sourceSessionLabel?: string;
+  createdAt: string;
+  createIdempotencyKey?: string;
+  serverAnnotationId?: string;
+  serverSavedAt?: string;
+  serverSaveStatus?: "unsaved" | "saving" | "saved" | "error";
+  serverSaveError?: string;
+  serverDeleteStatus?: "deleting" | "error";
+  serverDeleteError?: string;
+};
+
+export type LocalAnnotation = LocalHighlight | LocalBookmark;
 
 export type PendingSelection = {
   cfiRange: string;

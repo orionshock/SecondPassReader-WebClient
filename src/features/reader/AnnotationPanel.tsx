@@ -1,5 +1,5 @@
 import type { ReadingOpenResponse, ReadingSessionSummary } from "@secondpass/client";
-import type { LocalHighlight } from "./types";
+import type { LocalAnnotation } from "./types";
 import { useEffect, useState } from "react";
 import { createSecondPassClient } from "@secondpass/client";
 import {
@@ -11,7 +11,7 @@ import {
   type HighlightColor,
 } from "./highlightColors";
 
-function getAnnotationStateLabel(h: LocalHighlight): { label: string; kind: "draft" | "saving" | "saved" | "error" } {
+function getAnnotationStateLabel(h: LocalAnnotation): { label: string; kind: "draft" | "saving" | "saved" | "error" } {
   if (h.serverSaveStatus === "saving") return { label: "Saving", kind: "saving" };
   if (h.serverSaveStatus === "saved" || h.serverAnnotationId) return { label: "Saved to session", kind: "saved" };
   if (h.serverSaveStatus === "error") return { label: "Error", kind: "error" };
@@ -34,7 +34,7 @@ export function AnnotationPanel({
   accessToken,
   tokenType,
 }: {
-  highlights: LocalHighlight[];
+  highlights: LocalAnnotation[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onRemoveLocal: (id: string) => void;
@@ -77,8 +77,8 @@ export function AnnotationPanel({
       setPendingSaveId(null);
       return;
     }
-    if (h.serverUpdateStatus === "saving") return;
-    if (h.serverUpdateStatus === "error") {
+    if (h.kind === "highlight" && h.serverUpdateStatus === "saving") return;
+    if (h.kind === "highlight" && h.serverUpdateStatus === "error") {
       setPendingSaveId(null);
       return;
     }
@@ -299,8 +299,9 @@ export function AnnotationPanel({
             const isDeleting = h.serverDeleteStatus === "deleting";
             const canDelete = apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting;
             const isEditing = editingId === h.id;
-            const isUpdating = h.serverUpdateStatus === "saving";
-            const canEdit = apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting && !isUpdating;
+            const isUpdating = h.kind === "highlight" && h.serverUpdateStatus === "saving";
+            const canEdit =
+              h.kind === "highlight" && apiReady && Boolean(sessionId) && isSaved && Boolean(h.serverAnnotationId) && !isDeleting && !isUpdating;
 
             return (
               <li key={h.id} className={`highlightRow ${h.id === selectedId ? "highlightRowSelected" : ""}`}>
@@ -312,6 +313,10 @@ export function AnnotationPanel({
                     title="Select annotation"
                   >
                     {(() => {
+                      if (h.kind === "bookmark") {
+                        return <div className="annoQuote">{"\uD83D\uDD16"} Bookmark</div>;
+                      }
+
                       const token = isHighlightColor(h.color) ? h.color : DEFAULT_HIGHLIGHT_COLOR;
                       const quoteClass = `annoQuote ${highlightColorToClassName(token)}`;
                       return (
@@ -325,7 +330,7 @@ export function AnnotationPanel({
                     })()}
                   </button>
 
-                  {isSaved && isEditing ? (
+                  {h.kind === "highlight" && isSaved && isEditing ? (
                     <div className="highlightEditBox">
                       <textarea
                         className="input"
@@ -393,7 +398,7 @@ export function AnnotationPanel({
                       <span className="pill pillIdle">{state.label}</span>
                     )}
                     {(() => {
-                      const when = formatWhen(h.serverUpdatedAt ?? h.serverSavedAt ?? h.createdAt);
+                      const when = formatWhen((h.kind === "highlight" ? h.serverUpdatedAt : undefined) ?? h.serverSavedAt ?? h.createdAt);
                       return when ? <span className="annoMetaWhen">{when}</span> : null;
                     })()}
                   </div>
@@ -402,14 +407,14 @@ export function AnnotationPanel({
                   {h.serverDeleteStatus === "error" && h.serverDeleteError ? (
                     <div className="errorText">{h.serverDeleteError}</div>
                   ) : null}
-                  {h.serverUpdateStatus === "error" && h.serverUpdateError ? (
+                  {h.kind === "highlight" && h.serverUpdateStatus === "error" && h.serverUpdateError ? (
                     <div className="errorText">{h.serverUpdateError}</div>
                   ) : null}
 
                 </div>
 
                 <div className="highlightActions">
-                  {isSaved ? (
+                  {h.kind === "highlight" && isSaved ? (
                     <button
                       type="button"
                       className="button buttonCompact"

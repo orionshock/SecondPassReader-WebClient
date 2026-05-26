@@ -1,5 +1,5 @@
 import type { ReadingAnnotation, ReadingAnnotationCreatePayload, ReadingAnnotationUpdatePayload } from "@secondpass/client";
-import type { LocalHighlight } from "./types";
+import type { LocalAnnotation, LocalBookmark, LocalHighlight } from "./types";
 import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor, type HighlightColor } from "./highlightColors";
 
 const EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html";
@@ -53,6 +53,25 @@ export function createServerAnnotationUpdatePayloadFromLocalHighlight(input: {
 }): ReadingAnnotationUpdatePayload {
   // For Phase 1, PATCH uses the same tight shape as create (server rejects unknown fields).
   return createServerAnnotationPayloadFromLocalHighlight(input);
+}
+
+export function createServerBookmarkPayloadFromCfi(input: {
+  cfi: string;
+  sessionId: string;
+  profileVersion?: string;
+}): ReadingAnnotationCreatePayload {
+  return {
+    profile_version: input.profileVersion ?? "0.1.0",
+    session: input.sessionId,
+    motivation: "bookmarking",
+    target: {
+      selector: {
+        type: "FragmentSelector",
+        conformsTo: EPUB_CFI_CONFORMS_TO,
+        value: input.cfi,
+      },
+    },
+  };
 }
 
 function looksLikeColor(value: string): boolean {
@@ -114,19 +133,40 @@ function parseBody(annotation: ReadingAnnotation): { text?: string; note?: strin
   return { text: selectedText, note, color };
 }
 
-export function createLocalHighlightFromServerAnnotation(annotation: ReadingAnnotation): LocalHighlight | null {
-  const cfiRange = tryGetCfi(annotation);
-  if (!cfiRange) return null;
+function parseMotivations(annotation: ReadingAnnotation): string[] {
+  const raw = (annotation as any)?.motivation;
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : typeof raw === "string" ? [raw] : [];
+}
+
+export function createLocalAnnotationFromServerAnnotation(annotation: ReadingAnnotation): LocalAnnotation | null {
+  const cfi = tryGetCfi(annotation);
+  if (!cfi) return null;
 
   const id = String(annotation.id ?? "");
   if (!id) return null;
 
-  const { text, note, color } = parseBody(annotation);
+  const motivations = parseMotivations(annotation);
+  const isBookmark = motivations.includes("bookmarking");
   const { createdAt, savedAt } = tryGetTimestamps(annotation);
 
-  return {
+  if (isBookmark) {
+    const bookmark: LocalBookmark = {
+      kind: "bookmark",
+      id: `srv_${id}`,
+      cfi,
+      createdAt,
+      serverAnnotationId: id,
+      serverSavedAt: savedAt ?? createdAt,
+      serverSaveStatus: "saved",
+    };
+    return bookmark;
+  }
+
+  const { text, note, color } = parseBody(annotation);
+  const highlight: LocalHighlight = {
+    kind: "highlight",
     id: `srv_${id}`,
-    cfiRange,
+    cfiRange: cfi,
     text: text?.trim() || "[server annotation]",
     note: note?.trim() || undefined,
     color: isHighlightColor(color) ? color : DEFAULT_HIGHLIGHT_COLOR,
@@ -135,4 +175,10 @@ export function createLocalHighlightFromServerAnnotation(annotation: ReadingAnno
     serverSavedAt: savedAt ?? createdAt,
     serverSaveStatus: "saved",
   };
+  return highlight;
+}
+
+export function createLocalHighlightFromServerAnnotation(annotation: ReadingAnnotation): LocalHighlight | null {
+  const local = createLocalAnnotationFromServerAnnotation(annotation);
+  return local && local.kind === "highlight" ? local : null;
 }

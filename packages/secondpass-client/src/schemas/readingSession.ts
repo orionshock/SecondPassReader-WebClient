@@ -124,7 +124,7 @@ export type ReadingAnnotationCreatePayload = {
       value: string;
     };
   };
-  body: Array<
+  body?: Array<
     | (W3CTextualBody & { color?: string })
     | {
         type: "TextualBody";

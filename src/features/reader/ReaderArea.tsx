@@ -15,6 +15,7 @@ import { useReaderAnnotations } from "./useReaderAnnotations";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { usePreviousSessionLayers } from "./usePreviousSessionLayers";
 import { MarginaliaLayersPanel } from "./MarginaliaLayersPanel";
+import type { LocalBookmark } from "./types";
 
 export function ReaderArea({
   openedBook,
@@ -36,6 +37,7 @@ export function ReaderArea({
 
   const [locationString, setLocationString] = useState<string | null>(null);
   const [readerLocation, setReaderLocation] = useState<ReaderLocation | null>(null);
+  const [visibleBookmarkIds, setVisibleBookmarkIds] = useState<string[]>([]);
   const [goToStartSignal, setGoToStartSignal] = useState(0);
 
   const [readerSettings, setReaderSettings] = useState(() => getReaderSettings());
@@ -124,6 +126,19 @@ export function ReaderArea({
   const currentCfi = readerLocation?.cfi ?? locationString;
   const currentHref = readerLocation?.href;
   const currentProgression = readerLocation?.progression ?? null;
+
+  const currentSessionBookmarks = useMemo(
+    () => annotations.highlights.filter((a): a is LocalBookmark => a.kind === "bookmark" && !a.readOnly),
+    [annotations.highlights],
+  );
+
+  const visibleBookmark = useMemo(() => {
+    for (const id of visibleBookmarkIds) {
+      const found = currentSessionBookmarks.find((b) => b.id === id);
+      if (found) return found;
+    }
+    return null;
+  }, [currentSessionBookmarks, visibleBookmarkIds]);
 
   const { autosave, resetForSessionSwap } = useProgressAutosave({
     apiBaseUrl,
@@ -232,7 +247,43 @@ export function ReaderArea({
           </div>
         </div>
 
-        <ProgressPanel autosave={autosave} currentHref={currentHref} progression={currentProgression} />
+        <div className="readerProgressRow">
+          <ProgressPanel autosave={autosave} currentHref={currentHref} progression={currentProgression} />
+          <button
+            type="button"
+            className={`bookmarkToggle ${visibleBookmark ? "bookmarkToggleOn" : "bookmarkToggleOff"}`}
+            onClick={() => {
+              if (!currentCfi) return;
+              if (visibleBookmark) {
+                if (visibleBookmark.serverSaveStatus === "saving") return;
+                if (visibleBookmark.serverAnnotationId) {
+                  void annotations.deleteHighlightFromSession(visibleBookmark.id);
+                } else {
+                  annotations.removeLocalAnnotation(visibleBookmark.id);
+                }
+                return;
+              }
+              annotations.createBookmarkAtLocation(currentCfi);
+            }}
+            disabled={!currentCfi || (visibleBookmark?.serverSaveStatus === "saving")}
+            title={
+              !currentCfi
+                ? "Bookmark unavailable until location is known"
+                : visibleBookmark
+                  ? "Remove bookmark at this location"
+                  : "Bookmark this location"
+            }
+            aria-label={
+              !currentCfi
+                ? "Bookmark unavailable until location is known"
+                : visibleBookmark
+                  ? "Remove bookmark at this location"
+                  : "Bookmark this location"
+            }
+          >
+            {visibleBookmark ? "= Bookmarked =" : "+ Bookmark"}
+          </button>
+        </div>
       </div>
 
       {nearEnd.shouldShowNearEndBanner ? (
@@ -259,7 +310,7 @@ export function ReaderArea({
           const seen = new Set<string>();
           const merged = [];
           for (const h of annotations.highlights) {
-            if (!h.cfiRange) continue;
+            if (h.kind !== "highlight") continue;
             if (seen.has(h.cfiRange)) continue;
             seen.add(h.cfiRange);
             merged.push(h);
@@ -274,12 +325,14 @@ export function ReaderArea({
         <EpubReaderPanel
           blob={openedBook.blob}
           highlights={merged}
+          bookmarks={currentSessionBookmarks.map((b) => ({ id: b.id, cfi: b.cfi }))}
           initialLocation={initialCfi ?? undefined}
           goToStartSignal={goToStartSignal}
           settings={readerSettings}
           onLocationChanged={setLocationString}
           onReaderLocationChange={setReaderLocation}
           onHighlightClicked={annotations.setSelectedHighlightId}
+          onVisibleBookmarksChange={setVisibleBookmarkIds}
           onTextSelected={(sel) => {
             annotations.onTextSelected(sel);
           }}

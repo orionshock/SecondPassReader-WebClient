@@ -40,6 +40,7 @@ function highlightClassForToken(token: string, opts?: { readOnly?: boolean }): s
 export function EpubReaderPanel({
   blob,
   highlights,
+  bookmarks,
   initialLocation,
   goToStartSignal,
   settings,
@@ -48,9 +49,11 @@ export function EpubReaderPanel({
   onHighlightClicked,
   onTextSelected,
   onRendererError,
+  onVisibleBookmarksChange,
 }: {
   blob: Blob;
   highlights: LocalHighlight[];
+  bookmarks?: Array<{ id: string; cfi: string }>;
   initialLocation?: string | number;
   goToStartSignal?: number;
   settings?: ReaderSettings;
@@ -59,6 +62,7 @@ export function EpubReaderPanel({
   onHighlightClicked?: (highlightId: string) => void;
   onTextSelected?: (selection: PendingSelection) => void;
   onRendererError?: (message: string) => void;
+  onVisibleBookmarksChange?: (visibleIds: string[]) => void;
 }) {
   const DEBUG_READER = import.meta.env.DEV;
   const [location, setLocation] = useState<string | number | null>(null);
@@ -86,6 +90,7 @@ export function EpubReaderPanel({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const themesAttachedToRef = useRef<any | null>(null);
   const themesRegisteredRef = useRef(false);
+  const visibleBookmarksKeyRef = useRef<string>("");
 
   useEffect(() => {
     const rendition = renditionRef.current;
@@ -187,6 +192,113 @@ export function EpubReaderPanel({
   useEffect(() => {
     highlightByCfiRef.current = highlightIndex;
   }, [highlightIndex]);
+
+  useEffect(() => {
+    if (!onVisibleBookmarksChange) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const r = renditionRef.current;
+        const list = bookmarks ?? [];
+
+        if (!r || list.length === 0) {
+          if (!cancelled && visibleBookmarksKeyRef.current !== "") {
+            visibleBookmarksKeyRef.current = "";
+            onVisibleBookmarksChange([]);
+          }
+          return;
+        }
+
+        const contentsRaw = typeof r?.getContents === "function" ? r.getContents() : [];
+        const contents = Array.isArray(contentsRaw) ? contentsRaw : contentsRaw ? [contentsRaw] : [];
+        if (contents.length === 0) {
+          if (!cancelled && visibleBookmarksKeyRef.current !== "") {
+            visibleBookmarksKeyRef.current = "";
+            onVisibleBookmarksChange([]);
+          }
+          return;
+        }
+
+        const visible: string[] = [];
+
+        for (const bm of list) {
+          const cfi = (bm?.cfi ?? "").trim();
+          if (!cfi) continue;
+
+          let isVisible = false;
+          for (const c of contents) {
+            if (!c) continue;
+            const iframe: HTMLElement | null = c?.iframe ?? (c?.window?.frameElement as any) ?? null;
+            if (!iframe || typeof iframe.getBoundingClientRect !== "function") continue;
+            const iframeRect = iframe.getBoundingClientRect();
+
+            let range: Range | null = null;
+            try {
+              if (typeof c?.range === "function") range = c.range(cfi) as Range;
+              else if (typeof r?.getRange === "function") range = r.getRange(cfi) as Range;
+            } catch {
+              range = null;
+            }
+            if (!range) continue;
+
+            // Ensure the resolved range is from this rendered document.
+            const doc = c?.document ?? c?.window?.document ?? null;
+            const owner = (range.startContainer as any)?.ownerDocument ?? null;
+            if (doc && owner && owner !== doc) continue;
+
+            let rect: DOMRect | null = null;
+            try {
+              const rects = typeof (range as any).getClientRects === "function" ? (range as any).getClientRects() : null;
+              if (rects && rects.length) rect = rects[0] as DOMRect;
+              else if (typeof range.getBoundingClientRect === "function") rect = range.getBoundingClientRect();
+            } catch {
+              rect = null;
+            }
+            if (!rect) continue;
+            if (!Number.isFinite(rect.left) || !Number.isFinite(rect.top)) continue;
+            if (rect.width === 0 && rect.height === 0) continue;
+
+            const absLeft = iframeRect.left + rect.left;
+            const absTop = iframeRect.top + rect.top;
+            const absRight = absLeft + rect.width;
+            const absBottom = absTop + rect.height;
+
+            const intersects =
+              absRight > iframeRect.left &&
+              absLeft < iframeRect.right &&
+              absBottom > iframeRect.top &&
+              absTop < iframeRect.bottom;
+
+            if (intersects) {
+              isVisible = true;
+              break;
+            }
+          }
+
+          // Fallback: if CFI-to-range resolution isn't working in this renderer/version,
+          // fall back to exact CFI string matching against the current location.
+          if (!isVisible && typeof location === "string" && location.trim() && location.trim() === cfi) {
+            isVisible = true;
+          }
+
+          if (isVisible) visible.push(bm.id);
+          if (cancelled) return;
+        }
+
+        const key = visible.join("|");
+        if (!cancelled && visibleBookmarksKeyRef.current !== key) {
+          visibleBookmarksKeyRef.current = key;
+          onVisibleBookmarksChange(visible);
+        }
+      })();
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [bookmarks, location, onVisibleBookmarksChange, renditionVersion]);
 
   useEffect(() => {
     let cancelled = false;

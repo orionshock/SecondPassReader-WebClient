@@ -3,11 +3,12 @@ import { ApiError, createSecondPassClient } from "@secondpass/client";
 import type { ReadingOpenResponse } from "@secondpass/client";
 import { createIdempotencyKey } from "./idempotency";
 import {
-  createLocalHighlightFromServerAnnotation,
+  createLocalAnnotationFromServerAnnotation,
+  createServerBookmarkPayloadFromCfi,
   createServerAnnotationPayloadFromLocalHighlight,
   createServerAnnotationUpdatePayloadFromLocalHighlight,
 } from "./readingAnnotationAdapter";
-import type { LocalHighlight, PendingSelection } from "./types";
+import type { LocalAnnotation, LocalBookmark, LocalHighlight, PendingSelection } from "./types";
 import { DEFAULT_HIGHLIGHT_COLOR, isHighlightColor, type HighlightColor } from "./highlightColors";
 
 type ServerAnnotationPaging = {
@@ -27,7 +28,7 @@ export function useReaderAnnotations(input: {
 }) {
   const { readingOpen, sessionId, profileVersion } = input;
 
-  const [highlights, setHighlights] = useState<LocalHighlight[]>([]);
+  const [highlights, setHighlights] = useState<LocalAnnotation[]>([]);
   const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
   const [serverAnnotationPaging, setServerAnnotationPaging] = useState<ServerAnnotationPaging | null>(null);
   const [loadingMoreAnnotations, setLoadingMoreAnnotations] = useState(false);
@@ -62,7 +63,7 @@ export function useReaderAnnotations(input: {
     if (!Array.isArray(results) || results.length === 0) return;
 
     const converted = results
-      .map((a) => createLocalHighlightFromServerAnnotation(a))
+      .map((a) => createLocalAnnotationFromServerAnnotation(a))
       .filter((x): x is NonNullable<typeof x> => Boolean(x));
     if (converted.length === 0) return;
 
@@ -125,7 +126,7 @@ export function useReaderAnnotations(input: {
       const page = await spl.reading.annotations.list({ sessionId, page: nextPage });
 
       const converted = (page.results ?? [])
-        .map((a) => createLocalHighlightFromServerAnnotation(a))
+        .map((a) => createLocalAnnotationFromServerAnnotation(a))
         .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
       setHighlights((prev) => {
@@ -186,11 +187,10 @@ export function useReaderAnnotations(input: {
       );
 
       try {
-        const payload = createServerAnnotationPayloadFromLocalHighlight({
-          localHighlight: target,
-          sessionId,
-          profileVersion,
-        });
+        const payload =
+          target.kind === "bookmark"
+            ? createServerBookmarkPayloadFromCfi({ cfi: target.cfi, sessionId, profileVersion })
+            : createServerAnnotationPayloadFromLocalHighlight({ localHighlight: target, sessionId, profileVersion });
 
         const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
         const created = await spl.reading.annotations.create(payload, { idempotencyKey });
@@ -288,6 +288,7 @@ export function useReaderAnnotations(input: {
       if (!sessionId) return;
 
       const target = highlights.find((h) => h.id === highlightId);
+      if (!target || target.kind === "bookmark") return;
       if (!target?.serverAnnotationId) return;
       if (target.serverUpdateStatus === "saving") return;
 
@@ -356,6 +357,7 @@ export function useReaderAnnotations(input: {
   const createDraftHighlight = useCallback((draft: { cfiRange: string; text: string; note?: string; color?: HighlightColor }) => {
     const now = new Date().toISOString();
     const h: LocalHighlight = {
+      kind: "highlight",
       id: `lh_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`,
       cfiRange: draft.cfiRange,
       text: draft.text,
@@ -385,7 +387,7 @@ export function useReaderAnnotations(input: {
       const previewHighlight: LocalHighlight = { ...preview, serverSaveStatus: undefined };
 
       setHighlights((prev) => {
-        if (prev.some((h) => h.cfiRange === sel.cfiRange)) return prev;
+        if (prev.some((h) => h.kind === "highlight" && h.cfiRange === sel.cfiRange)) return prev;
         return [previewHighlight, ...prev];
       });
       setPreviewHighlightId(previewHighlight.id);
@@ -421,7 +423,7 @@ export function useReaderAnnotations(input: {
             : h,
         );
       }
-      if (prev.some((h) => h.cfiRange === pendingSelection.cfiRange)) return prev;
+      if (prev.some((h) => h.kind === "highlight" && h.cfiRange === pendingSelection.cfiRange)) return prev;
       const h = createDraftHighlight({ cfiRange: pendingSelection.cfiRange, text: pendingSelection.text, color: finalColor });
       return [h, ...prev];
     });
@@ -448,7 +450,7 @@ export function useReaderAnnotations(input: {
             : h,
         );
       }
-      if (prev.some((h) => h.cfiRange === pendingSelection.cfiRange)) return prev;
+      if (prev.some((h) => h.kind === "highlight" && h.cfiRange === pendingSelection.cfiRange)) return prev;
       const h = createDraftHighlight({
         cfiRange: pendingSelection.cfiRange,
         text: pendingSelection.text,
@@ -463,6 +465,29 @@ export function useReaderAnnotations(input: {
     setNoteDraft("");
     setPreviewHighlightId(null);
   }, [createDraftHighlight, highlights, noteDraft, pendingColor, pendingSelection]);
+
+  const createBookmarkAtLocation = useCallback(
+    (cfi: string) => {
+      const trimmed = cfi.trim();
+      if (!trimmed) return;
+      if (!sessionId) return;
+
+      setHighlights((prev) => {
+        if (prev.some((a) => a.kind === "bookmark" && !a.readOnly && a.cfi === trimmed)) return prev;
+        const now = new Date().toISOString();
+        const b: LocalBookmark = {
+          kind: "bookmark",
+          id: `bm_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`,
+          cfi: trimmed,
+          createdAt: now,
+          createIdempotencyKey: createIdempotencyKey(),
+          serverSaveStatus: "unsaved",
+        };
+        return [b, ...prev];
+      });
+    },
+    [sessionId],
+  );
 
   const removeLocalAnnotation = useCallback(
     (id: string) => {
@@ -515,6 +540,7 @@ export function useReaderAnnotations(input: {
     cancelPendingSelection,
     createHighlightFromPending,
     createNoteFromPending,
+    createBookmarkAtLocation,
     saveHighlightToSession,
     deleteHighlightFromSession,
     updateSavedAnnotationNote,
