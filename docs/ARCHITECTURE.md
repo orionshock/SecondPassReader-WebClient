@@ -43,12 +43,13 @@ This app is a standalone static web client that talks to a Second Pass Library s
 
 `src/`
 - `app/` App shell entrypoints/components
-- `api/` Low-level HTTP client(s)
 - `bridges/` `ServerBridge` and `ReaderBridge` abstractions
 - `features/` Feature-area modules (`connection/`, `library/`, `reader/`, `sessions/`, `annotations/`)
-- `schemas/` Shared TypeScript types for API/data shapes (no validation libs yet)
 - `storage/` Local persistence (connection profiles, preferences)
 - `styles/` Minimal global/app CSS (no framework)
+
+`packages/`
+- `secondpass-client/` SPL client package (`@secondpass/client`) with endpoint + transport internals (pure TypeScript)
 
 ## API boundary (SPL)
 
@@ -56,8 +57,9 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - Feature modules (`src/features/*`) should call `SecondPassApiClient` methods and not depend on endpoint URLs, headers, auth construction, or pagination details.
 - Endpoint modules inside the package are free to change internally as long as the facade remains stable.
 - Schema/types for server contracts live in the package and are re-exported from `@secondpass/client`.
+- SPL API contract doc: `docs/SPL_API.md`.
 
-Future (optional): if the facade grows too endpoint-shaped, we can introduce a dedicated `src/spl/` package for app-facing domain methods while keeping `src/api/` as the raw endpoint layer.
+Future (optional): if the facade grows too endpoint-shaped, we can introduce a dedicated `src/spl/` package for app-facing domain methods while keeping the package's internal endpoint/transport layer private.
 
 ### Potential future app events (not implemented)
 
