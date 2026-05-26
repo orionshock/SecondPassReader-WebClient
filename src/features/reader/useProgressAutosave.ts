@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError, createSecondPassClient } from "@secondpass/client";
 import type { ReadingProgressUpdatePayload } from "@secondpass/client";
 import type { ProgressAutosaveState, ProgressSaveState } from "./ProgressPanel";
 
@@ -85,15 +85,8 @@ export function useProgressAutosave(input: {
       }
 
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: apiBaseUrl });
-        const progress = await api.updateReadingProgress({
-          apiBaseUrl,
-          accessToken,
-          tokenType: tokenType ?? "Bearer",
-          sessionId: sid,
-          payload,
-          method: "PATCH",
-        });
+        const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType: tokenType ?? "Bearer" });
+        const progress = await spl.reading.progress.update(sid, payload, { method: "PATCH" });
 
         const savedAt = new Date().toISOString();
         setSaveState({ phase: "success", savedAt, progress });

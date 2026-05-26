@@ -18,7 +18,7 @@ This document describes the internal **Second Pass Library (SPL)** client contra
 App code imports server/API behavior **only** from:
 
 ```ts
-import { SecondPassApiClient } from "@secondpass/client";
+import { createSecondPassClient } from "@secondpass/client";
 ```
 
 App code must not import:
@@ -29,65 +29,78 @@ App code must not import:
 ## 3) Client facade
 
 The current public facade is:
-- `SecondPassApiClient`
+- `createSecondPassClient(config) -> SecondPassClient`
 
 Notes:
-- Method names are currently conservative / endpoint-shaped.
-- A future pass may add more domain-shaped namespaces without changing app behavior (the facade remains the boundary).
+- The API is domain-shaped (namespaces) and instance-based; config supplies `apiBaseUrl`, `accessToken`, and `tokenType`.
 
 ## 4) Major API areas (current)
 
 All methods return Promises and throw on failures (see Error model).
 
-### Discovery / auth / profile
+### Create client
 
-- `SecondPassApiClient.discoverSecondPass(serverBaseUrl)`
-- `createLoginRequest(discovery, input?)`
-- `pollLoginRequest(pollUrl)`
-- `getMe({ apiBaseUrl, accessToken, tokenType? })`
+```ts
+const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
+```
 
-### Library / books
+### server
 
-- `listBooks({ apiBaseUrl, accessToken, tokenType?, params? })`
-- `getBook({ apiBaseUrl, accessToken, tokenType?, bookId })`
-- `downloadBookFile({ downloadUrl, accessToken, tokenType? })`
+- `spl.server.discover(serverBaseUrl)`
+- `spl.server.createLoginRequest(discovery, input?)`
+- `spl.server.pollLoginRequest(pollUrl)`
 
-### Library / series
+### account
 
-- `listSeries({ apiBaseUrl, accessToken, tokenType?, page? })`
-- `getSeries({ apiBaseUrl, accessToken, tokenType?, seriesId })`
+- `spl.account.getCurrent()`
 
-### Library / authors
+### library.books
 
-- `listAuthors({ apiBaseUrl, accessToken, tokenType?, page? })`
-- `getAuthor({ apiBaseUrl, accessToken, tokenType?, authorId })`
+- `spl.library.books.list(params?)`
+- `spl.library.books.get(bookId)`
+- `spl.library.books.downloadFile(downloadUrl)`
 
-### Shelves
+### library.series
 
-- `listShelves({ apiBaseUrl, accessToken, tokenType? })`
-- `getShelf({ apiBaseUrl, accessToken, tokenType?, shelfId })`
-- `listShelfItems({ apiBaseUrl, accessToken, tokenType?, shelfId, page? })`
+- `spl.library.series.list(params?)`
+- `spl.library.series.get(seriesId)`
+- `spl.library.series.books(seriesId, params?)` (delegates to book listing with `series=<seriesId>`)
 
-### Reading sessions
+### library.authors
 
-- `listRecentReadingSessions({ apiBaseUrl, accessToken, tokenType?, limit? })`
-- `listReadingSessions({ apiBaseUrl, accessToken, tokenType?, page?, pageSize?, bookId?, status?, isActive? })`
-- `getReadingSession({ apiBaseUrl, accessToken, tokenType?, sessionId })`
-- `updateReadingSession({ apiBaseUrl, accessToken, tokenType?, sessionId, payload })`
-- `closeReadingSession({ apiBaseUrl, accessToken, tokenType?, sessionId })`
-- `openReadingSession({ apiBaseUrl, accessToken, tokenType?, bookId })`
-- `startOverReadingSession({ apiBaseUrl, accessToken, tokenType?, bookId })`
+- `spl.library.authors.list(params?)`
+- `spl.library.authors.get(authorId)`
+- `spl.library.authors.books(authorId, params?)` (delegates to book listing with `author=<authorId>`)
 
-### Progress
+### shelves
 
-- `updateReadingProgress({ apiBaseUrl, accessToken, tokenType?, sessionId, payload, method? })`
+- `spl.shelves.list(params?)`
+- `spl.shelves.get(shelfId)`
+- `spl.shelves.items(shelfId, params?)`
 
-### Annotations
+### reading
 
-- `listReadingAnnotations({ apiBaseUrl, accessToken, tokenType?, sessionId, page? })`
-- `createReadingAnnotation({ apiBaseUrl, accessToken, tokenType?, payload, idempotencyKey? })`
-- `updateReadingAnnotation({ apiBaseUrl, accessToken, tokenType?, annotationId, payload })`
-- `deleteReadingAnnotation({ apiBaseUrl, accessToken, tokenType?, annotationId })` (server-side soft-delete)
+- `spl.reading.openBook(bookId)`
+- `spl.reading.startOver(bookId)`
+
+### reading.sessions
+
+- `spl.reading.sessions.recent(params?)`
+- `spl.reading.sessions.list(params?)`
+- `spl.reading.sessions.get(sessionId)`
+- `spl.reading.sessions.update(sessionId, payload)`
+- `spl.reading.sessions.close(sessionId)`
+
+### reading.progress
+
+- `spl.reading.progress.update(sessionId, payload, options?)`
+
+### reading.annotations
+
+- `spl.reading.annotations.list({ sessionId, page? })`
+- `spl.reading.annotations.create(payload, { idempotencyKey? }?)`
+- `spl.reading.annotations.update(annotationId, payload)`
+- `spl.reading.annotations.delete(annotationId)` (server-side soft-delete)
 
 ## 5) Error model
 
@@ -118,4 +131,3 @@ Possible future events (not implemented):
 
 - Renderer boundary remains `ReaderBridge` + the concrete renderer implementation (currently `EpubReaderPanel`).
 - Reader adapters translate between SPL domain models (sessions/annotations) and renderer highlight/location models.
-

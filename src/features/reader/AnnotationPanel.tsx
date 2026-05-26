@@ -1,7 +1,7 @@
 import type { ReadingOpenResponse, ReadingSessionSummary } from "@secondpass/client";
 import type { LocalHighlight } from "./types";
 import { useEffect, useState } from "react";
-import { SecondPassApiClient } from "@secondpass/client";
+import { createSecondPassClient } from "@secondpass/client";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
   HIGHLIGHT_COLORS,
@@ -112,14 +112,8 @@ export function AnnotationPanel({
     setSessionSaving(true);
     setSessionSaveError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: new URL(apiBaseUrl).origin });
-      const updated = await api.updateReadingSession({
-        apiBaseUrl,
-        accessToken,
-        tokenType: tokenType ?? "Bearer",
-        sessionId,
-        payload: patch,
-      });
+      const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType: tokenType ?? "Bearer" });
+      const updated = await spl.reading.sessions.update(sessionId, patch);
       setSessionMeta(updated);
       setEditingSessionName(false);
       setEditingSessionNotes(false);

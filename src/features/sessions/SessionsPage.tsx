@@ -1,9 +1,10 @@
 ﻿import { useCallback, useEffect, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import type { PaginatedResponse, ReadingSessionSummary } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 function formatAuthors(session: ReadingSessionSummary): string {
   const authors = session.book?.authors ?? [];
@@ -67,11 +68,8 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
       setBusy(true);
       setError(null);
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-        const r = await api.listReadingSessions({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
+        const spl = createSplClientFromProfile(profile);
+        const r = await spl.reading.sessions.list({
           page: targetPage,
           pageSize,
           isActive: filter === "active" ? true : filter === "closed" ? false : undefined,

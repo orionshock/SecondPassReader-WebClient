@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from "react";
-import { SecondPassApiClient } from "@secondpass/client";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 import type { ReadingRecentSessionsResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
@@ -31,13 +31,8 @@ export function RecentReadingSection({
     setBusy(true);
     setError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const r = await api.listRecentReadingSessions({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        limit: 10,
-      });
+      const spl = createSplClientFromProfile(profile);
+      const r = await spl.reading.sessions.recent({ limit: 10 });
       setData(r);
     } catch (e) {
       setData(null);

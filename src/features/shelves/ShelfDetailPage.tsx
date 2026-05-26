@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 function formatAuthors(item: ShelfItem): string {
   const authors = item.book.authors ?? [];
@@ -24,21 +25,10 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     setBusy(true);
     setError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
+      const spl = createSplClientFromProfile(profile);
       const [s, page] = await Promise.all([
-        api.getShelf({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
-          shelfId,
-        }),
-        api.listShelfItems({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
-          shelfId,
-          page: 1,
-        }),
+        spl.shelves.get(shelfId),
+        spl.shelves.items(shelfId, { page: 1 }),
       ]);
       setShelf(s);
       const results = page.results ?? [];
@@ -95,14 +85,8 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     setLoadMoreBusy(true);
     setError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const page = await api.listShelfItems({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        shelfId,
-        page: nextPage,
-      });
+      const spl = createSplClientFromProfile(profile);
+      const page = await spl.shelves.items(shelfId, { page: nextPage });
       const results = page.results ?? [];
       setItems((prev) => {
         const merged = [...prev, ...results];

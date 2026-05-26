@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError, createSecondPassClient } from "@secondpass/client";
 import type { ReadingOpenResponse } from "@secondpass/client";
 import { createIdempotencyKey } from "./idempotency";
 import {
@@ -121,14 +121,8 @@ export function useReaderAnnotations(input: {
     setLoadingMoreAnnotations(true);
     setLoadMoreAnnotationsError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
-      const page = await api.listReadingAnnotations({
-        apiBaseUrl: input.apiBaseUrl,
-        accessToken: input.accessToken,
-        tokenType: input.tokenType ?? "Bearer",
-        sessionId,
-        page: nextPage,
-      });
+      const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
+      const page = await spl.reading.annotations.list({ sessionId, page: nextPage });
 
       const converted = (page.results ?? [])
         .map((a) => createLocalHighlightFromServerAnnotation(a))
@@ -198,14 +192,8 @@ export function useReaderAnnotations(input: {
           profileVersion,
         });
 
-        const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
-        const created = await api.createReadingAnnotation({
-          apiBaseUrl: input.apiBaseUrl,
-          accessToken: input.accessToken,
-          tokenType: input.tokenType ?? "Bearer",
-          payload,
-          idempotencyKey,
-        });
+        const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
+        const created = await spl.reading.annotations.create(payload, { idempotencyKey });
 
         const now = new Date().toISOString();
         setHighlights((prev) =>
@@ -271,13 +259,8 @@ export function useReaderAnnotations(input: {
       );
 
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
-        await api.deleteReadingAnnotation({
-          apiBaseUrl: input.apiBaseUrl,
-          accessToken: input.accessToken,
-          tokenType: input.tokenType ?? "Bearer",
-          annotationId: target.serverAnnotationId,
-        });
+        const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
+        await spl.reading.annotations.delete(target.serverAnnotationId);
 
         setHighlights((prev) => prev.filter((h) => h.id !== highlightId));
         if (selectedHighlightId === highlightId) setSelectedHighlightId(null);
@@ -328,14 +311,8 @@ export function useReaderAnnotations(input: {
           profileVersion,
         });
 
-        const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
-        const updated = await api.updateReadingAnnotation({
-          apiBaseUrl: input.apiBaseUrl,
-          accessToken: input.accessToken,
-          tokenType: input.tokenType ?? "Bearer",
-          annotationId: target.serverAnnotationId,
-          payload,
-        });
+        const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
+        const updated = await spl.reading.annotations.update(target.serverAnnotationId, payload);
 
         const updatedAt =
           (typeof (updated as any)?.updated_at === "string" && (updated as any).updated_at) ||

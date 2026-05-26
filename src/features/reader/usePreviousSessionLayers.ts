@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SecondPassApiClient } from "@secondpass/client";
+import { createSecondPassClient } from "@secondpass/client";
 import type { ReadingAnnotationPage, ReadingSessionSummary } from "@secondpass/client";
 import type { LocalHighlight } from "./types";
 import { createLocalHighlightFromServerAnnotation } from "./readingAnnotationAdapter";
@@ -57,11 +57,8 @@ export function usePreviousSessionLayers(input: {
 
     void (async () => {
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: new URL(input.apiBaseUrl!).origin });
-        const page = await api.listReadingSessions({
-          apiBaseUrl: input.apiBaseUrl!,
-          accessToken: input.accessToken!,
-          tokenType: input.tokenType ?? "Bearer",
+        const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl!, accessToken: input.accessToken!, tokenType: input.tokenType ?? "Bearer" });
+        const page = await spl.reading.sessions.list({
           bookId: bookKey,
           isActive: false,
           pageSize: 50,
@@ -108,14 +105,8 @@ export function usePreviousSessionLayers(input: {
       cacheRef.current.set(sid, { session, highlights: [], loading: true });
       setBump((v) => v + 1);
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: new URL(input.apiBaseUrl!).origin });
-        const page = await api.listReadingAnnotations({
-          apiBaseUrl: input.apiBaseUrl!,
-          accessToken: input.accessToken!,
-          tokenType: input.tokenType ?? "Bearer",
-          sessionId: sid,
-          page: 1,
-        });
+        const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl!, accessToken: input.accessToken!, tokenType: input.tokenType ?? "Bearer" });
+        const page = await spl.reading.annotations.list({ sessionId: sid, page: 1 });
 
         const highlights: LocalHighlight[] = [];
         for (const ann of page.results ?? []) {
@@ -175,13 +166,8 @@ export function usePreviousSessionLayers(input: {
         const url = new URL(nextUrl);
         const pageRaw = url.searchParams.get("page");
         const pageNum = pageRaw ? Number(pageRaw) : NaN;
-        const page = await new SecondPassApiClient({ serverBaseUrl: new URL(input.apiBaseUrl!).origin }).listReadingAnnotations({
-          apiBaseUrl: input.apiBaseUrl!,
-          accessToken: input.accessToken!,
-          tokenType: input.tokenType ?? "Bearer",
-          sessionId: sid,
-          page: Number.isFinite(pageNum) ? pageNum : undefined,
-        });
+        const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl!, accessToken: input.accessToken!, tokenType: input.tokenType ?? "Bearer" });
+        const page = await spl.reading.annotations.list({ sessionId: sid, page: Number.isFinite(pageNum) ? pageNum : undefined });
 
         const more: LocalHighlight[] = [];
         for (const ann of page.results ?? []) {

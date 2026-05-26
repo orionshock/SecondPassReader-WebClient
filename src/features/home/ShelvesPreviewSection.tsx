@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 export function ShelvesPreviewSection({ profile }: { profile: ConnectionProfile | null }) {
   const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
@@ -15,12 +16,8 @@ export function ShelvesPreviewSection({ profile }: { profile: ConnectionProfile 
     setBusy(true);
     setError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const r = await api.listShelves({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-      });
+      const spl = createSplClientFromProfile(profile);
+      const r = await spl.shelves.list();
       setShelves(r.results ?? []);
     } catch (e) {
       const message =

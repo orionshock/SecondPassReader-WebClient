@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { SecondPassApiClient, ApiError } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 function shelfOwnerLabel(shelf: Shelf): string {
   if (shelf.owner_type === "group") {
@@ -25,12 +26,8 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     setBusy(true);
     setError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const r = await api.listShelves({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-      });
+      const spl = createSplClientFromProfile(profile);
+      const r = await spl.shelves.list();
       setData(r.results ?? []);
     } catch (e) {
       const message =

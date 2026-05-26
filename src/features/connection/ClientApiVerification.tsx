@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import type { MePayload } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -62,12 +63,8 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
 
     setState({ phase: "verifying" });
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const me = await api.getMe({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-      });
+      const spl = createSplClientFromProfile(profile);
+      const me = await spl.account.getCurrent();
 
       const now = new Date().toISOString();
       const updated: ConnectionProfile = {

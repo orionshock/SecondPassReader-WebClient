@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import type { LibraryBook } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailPanel } from "./BookDetailPanel";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 export function BookDetailModal({
   profile,
@@ -54,12 +55,6 @@ export function BookDetailModal({
   useEffect(() => {
     if (!canFetch) return;
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!profile.serverBaseUrl) return;
-
-    const apiBaseUrl = profile.apiBaseUrl;
-    const accessToken = profile.accessToken;
-    const tokenType = profile.tokenType ?? "Bearer";
-    const serverBaseUrl = profile.serverBaseUrl;
 
     fetchSeqRef.current += 1;
     const seq = fetchSeqRef.current;
@@ -68,13 +63,8 @@ export function BookDetailModal({
     setError(null);
     void (async () => {
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl });
-        const full = await api.getBook({
-          apiBaseUrl,
-          accessToken,
-          tokenType,
-          bookId,
-        });
+        const spl = createSplClientFromProfile(profile);
+        const full = await spl.library.books.get(bookId);
         if (seq !== fetchSeqRef.current) return;
         setBook(full);
         if (DEBUG_BOOK_DETAIL && !loggedBookIdsRef.current[bookId]) {

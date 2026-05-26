@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError, createSecondPassClient } from "@secondpass/client";
 import type { LibraryBook, ReadingOpenResponse } from "@secondpass/client";
 import { findNextBookInSeries } from "../library/seriesNavigation";
 
@@ -81,17 +81,12 @@ export function useNearEndLifecycle(input: {
     }
 
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
+      const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
       if (input.debug) {
         // eslint-disable-next-line no-console
         console.log("[progress] start-over: request", { bookId: input.openedBook.book.id, priorSessionId: input.sessionId });
       }
-      let next = await api.startOverReadingSession({
-        apiBaseUrl: input.apiBaseUrl,
-        accessToken: input.accessToken,
-        tokenType: input.tokenType ?? "Bearer",
-        bookId: input.openedBook.book.id,
-      });
+      let next = await spl.reading.startOver(input.openedBook.book.id);
 
       const nextSessionId: string | null = (next as unknown as { session?: { id?: string } })?.session?.id ?? null;
       if (!nextSessionId) {
@@ -102,12 +97,7 @@ export function useNearEndLifecycle(input: {
             keys: next && typeof next === "object" ? Object.keys(next as object) : typeof next,
           });
         }
-        next = await api.openReadingSession({
-          apiBaseUrl: input.apiBaseUrl,
-          accessToken: input.accessToken,
-          tokenType: input.tokenType ?? "Bearer",
-          bookId: input.openedBook.book.id,
-        });
+        next = await spl.reading.openBook(input.openedBook.book.id);
       }
       if (input.debug) {
         // eslint-disable-next-line no-console
@@ -167,19 +157,10 @@ export function useNearEndLifecycle(input: {
     setNextBookBusy(true);
     let phase: "lookup" | "close" | "open" = "lookup";
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: input.apiBaseUrl });
+      const spl = createSecondPassClient({ apiBaseUrl: input.apiBaseUrl, accessToken: input.accessToken, tokenType: input.tokenType ?? "Bearer" });
       setNearEndMessage(`Opening next book${"\u2026"}`);
 
-      const seriesBooks = await api.listBooks({
-        apiBaseUrl: input.apiBaseUrl,
-        accessToken: input.accessToken,
-        tokenType: input.tokenType ?? "Bearer",
-        params: {
-          series: seriesId,
-          ordering: "series_index",
-          pageSize: 200,
-        },
-      });
+      const seriesBooks = await spl.library.books.list({ series: seriesId, ordering: "series_index", pageSize: 200 });
 
       const next = findNextBookInSeries(input.openedBook.book, seriesBooks.results);
       if (!next) {
@@ -194,12 +175,7 @@ export function useNearEndLifecycle(input: {
       if (closeSessionFirst && input.sessionId) {
         phase = "close";
         setNearEndMessage(`Closing session${"\u2026"}`);
-        await api.closeReadingSession({
-          apiBaseUrl: input.apiBaseUrl,
-          accessToken: input.accessToken,
-          tokenType: input.tokenType ?? "Bearer",
-          sessionId: input.sessionId,
-        });
+        await spl.reading.sessions.close(input.sessionId);
       }
 
       phase = "open";

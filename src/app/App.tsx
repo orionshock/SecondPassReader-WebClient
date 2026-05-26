@@ -18,12 +18,13 @@ import {
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import { ShelvesPage } from "../features/shelves/ShelvesPage";
 import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
 import { BookDetailModal } from "../features/library/BookDetailModal";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
+import { createSplClientFromProfile } from "./createSplClient";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -79,12 +80,8 @@ export default function App() {
     lastMeCheckRef.current[profileId] = now;
 
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: selectedProfile.serverBaseUrl });
-      const me = await api.getMe({
-        apiBaseUrl: selectedProfile.apiBaseUrl,
-        accessToken: selectedProfile.accessToken,
-        tokenType: selectedProfile.tokenType ?? "Bearer",
-      });
+      const spl = createSplClientFromProfile(selectedProfile);
+      const me = await spl.account.getCurrent();
 
       const firstName = typeof (me as any)?.first_name === "string" ? ((me as any).first_name as string) : undefined;
       const lastName = typeof (me as any)?.last_name === "string" ? ((me as any).last_name as string) : undefined;
@@ -235,8 +232,6 @@ export default function App() {
     if (workflowStep !== "library_home") return;
     if (!route || route.kind !== "reader") return;
     if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return;
-    const apiBaseUrl = selectedProfile.apiBaseUrl;
-    const accessToken = selectedProfile.accessToken;
 
     const requestedBookId = route.bookId;
     if (openedBook?.book?.id === requestedBookId) return;
@@ -252,7 +247,7 @@ export default function App() {
     void (async () => {
       const seq = navSeqRef.current;
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: selectedProfile.serverBaseUrl });
+        const spl = createSplClientFromProfile(selectedProfile);
 
         const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
           let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -267,12 +262,7 @@ export default function App() {
         };
 
         const book = await withTimeout(
-          api.getBook({
-            apiBaseUrl,
-            accessToken,
-            tokenType: selectedProfile.tokenType ?? "Bearer",
-            bookId: requestedBookId,
-          }),
+          spl.library.books.get(requestedBookId),
           30_000,
           "Loading book details",
         );

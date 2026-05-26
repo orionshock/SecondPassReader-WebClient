@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookList } from "./BookList";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 type BrowseMode = "books" | "series" | "authors";
 
@@ -85,19 +86,14 @@ export function LibraryLandingPage({
       setBooksBusy(true);
       setBooksError(null);
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-        const result = await api.listBooks({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
-          params: {
-            q: input.q?.trim() ? input.q.trim() : undefined,
-            series: input.seriesId,
-            author: input.authorId,
-            ordering: input.ordering,
-            page: input.page,
-            pageSize,
-          },
+        const spl = createSplClientFromProfile(profile);
+        const result = await spl.library.books.list({
+          q: input.q?.trim() ? input.q.trim() : undefined,
+          series: input.seriesId,
+          author: input.authorId,
+          ordering: input.ordering,
+          page: input.page,
+          pageSize,
         });
         setBooksData(result);
         setBooksPage(input.page);
@@ -123,13 +119,8 @@ export function LibraryLandingPage({
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-        const r = await api.listSeries({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
-          page,
-        });
+        const spl = createSplClientFromProfile(profile);
+        const r = await spl.library.series.list({ page });
         setSeriesData(r);
         setSeriesPage(page);
       } catch (e) {
@@ -148,13 +139,8 @@ export function LibraryLandingPage({
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-        const r = await api.listAuthors({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
-          page,
-        });
+        const spl = createSplClientFromProfile(profile);
+        const r = await spl.library.authors.list({ page });
         setAuthorsData(r);
         setAuthorsPage(page);
       } catch (e) {
@@ -216,13 +202,8 @@ export function LibraryLandingPage({
     if (browseMode === "series" && route.seriesId) {
       void (async () => {
         try {
-          const api = new SecondPassApiClient({ serverBaseUrl: profile!.serverBaseUrl });
-          const s = await api.getSeries({
-            apiBaseUrl: profile!.apiBaseUrl!,
-            accessToken: profile!.accessToken!,
-            tokenType: profile!.tokenType ?? "Bearer",
-            seriesId: route.seriesId!,
-          });
+          const spl = createSplClientFromProfile(profile!);
+          const s = await spl.library.series.get(route.seriesId!);
           setSelectedSeries(s);
         } catch {
           setSelectedSeries(null);
@@ -235,13 +216,8 @@ export function LibraryLandingPage({
     if (browseMode === "authors" && route.authorId) {
       void (async () => {
         try {
-          const api = new SecondPassApiClient({ serverBaseUrl: profile!.serverBaseUrl });
-          const a = await api.getAuthor({
-            apiBaseUrl: profile!.apiBaseUrl!,
-            accessToken: profile!.accessToken!,
-            tokenType: profile!.tokenType ?? "Bearer",
-            authorId: route.authorId!,
-          });
+          const spl = createSplClientFromProfile(profile!);
+          const a = await spl.library.authors.get(route.authorId!);
           setSelectedAuthor(a);
         } catch {
           setSelectedAuthor(null);

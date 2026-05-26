@@ -1,10 +1,11 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, SecondPassApiClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import type { ReadingAnnotationPage, ReadingSessionSummary } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { getAnnotationDisplay } from "../annotations/annotationDisplay";
+import { createSplClientFromProfile } from "../../app/createSplClient";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -108,13 +109,8 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setBusy(true);
     setError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const s = await api.getReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-      });
+      const spl = createSplClientFromProfile(profile);
+      const s = await spl.reading.sessions.get(sessionId);
       setSession(s);
       setDraftName(typeof s.name === "string" ? s.name : "");
       setDraftNotes(typeof s.notes === "string" ? s.notes : "");
@@ -142,14 +138,8 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
       setAnnoBusy(true);
       setAnnoError(null);
       try {
-        const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-        const p = await api.listReadingAnnotations({
-          apiBaseUrl: profile.apiBaseUrl,
-          accessToken: profile.accessToken,
-          tokenType: profile.tokenType ?? "Bearer",
-          sessionId,
-          page,
-        });
+        const spl = createSplClientFromProfile(profile);
+        const p = await spl.reading.annotations.list({ sessionId, page });
         setAnnoPage(p);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Failed to load annotations.";
@@ -193,20 +183,9 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setSaveBusy(true);
     setSaveError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      await api.updateReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-        payload: { name: draftName },
-      });
-      const refreshed = await api.getReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-      });
+      const spl = createSplClientFromProfile(profile);
+      await spl.reading.sessions.update(sessionId, { name: draftName });
+      const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
       setEditingName(false);
     } catch (e) {
@@ -223,20 +202,9 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setSaveBusy(true);
     setSaveError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      await api.updateReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-        payload: { notes: draftNotes },
-      });
-      const refreshed = await api.getReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-      });
+      const spl = createSplClientFromProfile(profile);
+      await spl.reading.sessions.update(sessionId, { notes: draftNotes });
+      const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
       setEditingNotes(false);
     } catch (e) {
@@ -253,19 +221,9 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setCloseError(null);
     setConfirmClose(false);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      await api.closeReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-      });
-      const refreshed = await api.getReadingSession({
-        apiBaseUrl: profile.apiBaseUrl,
-        accessToken: profile.accessToken,
-        tokenType: profile.tokenType ?? "Bearer",
-        sessionId,
-      });
+      const spl = createSplClientFromProfile(profile);
+      await spl.reading.sessions.close(sessionId);
+      const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
       setDraftName(typeof refreshed.name === "string" ? refreshed.name : "");
       setDraftNotes(typeof refreshed.notes === "string" ? refreshed.notes : "");
@@ -299,14 +257,8 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setAnnoLoadingMore(true);
     setAnnoError(null);
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile!.serverBaseUrl });
-      const p = await api.listReadingAnnotations({
-        apiBaseUrl: profile!.apiBaseUrl!,
-        accessToken: profile!.accessToken!,
-        tokenType: profile!.tokenType ?? "Bearer",
-        sessionId,
-        page: nextPage,
-      });
+      const spl = createSplClientFromProfile(profile!);
+      const p = await spl.reading.annotations.list({ sessionId, page: nextPage });
       setAnnoPage((prev) => {
         if (!prev) return p;
         return { ...p, results: [...(prev.results ?? []), ...(p.results ?? [])] };

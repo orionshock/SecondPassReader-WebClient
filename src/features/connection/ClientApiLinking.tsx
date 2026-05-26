@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SecondPassApiClient } from "@secondpass/client";
+import { createSecondPassClient, type SecondPassClient } from "@secondpass/client";
 import type { ClientApiLoginRequestResponse, ClientApiPollResponse, SecondPassDiscovery } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { isProfileLinked } from "./connectionStatus";
@@ -73,15 +73,15 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     abortRef.current = abort;
 
     try {
-      const api = new SecondPassApiClient({ serverBaseUrl: profile.serverBaseUrl });
-      const loginRequest = await api.createLoginRequest(discovery, {
+      const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "", accessToken: profile.accessToken ?? "", tokenType: profile.tokenType ?? "Bearer" });
+      const loginRequest = await spl.server.createLoginRequest(discovery, {
         clientName: clientName.trim() || "Second Pass Reader",
         clientType: "reader",
       });
       setState({ phase: "waiting", loginRequest, pollStatus: "pending" });
 
       await pollUntilDone({
-        api,
+        spl,
         loginRequest,
         signal: abort.signal,
         onUpdate: (status, detail) => {
@@ -235,7 +235,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 }
 
 async function pollUntilDone(input: {
-  api: SecondPassApiClient;
+  spl: SecondPassClient;
   loginRequest: ClientApiLoginRequestResponse;
   signal: AbortSignal;
   onUpdate: (status: ClientApiPollResponse["status"], detail?: string) => void;
@@ -244,7 +244,7 @@ async function pollUntilDone(input: {
   const intervalSeconds = Math.max(1, Math.floor(input.loginRequest.interval ?? 3));
 
   while (!input.signal.aborted) {
-    const result = await input.api.pollLoginRequest(input.loginRequest.poll_url);
+    const result = await input.spl.server.pollLoginRequest(input.loginRequest.poll_url);
     input.onUpdate(result.status, `Polling every ${intervalSeconds}s${"\u2026"}`);
 
     if (result.status === "approved") {

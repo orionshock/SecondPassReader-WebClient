@@ -1,5 +1,5 @@
 import type { SecondPassDiscovery } from "@secondpass/client";
-import { SecondPassApiClient } from "@secondpass/client";
+import { createSecondPassClient } from "@secondpass/client";
 
 export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string } {
   const trimmed = input.trim();
@@ -26,7 +26,7 @@ export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string }
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   try {
-    return await SecondPassApiClient.discoverSecondPass(serverBaseUrl);
+    return await createSecondPassClient({ apiBaseUrl: "", accessToken: "", tokenType: "Bearer" }).server.discover(serverBaseUrl);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Discovery failed.";
     throw new Error(message);

@@ -54,7 +54,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 ## API boundary (SPL)
 
 `@secondpass/client` is the app-facing "Second Pass Library" (SPL) boundary:
-- Feature modules (`src/features/*`) should call `SecondPassApiClient` methods and not depend on endpoint URLs, headers, auth construction, or pagination details.
+- Feature modules (`src/features/*`) should call the configured SPL client returned by `createSecondPassClient()` and not depend on endpoint URLs, headers, auth construction, or pagination details.
 - Endpoint modules inside the package are free to change internally as long as the facade remains stable.
 - Schema/types for server contracts live in the package and are re-exported from `@secondpass/client`.
 - SPL API contract doc: `docs/SPL_API.md`.
