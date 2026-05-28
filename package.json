@@ -3,18 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "npm run build -w @secondpass/client && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@likecoin/epub-ts": "^0.6.6",
     "@secondpass/client": "workspace:*",
-    "epubjs": "^0.3.93",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-reader": "^2.0.15"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

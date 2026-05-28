@@ -1,2 +1,3 @@
-export { ReaderArea } from "./ReaderArea";
+export { ReadingActivity } from "./ReadingActivity";
 export type { OpenedBook } from "./types";
+

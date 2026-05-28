@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
 import { LibraryLandingPage } from "../features/library";
 import { HomePage } from "../features/home/HomePage";
-import { ReaderArea, type OpenedBook } from "../features/reader";
+import { ReadingActivity, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { LibraryBook } from "@secondpass/client";
@@ -474,7 +474,7 @@ export default function App() {
                 </section>
               ) : openedBook && route?.kind === "reader" ? (
                 <section className="readerScreen">
-                  <ReaderArea
+                  <ReadingActivity
                     openedBook={openedBook}
                     onBackToLibrary={() => {
                       navigateTo({ kind: "home" });
