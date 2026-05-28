@@ -38,16 +38,16 @@ export function ReadingActivity({
       </div>
 
       <ReadingSessionOrchestrator openedBook={openedBook} apiBaseUrl={apiBaseUrl} accessToken={accessToken} tokenType={tokenType} settings={settings}>
-        {({ state, shellProps }) => (
+        {({ state, shell, debugPanel }) => (
           <div className="spReaderLayout">
-            <div className="spReaderViewportRegion">{shellProps.render()}</div>
+            <div className="spReaderViewportRegion">{shell}</div>
             <div className="spReaderAnnotationsRegion">
               <AnnotationList state={state} onOpenBook={onOpenBook} />
             </div>
+            <div className="spReaderDebugRegion">{debugPanel}</div>
           </div>
         )}
       </ReadingSessionOrchestrator>
     </div>
   );
 }
-

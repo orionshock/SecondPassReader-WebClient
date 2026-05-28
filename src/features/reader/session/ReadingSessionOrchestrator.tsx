@@ -13,7 +13,7 @@ export type ReadingSessionOrchestratorProps = {
   accessToken?: string;
   tokenType?: string;
   settings?: ReaderSettings;
-  children: (arg: { state: ReadingSessionState; shellProps: { render: () => ReactNode } }) => ReactNode;
+  children: (arg: { state: ReadingSessionState; shell: ReactNode; debugPanel: ReactNode }) => ReactNode;
 };
 
 // Placeholder orchestrator: will eventually own session state, SPL calls, and Shell cross-talk.
@@ -60,30 +60,28 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   return props.children({
     state,
-    shellProps: {
-      render: () => (
-        <div className="spReaderShellStack">
-          <ReadingShell blob={props.openedBook.blob} initialDisplayTarget={initialDisplayTarget} annotations={state.annotations} onEvent={onShellEvent} />
-          <section className="panel spReaderDebugPanel">
-            <h2 className="panelTitle">Reader debug (temporary)</h2>
-            <div className="muted">Session: {state.sessionId ?? "(none yet)"}</div>
-            <div className="muted">Book ID: {String(state.bookId)}</div>
-            {lastError ? <div className="errorText">{lastError}</div> : null}
-            <div className="spReaderDebugGrid">
-              <div className="muted">cfi</div>
-              <div className="mono">{state.location?.cfi ?? ""}</div>
-              <div className="muted">href</div>
-              <div className="mono">{state.location?.href ?? ""}</div>
-              <div className="muted">progression</div>
-              <div className="mono">{state.location?.progression ?? ""}</div>
-              <div className="muted">page</div>
-              <div className="mono">
-                {state.location?.displayedPage ?? ""}/{state.location?.displayedTotal ?? ""}
-              </div>
-            </div>
-          </section>
+    shell: (
+      <ReadingShell blob={props.openedBook.blob} initialDisplayTarget={initialDisplayTarget} annotations={state.annotations} onEvent={onShellEvent} />
+    ),
+    debugPanel: (
+      <section className="panel spReaderDebugPanel">
+        <h2 className="panelTitle">Reader debug (temporary)</h2>
+        <div className="muted">Session: {state.sessionId ?? "(none yet)"}</div>
+        <div className="muted">Book ID: {String(state.bookId)}</div>
+        {lastError ? <div className="errorText">{lastError}</div> : null}
+        <div className="spReaderDebugGrid">
+          <div className="muted">cfi</div>
+          <div className="mono">{state.location?.cfi ?? ""}</div>
+          <div className="muted">href</div>
+          <div className="mono">{state.location?.href ?? ""}</div>
+          <div className="muted">progression</div>
+          <div className="mono">{state.location?.progression ?? ""}</div>
+          <div className="muted">page</div>
+          <div className="mono">
+            {state.location?.displayedPage ?? ""}/{state.location?.displayedTotal ?? ""}
+          </div>
         </div>
-      ),
-    },
+      </section>
+    ),
   });
 }
