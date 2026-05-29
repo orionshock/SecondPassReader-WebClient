@@ -28,9 +28,6 @@ function toRenditionTarget(target: ReaderLocationTarget | undefined): string | n
       return target.cfiRange;
     case "href":
       return target.href;
-    case "progression":
-      // epubjs-style APIs sometimes accept percentages, but we intentionally avoid guessing here.
-      return undefined;
   }
 }
 

@@ -4,15 +4,28 @@
 // Engine-specific types from @likecoin/epub-ts should not appear above the engine layer.
 
 export type ReaderLocation = {
+  /**
+   * Canonical restore anchor / primary persisted reading position (EPUB CFI).
+   *
+   * This is what we rely on to resume reading position across renderer changes.
+   */
   cfi?: string;
+  /**
+   * Useful context / fallback / TOC matching (typically a spine href).
+   *
+   * Not authoritative for precise restore, but helpful for display and navigation intent.
+   */
   href?: string;
   /**
-   * Canonical whole-book progress (0..1) for persistence.
+   * Approximate whole-book progress (0..1) derived from the engine's location reporting.
    *
-   * This is intended to reflect progress from the first renderable EPUB location
-   * to the last renderable EPUB location (whole-book), not chapter-local progress.
+   * This is UI glue (e.g. "12%") and may be sent to the server for presentation, but it is
+   * not authoritative and must not be used as the canonical restore anchor.
    */
   bookProgress?: number;
+  /**
+   * Rendition display metadata (not persisted as canonical position).
+   */
   displayedPage?: number;
   displayedTotal?: number;
   raw?: unknown;
@@ -34,8 +47,7 @@ export type ReaderTocItem = {
 export type ReaderLocationTarget =
   | { type: "cfi"; cfi: string }
   | { type: "cfiRange"; cfiRange: string }
-  | { type: "href"; href: string }
-  | { type: "progression"; progression: number };
+  | { type: "href"; href: string };
 
 export type ReaderAnnotation =
   | {

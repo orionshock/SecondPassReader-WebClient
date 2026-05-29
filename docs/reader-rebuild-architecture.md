@@ -59,8 +59,10 @@ Key principle:
 
 ## Progress + navigation notes (typescript-eupb)
 
-- `bookProgress` is the canonical whole-book persisted progress concept (0..1). It is derived from the engine's whole-book location reporting when available and is intended to be persisted to the server as reading progress.
-- Display progress may later combine whole-book progress (`bookProgress`) and a chapter-local progress concept (planned `chapterProgress`) for UX, but only `bookProgress` is canonical/persisted.
+- `cfi` is the canonical restore anchor / primary persisted reading position. This is what we rely on to resume reading position across renderer changes.
+- `href` is useful context and a fallback for TOC matching / display, but is not authoritative for precise restore.
+- `bookProgress` is approximate whole-book UI progress (0..1) derived from engine location reporting. It may be sent to the server for presentation (e.g. "12%"), but it is not authoritative and must not be used for restore.
+- Display progress may later combine approximate whole-book progress (`bookProgress`) and a chapter-local progress concept (planned `chapterProgress`) for UX.
 - Initial navigation/restore flows through the orchestrator -> shell -> engine `display(target)` command path (same mechanism as future TOC jumps).
 - TOC is normalized at the engine/shell boundary into app-owned `ReaderTocItem[]` (no raw epub-ts nav item leakage).
 
@@ -97,7 +99,7 @@ The old implementation can be recovered from git history if needed.
 
 - What `@likecoin/epub-ts` exposes for:
   - selection -> text extraction + CFI range capture
-  - location reporting: current location + visible range + progression/percentage
+  - location reporting: current location + visible range + percentage (for UI only)
   - annotation marking primitives and reflow behavior
   - TOC/spine navigation primitives and href <-> CFI mapping
-- How to represent "visible range" as an engine-agnostic type (likely `{ startCfi, endCfi, href?, progression? }`).
+- How to represent "visible range" as an engine-agnostic type (likely `{ startCfi, endCfi, href?, bookProgress? }`).
