@@ -1,6 +1,14 @@
 export { ApiError, type ApiErrorKind } from "./apiHttp";
 export { createSecondPassClient } from "./client";
-export type { SecondPassClient, SecondPassClientConfig, LibraryBookListParams, SaveReadingProgressInput } from "./client";
+export type {
+  SecondPassClient,
+  SecondPassClientConfig,
+  LibraryBookListParams,
+  SaveReadingProgressInput,
+  CreateHighlightInput,
+  CreateBookmarkInput,
+  UpdateNoteInput,
+} from "./client";
 
 export type * from "./schemas/clientApiAuth";
 export type * from "./schemas/library";

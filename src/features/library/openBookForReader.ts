@@ -11,7 +11,6 @@ export async function openBookForReader(input: {
 
   if (!profile.apiBaseUrl) throw new Error("Profile is missing apiBaseUrl. Run discovery again.");
   if (!profile.accessToken) throw new Error("Profile is not linked.");
-  if (!book.file?.download_url) throw new Error("No EPUB file available for this book.");
 
   const spl = createSplClientFromProfile(profile);
 
@@ -27,24 +26,13 @@ export async function openBookForReader(input: {
     }
   };
 
-  const open = await withTimeout(
-    spl.reading.openBook(book.id),
-    45_000,
-    "Opening reading session",
-  );
-
-  const download = await withTimeout(
-    spl.library.books.downloadFile(book.file.download_url),
-    120_000,
-    "Downloading EPUB",
-  );
-
-  const objectUrl = URL.createObjectURL(download.blob);
+  const opened = await withTimeout(spl.reading.openForReading(book), 120_000, "Opening reading session");
+  const objectUrl = URL.createObjectURL(opened.blob);
   return {
     book,
-    blob: download.blob,
+    blob: opened.blob,
     objectUrl,
     openedAt: new Date().toISOString(),
-    readingOpen: open,
+    readingOpen: opened.open,
   };
 }

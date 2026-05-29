@@ -44,6 +44,9 @@ All methods return Promises and throw on failures (see Error model).
 const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 ```
 
+Notes:
+- `accessToken` is optional for server-level discovery/linking calls (`spl.server.*`). Auth-required namespaces throw if called without credentials.
+
 ### server
 
 - `spl.server.discover(serverBaseUrl)`
@@ -58,7 +61,8 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 
 - `spl.library.books.list(params?)`
 - `spl.library.books.get(bookId)`
-- `spl.library.books.downloadFile(downloadUrl)`
+- `spl.library.books.downloadEpub(bookIdOrBook)` (preferred)
+- `spl.library.books.downloadFile(downloadUrl)` (low-level / escape hatch)
 
 ### library.series
 
@@ -80,28 +84,31 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 
 ### reading
 
-- `spl.reading.openBook(bookId)`
-- `spl.reading.startOver(bookId)`
+- `spl.reading.openForReading(bookIdOrBook)` (open session + download EPUB blob)
 
 ### reading.sessions
 
+- `spl.reading.sessions.open(bookId)`
+- `spl.reading.sessions.startOver(bookId)`
 - `spl.reading.sessions.recent(params?)`
 - `spl.reading.sessions.list(params?)`
 - `spl.reading.sessions.get(sessionId)`
-- `spl.reading.sessions.update(sessionId, payload)`
+- `spl.reading.sessions.updateDetails(sessionId, { name?, notes? })`
 - `spl.reading.sessions.close(sessionId)`
 
 ### reading.progress
 
 - `spl.reading.progress.save(sessionId, { profileVersion, cfi, href?, bookProgress?, format? })` (preferred)
-- `spl.reading.progress.update(sessionId, payload, options?)` (low-level / escape hatch)
 
 ### reading.annotations
 
 - `spl.reading.annotations.list({ sessionId, page? })`
-- `spl.reading.annotations.create(payload, { idempotencyKey? }?)`
-- `spl.reading.annotations.update(annotationId, payload)`
-- `spl.reading.annotations.delete(annotationId)` (server-side soft-delete)
+- `spl.reading.annotations.createHighlight(input, { idempotencyKey? }?)`
+- `spl.reading.annotations.createBookmark(input, { idempotencyKey? }?)`
+- `spl.reading.annotations.updateNote(annotationId, input)`
+- `spl.reading.annotations.remove(annotationId)` (server-side soft-delete)
+- `spl.reading.annotations.raw.create(payload, { idempotencyKey? }?)` (escape hatch)
+- `spl.reading.annotations.raw.update(annotationId, payload)` (escape hatch)
 
 ## 5) Error model
 

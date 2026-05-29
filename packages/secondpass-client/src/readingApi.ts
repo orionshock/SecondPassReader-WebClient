@@ -231,6 +231,32 @@ export type SaveReadingProgressInput = {
   format?: "epub" | string;
 };
 
+export type CreateHighlightInput = {
+  sessionId: string;
+  profileVersion: string;
+  cfiRange: string;
+  text?: string;
+  color?: string;
+  note?: string;
+};
+
+export type CreateBookmarkInput = {
+  sessionId: string;
+  profileVersion: string;
+  cfi: string;
+};
+
+export type UpdateNoteInput = {
+  profileVersion: string;
+  sessionId: string;
+  // Keep motivation explicit for correctness; default to "commenting" for note updates.
+  motivation?: "commenting" | "highlighting" | "bookmarking" | string;
+  cfi: string;
+  note?: string;
+  color?: string;
+  text?: string;
+};
+
 export async function saveReadingProgress(input: {
   apiBaseUrl: string;
   accessToken: string;
@@ -262,6 +288,144 @@ export async function saveReadingProgress(input: {
     sessionId: input.sessionId,
     payload,
     method: "PATCH",
+  });
+}
+
+const EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html";
+
+export async function createHighlightAnnotation(input: {
+  apiBaseUrl: string;
+  accessToken: string;
+  tokenType?: string;
+  create: CreateHighlightInput;
+  idempotencyKey?: string;
+}): Promise<ReadingAnnotation> {
+  const cfiRange = input.create.cfiRange.trim();
+  if (!cfiRange) throw new Error("Highlight requires a cfiRange.");
+
+  const body: ReadingAnnotationCreatePayload["body"] = [];
+  const text = typeof input.create.text === "string" ? input.create.text.trim() : "";
+  if (text) {
+    body.push({
+      type: "TextualBody",
+      purpose: "describing",
+      value: text,
+      ...(input.create.color ? { color: input.create.color } : {}),
+    });
+  }
+  const note = typeof input.create.note === "string" ? input.create.note.trim() : "";
+  if (note) {
+    body.push({
+      type: "TextualBody",
+      purpose: "commenting",
+      value: note,
+    });
+  }
+
+  const payload: ReadingAnnotationCreatePayload = {
+    profile_version: input.create.profileVersion,
+    session: input.create.sessionId,
+    motivation: "highlighting",
+    target: {
+      selector: {
+        type: "FragmentSelector",
+        conformsTo: EPUB_CFI_CONFORMS_TO,
+        value: cfiRange,
+      },
+    },
+    ...(body.length ? { body } : {}),
+  };
+
+  return createReadingAnnotation({
+    apiBaseUrl: input.apiBaseUrl,
+    accessToken: input.accessToken,
+    tokenType: input.tokenType,
+    payload,
+    idempotencyKey: input.idempotencyKey,
+  });
+}
+
+export async function createBookmarkAnnotation(input: {
+  apiBaseUrl: string;
+  accessToken: string;
+  tokenType?: string;
+  create: CreateBookmarkInput;
+  idempotencyKey?: string;
+}): Promise<ReadingAnnotation> {
+  const cfi = input.create.cfi.trim();
+  if (!cfi) throw new Error("Bookmark requires a cfi.");
+
+  const payload: ReadingAnnotationCreatePayload = {
+    profile_version: input.create.profileVersion,
+    session: input.create.sessionId,
+    motivation: "bookmarking",
+    target: {
+      selector: {
+        type: "FragmentSelector",
+        conformsTo: EPUB_CFI_CONFORMS_TO,
+        value: cfi,
+      },
+    },
+  };
+
+  return createReadingAnnotation({
+    apiBaseUrl: input.apiBaseUrl,
+    accessToken: input.accessToken,
+    tokenType: input.tokenType,
+    payload,
+    idempotencyKey: input.idempotencyKey,
+  });
+}
+
+export async function updateNoteAnnotation(input: {
+  apiBaseUrl: string;
+  accessToken: string;
+  tokenType?: string;
+  annotationId: string;
+  update: UpdateNoteInput;
+}): Promise<ReadingAnnotation> {
+  const cfi = input.update.cfi.trim();
+  if (!cfi) throw new Error("Note update requires a cfi.");
+
+  const body: ReadingAnnotationUpdatePayload["body"] = [];
+  const text = typeof input.update.text === "string" ? input.update.text.trim() : "";
+  if (text) {
+    body.push({
+      type: "TextualBody",
+      purpose: "describing",
+      value: text,
+      ...(input.update.color ? { color: input.update.color } : {}),
+    });
+  }
+  const note = typeof input.update.note === "string" ? input.update.note.trim() : "";
+  if (note) {
+    body.push({
+      type: "TextualBody",
+      purpose: "commenting",
+      value: note,
+    });
+  }
+
+  const payload: ReadingAnnotationUpdatePayload = {
+    profile_version: input.update.profileVersion,
+    session: input.update.sessionId,
+    motivation: input.update.motivation ?? "commenting",
+    target: {
+      selector: {
+        type: "FragmentSelector",
+        conformsTo: EPUB_CFI_CONFORMS_TO,
+        value: cfi,
+      },
+    },
+    ...(body.length ? { body } : {}),
+  };
+
+  return updateReadingAnnotation({
+    apiBaseUrl: input.apiBaseUrl,
+    accessToken: input.accessToken,
+    tokenType: input.tokenType,
+    annotationId: input.annotationId,
+    payload,
   });
 }
 

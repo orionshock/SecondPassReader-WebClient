@@ -73,7 +73,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     abortRef.current = abort;
 
     try {
-      const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "", accessToken: profile.accessToken ?? "", tokenType: profile.tokenType ?? "Bearer" });
+      const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "" });
       const loginRequest = await spl.server.createLoginRequest(discovery, {
         clientName: clientName.trim() || "Second Pass Reader",
         clientType: "reader",

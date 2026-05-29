@@ -19,7 +19,6 @@ import type {
   ReadingAnnotationUpdatePayload,
   ReadingOpenResponse,
   ReadingProgress,
-  ReadingProgressUpdatePayload,
   ReadingRecentSessionsResponse,
   ReadingSession,
   ReadingSessionSummary,
@@ -30,6 +29,8 @@ import { createLoginRequest, discoverSecondPass, getMe, pollLoginRequest } from 
 import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
 import {
   closeReadingSession,
+  createBookmarkAnnotation,
+  createHighlightAnnotation,
   createReadingAnnotation,
   deleteReadingAnnotation,
   getReadingSession,
@@ -40,17 +41,17 @@ import {
   saveReadingProgress,
   startOverReadingSession,
   updateReadingAnnotation,
-  updateReadingProgress,
+  updateNoteAnnotation,
   updateReadingSession,
 } from "./readingApi";
-import type { SaveReadingProgressInput } from "./readingApi";
+import type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
 
-export type { SaveReadingProgressInput } from "./readingApi";
+export type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
 import { getShelf, listShelfItems, listShelves } from "./shelvesApi";
 
 export type SecondPassClientConfig = {
   apiBaseUrl: string;
-  accessToken: string;
+  accessToken?: string;
   tokenType?: string;
 };
 
@@ -84,7 +85,13 @@ export type SecondPassClient = {
     books: {
       list(params?: LibraryBookListParams): Promise<PaginatedResponse<LibraryBook>>;
       get(bookId: string): Promise<LibraryBook>;
+      /**
+       * Download an arbitrary file URL previously obtained from the server.
+       *
+       * Prefer `downloadEpub()` in app code to avoid handling `download_url` fields directly.
+       */
       downloadFile(downloadUrl: string): Promise<BookFileDownloadResult>;
+      downloadEpub(book: LibraryBook | string | number): Promise<BookFileDownloadResult>;
     };
     series: {
       list(params?: { page?: number }): Promise<PaginatedResponse<LibrarySeries>>;
@@ -105,10 +112,11 @@ export type SecondPassClient = {
   };
 
   reading: {
-    openBook(bookId: string | number): Promise<ReadingOpenResponse>;
-    startOver(bookId: string | number): Promise<ReadingOpenResponse>;
+    openForReading(book: LibraryBook | string | number): Promise<{ open: ReadingOpenResponse; blob: Blob }>;
 
     sessions: {
+      open(bookId: string | number): Promise<ReadingOpenResponse>;
+      startOver(bookId: string | number): Promise<ReadingOpenResponse>;
       recent(params?: { limit?: number }): Promise<ReadingRecentSessionsResponse>;
       list(params?: {
         page?: number;
@@ -118,7 +126,7 @@ export type SecondPassClient = {
         isActive?: boolean;
       }): Promise<PaginatedResponse<ReadingSessionSummary>>;
       get(sessionId: string): Promise<ReadingSessionSummary>;
-      update(sessionId: string, payload: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;
+      updateDetails(sessionId: string, input: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;
       close(sessionId: string): Promise<ReadingSession>;
     };
 
@@ -129,21 +137,18 @@ export type SecondPassClient = {
        * Hides wire-format field names and uses PATCH internally.
        */
       save(sessionId: string, progress: SaveReadingProgressInput): Promise<ReadingProgress>;
-      update(
-        sessionId: string,
-        payload: ReadingProgressUpdatePayload,
-        options?: { method?: "PUT" | "PATCH" },
-      ): Promise<ReadingProgress>;
     };
 
     annotations: {
       list(params: { sessionId: string; page?: number }): Promise<ReadingAnnotationPage>;
-      create(
-        payload: ReadingAnnotationCreatePayload,
-        options?: { idempotencyKey?: string },
-      ): Promise<ReadingAnnotation>;
-      update(annotationId: string, payload: ReadingAnnotationUpdatePayload): Promise<ReadingAnnotation>;
-      delete(annotationId: string): Promise<void>;
+      createHighlight(input: CreateHighlightInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
+      createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
+      updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
+      remove(annotationId: string): Promise<void>;
+      raw: {
+        create(payload: ReadingAnnotationCreatePayload, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
+        update(annotationId: string, payload: ReadingAnnotationUpdatePayload): Promise<ReadingAnnotation>;
+      };
     };
   };
 };
@@ -189,6 +194,16 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         downloadFile: (downloadUrl) => {
           const { accessToken, tokenType } = requireAuth(frozenConfig);
           return downloadBookFile({ downloadUrl, accessToken, tokenType });
+        },
+        downloadEpub: async (book) => {
+          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+          const resolved =
+            typeof book === "string" || typeof book === "number"
+              ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
+              : book;
+          const url = resolved.file?.download_url ?? null;
+          if (!url) throw new Error("No EPUB file available for this book.");
+          return downloadBookFile({ downloadUrl: url, accessToken, tokenType });
         },
       },
 
@@ -239,16 +254,28 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
     },
 
     reading: {
-      openBook: (bookId) => {
+      openForReading: async (book) => {
         const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
-      },
-      startOver: (bookId) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return startOverReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
+        const resolved =
+          typeof book === "string" || typeof book === "number"
+            ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
+            : book;
+        const open = await openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId: resolved.id });
+        const url = resolved.file?.download_url ?? null;
+        if (!url) throw new Error("No EPUB file available for this book.");
+        const dl = await downloadBookFile({ downloadUrl: url, accessToken, tokenType });
+        return { open, blob: dl.blob };
       },
 
       sessions: {
+        open: (bookId) => {
+          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+          return openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
+        },
+        startOver: (bookId) => {
+          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+          return startOverReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
+        },
         recent: (params) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return listRecentReadingSessions({ apiBaseUrl, accessToken, tokenType, limit: params?.limit });
@@ -261,7 +288,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return getReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId });
         },
-        update: (sessionId, payload) => {
+        updateDetails: (sessionId, payload) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return updateReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId, payload });
         },
@@ -276,10 +303,6 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return saveReadingProgress({ apiBaseUrl, accessToken, tokenType, sessionId, progress });
         },
-        update: (sessionId, payload, options) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateReadingProgress({ apiBaseUrl, accessToken, tokenType, sessionId, payload, method: options?.method });
-        },
       },
 
       annotations: {
@@ -287,17 +310,31 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return listReadingAnnotations({ apiBaseUrl, accessToken, tokenType, sessionId: params.sessionId, page: params.page });
         },
-        create: (payload, options) => {
+        createHighlight: (input, options) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return createReadingAnnotation({ apiBaseUrl, accessToken, tokenType, payload, idempotencyKey: options?.idempotencyKey });
+          return createHighlightAnnotation({ apiBaseUrl, accessToken, tokenType, create: input, idempotencyKey: options?.idempotencyKey });
         },
-        update: (annotationId, payload) => {
+        createBookmark: (input, options) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId, payload });
+          return createBookmarkAnnotation({ apiBaseUrl, accessToken, tokenType, create: input, idempotencyKey: options?.idempotencyKey });
         },
-        delete: (annotationId) => {
+        updateNote: (annotationId, input) => {
+          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+          return updateNoteAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId, update: input });
+        },
+        remove: (annotationId) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return deleteReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId });
+        },
+        raw: {
+          create: (payload, options) => {
+            const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+            return createReadingAnnotation({ apiBaseUrl, accessToken, tokenType, payload, idempotencyKey: options?.idempotencyKey });
+          },
+          update: (annotationId, payload) => {
+            const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+            return updateReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId, payload });
+          },
         },
       },
     },
