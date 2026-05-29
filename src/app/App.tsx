@@ -25,6 +25,7 @@ import { BookDetailModal } from "../features/library/BookDetailModal";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
+import type { SecondPassClient } from "@secondpass/client";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -48,6 +49,11 @@ export default function App() {
     if (!selectedProfileId) return null;
     return getConnectionProfile(selectedProfileId) ?? null;
   }, [selectedProfileId, profilesVersion]);
+
+  const splClient: SecondPassClient | null = useMemo(() => {
+    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return null;
+    return createSplClientFromProfile(selectedProfile);
+  }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
 
@@ -480,9 +486,7 @@ export default function App() {
                       navigateTo({ kind: "home" });
                       handleCloseReader();
                     }}
-                    apiBaseUrl={selectedProfile?.apiBaseUrl}
-                    accessToken={selectedProfile?.accessToken}
-                    tokenType={selectedProfile?.tokenType}
+                    spl={splClient}
                     onOpenBook={handleOpenBookFromReader}
                   />
                 </section>

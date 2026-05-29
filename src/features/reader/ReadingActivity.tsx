@@ -4,21 +4,18 @@ import { AnnotationList } from "./annotations/AnnotationList";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { ReaderTocItem } from "./domain/types";
+import type { SecondPassClient } from "@secondpass/client";
 
 export function ReadingActivity({
   openedBook,
   onBackToLibrary,
-  apiBaseUrl,
-  accessToken,
-  tokenType,
+  spl,
   onOpenBook,
   settings,
 }: {
   openedBook: OpenedBook | null;
   onBackToLibrary: () => void;
-  apiBaseUrl?: string;
-  accessToken?: string;
-  tokenType?: string;
+  spl?: SecondPassClient | null;
   onOpenBook?: (book: LibraryBook) => Promise<void>;
   settings?: ReaderSettings;
 }) {
@@ -38,7 +35,7 @@ export function ReadingActivity({
         </div>
       </div>
 
-      <ReadingSessionOrchestrator openedBook={openedBook} apiBaseUrl={apiBaseUrl} accessToken={accessToken} tokenType={tokenType} settings={settings}>
+      <ReadingSessionOrchestrator openedBook={openedBook} spl={spl} settings={settings}>
         {({ state, shell, debugPanel, sendCommand }) => (
           <div className="spReaderLayout">
             <div className="spReaderViewportRegion">{shell}</div>

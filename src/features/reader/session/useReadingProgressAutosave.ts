@@ -1,8 +1,7 @@
-import { ApiError, createSecondPassClient } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReadingProgress, ReadingProgressUpdatePayload } from "@secondpass/client";
+import type { ReadingProgress, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation } from "../domain/types";
-import { buildReadingProgressUpdatePayload } from "./progressPayload";
 
 export type ReadingProgressAutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
@@ -18,9 +17,7 @@ export type ReadingProgressAutosaveState = {
 export function useReadingProgressAutosave(input: {
   enabled?: boolean;
   autosaveDelayMs?: number;
-  apiBaseUrl?: string;
-  accessToken?: string;
-  tokenType?: string;
+  spl?: SecondPassClient | null;
   sessionId: string | null;
   profileVersion: string | null;
   location: ReaderLocation | null;
@@ -36,20 +33,26 @@ export function useReadingProgressAutosave(input: {
   const dirtyRef = useRef(false);
   const lastSavedCfiRef = useRef<string | null>(null);
   const latestCfiRef = useRef<string | null>(null);
-  const latestPayloadRef = useRef<ReadingProgressUpdatePayload | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
-  const payload = useMemo(() => {
+  const progressInput = useMemo(() => {
     if (!input.profileVersion || !input.location) return null;
-    return buildReadingProgressUpdatePayload({ profileVersion: input.profileVersion, location: input.location });
+    const cfi = typeof input.location.cfi === "string" ? input.location.cfi.trim() : "";
+    if (!cfi) return null;
+    const href = typeof input.location.href === "string" ? input.location.href.trim() : "";
+    return {
+      profileVersion: input.profileVersion,
+      cfi,
+      href: href || undefined,
+      bookProgress: typeof input.location.bookProgress === "number" && Number.isFinite(input.location.bookProgress) ? input.location.bookProgress : undefined,
+    };
   }, [input.location, input.profileVersion]);
 
   useEffect(() => {
     sessionIdRef.current = input.sessionId;
-    latestPayloadRef.current = payload;
-    const cfi = payload?.current_location?.cfi ?? null;
+    const cfi = progressInput?.cfi ?? null;
     latestCfiRef.current = cfi;
-  }, [input.sessionId, payload]);
+  }, [input.sessionId, progressInput]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -65,7 +68,6 @@ export function useReadingProgressAutosave(input: {
       dirtyRef.current = false;
       lastSavedCfiRef.current = null;
       latestCfiRef.current = null;
-      latestPayloadRef.current = null;
       setState({ status: "idle" });
     },
     [clearTimer],
@@ -79,10 +81,9 @@ export function useReadingProgressAutosave(input: {
 
   const saveNow = useCallback(async () => {
     const sid = sessionIdRef.current;
-    const p = latestPayloadRef.current;
     const cfi = latestCfiRef.current;
     if (!enabled) return;
-    if (!input.apiBaseUrl || !input.accessToken || !sid || !p || !cfi) return;
+    if (!input.spl || !sid || !progressInput || !cfi) return;
 
     if (inFlightRef.current) {
       dirtyRef.current = true;
@@ -95,13 +96,13 @@ export function useReadingProgressAutosave(input: {
     setState((prev) => ({ ...prev, status: "saving", error: undefined, dirty: false }));
 
     try {
-      const spl = createSecondPassClient({
-        apiBaseUrl: input.apiBaseUrl,
-        accessToken: input.accessToken,
-        tokenType: input.tokenType ?? "Bearer",
+      const progress = await input.spl.reading.progress.save(sid, {
+        profileVersion: progressInput.profileVersion,
+        cfi: progressInput.cfi,
+        href: progressInput.href,
+        bookProgress: progressInput.bookProgress,
+        format: "epub",
       });
-
-      const progress = await spl.reading.progress.update(sid, p, { method: "PATCH" });
 
       const savedAt = new Date().toISOString();
       lastSavedCfiRef.current = cfi;
@@ -136,7 +137,7 @@ export function useReadingProgressAutosave(input: {
         void saveNow();
       }
     }
-  }, [enabled, input.accessToken, input.apiBaseUrl, input.tokenType]);
+  }, [enabled, input.spl, progressInput]);
 
   useEffect(() => {
     if (!enabled) {
@@ -146,10 +147,9 @@ export function useReadingProgressAutosave(input: {
 
     const sid = input.sessionId;
     if (!sid) return;
-    if (!payload) return;
+    if (!progressInput) return;
 
-    const cfi = payload.current_location?.cfi ?? "";
-    if (!cfi) return;
+    const cfi = progressInput.cfi;
 
     // Suppress if we already successfully saved this CFI.
     if (state.lastSavedCfi && state.lastSavedCfi === cfi) return;
@@ -172,7 +172,7 @@ export function useReadingProgressAutosave(input: {
     }, autosaveDelayMs);
 
     return () => clearTimer();
-  }, [autosaveDelayMs, clearTimer, enabled, input.sessionId, payload, saveNow, state.lastSavedCfi, state.status]);
+  }, [autosaveDelayMs, clearTimer, enabled, input.sessionId, progressInput, saveNow, state.lastSavedCfi, state.status]);
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
@@ -181,4 +181,3 @@ export function useReadingProgressAutosave(input: {
     resetForSessionSwap,
   };
 }
-

@@ -223,6 +223,48 @@ export async function updateReadingProgress(input: {
   return (await res.json()) as ReadingProgress;
 }
 
+export type SaveReadingProgressInput = {
+  profileVersion: string;
+  cfi: string;
+  href?: string;
+  bookProgress?: number | null;
+  format?: "epub" | string;
+};
+
+export async function saveReadingProgress(input: {
+  apiBaseUrl: string;
+  accessToken: string;
+  tokenType?: string;
+  sessionId: string;
+  progress: SaveReadingProgressInput;
+}): Promise<ReadingProgress> {
+  const cfi = input.progress.cfi.trim();
+  if (!cfi) throw new Error("Cannot save reading progress without a CFI.");
+
+  const payload: ReadingProgressUpdatePayload = {
+    profile_version: input.progress.profileVersion,
+    current_location: {
+      format: input.progress.format ?? "epub",
+      cfi,
+    },
+  };
+
+  const href = typeof input.progress.href === "string" ? input.progress.href.trim() : "";
+  if (href) (payload.current_location as NonNullable<ReadingProgressUpdatePayload["current_location"]>).href = href;
+
+  const p = input.progress.bookProgress;
+  if (typeof p === "number" && Number.isFinite(p)) payload.progression = p;
+
+  return updateReadingProgress({
+    apiBaseUrl: input.apiBaseUrl,
+    accessToken: input.accessToken,
+    tokenType: input.tokenType,
+    sessionId: input.sessionId,
+    payload,
+    method: "PATCH",
+  });
+}
+
 export async function listReadingAnnotations(input: {
   apiBaseUrl: string;
   accessToken: string;

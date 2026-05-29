@@ -8,12 +8,11 @@ import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
+import type { SecondPassClient } from "@secondpass/client";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
-  apiBaseUrl?: string;
-  accessToken?: string;
-  tokenType?: string;
+  spl?: SecondPassClient | null;
   settings?: ReaderSettings;
   children: (arg: {
     state: ReadingSessionState;
@@ -57,9 +56,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const { autosave } = useReadingProgressAutosave({
     enabled: true,
     autosaveDelayMs: 5000,
-    apiBaseUrl: props.apiBaseUrl,
-    accessToken: props.accessToken,
-    tokenType: props.tokenType,
+    spl: props.spl,
     sessionId: state.sessionId,
     profileVersion,
     location: state.location,

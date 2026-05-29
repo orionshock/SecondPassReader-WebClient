@@ -37,11 +37,15 @@ import {
   listReadingSessions,
   listRecentReadingSessions,
   openReadingSession,
+  saveReadingProgress,
   startOverReadingSession,
   updateReadingAnnotation,
   updateReadingProgress,
   updateReadingSession,
 } from "./readingApi";
+import type { SaveReadingProgressInput } from "./readingApi";
+
+export type { SaveReadingProgressInput } from "./readingApi";
 import { getShelf, listShelfItems, listShelves } from "./shelvesApi";
 
 export type SecondPassClientConfig = {
@@ -119,6 +123,12 @@ export type SecondPassClient = {
     };
 
     progress: {
+      /**
+       * Save reading progress (high-level helper).
+       *
+       * Hides wire-format field names and uses PATCH internally.
+       */
+      save(sessionId: string, progress: SaveReadingProgressInput): Promise<ReadingProgress>;
       update(
         sessionId: string,
         payload: ReadingProgressUpdatePayload,
@@ -262,6 +272,10 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       },
 
       progress: {
+        save: (sessionId, progress) => {
+          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+          return saveReadingProgress({ apiBaseUrl, accessToken, tokenType, sessionId, progress });
+        },
         update: (sessionId, payload, options) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return updateReadingProgress({ apiBaseUrl, accessToken, tokenType, sessionId, payload, method: options?.method });

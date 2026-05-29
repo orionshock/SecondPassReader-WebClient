@@ -93,7 +93,8 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 
 ### reading.progress
 
-- `spl.reading.progress.update(sessionId, payload, options?)`
+- `spl.reading.progress.save(sessionId, { profileVersion, cfi, href?, bookProgress?, format? })` (preferred)
+- `spl.reading.progress.update(sessionId, payload, options?)` (low-level / escape hatch)
 
 ### reading.annotations
 
