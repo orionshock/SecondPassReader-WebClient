@@ -65,6 +65,8 @@ Key principle:
 - Display progress may later combine approximate whole-book progress (`bookProgress`) and a chapter-local progress concept (planned `chapterProgress`) for UX.
 - Initial navigation/restore flows through the orchestrator -> shell -> engine `display(target)` command path (same mechanism as future TOC jumps).
 - TOC is normalized at the engine/shell boundary into app-owned `ReaderTocItem[]` (no raw epub-ts nav item leakage).
+- Progress autosave lives in the session layer (orchestrator-owned hook) and calls `spl.reading.progress.update(...)`. The shell/engine never call SPL directly.
+- Autosave persists `current_location.cfi` as the meaningful restore anchor; `progression` is populated from `bookProgress` only as approximate presentation metadata.
 
 ## What must remain stable
 

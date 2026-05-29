@@ -7,6 +7,7 @@ import type { ReaderLocation } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
+import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -29,6 +30,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
   const commandSeqRef = useRef(0);
+  const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -51,6 +53,17 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       annotations: seedAnnotations,
     };
   }, [location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, toc]);
+
+  const { autosave } = useReadingProgressAutosave({
+    enabled: true,
+    autosaveDelayMs: 5000,
+    apiBaseUrl: props.apiBaseUrl,
+    accessToken: props.accessToken,
+    tokenType: props.tokenType,
+    sessionId: state.sessionId,
+    profileVersion,
+    location: state.location,
+  });
 
   const statusLine = useMemo(() => {
     const parts: string[] = [];
@@ -119,6 +132,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         <h2 className="panelTitle">Reader debug (temporary)</h2>
         <div className="muted">Session: {state.sessionId ?? "(none yet)"}</div>
         <div className="muted">Book ID: {String(state.bookId)}</div>
+        <div className="muted">
+          Autosave: {autosave.status}
+          {autosave.lastSavedAt ? ` \u00B7 ${autosave.lastSavedAt}` : ""}
+          {autosave.lastSavedCfi ? ` \u00B7 ${autosave.lastSavedCfi.slice(0, 48)}...` : ""}
+        </div>
+        {autosave.error ? <div className="errorText">{autosave.error}</div> : null}
         {lastError ? <div className="errorText">{lastError}</div> : null}
         <div className="spReaderDebugGrid">
           <div className="muted">cfi</div>
