@@ -113,6 +113,17 @@
   flex-wrap: wrap;
 }
 
+.spReadingShellLabelBlock {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.spReadingShellStatus {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .spReaderShellStack {
   display: grid;
   gap: 12px;

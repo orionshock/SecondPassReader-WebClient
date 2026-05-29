@@ -1,13 +1,14 @@
 import ePub, { type Book, type Location, type Rendition } from "@likecoin/epub-ts";
 import type { ReaderLocation, ReaderLocationTarget } from "../domain/types";
+import type { ReaderTocItem } from "../domain/types";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
 export type EpubTsBookEngineInit = {
   source: EpubTsBookEngineSource;
   mountEl: HTMLElement;
-  initialTarget?: ReaderLocationTarget;
   onLocationChanged?: (location: ReaderLocation) => void;
+  onTocReady?: (toc: ReaderTocItem[]) => void;
   onError?: (error: unknown) => void;
 };
 
@@ -38,11 +39,22 @@ function normalizeLocation(loc: Location): ReaderLocation {
   return {
     cfi: start.cfi,
     href: start.href,
-    progression: typeof start.percentage === "number" ? start.percentage : undefined,
+    bookProgress: typeof start.percentage === "number" ? start.percentage : undefined,
     displayedPage: start.displayed?.page,
     displayedTotal: start.displayed?.total,
     raw: loc,
   };
+}
+
+function normalizeTocItems(items: Array<{ id: string; href: string; label: string; subitems?: any[] }>): ReaderTocItem[] {
+  return items
+    .filter((i) => i && typeof i.href === "string" && typeof i.label === "string")
+    .map((i) => ({
+      id: i.id,
+      label: i.label,
+      href: i.href,
+      children: Array.isArray(i.subitems) ? normalizeTocItems(i.subitems) : undefined,
+    }));
 }
 
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
@@ -51,6 +63,15 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   // Ensure parsing/opening completes before rendering.
   await book.opened;
   if (book.replacementsReady) await book.replacementsReady;
+
+  try {
+    const nav = await book.loaded.navigation;
+    const toc = normalizeTocItems(nav.toc as any);
+    init.onTocReady?.(toc);
+  } catch (err) {
+    // TOC should not prevent reading; report as a non-fatal error.
+    init.onError?.(err);
+  }
 
   const rendition: Rendition = book.renderTo(init.mountEl, {
     width: "100%",
@@ -71,9 +92,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   rendition.on("relocated", onRelocated);
   rendition.on("displayerror", onDisplayError);
-
-  const initialTarget = toRenditionTarget(init.initialTarget);
-  await rendition.display(initialTarget);
 
   let destroyed = false;
 

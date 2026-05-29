@@ -6,7 +6,13 @@
 export type ReaderLocation = {
   cfi?: string;
   href?: string;
-  progression?: number;
+  /**
+   * Canonical whole-book progress (0..1) for persistence.
+   *
+   * This is intended to reflect progress from the first renderable EPUB location
+   * to the last renderable EPUB location (whole-book), not chapter-local progress.
+   */
+  bookProgress?: number;
   displayedPage?: number;
   displayedTotal?: number;
   raw?: unknown;
@@ -45,4 +51,3 @@ export type ReaderAnnotation =
       cfi: string;
       readOnly?: boolean;
     };
-

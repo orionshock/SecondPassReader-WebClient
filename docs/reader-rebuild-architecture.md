@@ -57,6 +57,13 @@ Key principle:
 - ReadingSession decides what those facts mean.
 - SecondPass UI presents and acts on the session.
 
+## Progress + navigation notes (typescript-eupb)
+
+- `bookProgress` is the canonical whole-book persisted progress concept (0..1). It is derived from the engine's whole-book location reporting when available and is intended to be persisted to the server as reading progress.
+- Display progress may later combine whole-book progress (`bookProgress`) and a chapter-local progress concept (planned `chapterProgress`) for UX, but only `bookProgress` is canonical/persisted.
+- Initial navigation/restore flows through the orchestrator -> shell -> engine `display(target)` command path (same mechanism as future TOC jumps).
+- TOC is normalized at the engine/shell boundary into app-owned `ReaderTocItem[]` (no raw epub-ts nav item leakage).
+
 ## What must remain stable
 
 - SPL client library APIs and server contracts (no redesign in this pass).
@@ -94,4 +101,3 @@ The old implementation can be recovered from git history if needed.
   - annotation marking primitives and reflow behavior
   - TOC/spine navigation primitives and href <-> CFI mapping
 - How to represent "visible range" as an engine-agnostic type (likely `{ startCfi, endCfi, href?, progression? }`).
-

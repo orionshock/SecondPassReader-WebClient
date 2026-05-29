@@ -10,10 +10,14 @@ export type ReadingShellProps = {
   annotations?: ReaderAnnotation[];
   onEvent?: (event: ReadingShellEvent) => void;
   onCommand?: (command: ReadingShellCommand) => void;
+  command?: { seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } };
+  statusLine?: string;
 };
 
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
+  const lastHandledCommandSeqRef = useRef<number | null>(null);
+  const deferredCommandRef = useRef<ReadingShellProps["command"] | null>(null);
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -34,8 +38,8 @@ export function ReadingShell(props: ReadingShellProps) {
         const engine = await createEpubTsBookEngine({
           source: props.blob,
           mountEl,
-          initialTarget: props.initialDisplayTarget,
           onLocationChanged: (location) => props.onEvent?.({ type: "locationChanged", location }),
+          onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
           onError: (err) => props.onEvent?.({ type: "displayError", error: err }),
         });
         if (cancelled) {
@@ -44,6 +48,34 @@ export function ReadingShell(props: ReadingShellProps) {
         }
         engineRef.current = engine;
         setStatus("ready");
+
+        if (deferredCommandRef.current) {
+          const cmd = deferredCommandRef.current;
+          deferredCommandRef.current = null;
+          if (cmd) {
+            // best-effort execute deferred command now that engine exists
+            try {
+              if (cmd.value.type === "display") await engine.display(cmd.value.target);
+              else if (cmd.value.type === "next") await engine.next();
+              else await engine.previous();
+            } catch (err) {
+              setStatus("error");
+              setErrorMessage(err instanceof Error ? err.message : "Command failed.");
+              props.onEvent?.({ type: "displayError", error: err });
+            }
+          }
+        }
+
+        // If nothing has asked for a specific display target yet, display the default start location.
+        if (!props.initialDisplayTarget) {
+          try {
+            await engine.display();
+          } catch (err) {
+            setStatus("error");
+            setErrorMessage(err instanceof Error ? err.message : "Display failed.");
+            props.onEvent?.({ type: "displayError", error: err });
+          }
+        }
       } catch (err) {
         if (cancelled) return;
         setStatus("error");
@@ -59,6 +91,37 @@ export function ReadingShell(props: ReadingShellProps) {
       engine?.destroy();
     };
   }, [mountEl, props.blob, props.initialDisplayTarget, props.onEvent]);
+
+  useEffect(() => {
+    const cmd = props.command;
+    if (!cmd) return;
+    if (lastHandledCommandSeqRef.current === cmd.seq) return;
+    lastHandledCommandSeqRef.current = cmd.seq;
+
+    void (async () => {
+      try {
+        if (!engineRef.current) {
+          deferredCommandRef.current = cmd;
+          return;
+        }
+        switch (cmd.value.type) {
+          case "display":
+            await engineRef.current?.display(cmd.value.target);
+            return;
+          case "next":
+            await engineRef.current?.next();
+            return;
+          case "previous":
+            await engineRef.current?.previous();
+            return;
+        }
+      } catch (err) {
+        setStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : "Command failed.");
+        props.onEvent?.({ type: "displayError", error: err });
+      }
+    })();
+  }, [props.command, props.onEvent]);
 
   const goPrev = async () => {
     try {
@@ -83,7 +146,10 @@ export function ReadingShell(props: ReadingShellProps) {
   return (
     <div className="spReadingShell">
       <div className="spReadingShellBar">
-        <div className="muted spReadingShellLabel">ReadingShell (epub-ts)</div>
+        <div className="spReadingShellLabelBlock">
+          <div className="muted spReadingShellLabel">ReadingShell (epub-ts)</div>
+          {props.statusLine ? <div className="muted spReadingShellStatus">{props.statusLine}</div> : null}
+        </div>
         <div className="spReadingShellNav">
           <button type="button" className="button buttonCompact" onClick={goPrev} disabled={status !== "ready"}>
             Previous
