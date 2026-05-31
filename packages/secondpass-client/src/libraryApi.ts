@@ -1,6 +1,9 @@
 import type { BookFileDownloadResult, LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "./schemas/library";
 import type { AuthenticatedClientContext } from "./clientContext";
-import { requestBlob, requestJson, resolveUrl, tryParseFilename } from "./apiHttp";
+import { authErrorMessages, requestBlob, requestJson, resolveUrl, tryParseFilename } from "./apiHttp";
+
+const LIBRARY_FORBIDDEN_403 = "Token is not allowed to access the library (403).";
+const LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 = "Token is not allowed to download files (403).";
 
 export async function listBooks(
   ctx: AuthenticatedClientContext,
@@ -33,10 +36,7 @@ export async function listBooks(
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access the library (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }),
     },
   });
 }
@@ -54,10 +54,7 @@ export async function listSeries(
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access the library (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }),
     },
   });
 }
@@ -70,11 +67,10 @@ export async function getSeries(ctx: AuthenticatedClientContext, input: { series
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access the library (403).",
-        404: "Series not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: LIBRARY_FORBIDDEN_403,
+        notFound: "Series not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -92,10 +88,7 @@ export async function listAuthors(
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access the library (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }),
     },
   });
 }
@@ -108,11 +101,10 @@ export async function getAuthor(ctx: AuthenticatedClientContext, input: { author
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access the library (403).",
-        404: "Author not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: LIBRARY_FORBIDDEN_403,
+        notFound: "Author not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -125,11 +117,10 @@ export async function getBook(ctx: AuthenticatedClientContext, input: { bookId: 
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access the library (403).",
-        404: "Book not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: LIBRARY_FORBIDDEN_403,
+        notFound: "Book not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -145,10 +136,7 @@ export async function downloadBookFile(
     endpointOrUrl: input.downloadUrl,
     options: {
       accept: "application/epub+zip, application/octet-stream, */*",
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to download files (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 }),
     },
   });
 

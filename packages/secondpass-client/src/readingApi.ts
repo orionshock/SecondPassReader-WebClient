@@ -12,7 +12,18 @@ import type {
 } from "./schemas/readingSession";
 import type { PaginatedResponse } from "./schemas/library";
 import type { AuthenticatedClientContext } from "./clientContext";
-import { requestJson, resolveUrl } from "./apiHttp";
+import { authErrorMessages, requestJson, resolveUrl } from "./apiHttp";
+
+const READING_SESSIONS_FORBIDDEN_403 = "Token is not allowed to access reading sessions (403).";
+const READING_DATA_FORBIDDEN_403 = "Token is not allowed to access reading data (403).";
+const READING_MODIFY_FORBIDDEN_403 = "Token is not allowed to modify reading data (403).";
+const READING_START_OVER_FORBIDDEN_403 = "Token is not allowed to start over reading sessions (403).";
+const READING_PROGRESS_UPDATE_FORBIDDEN_403 = "Token cannot update reading progress (403).";
+const READING_ANNOTATIONS_LIST_FORBIDDEN_403 = "Token cannot list reading annotations (403).";
+const READING_ANNOTATIONS_CREATE_FORBIDDEN_403 = "Token cannot create reading annotations (403).";
+const READING_ANNOTATIONS_UPDATE_FORBIDDEN_403 = "Token cannot update reading annotations (403).";
+const READING_ANNOTATIONS_DELETE_FORBIDDEN_403 = "Token cannot delete reading annotations (403).";
+const READING_SESSIONS_MODIFY_FORBIDDEN_403 = "Token is not allowed to modify reading sessions (403).";
 
 export async function listRecentReadingSessions(
   ctx: AuthenticatedClientContext,
@@ -27,10 +38,7 @@ export async function listRecentReadingSessions(
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access reading sessions (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: READING_SESSIONS_FORBIDDEN_403 }),
     },
   });
 }
@@ -48,11 +56,10 @@ export async function closeReadingSession(
     endpointOrUrl: url,
     options: {
       method: "POST",
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to modify reading data (403).",
-        404: "Reading session not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_MODIFY_FORBIDDEN_403,
+        notFound: "Reading session not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -71,11 +78,10 @@ export async function openReadingSession(
     options: {
       method: "POST",
       body: {},
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access reading data (403).",
-        404: "Book not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_DATA_FORBIDDEN_403,
+        notFound: "Book not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -93,11 +99,10 @@ export async function startOverReadingSession(
     endpointOrUrl: url,
     options: {
       method: "POST",
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to start over reading sessions (403).",
-        404: "Book not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_START_OVER_FORBIDDEN_403,
+        notFound: "Book not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -116,11 +121,10 @@ export async function updateReadingProgress(
     options: {
       method: input.method ?? "PATCH",
       body: input.payload,
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token cannot update reading progress (403).",
-        404: "Reading session not found (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_PROGRESS_UPDATE_FORBIDDEN_403,
+        notFound: "Reading session not found (404).",
+      }),
     },
   });
 }
@@ -313,11 +317,10 @@ export async function listReadingAnnotations(input: {
     tokenType: input.ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token cannot list reading annotations (403).",
-        404: "Reading annotations endpoint not found (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_LIST_FORBIDDEN_403,
+        notFound: "Reading annotations endpoint not found (404).",
+      }),
     },
   });
 }
@@ -343,10 +346,7 @@ export async function listReadingSessions(input: {
     tokenType: input.ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access reading sessions (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: READING_SESSIONS_FORBIDDEN_403 }),
     },
   });
 }
@@ -363,11 +363,10 @@ export async function getReadingSession(input: {
     tokenType: input.ctx.tokenType,
     endpointOrUrl: url,
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access reading sessions (403).",
-        404: "Reading session not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_SESSIONS_FORBIDDEN_403,
+        notFound: "Reading session not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -386,12 +385,10 @@ export async function updateReadingSession(
     options: {
       method: "PATCH",
       body: input.payload,
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to modify reading sessions (403).",
-        400: "Validation error (400)",
-        404: "Reading session not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_SESSIONS_MODIFY_FORBIDDEN_403,
+        notFound: "Reading session not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -411,13 +408,10 @@ export async function createReadingAnnotation(
       method: "POST",
       body: input.payload,
       headers: input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : undefined,
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token cannot create reading annotations (403).",
-        400: "Validation error (400)",
-        409: "Idempotency key was already used for a different request (409).",
-        404: "Reading annotations endpoint not found (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_CREATE_FORBIDDEN_403,
+        notFound: "Reading annotations endpoint not found (404).",
+      }),
     },
   });
 }
@@ -436,12 +430,10 @@ export async function updateReadingAnnotation(
     options: {
       method: "PATCH",
       body: input.payload,
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token cannot update reading annotations (403).",
-        400: "Validation error (400)",
-        404: "Reading annotation not found (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_UPDATE_FORBIDDEN_403,
+        notFound: "Reading annotation not found (404).",
+      }),
     },
   });
 }
@@ -459,11 +451,10 @@ export async function deleteReadingAnnotation(
     endpointOrUrl: url,
     options: {
       method: "DELETE",
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token cannot delete reading annotations (403).",
-        404: "Reading annotation not found (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_DELETE_FORBIDDEN_403,
+        notFound: "Reading annotation not found (404).",
+      }),
     },
   });
 }

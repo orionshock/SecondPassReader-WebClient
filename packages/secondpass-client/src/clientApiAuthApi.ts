@@ -4,7 +4,7 @@ import type {
   MePayload,
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
-import { requestJson, requestJsonUrl, resolveUrl } from "./apiHttp";
+import { authErrorMessages, requestJson, requestJsonUrl, resolveUrl } from "./apiHttp";
 import type { AuthenticatedClientContext } from "./clientContext";
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
@@ -40,10 +40,7 @@ export async function getMe(ctx: AuthenticatedClientContext): Promise<MePayload>
     tokenType: ctx.tokenType,
     endpointOrUrl: "/accounts/me/",
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed for /me (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: "Token is not allowed for /me (403)." }),
     },
   });
 }

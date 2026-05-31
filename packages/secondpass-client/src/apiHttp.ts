@@ -27,6 +27,25 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Common auth-related messages.
+ *
+ * Most authenticated endpoints use the same semantics for 401/403.
+ * Callers can override 403/404 when a more specific message is valuable.
+ */
+export const INVALID_OR_REVOKED_TOKEN_401 = "Token is invalid or revoked (401).";
+
+export function authErrorMessages(input?: {
+  forbidden?: string;
+  notFound?: string;
+}): Partial<Record<number, string>> {
+  return {
+    401: INVALID_OR_REVOKED_TOKEN_401,
+    ...(input?.forbidden ? { 403: input.forbidden } : {}),
+    ...(input?.notFound ? { 404: input.notFound } : {}),
+  };
+}
+
 export function resolveUrl(baseUrl: string, endpointOrUrl: string): string {
   if (/^https?:\/\//i.test(endpointOrUrl)) return endpointOrUrl;
   const base = baseUrl.replace(/\/+$/, "");

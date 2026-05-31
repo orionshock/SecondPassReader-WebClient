@@ -1,6 +1,8 @@
 import type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf } from "./schemas/shelves";
 import type { AuthenticatedClientContext } from "./clientContext";
-import { requestJson, resolveUrl } from "./apiHttp";
+import { authErrorMessages, requestJson, resolveUrl } from "./apiHttp";
+
+const SHELVES_FORBIDDEN_403 = "Token is not allowed to access shelves (403).";
 
 export async function listShelves(ctx: AuthenticatedClientContext): Promise<PaginatedShelfResponse> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/shelves/"));
@@ -10,10 +12,7 @@ export async function listShelves(ctx: AuthenticatedClientContext): Promise<Pagi
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access shelves (403).",
-      },
+      errorMessages: authErrorMessages({ forbidden: SHELVES_FORBIDDEN_403 }),
     },
   });
 }
@@ -26,11 +25,10 @@ export async function getShelf(ctx: AuthenticatedClientContext, input: { shelfId
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access shelves (403).",
-        404: "Shelf not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf not found or not accessible (404).",
+      }),
     },
   });
 }
@@ -48,11 +46,10 @@ export async function listShelfItems(
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
-      errorMessages: {
-        401: "Token is invalid or revoked (401).",
-        403: "Token is not allowed to access shelves (403).",
-        404: "Shelf not found or not accessible (404).",
-      },
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf not found or not accessible (404).",
+      }),
     },
   });
 }
