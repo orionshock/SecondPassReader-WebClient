@@ -21,7 +21,6 @@ import type {
   ReadingSessionSummary,
 } from "./schemas/readingSession";
 
-import { ApiError } from "./apiHttp";
 import { createLoginRequest, discoverSecondPass, getMe, pollLoginRequest } from "./clientApiAuthApi";
 import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
 import {
@@ -43,6 +42,7 @@ import type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInpu
 
 export type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
 import { getShelf, listShelfItems, listShelves } from "./shelvesApi";
+import { createClientContext, requireAuth } from "./clientContext";
 
 export type SecondPassClientConfig = {
   apiBaseUrl: string;
@@ -149,22 +149,15 @@ export type SecondPassClient = {
   };
 };
 
-function requireAuth(config: SecondPassClientConfig): { apiBaseUrl: string; accessToken: string; tokenType: string } {
-  if (!config.apiBaseUrl) throw new Error("SecondPassClient config.apiBaseUrl is required.");
-  if (!config.accessToken) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Access token is missing." });
-  }
-  return { apiBaseUrl: config.apiBaseUrl, accessToken: config.accessToken, tokenType: config.tokenType ?? "Bearer" };
-}
-
 export function createSecondPassClient(config: SecondPassClientConfig): SecondPassClient {
   const frozenConfig = Object.freeze({ ...config });
+  const ctx = createClientContext(frozenConfig);
 
   const getBookDownloadUrl = async (book: LibraryBook | string | number): Promise<string> => {
-    const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+    const auth = requireAuth(ctx);
     const resolved =
       typeof book === "string" || typeof book === "number"
-        ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
+        ? await getBook(auth, { bookId: String(book) })
         : book;
     const url = resolved.file?.download_url ?? null;
     if (!url) throw new Error("Server returned a book without a file download URL.");
@@ -172,9 +165,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
   };
 
   const downloadBookBlob = async (book: LibraryBook | string | number): Promise<Blob> => {
-    const { accessToken, tokenType } = requireAuth(frozenConfig);
+    const auth = requireAuth(ctx);
     const url = await getBookDownloadUrl(book);
-    const dl = await downloadBookFile({ downloadUrl: url, accessToken, tokenType });
+    const dl = await downloadBookFile(auth, { downloadUrl: url });
     return dl.blob;
   };
 
@@ -190,20 +183,20 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
 
     account: {
       getCurrent: () => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return getMe({ apiBaseUrl, accessToken, tokenType });
+        const auth = requireAuth(ctx);
+        return getMe(auth);
       },
     },
 
     library: {
       books: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listBooks({ apiBaseUrl, accessToken, tokenType, params });
+          const auth = requireAuth(ctx);
+          return listBooks(auth, { params });
         },
         get: (bookId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getBook({ apiBaseUrl, accessToken, tokenType, bookId });
+          const auth = requireAuth(ctx);
+          return getBook(auth, { bookId });
         },
         getDownloadUrl: async (book) => {
           return getBookDownloadUrl(book);
@@ -215,120 +208,120 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
 
       series: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listSeries({ apiBaseUrl, accessToken, tokenType, page: params?.page });
+          const auth = requireAuth(ctx);
+          return listSeries(auth, { page: params?.page });
         },
         get: (seriesId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getSeries({ apiBaseUrl, accessToken, tokenType, seriesId });
+          const auth = requireAuth(ctx);
+          return getSeries(auth, { seriesId });
         },
         books: (seriesId, params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listBooks({ apiBaseUrl, accessToken, tokenType, params: { ...params, series: seriesId } });
+          const auth = requireAuth(ctx);
+          return listBooks(auth, { params: { ...params, series: seriesId } });
         },
       },
 
       authors: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listAuthors({ apiBaseUrl, accessToken, tokenType, page: params?.page });
+          const auth = requireAuth(ctx);
+          return listAuthors(auth, { page: params?.page });
         },
         get: (authorId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getAuthor({ apiBaseUrl, accessToken, tokenType, authorId });
+          const auth = requireAuth(ctx);
+          return getAuthor(auth, { authorId });
         },
         books: (authorId, params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listBooks({ apiBaseUrl, accessToken, tokenType, params: { ...params, author: authorId } });
+          const auth = requireAuth(ctx);
+          return listBooks(auth, { params: { ...params, author: authorId } });
         },
       },
     },
 
     shelves: {
       list: () => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return listShelves({ apiBaseUrl, accessToken, tokenType });
+        const auth = requireAuth(ctx);
+        return listShelves(auth);
       },
       get: (shelfId) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return getShelf({ apiBaseUrl, accessToken, tokenType, shelfId });
+        const auth = requireAuth(ctx);
+        return getShelf(auth, { shelfId });
       },
       items: (shelfId, params) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return listShelfItems({ apiBaseUrl, accessToken, tokenType, shelfId, page: params?.page });
+        const auth = requireAuth(ctx);
+        return listShelfItems(auth, { shelfId, page: params?.page });
       },
     },
 
     reading: {
       openForReading: async (book) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+        const auth = requireAuth(ctx);
         const resolved =
           typeof book === "string" || typeof book === "number"
-            ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
+            ? await getBook(auth, { bookId: String(book) })
             : book;
-        const open = await openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId: resolved.id });
+        const open = await openReadingSession(auth, { bookId: resolved.id });
         const blob = await downloadBookBlob(resolved);
         return { open, blob };
       },
 
       sessions: {
         open: (bookId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
+          const auth = requireAuth(ctx);
+          return openReadingSession(auth, { bookId });
         },
         startOver: (bookId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return startOverReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
+          const auth = requireAuth(ctx);
+          return startOverReadingSession(auth, { bookId });
         },
         recent: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listRecentReadingSessions({ apiBaseUrl, accessToken, tokenType, limit: params?.limit });
+          const auth = requireAuth(ctx);
+          return listRecentReadingSessions(auth, { limit: params?.limit });
         },
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listReadingSessions({ apiBaseUrl, accessToken, tokenType, ...params });
+          const auth = requireAuth(ctx);
+          return listReadingSessions({ ctx: auth, ...params });
         },
         get: (sessionId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId });
+          const auth = requireAuth(ctx);
+          return getReadingSession({ ctx: auth, sessionId });
         },
         updateDetails: (sessionId, payload) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId, payload });
+          const auth = requireAuth(ctx);
+          return updateReadingSession(auth, { sessionId, payload });
         },
         close: (sessionId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return closeReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId });
+          const auth = requireAuth(ctx);
+          return closeReadingSession(auth, { sessionId });
         },
       },
 
       progress: {
         save: (sessionId, progress) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return saveReadingProgress({ apiBaseUrl, accessToken, tokenType, sessionId, progress });
+          const auth = requireAuth(ctx);
+          return saveReadingProgress({ ctx: auth, sessionId, progress });
         },
       },
 
       annotations: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listReadingAnnotations({ apiBaseUrl, accessToken, tokenType, sessionId: params.sessionId, page: params.page });
+          const auth = requireAuth(ctx);
+          return listReadingAnnotations({ ctx: auth, sessionId: params.sessionId, page: params.page });
         },
         createHighlight: (input, options) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return createHighlightAnnotation({ apiBaseUrl, accessToken, tokenType, create: input, idempotencyKey: options?.idempotencyKey });
+          const auth = requireAuth(ctx);
+          return createHighlightAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
         },
         createBookmark: (input, options) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return createBookmarkAnnotation({ apiBaseUrl, accessToken, tokenType, create: input, idempotencyKey: options?.idempotencyKey });
+          const auth = requireAuth(ctx);
+          return createBookmarkAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
         },
         updateNote: (annotationId, input) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateNoteAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId, update: input });
+          const auth = requireAuth(ctx);
+          return updateNoteAnnotation({ ctx: auth, annotationId, update: input });
         },
         remove: (annotationId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return deleteReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId });
+          const auth = requireAuth(ctx);
+          return deleteReadingAnnotation(auth, { annotationId });
         },
       },
     },

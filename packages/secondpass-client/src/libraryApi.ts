@@ -1,23 +1,23 @@
 import type { BookFileDownloadResult, LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "./schemas/library";
-import { ApiError, resolveUrl, tryParseFilename } from "./apiHttp";
+import type { AuthenticatedClientContext } from "./clientContext";
+import { requestBlob, requestJson, resolveUrl, tryParseFilename } from "./apiHttp";
 
-export async function listBooks(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  params?: {
-    q?: string;
-    hasFiles?: boolean;
-    series?: string | number;
-    author?: string | number;
-    ordering?: string;
-    page?: number;
-    pageSize?: number;
-  };
-}): Promise<PaginatedResponse<LibraryBook>> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = new URL(resolveUrl(input.apiBaseUrl, "/library/books/"));
-  const params = input.params ?? {};
+export async function listBooks(
+  ctx: AuthenticatedClientContext,
+  input?: {
+    params?: {
+      q?: string;
+      hasFiles?: boolean;
+      series?: string | number;
+      author?: string | number;
+      ordering?: string;
+      page?: number;
+      pageSize?: number;
+    };
+  },
+): Promise<PaginatedResponse<LibraryBook>> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/books/"));
+  const params = input?.params ?? {};
 
   if (params.q) url.searchParams.set("q", params.q);
   if (params.hasFiles !== undefined) url.searchParams.set("has_files", params.hasFiles ? "true" : "false");
@@ -27,253 +27,136 @@ export async function listBooks(input: {
   if (params.page !== undefined) url.searchParams.set("page", String(params.page));
   if (params.pageSize !== undefined) url.searchParams.set("page_size", String(params.pageSize));
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<PaginatedResponse<LibraryBook>>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to access the library (403).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as PaginatedResponse<LibraryBook>;
 }
 
-export async function listSeries(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  page?: number;
-}): Promise<PaginatedResponse<LibrarySeries>> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = new URL(resolveUrl(input.apiBaseUrl, "/library/series/"));
-  if (input.page !== undefined) url.searchParams.set("page", String(input.page));
+export async function listSeries(
+  ctx: AuthenticatedClientContext,
+  input?: { page?: number },
+): Promise<PaginatedResponse<LibrarySeries>> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/series/"));
+  if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<PaginatedResponse<LibrarySeries>>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to access the library (403).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as PaginatedResponse<LibrarySeries>;
 }
 
-export async function getSeries(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  seriesId: string;
-}): Promise<LibrarySeries> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/library/series/${encodeURIComponent(input.seriesId)}/`);
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+export async function getSeries(ctx: AuthenticatedClientContext, input: { seriesId: string }): Promise<LibrarySeries> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/library/series/${encodeURIComponent(input.seriesId)}/`);
+  return requestJson<LibrarySeries>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to access the library (403).",
+        404: "Series not found or not accessible (404).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Series not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as LibrarySeries;
 }
 
-export async function listAuthors(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  page?: number;
-}): Promise<PaginatedResponse<LibraryAuthor>> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = new URL(resolveUrl(input.apiBaseUrl, "/library/authors/"));
-  if (input.page !== undefined) url.searchParams.set("page", String(input.page));
+export async function listAuthors(
+  ctx: AuthenticatedClientContext,
+  input?: { page?: number },
+): Promise<PaginatedResponse<LibraryAuthor>> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/authors/"));
+  if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<PaginatedResponse<LibraryAuthor>>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to access the library (403).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as PaginatedResponse<LibraryAuthor>;
 }
 
-export async function getAuthor(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  authorId: string;
-}): Promise<LibraryAuthor> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/library/authors/${encodeURIComponent(input.authorId)}/`);
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+export async function getAuthor(ctx: AuthenticatedClientContext, input: { authorId: string }): Promise<LibraryAuthor> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/library/authors/${encodeURIComponent(input.authorId)}/`);
+  return requestJson<LibraryAuthor>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to access the library (403).",
+        404: "Author not found or not accessible (404).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Author not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as LibraryAuthor;
 }
 
-export async function getBook(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  bookId: string;
-}): Promise<LibraryBook> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/library/books/${encodeURIComponent(input.bookId)}/`);
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+export async function getBook(ctx: AuthenticatedClientContext, input: { bookId: string }): Promise<LibraryBook> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/library/books/${encodeURIComponent(input.bookId)}/`);
+  return requestJson<LibraryBook>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to access the library (403).",
+        404: "Book not found or not accessible (404).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access the library (403)." });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Book not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as LibraryBook;
 }
 
-export async function downloadBookFile(input: {
-  downloadUrl: string;
-  accessToken: string;
-  tokenType?: string;
-}): Promise<BookFileDownloadResult> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const res = await fetch(input.downloadUrl, {
-    method: "GET",
-    headers: {
-      Accept: "application/epub+zip, application/octet-stream, */*",
-      Authorization: `${tokenType} ${input.accessToken}`,
+export async function downloadBookFile(
+  ctx: AuthenticatedClientContext,
+  input: { downloadUrl: string },
+): Promise<BookFileDownloadResult> {
+  const { blob, response } = await requestBlob({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: input.downloadUrl,
+    options: {
+      accept: "application/epub+zip, application/octet-stream, */*",
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed to download files (403).",
+      },
     },
   });
 
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to download files (403)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  const contentType = res.headers.get("content-type") ?? undefined;
-  const contentDisposition = res.headers.get("content-disposition") ?? undefined;
-  const contentLengthRaw = res.headers.get("content-length");
+  const contentType = response.headers.get("content-type") ?? undefined;
+  const contentDisposition = response.headers.get("content-disposition") ?? undefined;
+  const contentLengthRaw = response.headers.get("content-length");
   const contentLength = contentLengthRaw ? Number(contentLengthRaw) : undefined;
 
-  const blob = await res.blob();
   const filename = contentDisposition ? tryParseFilename(contentDisposition) : undefined;
 
   return {

@@ -4,7 +4,8 @@ import type {
   MePayload,
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
-import { ApiError, requestJsonUrl, resolveUrl } from "./apiHttp";
+import { requestJson, requestJsonUrl, resolveUrl } from "./apiHttp";
+import type { AuthenticatedClientContext } from "./clientContext";
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   const url = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
@@ -32,32 +33,17 @@ export async function pollLoginRequest(pollUrl: string, defaultAccessToken?: str
   return requestJsonUrl<ClientApiPollResponse>({ url: pollUrl, method: "GET", defaultAccessToken });
 }
 
-export async function getMe(input: { apiBaseUrl: string; accessToken: string; tokenType?: string }): Promise<MePayload> {
-  const url = resolveUrl(input.apiBaseUrl, "/accounts/me/");
-  const tokenType = input.tokenType ?? "Bearer";
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+export async function getMe(ctx: AuthenticatedClientContext): Promise<MePayload> {
+  return requestJson<MePayload>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: "/accounts/me/",
+    options: {
+      errorMessages: {
+        401: "Token is invalid or revoked (401).",
+        403: "Token is not allowed for /me (403).",
+      },
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed for /me (403)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as MePayload;
 }
