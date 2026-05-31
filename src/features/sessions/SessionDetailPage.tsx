@@ -4,7 +4,6 @@ import type { ReadingAnnotationPage, ReadingSessionSummary } from "@secondpass/c
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
-import { getAnnotationDisplay } from "../annotations/annotationDisplay";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 
 function formatIso(iso?: string | null): string | null {
@@ -79,6 +78,20 @@ function getAnnotationTexts(annotation: unknown): { quote: string | null; note: 
   if (isComment && textBodies.length === 1) return { quote: null, note: textBodies[0]?.value ?? null };
 
   return { quote: textBodies[0]?.value ?? null, note: null };
+}
+
+function getAnnotationDisplay(annotation: unknown): { icon: string; label: string } {
+  const rawMotivation = (annotation as any)?.motivation;
+  const motivations: string[] = Array.isArray(rawMotivation)
+    ? rawMotivation.filter((x): x is string => typeof x === "string")
+    : typeof rawMotivation === "string"
+      ? [rawMotivation]
+      : [];
+
+  if (motivations.includes("bookmarking")) return { icon: "🔖", label: "Bookmark" };
+  if (motivations.includes("highlighting")) return { icon: "🖍️", label: "Highlight" };
+  if (motivations.includes("commenting")) return { icon: "💬", label: "Comment" };
+  return { icon: "📝", label: "Annotation" };
 }
 
 export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
