@@ -13,8 +13,8 @@ Server convention: **1 book === 1 backing file**. Client/UI code should not trea
 ## Renderer is replaceable
 
 - Renderer implementation must be swappable.
-- Initial candidate is epub.js / react-reader, but renderer state must remain an implementation detail.
-- The app’s model should be renderer-agnostic via a `ReaderBridge`.
+- Current renderer implementation uses `@likecoin/epub-ts` behind an app-owned boundary (`ReadingShell` + `EpubTsBookEngine`).
+- Renderer state remains an implementation detail; app/session state remains renderer-agnostic.
 
 ## Sessions
 

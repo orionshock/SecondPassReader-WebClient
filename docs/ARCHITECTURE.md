@@ -17,20 +17,14 @@ This app is a standalone static web client that talks to a Second Pass Library s
      - Endpoint modules inside the package (`clientApiAuthApi.ts`, `libraryApi.ts`, `readingApi.ts`, `shelvesApi.ts`, `apiHttp.ts`) are **private implementation details**.
      - No `fetch()` calls should exist outside `packages/secondpass-client/`.
 
-4. **`ReaderBridge`**
-   - Stable interface the rest of the app uses for "open book", "go to location", "get current location", "create highlight", etc.
-   - Hides renderer quirks and provides events in app-owned types.
+4. **Reader feature (`src/features/reader`)**
+   - Session-centered reader architecture (route/activity -> session orchestrator -> reading shell -> engine/viewport).
+   - Renderer-specific code stays inside the reader engine boundary (`EpubTsBookEngine`).
+   - Reader shell emits normalized events (e.g. location changed) and accepts commands (e.g. display target).
 
-5. **EPUB renderer implementation**
-   - Initial renderer implementation: react-reader + epubjs (replaceable).
-   - Replaceable via `ReaderBridge` without rewriting app state/model.
-
-6. **Session/annotation adapter**
-   - Maps renderer events (selection/range, location) into:
-     - reading session updates (server-owned)
-     - W3C Web Annotation JSON-LD (canonical annotation form)
-   - See local read-only spec reference at `docs/specs/reading-session-annotation-profile`.
-   - Client-side preview conversion helper lives in `src/features/reader/w3cAnnotationAdapter.ts` (local-only; not persisted).
+5. **Annotation/session coordination (future)**
+   - The session layer coordinates server state (sessions/progress/annotations) with the reader shell.
+   - Canonical annotation data remains W3C Web Annotation JSON-LD with EPUB CFI selectors (server-owned contract).
 
 7. **Local storage**
    - Stores connection profile(s) and user preferences (non-sensitive).
@@ -43,7 +37,6 @@ This app is a standalone static web client that talks to a Second Pass Library s
 
 `src/`
 - `app/` App shell entrypoints/components
-- `bridges/` `ServerBridge` and `ReaderBridge` abstractions
 - `features/` Feature-area modules (`connection/`, `library/`, `reader/`, `sessions/`, `annotations/`)
 - `storage/` Local persistence (connection profiles, preferences)
 - `styles/` Minimal global/app CSS (no framework)
@@ -82,23 +75,20 @@ The current app uses promise-returning request/response calls, not an event bus.
 ## Reader launch
 
 - The Open Reader flow bootstraps server reading state by calling `POST /reading/books/{book_id}/open/` (session + progress + first page of annotations) before downloading/rendering the EPUB.
-- Progress saving supports manual save (Save Progress) plus a debounced autosave (default on). The server upserts progress, and the client debounces writes to avoid chatty PATCH calls.
-- Progress capture uses epub.js `rendition` `relocated` events when available (CFI + href + percentage progression), with CFI-only fallback.
+- Progress saving uses a debounced autosave in the session layer, persisting CFI as the restore anchor and sending approximate progression metadata when available.
 
 ## Reader architecture (practical)
 
-- **Renderer boundary:** `src/features/reader/EpubReaderPanel.tsx` is the intended replaceable boundary for react-reader/epub.js. It is responsible for CFI selection capture, highlight injection/reflow, and applying local reader settings into the renderer.
-- **Domain hooks:** `useReaderAnnotations.ts` (current session + drafts) and `usePreviousSessionLayers.ts` (read-only historical session layers) work in app-owned/domain types (`LocalHighlight`, semantic color tokens, CFI strings). They call the API client, but do not touch epub.js/renderer internals.
-- **Server adapters:** `readingAnnotationAdapter.ts` and `w3cAnnotationAdapter.ts` own the mapping between server/W3C-ish payload shapes and the local domain types so UI components do not parse raw `body[]` arrays directly.
-- **UI components:** `ReaderArea.tsx` orchestrates and wires together the hooks, panels, and renderer; panels like `SelectionToolbar.tsx`, `AnnotationPanel.tsx`, `ReaderSettingsPanel.tsx`, and `MarginaliaLayersPanel.tsx` are presentational and should not depend on renderer internals.
+- **Route/activity container:** `src/features/reader/ReadingActivity.tsx`
+- **Session orchestration:** `src/features/reader/session/ReadingSessionOrchestrator.tsx` owns session coordination and server sync.
+- **Reading shell:** `src/features/reader/shell/ReadingShell.tsx` owns reader interaction surface and events/commands.
+- **Engine boundary:** `src/features/reader/engine/EpubTsBookEngine.ts` owns `@likecoin/epub-ts` details.
+- **Viewport boundary:** `src/features/reader/viewport/ReaderViewport.tsx` owns the DOM mount container only.
 
 ## Annotation adapters
 
-- `src/features/reader/w3cAnnotationAdapter.ts`: local W3C Web Annotation JSON-LD preview/export shape (not persisted yet).
-- `src/features/reader/readingAnnotationAdapter.ts`: tight Reading API `POST /reading/annotations/` create payload adapter (manual save).
+Not implemented in the current reader rebuild yet. When reintroduced, adapters should live in the session layer and keep renderer concerns isolated in the shell/engine boundary.
 
 ## Annotation rehydration (Phase 1)
 
-- The reader converts server annotations returned by `POST /reading/books/{book_id}/open/` into local renderable highlights and feeds them into the renderer overlay layer.
-- Server delete uses `DELETE /reading/annotations/{annotation_id}/` (soft-delete).
-- Saved note-backed annotations can be updated via `PATCH /reading/annotations/{annotation_id}/` (note text only in Phase 1; target/CFI editing not supported yet).
+Not implemented in the current reader rebuild yet.

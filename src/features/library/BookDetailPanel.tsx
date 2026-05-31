@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BookFileDownloadResult, LibraryBook } from "@secondpass/client";
+import type { LibraryBook } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 
@@ -29,7 +29,7 @@ export function BookDetailPanel({
     | { phase: "opening_session" }
     | { phase: "fetching" }
     | { phase: "opening_reader" }
-    | { phase: "success"; result: BookFileDownloadResult }
+    | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
 }) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");

@@ -10,8 +10,23 @@ export type {
   UpdateNoteInput,
 } from "./client";
 
-export type * from "./schemas/clientApiAuth";
-export type * from "./schemas/library";
-export type * from "./schemas/readingSession";
-export type * from "./schemas/shelves";
-export type * from "./schemas/w3cAnnotation";
+export type {
+  ClientApiLoginRequestResponse,
+  ClientApiPollResponse,
+  MePayload,
+  SecondPassDiscovery,
+} from "./schemas/clientApiAuth";
+
+export type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "./schemas/library";
+
+export type {
+  ReadingAnnotation,
+  ReadingAnnotationPage,
+  ReadingOpenResponse,
+  ReadingProgress,
+  ReadingRecentSessionsResponse,
+  ReadingSession,
+  ReadingSessionSummary,
+} from "./schemas/readingSession";
+
+export type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf, ShelfItem } from "./schemas/shelves";

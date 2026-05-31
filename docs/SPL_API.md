@@ -135,5 +135,5 @@ Possible future events (not implemented):
 
 `@secondpass/client` does not know about EPUB rendering.
 
-- Renderer boundary remains `ReaderBridge` + the concrete renderer implementation (currently `EpubReaderPanel`).
-- Reader adapters translate between SPL domain models (sessions/annotations) and renderer highlight/location models.
+- The reader renderer boundary is owned by `src/features/reader` (e.g. `ReadingShell` + `EpubTsBookEngine`).
+- Session/orchestration code translates between SPL domain models (sessions/annotations/progress) and reader engine events/commands.
