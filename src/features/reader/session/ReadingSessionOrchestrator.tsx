@@ -21,7 +21,7 @@ export type ReadingSessionOrchestratorProps = {
   children: (arg: {
     state: ReadingSessionState;
     shell: ReactNode;
-    debugPanel: ReactNode;
+    debugPanel: ReactNode | null;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
     annotations: {
       items: Array<ReaderBookmarkViewModel | { kind: "highlight"; id: string; cfiRange: string; text: string; label: string; descriptionStatus: "idle" | "loading" | "ready" | "error" }>;
@@ -38,7 +38,6 @@ export type ReadingSessionOrchestratorProps = {
 // Placeholder orchestrator: will eventually own session state, SPL calls, and Shell cross-talk.
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
   const [location, setLocation] = useState<ReaderLocation | null>(null);
-  const [lastError, setLastError] = useState<string | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [selection, setSelection] = useState<ReaderSelection | null>(null);
   const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
@@ -99,6 +98,48 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     location: state.location,
   });
 
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const shouldTickAutosaveCountdown = Boolean(
+    state.sessionId &&
+      autosave.status !== "saving" &&
+      autosave.status !== "saved" &&
+      typeof autosave.nextSaveAt === "number" &&
+      autosave.nextSaveAt > nowMs,
+  );
+
+  useEffect(() => {
+    if (!shouldTickAutosaveCountdown) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [shouldTickAutosaveCountdown]);
+
+  const autosaveStatus = useMemo((): { text: string; title?: string } | null => {
+    if (!state.sessionId) return null;
+
+    const lastSavedTitle =
+      autosave.lastSavedAt && !Number.isNaN(Date.parse(autosave.lastSavedAt))
+        ? `Last saved: ${new Date(autosave.lastSavedAt).toLocaleString()}`
+        : undefined;
+
+    switch (autosave.status) {
+      case "saving":
+        return { text: "Autosave: sending" };
+      case "saved":
+        return { text: "Autosave: complete", title: lastSavedTitle };
+      case "pending":
+      case "idle":
+        if (typeof autosave.nextSaveAt === "number") {
+          const remaining = Math.max(0, autosave.nextSaveAt - nowMs);
+          const seconds = Math.max(0, Math.ceil(remaining / 1000));
+          return { text: `Autosave: waiting (${seconds}s)` };
+        }
+        return { text: "Autosave: waiting" };
+      case "error":
+        // Keep UI terminology constrained; log details in console via hook/orchestrator.
+        return { text: "Autosave: waiting" };
+    }
+  }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, nowMs, state.sessionId]);
+
   const statusLine = useMemo(() => {
     const parts: string[] = [];
 
@@ -122,7 +163,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         setLocation(event.location);
         return;
       case "displayError":
-        setLastError(event.error instanceof Error ? event.error.message : "Reader error");
+        // Keep errors visible in the browser console; avoid a permanent reader debug panel in the UI.
+        // eslint-disable-next-line no-console
+        console.error("Reader error", event.error);
         return;
       case "selectionChanged":
         setSelection(event.selection ?? null);
@@ -404,6 +447,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onEvent={onShellEvent}
         command={pendingCommand ?? undefined}
         statusLine={statusLine}
+        autosaveStatus={autosaveStatus}
         onDescribeCfiReady={handleDescribeCfiReady}
         selection={selection}
         selectionActions={{
@@ -426,32 +470,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         }}
       />
     ),
-    debugPanel: (
-      <section className="spReaderDebugPanel">
-        <div className="muted">Session: {state.sessionId ?? "(none yet)"}</div>
-        <div className="muted">Book ID: {String(state.bookId)}</div>
-        <div className="muted">
-          Autosave: {autosave.status}
-          {autosave.lastSavedAt ? ` \u00B7 ${autosave.lastSavedAt}` : ""}
-          {autosave.lastSavedCfi ? ` \u00B7 ${autosave.lastSavedCfi.slice(0, 48)}...` : ""}
-        </div>
-        {autosave.error ? <div className="errorText">{autosave.error}</div> : null}
-        {lastError ? <div className="errorText">{lastError}</div> : null}
-        {annotationError ? <div className="errorText">{annotationError}</div> : null}
-        <div className="spReaderDebugGrid">
-          <div className="muted">cfi</div>
-          <div className="mono">{state.location?.cfi ?? ""}</div>
-          <div className="muted">href</div>
-          <div className="mono">{state.location?.href ?? ""}</div>
-          <div className="muted">bookProgress</div>
-          <div className="mono">{state.location?.bookProgress ?? ""}</div>
-          <div className="muted">page</div>
-          <div className="mono">
-            {state.location?.displayedPage ?? ""}/{state.location?.displayedTotal ?? ""}
-          </div>
-        </div>
-      </section>
-    ),
+    debugPanel: null,
     sendCommand,
     annotations: {
       items: [...bookmarkViewModels, ...highlightViewModels],

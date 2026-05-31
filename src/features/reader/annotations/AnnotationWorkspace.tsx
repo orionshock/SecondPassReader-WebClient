@@ -51,13 +51,13 @@ export function AnnotationWorkspace({
             Previous sessions
           </button>
         </div>
+        <div className="muted spAnnotationSessionId" title={sessionLabel}>
+          Session: {sessionLabel}
+        </div>
       </div>
 
       {tab === "current" ? (
         <div role="tabpanel" className="spAnnotationTabPanel">
-          <div className="muted spAnnotationWorkspaceHint">Bookmarks and highlights are shown here. Notes and painting are not wired yet.</div>
-          <div className="muted">Session: {sessionLabel}</div>
-
           {annotations.length === 0 ? <div className="muted">No annotations yet.</div> : null}
           {annotations.length > 0 ? (
             <div className="spBookmarkList">

@@ -9,6 +9,11 @@ export type ReadingProgressAutosaveState = {
   status: ReadingProgressAutosaveStatus;
   lastSavedAt?: string;
   lastSavedCfi?: string;
+  /**
+   * Epoch ms when the next debounced save is scheduled to fire.
+   * Present only while `status === "pending"` (or briefly while transitioning).
+   */
+  nextSaveAt?: number;
   error?: string;
   dirty?: boolean;
   progress?: ReadingProgress;
@@ -57,6 +62,7 @@ export function useReadingProgressAutosave(input: {
   const clearTimer = useCallback(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = null;
+    setState((prev) => ({ ...prev, nextSaveAt: undefined }));
   }, []);
 
   const resetForSessionSwap = useCallback(
@@ -93,7 +99,7 @@ export function useReadingProgressAutosave(input: {
 
     inFlightRef.current = true;
     dirtyRef.current = false;
-    setState((prev) => ({ ...prev, status: "saving", error: undefined, dirty: false }));
+    setState((prev) => ({ ...prev, status: "saving", error: undefined, dirty: false, nextSaveAt: undefined }));
 
     try {
       const progress = await input.spl.reading.progress.save(sid, {
@@ -113,6 +119,7 @@ export function useReadingProgressAutosave(input: {
         lastSavedCfi: cfi,
         error: undefined,
         dirty: false,
+        nextSaveAt: undefined,
         progress,
       }));
     } catch (e) {
@@ -124,7 +131,7 @@ export function useReadingProgressAutosave(input: {
             : e instanceof Error
               ? e.message
               : "Failed to save progress.";
-      setState((prev) => ({ ...prev, status: "error", error: message }));
+      setState((prev) => ({ ...prev, status: "error", error: message, nextSaveAt: undefined }));
     } finally {
       inFlightRef.current = false;
 
@@ -166,6 +173,8 @@ export function useReadingProgressAutosave(input: {
     const gen = generationRef.current;
 
     setState((prev) => ({ ...prev, status: "pending", error: undefined }));
+    const dueAt = Date.now() + autosaveDelayMs;
+    setState((prev) => ({ ...prev, nextSaveAt: dueAt }));
     timerRef.current = window.setTimeout(() => {
       if (gen !== generationRef.current) return;
       void saveNow();

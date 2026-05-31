@@ -13,6 +13,7 @@ export type ReadingShellProps = {
   onCommand?: (command: ReadingShellCommand) => void;
   command?: { seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } };
   statusLine?: string;
+  autosaveStatus?: { text: string; title?: string } | null;
   selection?: ReaderSelection | null;
   selectionActions?: {
     enabled: boolean;
@@ -169,6 +170,11 @@ export function ReadingShell(props: ReadingShellProps) {
       <div className="spReadingShellBar">
         <div className="spReadingShellLabelBlock">
           {props.statusLine ? <div className="spReadingShellStatus">{props.statusLine}</div> : null}
+          {props.autosaveStatus ? (
+            <div className="muted spReadingShellAutosave" title={props.autosaveStatus.title}>
+              {props.autosaveStatus.text}
+            </div>
+          ) : null}
         </div>
         <div className="spReadingShellActions">
           {props.selection && selectionActions ? (

@@ -32,7 +32,7 @@ export function ReadingActivity({
       </div>
 
       <ReadingSessionOrchestrator openedBook={openedBook} spl={spl} settings={settings}>
-        {({ state, shell, debugPanel, sendCommand, annotations }) => (
+        {({ state, shell, sendCommand, annotations }) => (
           <div className="spReaderLayout">
             <div className="spReaderViewportRegion">{shell}</div>
             {state.toc && state.toc.length > 0 ? (
@@ -67,12 +67,6 @@ export function ReadingActivity({
                   void annotations.removeById(annotationId);
                 }}
               />
-            </div>
-            <div className="spReaderDebugRegion">
-              <details className="panel spReaderDebugDetails">
-                <summary className="spReaderDebugSummary">Developer debug</summary>
-                <div className="spReaderDebugBody">{debugPanel}</div>
-              </details>
             </div>
           </div>
         )}

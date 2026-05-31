@@ -120,6 +120,11 @@
   line-height: 1.2;
 }
 
+.spReadingShellAutosave {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .spReadingShell {
   display: grid;
   gap: 10px;
@@ -189,6 +194,11 @@
   border: 1px solid var(--sp-border);
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.03);
+}
+
+.spAnnotationSessionId {
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .spAnnotationTab {
