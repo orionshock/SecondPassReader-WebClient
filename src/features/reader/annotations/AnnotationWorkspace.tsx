@@ -1,8 +1,23 @@
 import { useMemo, useState } from "react";
 import type { ReadingSessionState } from "../session/types";
 import type { ReaderBookmarkViewModel } from "./bookmarkUtils";
+import { toAnnotationCssVars } from "./annotationColors";
 
 type TabKey = "current" | "previous";
+
+export type HighlightViewModel = {
+  kind: "highlight";
+  id: string;
+  cfiRange: string;
+  text: string;
+  note?: string;
+  color?: string;
+  timestamp?: string;
+  label: string;
+  descriptionStatus: "idle" | "loading" | "ready" | "error";
+};
+
+export type CurrentSessionAnnotationViewModel = ReaderBookmarkViewModel | HighlightViewModel;
 
 export function AnnotationWorkspace({
   state,
@@ -12,10 +27,7 @@ export function AnnotationWorkspace({
   onRemoveAnnotation,
 }: {
   state: ReadingSessionState;
-  annotations: Array<
-    | ReaderBookmarkViewModel
-    | { kind: "highlight"; id: string; cfiRange: string; text: string; label: string; descriptionStatus: "idle" | "loading" | "ready" | "error" }
-  >;
+  annotations: CurrentSessionAnnotationViewModel[];
   currentCfi?: string | null;
   onJumpToTarget: (target: { type: "cfi"; cfi: string } | { type: "cfiRange"; cfiRange: string }) => void;
   onRemoveAnnotation: (annotationId: string) => void;
@@ -59,66 +71,103 @@ export function AnnotationWorkspace({
       {tab === "current" ? (
         <div role="tabpanel" className="spAnnotationTabPanel">
           {annotations.length === 0 ? <div className="muted">No annotations yet.</div> : null}
+
           {annotations.length > 0 ? (
-            <div className="spBookmarkList">
+            <div className="spAnnotationList" aria-label="Current session annotations">
               {annotations.map((a) => {
                 if ("cfi" in a) {
                   const b = a;
                   const isCurrent = b.isCurrent || Boolean(currentCfi && b.cfi === currentCfi);
+
                   return (
-                    <div key={b.id} className={`spBookmarkRow ${isCurrent ? "spBookmarkRowCurrent" : ""}`}>
-                      <div className="spBookmarkMain">
-                        <div className="spBookmarkLabel" title={b.label}>
-                          {b.label}
-                          {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                        </div>
-                        {isCurrent ? <div className="muted">Current location</div> : null}
-                        <div className="mono muted spBookmarkCfi" title={b.cfi}>
-                          {b.cfi.slice(0, 80)}
-                          {b.cfi.length > 80 ? "…" : ""}
-                        </div>
-                      </div>
-                      <div className="spBookmarkActions">
-                        <button type="button" className="button buttonCompact" onClick={() => onJumpToTarget({ type: "cfi", cfi: b.cfi })}>
+                    <article key={b.id} className={`spAnnotationCard ${isCurrent ? "spAnnotationCardCurrent" : ""}`}>
+                      <div className="spAnnotationActionRail" aria-label="Bookmark actions">
+                        <button
+                          type="button"
+                          className="button buttonCompact"
+                          onClick={() => onJumpToTarget({ type: "cfi", cfi: b.cfi })}
+                          aria-label="Jump to bookmark"
+                          title="Jump"
+                        >
                           Jump
                         </button>
-                        <button type="button" className="button buttonCompact" onClick={() => onRemoveAnnotation(b.id)}>
+                        <button
+                          type="button"
+                          className="button buttonCompact"
+                          onClick={() => onRemoveAnnotation(b.id)}
+                          aria-label="Remove bookmark"
+                          title="Remove"
+                        >
                           Remove
                         </button>
                       </div>
-                    </div>
+
+                      <div className="spAnnotationBody">
+                        <div className="spAnnotationKindRow">
+                          <span className="spAnnotationKind">Bookmark</span>
+                          {isCurrent ? <span className="spAnnotationBadge">Current</span> : null}
+                        </div>
+
+                        <div className="spAnnotationPrimary" title={b.label}>
+                          {b.label}
+                          {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                        </div>
+
+                        <div className="muted spAnnotationMetaLine">Saved location</div>
+                      </div>
+                    </article>
                   );
                 }
 
-                const h = a;
+                const h = a as HighlightViewModel;
+                const vars = toAnnotationCssVars(h.color);
+                const when =
+                  h.timestamp && !Number.isNaN(Date.parse(h.timestamp)) ? new Date(h.timestamp).toLocaleString() : null;
                 return (
-                  <div key={h.id} className="spBookmarkRow">
-                    <div className="spBookmarkMain">
-                      <div className="spBookmarkLabel" title={h.text}>
-                        {h.text ? (h.text.length > 120 ? `${h.text.slice(0, 120)}…` : h.text) : "Highlight"}
-                      </div>
-                      <div className="muted" title={h.label}>
-                        {h.label}
-                        {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                      </div>
-                      <div className="mono muted spBookmarkCfi" title={h.cfiRange}>
-                        {h.cfiRange.slice(0, 80)}
-                        {h.cfiRange.length > 80 ? "…" : ""}
-                      </div>
-                    </div>
-                    <div className="spBookmarkActions">
+                  <article
+                    key={h.id}
+                    className="spAnnotationCard"
+                    style={{ ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
+                  >
+                    <div className="spAnnotationActionRail" aria-label="Highlight actions">
                       <button
                         type="button"
                         className="button buttonCompact"
                         onClick={() => onJumpToTarget({ type: "cfiRange", cfiRange: h.cfiRange })}
+                        aria-label="Jump to highlight"
+                        title="Jump"
                       >
                         Jump
                       </button>
-                      <button type="button" className="button buttonCompact" onClick={() => onRemoveAnnotation(h.id)}>
+                      <button
+                        type="button"
+                        className="button buttonCompact"
+                        onClick={() => onRemoveAnnotation(h.id)}
+                        aria-label="Remove highlight"
+                        title="Remove"
+                      >
                         Remove
                       </button>
                     </div>
-                  </div>
+
+                    <div className="spAnnotationBody">
+                      <div className="spAnnotationKindRow">
+                        <span className="spAnnotationKind">Highlight</span>
+                      </div>
+
+                      <div className="spAnnotationQuote" title={h.text}>
+                        {h.text || "Highlight"}
+                      </div>
+
+                      {h.note ? <div className="spAnnotationNote">{h.note}</div> : null}
+
+                      <div className="muted spAnnotationMetaLine" title={h.label}>
+                        {h.label}
+                        {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                        {when ? <span className="muted">{` \u00B7 ${when}`}</span> : null}
+                      </div>
+                    </div>
+                  </article>
                 );
               })}
             </div>

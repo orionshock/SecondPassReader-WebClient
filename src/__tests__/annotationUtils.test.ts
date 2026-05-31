@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAnnotationDescribingText, getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/annotationUtils";
+import { getAnnotationColor, getAnnotationDescribingText, getAnnotationFragmentCfi, getAnnotationNoteText, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/annotationUtils";
 
 describe("annotationUtils", () => {
   it("detects bookmark motivation", () => {
@@ -35,5 +35,23 @@ describe("annotationUtils", () => {
     } as any;
     expect(getAnnotationDescribingText(ann)).toBe("Hello");
   });
-});
 
+  it("extracts note/comment text when present", () => {
+    const ann = {
+      id: "a",
+      body: [
+        { type: "TextualBody", purpose: "describing", value: "Quote" },
+        { type: "TextualBody", purpose: "commenting", value: "  Note here  " },
+      ],
+    } as any;
+    expect(getAnnotationNoteText(ann)).toBe("Note here");
+  });
+
+  it("extracts color token when present", () => {
+    const ann = {
+      id: "a",
+      body: [{ type: "TextualBody", purpose: "describing", value: "Quote", color: "yellow" }],
+    } as any;
+    expect(getAnnotationColor(ann)).toBe("yellow");
+  });
+});

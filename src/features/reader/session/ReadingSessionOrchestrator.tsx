@@ -12,7 +12,7 @@ import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReadingAnnotation } from "@secondpass/client";
 import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
-import { isHighlightAnnotation, toReaderAnnotation } from "../annotations/annotationUtils";
+import { getAnnotationColor, getAnnotationNoteText, getAnnotationTimestamp, isHighlightAnnotation, toReaderAnnotation } from "../annotations/annotationUtils";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -341,6 +341,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const highlightViewModels = useMemo(() => {
     return highlights.map((h) => {
+      const raw = annotationsRaw.find((a) => a.id === h.id) ?? null;
+      const note = raw ? getAnnotationNoteText(raw) : null;
+      const color = raw ? getAnnotationColor(raw) : null;
+      const timestamp = raw ? getAnnotationTimestamp(raw) : null;
       const entry = bookmarkDescriptions[h.cfiRange];
       const href = entry?.value?.href ?? undefined;
       const chapterLabel = href && toc ? findTocLabelForHref(toc, href) : null;
@@ -355,11 +359,14 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         id: h.id,
         cfiRange: h.cfiRange,
         text: h.text,
+        note: note ?? undefined,
+        color: color ?? undefined,
+        timestamp: timestamp ?? undefined,
         label,
         descriptionStatus: entry?.status ?? "idle",
       };
     });
-  }, [bookmarkDescriptions, highlights, toc]);
+  }, [annotationsRaw, bookmarkDescriptions, highlights, toc]);
 
   const removeById = useCallback(
     async (annotationId: string) => {
