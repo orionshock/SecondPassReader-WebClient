@@ -64,7 +64,15 @@ export type ReadingAnnotation = {
   id: string;
   profile_version?: string;
   session?: string;
-  motivation?: W3CAnnotationMotivation | W3CAnnotationMotivation[] | string | string[];
+  /**
+   * Server contract: motivations are always represented as an array.
+   *
+   * Examples:
+   * - Bookmark: ["bookmarking"]
+   * - Highlight: ["highlighting"]
+   * - Highlight with note: ["highlighting", "commenting"]
+   */
+  motivation?: W3CAnnotationMotivation[];
   target?: Partial<W3CAnnotationTarget> | unknown;
   body?: Array<Partial<W3CTextualBody> & Record<string, unknown>> | unknown;
   is_deleted?: boolean;
@@ -116,7 +124,7 @@ export type ReadingProgressUpdatePayload = {
 export type ReadingAnnotationCreatePayload = {
   profile_version: string;
   session: string;
-  motivation: "highlighting" | "commenting" | string;
+  motivation: Array<"highlighting" | "bookmarking" | "commenting" | string>;
   target: {
     /**
      * Primary anchor is an EPUB CFI FragmentSelector.

@@ -2,8 +2,10 @@ import type { ReadingAnnotation } from "@secondpass/client";
 import type { ReaderAnnotation } from "../domain/types";
 
 function normalizeMotivation(motivation: unknown): string[] {
-  if (typeof motivation === "string") return [motivation.toLowerCase()];
+  // Server contract: motivations are represented as an array.
+  // Keep a small amount of defensive handling for unexpected shapes.
   if (Array.isArray(motivation)) return motivation.filter((m) => typeof m === "string").map((m) => m.toLowerCase());
+  if (typeof motivation === "string") return [motivation.toLowerCase()];
   return [];
 }
 

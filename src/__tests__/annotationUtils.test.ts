@@ -3,15 +3,15 @@ import { getAnnotationColor, getAnnotationDescribingText, getAnnotationFragmentC
 
 describe("annotationUtils", () => {
   it("detects bookmark motivation", () => {
-    expect(isBookmarkAnnotation({ id: "1", motivation: "bookmarking" } as any)).toBe(true);
     expect(isBookmarkAnnotation({ id: "1", motivation: ["bookmarking"] } as any)).toBe(true);
-    expect(isBookmarkAnnotation({ id: "1", motivation: "highlighting" } as any)).toBe(false);
+    expect(isBookmarkAnnotation({ id: "1", motivation: ["highlighting"] } as any)).toBe(false);
   });
 
   it("detects highlight motivation", () => {
-    expect(isHighlightAnnotation({ id: "1", motivation: "highlighting" } as any)).toBe(true);
     expect(isHighlightAnnotation({ id: "1", motivation: ["highlighting"] } as any)).toBe(true);
-    expect(isHighlightAnnotation({ id: "1", motivation: "bookmarking" } as any)).toBe(false);
+    expect(isHighlightAnnotation({ id: "1", motivation: ["bookmarking"] } as any)).toBe(false);
+    expect(isHighlightAnnotation({ id: "1", motivation: ["commenting"] } as any)).toBe(false);
+    expect(isHighlightAnnotation({ id: "1", motivation: ["highlighting", "commenting"] } as any)).toBe(true);
   });
 
   it("extracts fragment selector CFI from selector or selector[]", () => {

@@ -99,6 +99,10 @@ High-level helpers for common workflows:
 - `spl.reading.annotations.list({ sessionId, page?, motivation?, ordering? })`
   - `motivation` may be a single value or an array; arrays are sent as **repeatable** query params:
     - `motivation=highlighting&motivation=bookmarking`
+  - Motivation output from the server is represented as an array:
+    - Bookmark: `["bookmarking"]`
+    - Highlight: `["highlighting"]`
+    - Highlight with note: `["highlighting", "commenting"]`
   - `ordering` may be:
     - `"created" | "-created" | "modified" | "-modified"`
 - `spl.reading.annotations.createHighlight(input, { idempotencyKey? }?)`

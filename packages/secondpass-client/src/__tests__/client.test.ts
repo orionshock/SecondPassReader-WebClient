@@ -97,7 +97,7 @@ describe("@secondpass/client high-level workflows", () => {
     const payload = JSON.parse(String(init?.body));
     expect(payload.profile_version).toBe("pv1");
     expect(payload.session).toBe("sess-1");
-    expect(payload.motivation).toBe("bookmarking");
+    expect(payload.motivation).toEqual(["bookmarking"]);
     expect(payload.target?.selector?.type).toBe("FragmentSelector");
     expect(payload.target?.selector?.value).toBe("epubcfi(/6/2[chap01]!/4/1:0)");
   });
@@ -133,7 +133,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(init?.method).toBe("POST");
 
     const payload = JSON.parse(String(init?.body));
-    expect(payload.motivation).toBe("highlighting");
+    expect(payload.motivation).toEqual(["highlighting", "commenting"]);
     expect(payload.target?.selector?.type).toBe("FragmentSelector");
     expect(payload.target?.selector?.value).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
     expect(payload.body).toEqual([
@@ -174,6 +174,7 @@ describe("@secondpass/client high-level workflows", () => {
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(payload.motivation).toEqual(["highlighting"]);
     expect(Array.isArray(payload.target.selector)).toBe(true);
     expect(payload.target.selector[0]).toMatchObject({ type: "FragmentSelector", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
     expect(payload.target.selector[1]).toMatchObject({ type: "TextQuoteSelector", exact: "Selected text" });

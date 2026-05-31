@@ -232,7 +232,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
           const res = await props.spl!.reading.annotations.list({
             sessionId,
             page,
-            motivation: ["bookmarking", "highlighting", "commenting"],
+            // Standalone comment-only annotations are not supported. Highlights with notes
+            // are still returned when filtering by "highlighting".
+            motivation: ["bookmarking", "highlighting"],
             ordering: "-created",
           });
           all.push(...(res.results as unknown as ReadingAnnotation[]));

@@ -27,6 +27,14 @@ The annotation list endpoint supports workflow-friendly filters:
 - `motivation` (repeatable): `highlighting`, `bookmarking`, `commenting`
 - `ordering`: `"created" | "-created" | "modified" | "-modified"`
 
+Server contract: `motivation` is always represented as an array:
+
+- Bookmark: `["bookmarking"]`
+- Highlight: `["highlighting"]`
+- Highlight with note: `["highlighting", "commenting"]`
+
+Standalone comment-only annotations are not supported in current workflows.
+
 ### Update immutability
 
 - Anchor fields (target/selector/CFI/TextQuoteSelector) are immutable after creation.

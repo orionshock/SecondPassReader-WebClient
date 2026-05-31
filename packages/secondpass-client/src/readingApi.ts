@@ -281,7 +281,7 @@ export async function createHighlightAnnotation(input: {
   const payload: ReadingAnnotationCreatePayload = {
     profile_version: input.create.profileVersion,
     session: input.create.sessionId,
-    motivation: "highlighting",
+    motivation: note ? ["highlighting", "commenting"] : ["highlighting"],
     target: {
       selector,
     },
@@ -302,7 +302,7 @@ export async function createBookmarkAnnotation(input: {
   const payload: ReadingAnnotationCreatePayload = {
     profile_version: input.create.profileVersion,
     session: input.create.sessionId,
-    motivation: "bookmarking",
+    motivation: ["bookmarking"],
     target: {
       selector: {
         type: "FragmentSelector",

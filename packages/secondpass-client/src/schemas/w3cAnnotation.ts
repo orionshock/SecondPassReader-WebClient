@@ -1,6 +1,6 @@
 export type JsonLdContext = string | Record<string, unknown> | Array<string | Record<string, unknown>>;
 
-export type W3CAnnotationMotivation = "highlighting" | "commenting" | string;
+export type W3CAnnotationMotivation = "highlighting" | "bookmarking" | "commenting" | string;
 
 export type W3CTextualBody = {
   type: "TextualBody";
@@ -22,7 +22,15 @@ export type W3CAnnotation = {
   "@context"?: JsonLdContext;
   id?: string;
   type: "Annotation";
-  motivation?: W3CAnnotationMotivation | W3CAnnotationMotivation[];
+  /**
+   * Server contract: motivations are always represented as an array.
+   *
+   * Examples:
+   * - Bookmark: ["bookmarking"]
+   * - Highlight: ["highlighting"]
+   * - Highlight with note: ["highlighting", "commenting"]
+   */
+  motivation?: W3CAnnotationMotivation[];
   body?: W3CTextualBody | W3CTextualBody[] | unknown;
   target: W3CAnnotationTarget;
   created?: string;
