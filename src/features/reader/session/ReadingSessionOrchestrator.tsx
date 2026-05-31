@@ -47,6 +47,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [bookmarkError, setBookmarkError] = useState<string | null>(null);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
+  const [locationsReady, setLocationsReady] = useState(false);
   const [bookmarkDescriptions, setBookmarkDescriptions] = useState<
     Record<string, { status: "idle" | "loading" | "ready" | "error"; value?: ReaderLocationDescription }>
   >({});
@@ -58,6 +59,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const handleDescribeCfiReady = useCallback(
     (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => {
       setDescribeCfi(() => fn);
+      setLocationsReady(false);
     },
     [],
   );
@@ -123,6 +125,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         return;
       case "tocReady":
         setToc(event.toc);
+        return;
+      case "locationsReady":
+        setLocationsReady(true);
         return;
     }
   }, []);
@@ -222,12 +227,26 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     const current = bookmarkDescriptionsRef.current;
     const toDescribe = bookmarks
       .map((b) => b.cfi)
-      .filter((cfi) => !current[cfi] || current[cfi]?.status === "error");
+      .filter((cfi) => {
+        const entry = current[cfi];
+        if (!entry) return true;
+        if (entry.status === "error") return true;
+        // Once locations are generated, refresh descriptions that previously
+        // lacked locations-derived metadata (e.g. approximate bookProgress).
+        if (locationsReady && entry.status === "ready" && entry.value && entry.value.bookProgress == null) return true;
+        return false;
+      });
 
     for (const cfi of toDescribe) {
       setBookmarkDescriptions((prev) => {
         const existing = prev[cfi];
-        if (existing && (existing.status === "loading" || existing.status === "ready")) return prev;
+        if (existing?.status === "loading") return prev;
+        if (
+          existing?.status === "ready" &&
+          !(locationsReady && existing.value && existing.value.bookProgress == null)
+        ) {
+          return prev;
+        }
         return { ...prev, [cfi]: { status: "loading" } };
       });
 
@@ -246,7 +265,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return () => {
       cancelled = true;
     };
-  }, [bookmarks, describeCfi]);
+  }, [bookmarks, describeCfi, locationsReady]);
 
   const bookmarkViewModels: ReaderBookmarkViewModel[] = useMemo(() => {
     return bookmarks.map((b) => {
@@ -331,8 +350,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       />
     ),
     debugPanel: (
-      <section className="panel spReaderDebugPanel">
-        <h2 className="panelTitle">Reader debug (temporary)</h2>
+      <section className="spReaderDebugPanel">
         <div className="muted">Session: {state.sessionId ?? "(none yet)"}</div>
         <div className="muted">Book ID: {String(state.bookId)}</div>
         <div className="muted">

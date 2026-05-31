@@ -5,6 +5,7 @@ export type ReadingShellEvent =
   | { type: "locationChanged"; location: ReaderLocation }
   | { type: "selectionChanged"; selection: ReaderSelection | null }
   | { type: "tocReady"; toc: ReaderTocItem[] }
+  | { type: "locationsReady" }
   | { type: "displayError"; error: unknown };
 
 export type ReadingShellCommand =

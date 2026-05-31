@@ -1,4 +1,4 @@
-/* Reader rebuild skeleton styles (typescript-eupb). */
+/* Reader UI styles. */
 
 .spReaderActivity {
   display: grid;
@@ -50,11 +50,9 @@
   contain: layout paint;
 }
 
-.spReaderViewportHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.spReaderViewportMountWrapper {
+  position: relative;
+  min-width: 0;
 }
 
 .spReaderViewportMount {
@@ -69,22 +67,13 @@
   position: relative;
 }
 
-.spReaderViewportMount * {
+/* Keep media from overflowing the viewport, but do not constrain layout containers.
+   Paginated mode relies on some inner elements being wider than the viewport. */
+.spReaderViewportMount img,
+.spReaderViewportMount svg,
+.spReaderViewportMount video,
+.spReaderViewportMount canvas {
   max-width: 100%;
-}
-
-/* epub-ts / epubjs-compatible generated structure (defensive containment). */
-.spReaderViewportMount .epub-container,
-.spReaderViewportMount .epub-view,
-.spReaderViewportMount .epub-view > iframe {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-}
-
-.spReaderViewportMount .epub-container,
-.spReaderViewportMount .epub-view {
-  overflow: hidden !important;
 }
 
 .spReaderViewportMount iframe {
@@ -93,9 +82,42 @@
   overflow: hidden;
 }
 
-.spReadingShellLabel,
-.spReaderViewportMeta {
+.spReaderViewportOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.spReaderPageNav {
+  pointer-events: auto;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-border);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--sp-text);
   font-size: 12px;
+  font-weight: 600;
+}
+
+.spReaderPageNav:disabled {
+  opacity: 0.5;
+}
+
+.spReaderPageNavPrev {
+  left: 10px;
+}
+
+.spReaderPageNavNext {
+  right: 10px;
+}
+
+.spReadingShellStatus {
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .spReadingShell {
@@ -119,11 +141,6 @@
   min-width: 0;
 }
 
-.spReadingShellStatus {
-  font-size: 12px;
-  line-height: 1.2;
-}
-
 .spReaderShellStack {
   display: grid;
   gap: 12px;
@@ -132,6 +149,20 @@
 .spReaderDebugPanel {
   display: grid;
   gap: 8px;
+}
+
+.spReaderDebugDetails {
+  padding: 12px;
+}
+
+.spReaderDebugSummary {
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+}
+
+.spReaderDebugBody {
+  margin-top: 10px;
 }
 
 .spReaderDebugGrid {

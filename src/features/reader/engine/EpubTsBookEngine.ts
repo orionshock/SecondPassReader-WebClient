@@ -10,6 +10,7 @@ export type EpubTsBookEngineInit = {
   mountEl: HTMLElement;
   onLocationChanged?: (location: ReaderLocation) => void;
   onTocReady?: (toc: ReaderTocItem[]) => void;
+  onLocationsReady?: () => void;
   onError?: (error: unknown) => void;
 };
 
@@ -63,6 +64,27 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   await book.opened;
   if (book.replacementsReady) await book.replacementsReady;
 
+  const measureMount = (): { width: number; height: number } => {
+    const rect = init.mountEl.getBoundingClientRect();
+    const width = Math.floor(rect.width || init.mountEl.clientWidth || 0);
+    const height = Math.floor(rect.height || init.mountEl.clientHeight || 0);
+    return { width, height };
+  };
+
+  const waitForMountSize = async (): Promise<{ width: number; height: number }> => {
+    // epub-ts Rendition#attachTo casts settings.width/height to numbers when
+    // constructing the manager Stage. Passing "100%" ends up as NaN and breaks
+    // pagination measurements, which in turn makes next/prev behave like section
+    // jumps. Ensure we pass real pixel sizes.
+    const start = Date.now();
+    while (true) {
+      const { width, height } = measureMount();
+      if (width > 0 && height > 0) return { width, height };
+      if (Date.now() - start > 1000) return { width: Math.max(width, 1), height: Math.max(height, 1) };
+      await new Promise((r) => setTimeout(r, 16));
+    }
+  };
+
   try {
     const nav = await book.loaded.navigation;
     const toc = normalizeTocItems(nav.toc as any);
@@ -72,10 +94,26 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     init.onError?.(err);
   }
 
+  const { width, height } = await waitForMountSize();
+
+  // Reader UX: treat next/prev as rendered page/spread navigation.
+  // Configure paginated flow up-front so the manager/layout are created in paginated mode.
   const rendition: Rendition = book.renderTo(init.mountEl, {
-    width: "100%",
-    height: "100%",
+    width,
+    height,
+    manager: "default",
+    flow: "paginated",
+    spread: "auto",
+    minSpreadWidth: 900,
   });
+
+  // Defensive: some environments may ignore initial options; re-assert after init.
+  try {
+    rendition.flow("paginated");
+    rendition.spread("auto", 900);
+  } catch {
+    // continue
+  }
 
   const onRelocated = (loc: Location) => {
     try {
@@ -94,6 +132,35 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   let destroyed = false;
   let locationsGeneratePromise: Promise<unknown> | null = null;
+  let locationsReady = false;
+
+  // Start locations generation in the background. This enables approximate whole-book
+  // percentage lookups (Location.percentage / percentageFromCfi) without needing to
+  // jump the rendition to a given CFI.
+  const startLocationsGeneration = () => {
+    if (locationsGeneratePromise) return;
+    try {
+      locationsGeneratePromise = book.locations
+        .generate(1000)
+        .then(() => {
+          if (destroyed) return;
+          const hasLocations = typeof book.locations.length === "function" ? book.locations.length() > 0 : false;
+          if (hasLocations) {
+            locationsReady = true;
+            init.onLocationsReady?.();
+          }
+        })
+        .catch((err: unknown) => {
+          if (destroyed) return;
+          // Non-fatal: percentage labels should degrade gracefully.
+          init.onError?.(err);
+        });
+    } catch (err) {
+      // ignore
+    }
+  };
+
+  startLocationsGeneration();
 
   return {
     async display(target?: ReaderLocationTarget) {
@@ -127,20 +194,12 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       }
 
       let bookProgress: number | null = null;
+      // Percentages are approximate UI metadata and depend on generated locations.
+      // This method must never trigger rendition navigation; it reads what is available.
       try {
-        const p = book.locations.percentageFromCfi(trimmed);
-        if (typeof p === "number" && Number.isFinite(p)) {
-          bookProgress = p;
-        } else {
-          // Locations-based percentage may require generating locations first.
-          // Best-effort: generate once per engine if locations are not yet available.
-          const hasLocations = typeof book.locations.length === "function" ? book.locations.length() > 0 : false;
-          if (!hasLocations) {
-            locationsGeneratePromise ??= book.locations.generate(1000);
-            await locationsGeneratePromise;
-            const p2 = book.locations.percentageFromCfi(trimmed);
-            if (typeof p2 === "number" && Number.isFinite(p2)) bookProgress = p2;
-          }
+        if (locationsReady) {
+          const p = book.locations.percentageFromCfi(trimmed);
+          if (typeof p === "number" && Number.isFinite(p)) bookProgress = p;
         }
       } catch {
         // ignore

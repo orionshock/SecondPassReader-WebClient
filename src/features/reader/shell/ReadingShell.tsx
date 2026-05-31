@@ -48,6 +48,7 @@ export function ReadingShell(props: ReadingShellProps) {
           mountEl,
           onLocationChanged: (location) => props.onEvent?.({ type: "locationChanged", location }),
           onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
+          onLocationsReady: () => props.onEvent?.({ type: "locationsReady" }),
           onError: (err) => props.onEvent?.({ type: "displayError", error: err }),
         });
         if (cancelled) {
@@ -157,11 +158,10 @@ export function ReadingShell(props: ReadingShellProps) {
     <div className="spReadingShell">
       <div className="spReadingShellBar">
         <div className="spReadingShellLabelBlock">
-          <div className="muted spReadingShellLabel">ReadingShell (epub-ts)</div>
-          {props.statusLine ? <div className="muted spReadingShellStatus">{props.statusLine}</div> : null}
+          {props.statusLine ? <div className="spReadingShellStatus">{props.statusLine}</div> : null}
         </div>
-        <div className="spReadingShellNav">
-          {props.bookmark ? (
+        {props.bookmark ? (
+          <div className="spReadingShellActions">
             <button
               type="button"
               className="button buttonCompact"
@@ -169,24 +169,40 @@ export function ReadingShell(props: ReadingShellProps) {
               disabled={!props.bookmark.enabled || status !== "ready" || Boolean(props.bookmark.busy)}
               title={!props.bookmark.enabled ? "Bookmark is unavailable until a reading location is known." : undefined}
             >
-              {props.bookmark.isBookmarked ? "Remove bookmark" : "Bookmark"}
+              {props.bookmark.isBookmarked ? "Bookmarked" : "Bookmark"}
             </button>
-          ) : null}
-          <button type="button" className="button buttonCompact" onClick={goPrev} disabled={status !== "ready"}>
-            Previous
-          </button>
-          <button type="button" className="button buttonCompact" onClick={goNext} disabled={status !== "ready"}>
-            Next
-          </button>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <ReaderViewport
         ref={mountRef}
         status={status}
-        title="Viewport"
         errorMessage={errorMessage ?? undefined}
-        footerText={`Source: Blob (${props.blob.size.toLocaleString()} bytes)`}
+        overlay={
+          <>
+            <button
+              type="button"
+              className="spReaderPageNav spReaderPageNavPrev"
+              onClick={goPrev}
+              disabled={status !== "ready"}
+              aria-label="Previous page"
+              title="Previous page"
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              className="spReaderPageNav spReaderPageNavNext"
+              onClick={goNext}
+              disabled={status !== "ready"}
+              aria-label="Next page"
+              title="Next page"
+            >
+              Next
+            </button>
+          </>
+        }
       />
     </div>
   );

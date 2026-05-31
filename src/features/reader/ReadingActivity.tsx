@@ -23,7 +23,6 @@ export function ReadingActivity({
       <div className="spReaderTopBar">
         <div className="spReaderTitle">
           <div className="spReaderTitleLine">{openedBook.book.title}</div>
-          <div className="spReaderSubtitle muted">SecondPass Reader rebuild placeholder (epub-ts)</div>
         </div>
         <div className="spReaderActions">
           <button type="button" className="button buttonCompact" onClick={onBackToLibrary}>
@@ -38,7 +37,7 @@ export function ReadingActivity({
             <div className="spReaderViewportRegion">{shell}</div>
             {state.toc && state.toc.length > 0 ? (
               <section className="panel spReaderTocPanel">
-                <h2 className="panelTitle">Contents (temporary)</h2>
+                <h2 className="panelTitle">Contents</h2>
                 <select
                   className="input"
                   defaultValue=""
@@ -69,7 +68,12 @@ export function ReadingActivity({
                 }}
               />
             </div>
-            <div className="spReaderDebugRegion">{debugPanel}</div>
+            <div className="spReaderDebugRegion">
+              <details className="panel spReaderDebugDetails">
+                <summary className="spReaderDebugSummary">Developer debug</summary>
+                <div className="spReaderDebugBody">{debugPanel}</div>
+              </details>
+            </div>
           </div>
         )}
       </ReadingSessionOrchestrator>

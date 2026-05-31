@@ -16,7 +16,8 @@ export function AnnotationList({
 }) {
   return (
     <section className="panel spAnnotationList">
-      <h2 className="panelTitle">Bookmarks</h2>
+      <h2 className="panelTitle">Annotations</h2>
+      <div className="muted">Showing bookmarks only</div>
       <div className="muted">Session: {state.sessionId ?? "(none yet)"}</div>
       {bookmarks.length === 0 ? <div className="muted">No bookmarks yet.</div> : null}
 
