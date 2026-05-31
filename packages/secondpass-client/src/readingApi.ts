@@ -11,529 +11,494 @@ import type {
   ReadingSession,
 } from "./schemas/readingSession";
 import type { PaginatedResponse } from "./schemas/library";
-import { ApiError, resolveUrl } from "./apiHttp";
+import type { AuthenticatedClientContext } from "./clientContext";
+import { authErrorMessages, requestJson, resolveUrl } from "./apiHttp";
 
-export async function listRecentReadingSessions(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  limit?: number;
-}): Promise<ReadingRecentSessionsResponse> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = new URL(resolveUrl(input.apiBaseUrl, "/reading/sessions/recent/"));
-  if (typeof input.limit === "number") url.searchParams.set("limit", String(input.limit));
+const READING_SESSIONS_FORBIDDEN_403 = "Token is not allowed to access reading sessions (403).";
+const READING_DATA_FORBIDDEN_403 = "Token is not allowed to access reading data (403).";
+const READING_MODIFY_FORBIDDEN_403 = "Token is not allowed to modify reading data (403).";
+const READING_START_OVER_FORBIDDEN_403 = "Token is not allowed to start over reading sessions (403).";
+const READING_PROGRESS_UPDATE_FORBIDDEN_403 = "Token cannot update reading progress (403).";
+const READING_ANNOTATIONS_LIST_FORBIDDEN_403 = "Token cannot list reading annotations (403).";
+const READING_ANNOTATIONS_CREATE_FORBIDDEN_403 = "Token cannot create reading annotations (403).";
+const READING_ANNOTATIONS_UPDATE_FORBIDDEN_403 = "Token cannot update reading annotations (403).";
+const READING_ANNOTATIONS_DELETE_FORBIDDEN_403 = "Token cannot delete reading annotations (403).";
+const READING_SESSIONS_MODIFY_FORBIDDEN_403 = "Token is not allowed to modify reading sessions (403).";
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+export async function listRecentReadingSessions(
+  ctx: AuthenticatedClientContext,
+  input?: { limit?: number },
+): Promise<ReadingRecentSessionsResponse> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, "/reading/sessions/recent/"));
+  if (typeof input?.limit === "number") url.searchParams.set("limit", String(input.limit));
+
+  return requestJson<ReadingRecentSessionsResponse>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: authErrorMessages({ forbidden: READING_SESSIONS_FORBIDDEN_403 }),
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({
-      kind: "forbidden",
-      status: 403,
-      message: "Token is not allowed to access reading sessions (403).",
-    });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingRecentSessionsResponse;
 }
 
-export async function closeReadingSession(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
+export async function closeReadingSession(
+  ctx: AuthenticatedClientContext,
+  input: { sessionId: string },
+): Promise<ReadingSession> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/close/`);
+
+  return requestJson<ReadingSession>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      errorMessages: authErrorMessages({
+        forbidden: READING_MODIFY_FORBIDDEN_403,
+        notFound: "Reading session not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function openReadingSession(
+  ctx: AuthenticatedClientContext,
+  input: { bookId: string | number },
+): Promise<ReadingOpenResponse> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/books/${encodeURIComponent(String(input.bookId))}/open/`);
+
+  return requestJson<ReadingOpenResponse>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      body: {},
+      errorMessages: authErrorMessages({
+        forbidden: READING_DATA_FORBIDDEN_403,
+        notFound: "Book not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function startOverReadingSession(
+  ctx: AuthenticatedClientContext,
+  input: { bookId: string | number },
+): Promise<ReadingOpenResponse> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/books/${encodeURIComponent(String(input.bookId))}/start-over/`);
+
+  return requestJson<ReadingOpenResponse>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      errorMessages: authErrorMessages({
+        forbidden: READING_START_OVER_FORBIDDEN_403,
+        notFound: "Book not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function updateReadingProgress(
+  ctx: AuthenticatedClientContext,
+  input: { sessionId: string; payload: ReadingProgressUpdatePayload; method?: "PUT" | "PATCH" },
+): Promise<ReadingProgress> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/progress/`);
+
+  return requestJson<ReadingProgress>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: input.method ?? "PATCH",
+      body: input.payload,
+      errorMessages: authErrorMessages({
+        forbidden: READING_PROGRESS_UPDATE_FORBIDDEN_403,
+        notFound: "Reading session not found (404).",
+      }),
+    },
+  });
+}
+
+export type SaveReadingProgressInput = {
+  profileVersion: string;
+  cfi: string;
+  href?: string;
+  bookProgress?: number | null;
+  format?: "epub" | string;
+};
+
+export type CreateHighlightInput = {
   sessionId: string;
-}): Promise<ReadingSession> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/close/`);
+  profileVersion: string;
+  cfiRange: string;
+  text?: string;
+  color?: string;
+  note?: string;
+  /**
+   * Optional W3C TextQuoteSelector context.
+   *
+   * - `cfiRange` remains the primary anchor.
+   * - prefix/suffix are repair/export metadata, not display text.
+   * - The reader/selection layer decides what context is useful.
+   * - The client clamps prefix/suffix to server limits (500 chars).
+   */
+  quotePrefix?: string;
+  quoteSuffix?: string;
+};
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
-    },
-  });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({
-      kind: "forbidden",
-      status: 403,
-      message: "Token is not allowed to modify reading data (403).",
-    });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading session not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingSession;
-}
-
-export async function openReadingSession(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  bookId: string | number;
-}): Promise<ReadingOpenResponse> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/books/${encodeURIComponent(String(input.bookId))}/open/`);
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
-    },
-    body: JSON.stringify({}),
-  });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({
-      kind: "forbidden",
-      status: 403,
-      message: "Token is not allowed to access reading data (403).",
-    });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Book not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingOpenResponse;
-}
-
-export async function startOverReadingSession(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  bookId: string | number;
-}): Promise<ReadingOpenResponse> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/books/${encodeURIComponent(String(input.bookId))}/start-over/`);
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
-    },
-  });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({
-      kind: "forbidden",
-      status: 403,
-      message: "Token is not allowed to start over reading sessions (403).",
-    });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Book not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingOpenResponse;
-}
-
-export async function updateReadingProgress(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
+export type CreateBookmarkInput = {
   sessionId: string;
-  payload: ReadingProgressUpdatePayload;
-  method?: "PUT" | "PATCH";
+  profileVersion: string;
+  cfi: string;
+};
+
+export type UpdateNoteInput = {
+  profileVersion: string;
+  sessionId: string;
+  // Keep motivation explicit for correctness; default to "commenting" for note updates.
+  motivation?: "commenting" | "highlighting" | "bookmarking" | string;
+  cfi: string;
+  note?: string;
+  color?: string;
+  text?: string;
+};
+
+export async function saveReadingProgress(input: {
+  ctx: AuthenticatedClientContext;
+  sessionId: string;
+  progress: SaveReadingProgressInput;
 }): Promise<ReadingProgress> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/progress/`);
+  const cfi = input.progress.cfi.trim();
+  if (!cfi) throw new Error("Cannot save reading progress without a CFI.");
 
-  const res = await fetch(url, {
-    method: input.method ?? "PATCH",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  const payload: ReadingProgressUpdatePayload = {
+    profile_version: input.progress.profileVersion,
+    current_location: {
+      format: input.progress.format ?? "epub",
+      cfi,
     },
-    body: JSON.stringify(input.payload),
-  });
+  };
 
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
+  const href = typeof input.progress.href === "string" ? input.progress.href.trim() : "";
+  if (href) (payload.current_location as NonNullable<ReadingProgressUpdatePayload["current_location"]>).href = href;
+
+  const p = input.progress.bookProgress;
+  if (typeof p === "number" && Number.isFinite(p)) payload.progression = p;
+
+  return updateReadingProgress(input.ctx, { sessionId: input.sessionId, payload, method: "PATCH" });
+}
+
+const EPUB_CFI_CONFORMS_TO = "http://www.idpf.org/epub/linking/cfi/epub-cfi.html";
+
+export async function createHighlightAnnotation(input: {
+  ctx: AuthenticatedClientContext;
+  create: CreateHighlightInput;
+  idempotencyKey?: string;
+}): Promise<ReadingAnnotation> {
+  const cfiRange = input.create.cfiRange.trim();
+  if (!cfiRange) throw new Error("Highlight requires a cfiRange.");
+
+  const body: ReadingAnnotationCreatePayload["body"] = [];
+  const text = typeof input.create.text === "string" ? input.create.text.trim() : "";
+  const quotePrefixRaw = typeof input.create.quotePrefix === "string" ? input.create.quotePrefix : "";
+  const quoteSuffixRaw = typeof input.create.quoteSuffix === "string" ? input.create.quoteSuffix : "";
+
+  const clampQuoteContext = (value: string): string | undefined => {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.length <= 500) return trimmed;
+    return trimmed.slice(0, 500);
+  };
+
+  const quotePrefix = clampQuoteContext(quotePrefixRaw);
+  const quoteSuffix = clampQuoteContext(quoteSuffixRaw);
+  const hasQuoteContext = Boolean(quotePrefix || quoteSuffix);
+  if (hasQuoteContext && !text) {
+    throw new Error("Highlight quote context requires `text` (used as TextQuoteSelector.exact).");
   }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot update reading progress (403)." });
+
+  if (text) {
+    body.push({
+      type: "TextualBody",
+      purpose: "describing",
+      value: text,
+      ...(input.create.color ? { color: input.create.color } : {}),
+    });
   }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading session not found (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
+  const note = typeof input.create.note === "string" ? input.create.note.trim() : "";
+  if (note) {
+    body.push({
+      type: "TextualBody",
+      purpose: "commenting",
+      value: note,
     });
   }
 
-  return (await res.json()) as ReadingProgress;
+  const fragmentSelector: ReadingAnnotationCreatePayload["target"]["selector"] =
+    // Cast the fragment selector shape; the schema type allows this object directly.
+    {
+      type: "FragmentSelector",
+      conformsTo: EPUB_CFI_CONFORMS_TO,
+      value: cfiRange,
+    } as ReadingAnnotationCreatePayload["target"]["selector"];
+
+  const selector: ReadingAnnotationCreatePayload["target"]["selector"] = hasQuoteContext
+    ? ([
+        fragmentSelector,
+        {
+          type: "TextQuoteSelector",
+          // Must match the describing body text when both are present.
+          exact: text,
+          ...(quotePrefix ? { prefix: quotePrefix } : {}),
+          ...(quoteSuffix ? { suffix: quoteSuffix } : {}),
+        },
+      ] as unknown as ReadingAnnotationCreatePayload["target"]["selector"])
+    : fragmentSelector;
+
+  const payload: ReadingAnnotationCreatePayload = {
+    profile_version: input.create.profileVersion,
+    session: input.create.sessionId,
+    motivation: "highlighting",
+    target: {
+      selector,
+    },
+    ...(body.length ? { body } : {}),
+  };
+
+  return createReadingAnnotation(input.ctx, { payload, idempotencyKey: input.idempotencyKey });
+}
+
+export async function createBookmarkAnnotation(input: {
+  ctx: AuthenticatedClientContext;
+  create: CreateBookmarkInput;
+  idempotencyKey?: string;
+}): Promise<ReadingAnnotation> {
+  const cfi = input.create.cfi.trim();
+  if (!cfi) throw new Error("Bookmark requires a cfi.");
+
+  const payload: ReadingAnnotationCreatePayload = {
+    profile_version: input.create.profileVersion,
+    session: input.create.sessionId,
+    motivation: "bookmarking",
+    target: {
+      selector: {
+        type: "FragmentSelector",
+        conformsTo: EPUB_CFI_CONFORMS_TO,
+        value: cfi,
+      },
+    },
+  };
+
+  return createReadingAnnotation(input.ctx, { payload, idempotencyKey: input.idempotencyKey });
+}
+
+export async function updateNoteAnnotation(input: {
+  ctx: AuthenticatedClientContext;
+  annotationId: string;
+  update: UpdateNoteInput;
+}): Promise<ReadingAnnotation> {
+  const cfi = input.update.cfi.trim();
+  if (!cfi) throw new Error("Note update requires a cfi.");
+
+  const body: ReadingAnnotationUpdatePayload["body"] = [];
+  const text = typeof input.update.text === "string" ? input.update.text.trim() : "";
+  if (text) {
+    body.push({
+      type: "TextualBody",
+      purpose: "describing",
+      value: text,
+      ...(input.update.color ? { color: input.update.color } : {}),
+    });
+  }
+  const note = typeof input.update.note === "string" ? input.update.note.trim() : "";
+  if (note) {
+    body.push({
+      type: "TextualBody",
+      purpose: "commenting",
+      value: note,
+    });
+  }
+
+  const payload: ReadingAnnotationUpdatePayload = {
+    profile_version: input.update.profileVersion,
+    session: input.update.sessionId,
+    motivation: input.update.motivation ?? "commenting",
+    target: {
+      selector: {
+        type: "FragmentSelector",
+        conformsTo: EPUB_CFI_CONFORMS_TO,
+        value: cfi,
+      },
+    },
+    ...(body.length ? { body } : {}),
+  };
+
+  return updateReadingAnnotation(input.ctx, { annotationId: input.annotationId, payload });
 }
 
 export async function listReadingAnnotations(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
+  ctx: AuthenticatedClientContext;
   sessionId: string;
   page?: number;
 }): Promise<ReadingAnnotationPage> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = new URL(resolveUrl(input.apiBaseUrl, "/reading/annotations/"));
+  const url = new URL(resolveUrl(input.ctx.apiBaseUrl, "/reading/annotations/"));
   url.searchParams.set("session_id", input.sessionId);
   if (input.page !== undefined) url.searchParams.set("page", String(input.page));
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<ReadingAnnotationPage>({
+    apiBaseUrl: input.ctx.apiBaseUrl,
+    accessToken: input.ctx.accessToken,
+    tokenType: input.ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_LIST_FORBIDDEN_403,
+        notFound: "Reading annotations endpoint not found (404).",
+      }),
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot list reading annotations (403)." });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotations endpoint not found (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingAnnotationPage;
 }
 
 export async function listReadingSessions(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
+  ctx: AuthenticatedClientContext;
   page?: number;
   pageSize?: number;
   bookId?: string | number;
   status?: "active" | "completed" | "archived" | string;
   isActive?: boolean;
 }): Promise<PaginatedResponse<ReadingSessionSummary>> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = new URL(resolveUrl(input.apiBaseUrl, "/reading/sessions/"));
+  const url = new URL(resolveUrl(input.ctx.apiBaseUrl, "/reading/sessions/"));
   if (input.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input.pageSize !== undefined) url.searchParams.set("page_size", String(input.pageSize));
   if (input.bookId !== undefined) url.searchParams.set("book", String(input.bookId));
   if (input.status) url.searchParams.set("status", String(input.status));
   if (input.isActive !== undefined) url.searchParams.set("is_active", input.isActive ? "true" : "false");
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<PaginatedResponse<ReadingSessionSummary>>({
+    apiBaseUrl: input.ctx.apiBaseUrl,
+    accessToken: input.ctx.accessToken,
+    tokenType: input.ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: authErrorMessages({ forbidden: READING_SESSIONS_FORBIDDEN_403 }),
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access reading sessions (403)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as PaginatedResponse<ReadingSessionSummary>;
 }
 
 export async function getReadingSession(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
+  ctx: AuthenticatedClientContext;
   sessionId: string;
 }): Promise<ReadingSessionSummary> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/`);
+  const url = resolveUrl(input.ctx.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/`);
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<ReadingSessionSummary>({
+    apiBaseUrl: input.ctx.apiBaseUrl,
+    accessToken: input.ctx.accessToken,
+    tokenType: input.ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      errorMessages: authErrorMessages({
+        forbidden: READING_SESSIONS_FORBIDDEN_403,
+        notFound: "Reading session not found or not accessible (404).",
+      }),
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to access reading sessions (403)." });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading session not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingSessionSummary;
 }
 
-export async function updateReadingSession(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  sessionId: string;
-  payload: { name?: string; notes?: string };
-}): Promise<ReadingSessionSummary> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/`);
+export async function updateReadingSession(
+  ctx: AuthenticatedClientContext,
+  input: { sessionId: string; payload: { name?: string; notes?: string } },
+): Promise<ReadingSessionSummary> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/sessions/${encodeURIComponent(input.sessionId)}/`);
 
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<ReadingSessionSummary>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "PATCH",
+      body: input.payload,
+      errorMessages: authErrorMessages({
+        forbidden: READING_SESSIONS_MODIFY_FORBIDDEN_403,
+        notFound: "Reading session not found or not accessible (404).",
+      }),
     },
-    body: JSON.stringify(input.payload),
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token is not allowed to modify reading sessions (403)." });
-  }
-  if (res.status === 400) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: 400,
-      message: `Validation error (400)${text ? ` - ${text}` : ""}`,
-    });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading session not found or not accessible (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingSessionSummary;
 }
 
-export async function createReadingAnnotation(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  payload: ReadingAnnotationCreatePayload;
-  idempotencyKey?: string;
-}): Promise<ReadingAnnotation> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, "/reading/annotations/");
+export async function createReadingAnnotation(
+  ctx: AuthenticatedClientContext,
+  input: { payload: ReadingAnnotationCreatePayload; idempotencyKey?: string },
+): Promise<ReadingAnnotation> {
+  const url = resolveUrl(ctx.apiBaseUrl, "/reading/annotations/");
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
-      ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
+  return requestJson<ReadingAnnotation>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      body: input.payload,
+      headers: input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : undefined,
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_CREATE_FORBIDDEN_403,
+        notFound: "Reading annotations endpoint not found (404).",
+      }),
     },
-    body: JSON.stringify(input.payload),
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot create reading annotations (403)." });
-  }
-  if (res.status === 400) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: 400,
-      message: `Validation error (400)${text ? ` - ${text}` : ""}`,
-    });
-  }
-  if (res.status === 409) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: 409,
-      message: `Idempotency key was already used for a different request (409)${text ? ` - ${text}` : ""}`,
-    });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotations endpoint not found (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingAnnotation;
 }
 
-export async function updateReadingAnnotation(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  annotationId: string;
-  payload: ReadingAnnotationUpdatePayload;
-}): Promise<ReadingAnnotation> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/annotations/${encodeURIComponent(input.annotationId)}/`);
+export async function updateReadingAnnotation(
+  ctx: AuthenticatedClientContext,
+  input: { annotationId: string; payload: ReadingAnnotationUpdatePayload },
+): Promise<ReadingAnnotation> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/annotations/${encodeURIComponent(input.annotationId)}/`);
 
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  return requestJson<ReadingAnnotation>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "PATCH",
+      body: input.payload,
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_UPDATE_FORBIDDEN_403,
+        notFound: "Reading annotation not found (404).",
+      }),
     },
-    body: JSON.stringify(input.payload),
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot update reading annotations (403)." });
-  }
-  if (res.status === 400) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: 400,
-      message: `Validation error (400)${text ? ` - ${text}` : ""}`,
-    });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotation not found (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
-
-  return (await res.json()) as ReadingAnnotation;
 }
 
-export async function deleteReadingAnnotation(input: {
-  apiBaseUrl: string;
-  accessToken: string;
-  tokenType?: string;
-  annotationId: string;
-}): Promise<void> {
-  const tokenType = input.tokenType ?? "Bearer";
-  const url = resolveUrl(input.apiBaseUrl, `/reading/annotations/${encodeURIComponent(input.annotationId)}/`);
+export async function deleteReadingAnnotation(
+  ctx: AuthenticatedClientContext,
+  input: { annotationId: string },
+): Promise<void> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/reading/annotations/${encodeURIComponent(input.annotationId)}/`);
 
-  const res = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      Accept: "application/json",
-      Authorization: `${tokenType} ${input.accessToken}`,
+  await requestJson<unknown>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "DELETE",
+      errorMessages: authErrorMessages({
+        forbidden: READING_ANNOTATIONS_DELETE_FORBIDDEN_403,
+        notFound: "Reading annotation not found (404).",
+      }),
     },
   });
-
-  if (res.status === 401) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Token is invalid or revoked (401)." });
-  }
-  if (res.status === 403) {
-    throw new ApiError({ kind: "forbidden", status: 403, message: "Token cannot delete reading annotations (403)." });
-  }
-  if (res.status === 404) {
-    throw new ApiError({ kind: "http_error", status: 404, message: "Reading annotation not found (404)." });
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new ApiError({
-      kind: "http_error",
-      status: res.status,
-      message: `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`,
-    });
-  }
 }

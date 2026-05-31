@@ -6,11 +6,21 @@
 - **Annotations** are canonical as **W3C Web Annotation JSON-LD**.
 - EPUB location/selectors use **EPUB CFI**.
 
+## Library book files
+
+Server convention: **1 book === 1 backing file**. Client/UI code should not treat file availability as an optional feature flag; open/download failures should be handled as errors.
+
 ## Renderer is replaceable
 
 - Renderer implementation must be swappable.
-- Initial candidate is epub.js / react-reader, but renderer state must remain an implementation detail.
-- The app’s model should be renderer-agnostic via a `ReaderBridge`.
+- Current renderer implementation uses `@likecoin/epub-ts` behind an app-owned boundary (`ReadingShell` + `EpubTsBookEngine`).
+- Renderer state remains an implementation detail; app/session state remains renderer-agnostic.
+
+## Client package notes
+
+Client-library-specific details live in:
+
+- `packages/secondpass-client/docs/DATA_MODEL.md`
 
 ## Sessions
 

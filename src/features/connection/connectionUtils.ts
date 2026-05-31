@@ -26,7 +26,7 @@ export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string }
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   try {
-    return await createSecondPassClient({ apiBaseUrl: "", accessToken: "", tokenType: "Bearer" }).server.discover(serverBaseUrl);
+    return await createSecondPassClient({ apiBaseUrl: serverBaseUrl }).server.discover(serverBaseUrl);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Discovery failed.";
     throw new Error(message);

@@ -21,9 +21,7 @@ export function findNextBookInSeries(currentBook: LibraryBook, seriesBooks: Libr
 
     const nextHigher = withIndex.filter((x) => x.idx > currentIndex);
     if (nextHigher.length === 0) return null;
-
-    const withFiles = nextHigher.find((x) => Boolean(x.book.file?.download_url));
-    return (withFiles ?? nextHigher[0]).book;
+    return nextHigher[0].book;
   }
 
   // Fallback: use list order and current id if series_index isn't parseable.

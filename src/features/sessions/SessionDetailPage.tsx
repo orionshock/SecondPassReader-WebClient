@@ -184,7 +184,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setSaveError(null);
     try {
       const spl = createSplClientFromProfile(profile);
-      await spl.reading.sessions.update(sessionId, { name: draftName });
+      await spl.reading.sessions.updateDetails(sessionId, { name: draftName });
       const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
       setEditingName(false);
@@ -203,7 +203,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setSaveError(null);
     try {
       const spl = createSplClientFromProfile(profile);
-      await spl.reading.sessions.update(sessionId, { notes: draftNotes });
+      await spl.reading.sessions.updateDetails(sessionId, { notes: draftNotes });
       const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
       setEditingNotes(false);

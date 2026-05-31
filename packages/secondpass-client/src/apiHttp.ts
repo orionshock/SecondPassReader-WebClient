@@ -5,6 +5,13 @@ export type RequestUrlOptions = {
   body?: unknown;
   headers?: Record<string, string>;
   url: string;
+  /**
+   * Optional override messages for specific status codes.
+   *
+   * Useful when you want a clearer product-facing error while keeping the
+   * underlying wire contract unchanged.
+   */
+  errorMessages?: Partial<Record<number, string>>;
 };
 
 export type ApiErrorKind = "unauthorized" | "forbidden" | "http_error";
@@ -18,6 +25,25 @@ export class ApiError extends Error {
     this.kind = input.kind;
     this.status = input.status;
   }
+}
+
+/**
+ * Common auth-related messages.
+ *
+ * Most authenticated endpoints use the same semantics for 401/403.
+ * Callers can override 403/404 when a more specific message is valuable.
+ */
+export const INVALID_OR_REVOKED_TOKEN_401 = "Token is invalid or revoked (401).";
+
+export function authErrorMessages(input?: {
+  forbidden?: string;
+  notFound?: string;
+}): Partial<Record<number, string>> {
+  return {
+    401: INVALID_OR_REVOKED_TOKEN_401,
+    ...(input?.forbidden ? { 403: input.forbidden } : {}),
+    ...(input?.notFound ? { 404: input.notFound } : {}),
+  };
 }
 
 export function resolveUrl(baseUrl: string, endpointOrUrl: string): string {
@@ -50,10 +76,103 @@ export async function requestJsonUrl<T>(options: RequestUrlOptions): Promise<T> 
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`);
+    const message =
+      options.errorMessages?.[res.status] ??
+      `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`;
+    const kind: ApiErrorKind =
+      res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
+    throw new ApiError({ kind, status: res.status, message });
   }
 
   return (await res.json()) as T;
+}
+
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export type RequestOptions = {
+  method?: HttpMethod;
+  headers?: Record<string, string>;
+  body?: unknown;
+  errorMessages?: Partial<Record<number, string>>;
+};
+
+export function buildAuthHeaders(input: { accessToken?: string; tokenType?: string }): Record<string, string> {
+  if (!input.accessToken) return {};
+  const tokenType = input.tokenType ?? "Bearer";
+  return { Authorization: `${tokenType} ${input.accessToken}` };
+}
+
+export async function requestJson<T>(input: {
+  apiBaseUrl: string;
+  accessToken?: string;
+  tokenType?: string;
+  endpointOrUrl: string;
+  options?: RequestOptions;
+}): Promise<T> {
+  const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...buildAuthHeaders({ accessToken: input.accessToken, tokenType: input.tokenType }),
+    ...input.options?.headers,
+  };
+
+  let body: BodyInit | undefined;
+  if (input.options?.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+    body = JSON.stringify(input.options.body);
+  }
+
+  const res = await fetch(url, {
+    method: input.options?.method ?? "GET",
+    headers,
+    body,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const message =
+      input.options?.errorMessages?.[res.status] ??
+      `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`;
+    const kind: ApiErrorKind =
+      res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
+    throw new ApiError({ kind, status: res.status, message });
+  }
+
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export async function requestBlob(input: {
+  apiBaseUrl: string;
+  accessToken?: string;
+  tokenType?: string;
+  endpointOrUrl: string;
+  options?: Omit<RequestOptions, "body"> & { accept?: string };
+}): Promise<{ blob: Blob; response: Response }> {
+  const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
+  const headers: Record<string, string> = {
+    Accept: input.options?.accept ?? "application/octet-stream, */*",
+    ...buildAuthHeaders({ accessToken: input.accessToken, tokenType: input.tokenType }),
+    ...input.options?.headers,
+  };
+
+  const res = await fetch(url, {
+    method: input.options?.method ?? "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const message =
+      input.options?.errorMessages?.[res.status] ??
+      `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`;
+    const kind: ApiErrorKind =
+      res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
+    throw new ApiError({ kind, status: res.status, message });
+  }
+
+  const blob = await res.blob();
+  return { blob, response: res };
 }
 
 export function tryParseFilename(contentDisposition: string): string | undefined {
@@ -72,4 +191,3 @@ export function tryParseFilename(contentDisposition: string): string | undefined
   if (filename) return filename[1].trim();
   return undefined;
 }
-

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BookFileDownloadResult, LibraryBook } from "@secondpass/client";
+import type { LibraryBook } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 
@@ -29,15 +29,13 @@ export function BookDetailPanel({
     | { phase: "opening_session" }
     | { phase: "fetching" }
     | { phase: "opening_reader" }
-    | { phase: "success"; result: BookFileDownloadResult }
+    | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
 }) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
     book.series?.name && book.series_index != null ? `${book.series.name} #${book.series_index}` : book.series?.name;
 
-  const file = book.file;
-  const canOpen = Boolean(file?.download_url);
   const busy =
     downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
 
@@ -85,7 +83,7 @@ export function BookDetailPanel({
             type="button"
             className="button buttonPrimary bookDetailActionButton"
             onClick={() => onOpenReader(book)}
-            disabled={!canOpen || busy}
+            disabled={busy}
           >
             Open reader
           </button>

@@ -5,7 +5,6 @@ import type {
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
 import type {
-  BookFileDownloadResult,
   LibraryAuthor,
   LibraryBook,
   LibrarySeries,
@@ -14,39 +13,40 @@ import type {
 import type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf } from "./schemas/shelves";
 import type {
   ReadingAnnotation,
-  ReadingAnnotationCreatePayload,
   ReadingAnnotationPage,
-  ReadingAnnotationUpdatePayload,
   ReadingOpenResponse,
   ReadingProgress,
-  ReadingProgressUpdatePayload,
   ReadingRecentSessionsResponse,
   ReadingSession,
   ReadingSessionSummary,
 } from "./schemas/readingSession";
 
-import { ApiError } from "./apiHttp";
 import { createLoginRequest, discoverSecondPass, getMe, pollLoginRequest } from "./clientApiAuthApi";
 import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
 import {
   closeReadingSession,
-  createReadingAnnotation,
+  createBookmarkAnnotation,
+  createHighlightAnnotation,
   deleteReadingAnnotation,
   getReadingSession,
   listReadingAnnotations,
   listReadingSessions,
   listRecentReadingSessions,
   openReadingSession,
+  saveReadingProgress,
   startOverReadingSession,
-  updateReadingAnnotation,
-  updateReadingProgress,
+  updateNoteAnnotation,
   updateReadingSession,
 } from "./readingApi";
+import type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
+
+export type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
 import { getShelf, listShelfItems, listShelves } from "./shelvesApi";
+import { createClientContext, requireAuth } from "./clientContext";
 
 export type SecondPassClientConfig = {
   apiBaseUrl: string;
-  accessToken: string;
+  accessToken?: string;
   tokenType?: string;
 };
 
@@ -80,7 +80,18 @@ export type SecondPassClient = {
     books: {
       list(params?: LibraryBookListParams): Promise<PaginatedResponse<LibraryBook>>;
       get(bookId: string): Promise<LibraryBook>;
-      downloadFile(downloadUrl: string): Promise<BookFileDownloadResult>;
+      /**
+       * Returns a server-provided download URL for deliberate URL workflows.
+       *
+       * Normal app flows should prefer `download()` to avoid passing URLs around.
+       */
+      getDownloadUrl(book: LibraryBook | string | number): Promise<string>;
+      /**
+       * Download the backing book file bytes (format-neutral).
+       *
+       * Server convention: 1 book === 1 file.
+       */
+      download(book: LibraryBook | string | number): Promise<Blob>;
     };
     series: {
       list(params?: { page?: number }): Promise<PaginatedResponse<LibrarySeries>>;
@@ -101,10 +112,11 @@ export type SecondPassClient = {
   };
 
   reading: {
-    openBook(bookId: string | number): Promise<ReadingOpenResponse>;
-    startOver(bookId: string | number): Promise<ReadingOpenResponse>;
+    openForReading(book: LibraryBook | string | number): Promise<{ open: ReadingOpenResponse; blob: Blob }>;
 
     sessions: {
+      open(bookId: string | number): Promise<ReadingOpenResponse>;
+      startOver(bookId: string | number): Promise<ReadingOpenResponse>;
       recent(params?: { limit?: number }): Promise<ReadingRecentSessionsResponse>;
       list(params?: {
         page?: number;
@@ -114,40 +126,50 @@ export type SecondPassClient = {
         isActive?: boolean;
       }): Promise<PaginatedResponse<ReadingSessionSummary>>;
       get(sessionId: string): Promise<ReadingSessionSummary>;
-      update(sessionId: string, payload: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;
+      updateDetails(sessionId: string, input: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;
       close(sessionId: string): Promise<ReadingSession>;
     };
 
     progress: {
-      update(
-        sessionId: string,
-        payload: ReadingProgressUpdatePayload,
-        options?: { method?: "PUT" | "PATCH" },
-      ): Promise<ReadingProgress>;
+      /**
+       * Save reading progress (high-level helper).
+       *
+       * Hides wire-format field names and uses PATCH internally.
+       */
+      save(sessionId: string, progress: SaveReadingProgressInput): Promise<ReadingProgress>;
     };
 
     annotations: {
       list(params: { sessionId: string; page?: number }): Promise<ReadingAnnotationPage>;
-      create(
-        payload: ReadingAnnotationCreatePayload,
-        options?: { idempotencyKey?: string },
-      ): Promise<ReadingAnnotation>;
-      update(annotationId: string, payload: ReadingAnnotationUpdatePayload): Promise<ReadingAnnotation>;
-      delete(annotationId: string): Promise<void>;
+      createHighlight(input: CreateHighlightInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
+      createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
+      updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
+      remove(annotationId: string): Promise<void>;
     };
   };
 };
 
-function requireAuth(config: SecondPassClientConfig): { apiBaseUrl: string; accessToken: string; tokenType: string } {
-  if (!config.apiBaseUrl) throw new Error("SecondPassClient config.apiBaseUrl is required.");
-  if (!config.accessToken) {
-    throw new ApiError({ kind: "unauthorized", status: 401, message: "Access token is missing." });
-  }
-  return { apiBaseUrl: config.apiBaseUrl, accessToken: config.accessToken, tokenType: config.tokenType ?? "Bearer" };
-}
-
 export function createSecondPassClient(config: SecondPassClientConfig): SecondPassClient {
   const frozenConfig = Object.freeze({ ...config });
+  const ctx = createClientContext(frozenConfig);
+
+  const getBookDownloadUrl = async (book: LibraryBook | string | number): Promise<string> => {
+    const auth = requireAuth(ctx);
+    const resolved =
+      typeof book === "string" || typeof book === "number"
+        ? await getBook(auth, { bookId: String(book) })
+        : book;
+    const url = resolved.file?.download_url ?? null;
+    if (!url) throw new Error("Server returned a book without a file download URL.");
+    return url;
+  };
+
+  const downloadBookBlob = async (book: LibraryBook | string | number): Promise<Blob> => {
+    const auth = requireAuth(ctx);
+    const url = await getBookDownloadUrl(book);
+    const dl = await downloadBookFile(auth, { downloadUrl: url });
+    return dl.blob;
+  };
 
   return {
     config: frozenConfig,
@@ -161,129 +183,145 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
 
     account: {
       getCurrent: () => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return getMe({ apiBaseUrl, accessToken, tokenType });
+        const auth = requireAuth(ctx);
+        return getMe(auth);
       },
     },
 
     library: {
       books: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listBooks({ apiBaseUrl, accessToken, tokenType, params });
+          const auth = requireAuth(ctx);
+          return listBooks(auth, { params });
         },
         get: (bookId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getBook({ apiBaseUrl, accessToken, tokenType, bookId });
+          const auth = requireAuth(ctx);
+          return getBook(auth, { bookId });
         },
-        downloadFile: (downloadUrl) => {
-          const { accessToken, tokenType } = requireAuth(frozenConfig);
-          return downloadBookFile({ downloadUrl, accessToken, tokenType });
+        getDownloadUrl: async (book) => {
+          return getBookDownloadUrl(book);
+        },
+        download: async (book) => {
+          return downloadBookBlob(book);
         },
       },
 
       series: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listSeries({ apiBaseUrl, accessToken, tokenType, page: params?.page });
+          const auth = requireAuth(ctx);
+          return listSeries(auth, { page: params?.page });
         },
         get: (seriesId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getSeries({ apiBaseUrl, accessToken, tokenType, seriesId });
+          const auth = requireAuth(ctx);
+          return getSeries(auth, { seriesId });
         },
         books: (seriesId, params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listBooks({ apiBaseUrl, accessToken, tokenType, params: { ...params, series: seriesId } });
+          const auth = requireAuth(ctx);
+          return listBooks(auth, { params: { ...params, series: seriesId } });
         },
       },
 
       authors: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listAuthors({ apiBaseUrl, accessToken, tokenType, page: params?.page });
+          const auth = requireAuth(ctx);
+          return listAuthors(auth, { page: params?.page });
         },
         get: (authorId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getAuthor({ apiBaseUrl, accessToken, tokenType, authorId });
+          const auth = requireAuth(ctx);
+          return getAuthor(auth, { authorId });
         },
         books: (authorId, params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listBooks({ apiBaseUrl, accessToken, tokenType, params: { ...params, author: authorId } });
+          const auth = requireAuth(ctx);
+          return listBooks(auth, { params: { ...params, author: authorId } });
         },
       },
     },
 
     shelves: {
       list: () => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return listShelves({ apiBaseUrl, accessToken, tokenType });
+        const auth = requireAuth(ctx);
+        return listShelves(auth);
       },
       get: (shelfId) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return getShelf({ apiBaseUrl, accessToken, tokenType, shelfId });
+        const auth = requireAuth(ctx);
+        return getShelf(auth, { shelfId });
       },
       items: (shelfId, params) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return listShelfItems({ apiBaseUrl, accessToken, tokenType, shelfId, page: params?.page });
+        const auth = requireAuth(ctx);
+        return listShelfItems(auth, { shelfId, page: params?.page });
       },
     },
 
     reading: {
-      openBook: (bookId) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
-      },
-      startOver: (bookId) => {
-        const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-        return startOverReadingSession({ apiBaseUrl, accessToken, tokenType, bookId });
+      openForReading: async (book) => {
+        const auth = requireAuth(ctx);
+        const resolved =
+          typeof book === "string" || typeof book === "number"
+            ? await getBook(auth, { bookId: String(book) })
+            : book;
+        const open = await openReadingSession(auth, { bookId: resolved.id });
+        const blob = await downloadBookBlob(resolved);
+        return { open, blob };
       },
 
       sessions: {
+        open: (bookId) => {
+          const auth = requireAuth(ctx);
+          return openReadingSession(auth, { bookId });
+        },
+        startOver: (bookId) => {
+          const auth = requireAuth(ctx);
+          return startOverReadingSession(auth, { bookId });
+        },
         recent: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listRecentReadingSessions({ apiBaseUrl, accessToken, tokenType, limit: params?.limit });
+          const auth = requireAuth(ctx);
+          return listRecentReadingSessions(auth, { limit: params?.limit });
         },
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listReadingSessions({ apiBaseUrl, accessToken, tokenType, ...params });
+          const auth = requireAuth(ctx);
+          return listReadingSessions({ ctx: auth, ...params });
         },
         get: (sessionId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return getReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId });
+          const auth = requireAuth(ctx);
+          return getReadingSession({ ctx: auth, sessionId });
         },
-        update: (sessionId, payload) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId, payload });
+        updateDetails: (sessionId, payload) => {
+          const auth = requireAuth(ctx);
+          return updateReadingSession(auth, { sessionId, payload });
         },
         close: (sessionId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return closeReadingSession({ apiBaseUrl, accessToken, tokenType, sessionId });
+          const auth = requireAuth(ctx);
+          return closeReadingSession(auth, { sessionId });
         },
       },
 
       progress: {
-        update: (sessionId, payload, options) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateReadingProgress({ apiBaseUrl, accessToken, tokenType, sessionId, payload, method: options?.method });
+        save: (sessionId, progress) => {
+          const auth = requireAuth(ctx);
+          return saveReadingProgress({ ctx: auth, sessionId, progress });
         },
       },
 
       annotations: {
         list: (params) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return listReadingAnnotations({ apiBaseUrl, accessToken, tokenType, sessionId: params.sessionId, page: params.page });
+          const auth = requireAuth(ctx);
+          return listReadingAnnotations({ ctx: auth, sessionId: params.sessionId, page: params.page });
         },
-        create: (payload, options) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return createReadingAnnotation({ apiBaseUrl, accessToken, tokenType, payload, idempotencyKey: options?.idempotencyKey });
+        createHighlight: (input, options) => {
+          const auth = requireAuth(ctx);
+          return createHighlightAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
         },
-        update: (annotationId, payload) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return updateReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId, payload });
+        createBookmark: (input, options) => {
+          const auth = requireAuth(ctx);
+          return createBookmarkAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
         },
-        delete: (annotationId) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          return deleteReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId });
+        updateNote: (annotationId, input) => {
+          const auth = requireAuth(ctx);
+          return updateNoteAnnotation({ ctx: auth, annotationId, update: input });
+        },
+        remove: (annotationId) => {
+          const auth = requireAuth(ctx);
+          return deleteReadingAnnotation(auth, { annotationId });
         },
       },
     },

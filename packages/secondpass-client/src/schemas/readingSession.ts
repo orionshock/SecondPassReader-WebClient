@@ -118,11 +118,33 @@ export type ReadingAnnotationCreatePayload = {
   session: string;
   motivation: "highlighting" | "commenting" | string;
   target: {
-    selector: {
-      type: "FragmentSelector";
-      conformsTo: "http://www.idpf.org/epub/linking/cfi/epub-cfi.html" | string;
-      value: string;
-    };
+    /**
+     * Primary anchor is an EPUB CFI FragmentSelector.
+     *
+     * The server also accepts optional TextQuoteSelector context as a second selector:
+     * - `[FragmentSelector, TextQuoteSelector]`
+     *
+     * Quote prefix/suffix are repair/export metadata (not display text).
+     */
+    selector:
+      | {
+          type: "FragmentSelector";
+          conformsTo: "http://www.idpf.org/epub/linking/cfi/epub-cfi.html" | string;
+          value: string;
+        }
+      | [
+          {
+            type: "FragmentSelector";
+            conformsTo: "http://www.idpf.org/epub/linking/cfi/epub-cfi.html" | string;
+            value: string;
+          },
+          {
+            type: "TextQuoteSelector";
+            exact: string;
+            prefix?: string;
+            suffix?: string;
+          },
+        ];
   };
   body?: Array<
     | (W3CTextualBody & { color?: string })

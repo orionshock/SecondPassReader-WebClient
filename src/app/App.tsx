@@ -3,10 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
 import { LibraryLandingPage } from "../features/library";
 import { HomePage } from "../features/home/HomePage";
-import { ReaderArea, type OpenedBook } from "../features/reader";
+import { ReadingActivity, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
-import type { LibraryBook } from "@secondpass/client";
 import type { AppRoute } from "./navigation";
 import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
 import {
@@ -25,6 +24,7 @@ import { BookDetailModal } from "../features/library/BookDetailModal";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
+import type { SecondPassClient } from "@secondpass/client";
 
 const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
@@ -48,6 +48,11 @@ export default function App() {
     if (!selectedProfileId) return null;
     return getConnectionProfile(selectedProfileId) ?? null;
   }, [selectedProfileId, profilesVersion]);
+
+  const splClient: SecondPassClient | null = useMemo(() => {
+    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return null;
+    return createSplClientFromProfile(selectedProfile);
+  }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
 
@@ -336,11 +341,6 @@ export default function App() {
     navigateTo({ kind: "reader", bookId: String(opened.book.id) });
   }
 
-  async function handleOpenBookFromReader(book: LibraryBook) {
-    // Route is canonical; App's reader-route effect owns opening/restoring the book.
-    navigateTo({ kind: "reader", bookId: String(book.id) });
-  }
-
   function handleCloseReader() {
     if (DEBUG_NAV) {
       // eslint-disable-next-line no-console
@@ -474,16 +474,13 @@ export default function App() {
                 </section>
               ) : openedBook && route?.kind === "reader" ? (
                 <section className="readerScreen">
-                  <ReaderArea
+                  <ReadingActivity
                     openedBook={openedBook}
                     onBackToLibrary={() => {
                       navigateTo({ kind: "home" });
                       handleCloseReader();
                     }}
-                    apiBaseUrl={selectedProfile?.apiBaseUrl}
-                    accessToken={selectedProfile?.accessToken}
-                    tokenType={selectedProfile?.tokenType}
-                    onOpenBook={handleOpenBookFromReader}
+                    spl={splClient}
                   />
                 </section>
               ) : route?.kind === "shelves" ? (
