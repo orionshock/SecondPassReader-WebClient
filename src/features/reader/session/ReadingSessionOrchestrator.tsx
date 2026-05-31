@@ -229,7 +229,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         const all: ReadingAnnotation[] = [];
         let page = 1;
         for (let guard = 0; guard < 50; guard += 1) {
-          const res = await props.spl!.reading.annotations.list({ sessionId, page });
+          const res = await props.spl!.reading.annotations.list({
+            sessionId,
+            page,
+            motivation: ["bookmarking", "highlighting", "commenting"],
+            ordering: "-created",
+          });
           all.push(...(res.results as unknown as ReadingAnnotation[]));
           if (!res.next) break;
           page += 1;

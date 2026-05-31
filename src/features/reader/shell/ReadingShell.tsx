@@ -38,6 +38,11 @@ export function ReadingShell(props: ReadingShellProps) {
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
+
+  useEffect(() => {
+    highlightMarksRef.current = props.highlightMarks ?? [];
+  }, [props.highlightMarks]);
 
   const mountRef = useCallback((el: HTMLDivElement | null) => {
     setMountEl(el);
@@ -68,6 +73,9 @@ export function ReadingShell(props: ReadingShellProps) {
         engineRef.current = engine;
         setStatus("ready");
         props.onDescribeCfiReady?.((cfi) => engine.describeCfi(cfi));
+
+        // Apply any highlight marks that loaded before the engine became available.
+        engine.setHighlightMarks(highlightMarksRef.current);
 
         if (deferredCommandRef.current) {
           const cmd = deferredCommandRef.current;

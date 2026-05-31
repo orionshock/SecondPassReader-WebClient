@@ -61,6 +61,9 @@ export function ReadingActivity({
               <AnnotationWorkspace
                 state={state}
                 annotations={annotations.items}
+                status={annotations.status}
+                error={annotations.error}
+                busy={annotations.busy}
                 currentCfi={state.location?.cfi ?? null}
                 onJumpToTarget={(target) => sendCommand({ type: "display", target })}
                 onRemoveAnnotation={(annotationId) => {
