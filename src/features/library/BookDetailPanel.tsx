@@ -36,8 +36,6 @@ export function BookDetailPanel({
   const seriesText =
     book.series?.name && book.series_index != null ? `${book.series.name} #${book.series_index}` : book.series?.name;
 
-  const file = book.file;
-  const canOpen = Boolean(file?.download_url);
   const busy =
     downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
 
@@ -85,7 +83,7 @@ export function BookDetailPanel({
             type="button"
             className="button buttonPrimary bookDetailActionButton"
             onClick={() => onOpenReader(book)}
-            disabled={!canOpen || busy}
+            disabled={busy}
           >
             Open reader
           </button>

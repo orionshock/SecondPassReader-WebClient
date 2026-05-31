@@ -67,7 +67,7 @@ Key principle:
 - TOC is normalized at the engine/shell boundary into app-owned `ReaderTocItem[]` (no raw epub-ts nav item leakage).
 - Progress autosave lives in the session layer (orchestrator-owned hook) and calls `spl.reading.progress.save(...)`. The shell/engine never call SPL directly.
 - Autosave persists `current_location.cfi` as the meaningful restore anchor; `progression` is populated from `bookProgress` only as approximate presentation metadata.
-- Reader open/download choreography should be owned by the SPL client where practical (e.g. `spl.reading.openForReading(...)` / `spl.library.books.downloadEpub(...)`), with the app owning only browser concerns like `URL.createObjectURL(...)`.
+- Reader open/download choreography should be owned by the SPL client where practical (e.g. `spl.reading.openForReading(...)` / `spl.library.books.download(...)`), with the app owning only browser concerns like `URL.createObjectURL(...)`.
 
 ## What must remain stable
 

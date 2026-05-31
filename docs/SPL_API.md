@@ -61,8 +61,8 @@ Notes:
 
 - `spl.library.books.list(params?)`
 - `spl.library.books.get(bookId)`
-- `spl.library.books.downloadEpub(bookIdOrBook)` (preferred)
-- `spl.library.books.downloadFile(downloadUrl)` (low-level / escape hatch)
+- `spl.library.books.download(bookIdOrBook)` (preferred)
+- `spl.library.books.getDownloadUrl(bookIdOrBook)` (only when a URL workflow is explicitly needed)
 
 ### library.series
 
@@ -107,8 +107,6 @@ Notes:
 - `spl.reading.annotations.createBookmark(input, { idempotencyKey? }?)`
 - `spl.reading.annotations.updateNote(annotationId, input)`
 - `spl.reading.annotations.remove(annotationId)` (server-side soft-delete)
-- `spl.reading.annotations.raw.create(payload, { idempotencyKey? }?)` (escape hatch)
-- `spl.reading.annotations.raw.update(annotationId, payload)` (escape hatch)
 
 ## 5) Error model
 

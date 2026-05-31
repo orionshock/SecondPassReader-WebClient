@@ -6,6 +6,10 @@
 - **Annotations** are canonical as **W3C Web Annotation JSON-LD**.
 - EPUB location/selectors use **EPUB CFI**.
 
+## Library book files
+
+Server convention: **1 book === 1 backing file**. Client/UI code should not treat file availability as an optional feature flag; open/download failures should be handled as errors.
+
 ## Renderer is replaceable
 
 - Renderer implementation must be swappable.

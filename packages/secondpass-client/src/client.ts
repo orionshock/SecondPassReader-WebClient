@@ -5,7 +5,6 @@ import type {
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
 import type {
-  BookFileDownloadResult,
   LibraryAuthor,
   LibraryBook,
   LibrarySeries,
@@ -14,9 +13,7 @@ import type {
 import type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf } from "./schemas/shelves";
 import type {
   ReadingAnnotation,
-  ReadingAnnotationCreatePayload,
   ReadingAnnotationPage,
-  ReadingAnnotationUpdatePayload,
   ReadingOpenResponse,
   ReadingProgress,
   ReadingRecentSessionsResponse,
@@ -31,7 +28,6 @@ import {
   closeReadingSession,
   createBookmarkAnnotation,
   createHighlightAnnotation,
-  createReadingAnnotation,
   deleteReadingAnnotation,
   getReadingSession,
   listReadingAnnotations,
@@ -40,7 +36,6 @@ import {
   openReadingSession,
   saveReadingProgress,
   startOverReadingSession,
-  updateReadingAnnotation,
   updateNoteAnnotation,
   updateReadingSession,
 } from "./readingApi";
@@ -86,12 +81,17 @@ export type SecondPassClient = {
       list(params?: LibraryBookListParams): Promise<PaginatedResponse<LibraryBook>>;
       get(bookId: string): Promise<LibraryBook>;
       /**
-       * Download an arbitrary file URL previously obtained from the server.
+       * Returns a server-provided download URL for deliberate URL workflows.
        *
-       * Prefer `downloadEpub()` in app code to avoid handling `download_url` fields directly.
+       * Normal app flows should prefer `download()` to avoid passing URLs around.
        */
-      downloadFile(downloadUrl: string): Promise<BookFileDownloadResult>;
-      downloadEpub(book: LibraryBook | string | number): Promise<BookFileDownloadResult>;
+      getDownloadUrl(book: LibraryBook | string | number): Promise<string>;
+      /**
+       * Download the backing book file bytes (format-neutral).
+       *
+       * Server convention: 1 book === 1 file.
+       */
+      download(book: LibraryBook | string | number): Promise<Blob>;
     };
     series: {
       list(params?: { page?: number }): Promise<PaginatedResponse<LibrarySeries>>;
@@ -145,10 +145,6 @@ export type SecondPassClient = {
       createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
       updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
       remove(annotationId: string): Promise<void>;
-      raw: {
-        create(payload: ReadingAnnotationCreatePayload, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
-        update(annotationId: string, payload: ReadingAnnotationUpdatePayload): Promise<ReadingAnnotation>;
-      };
     };
   };
 };
@@ -163,6 +159,24 @@ function requireAuth(config: SecondPassClientConfig): { apiBaseUrl: string; acce
 
 export function createSecondPassClient(config: SecondPassClientConfig): SecondPassClient {
   const frozenConfig = Object.freeze({ ...config });
+
+  const getBookDownloadUrl = async (book: LibraryBook | string | number): Promise<string> => {
+    const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
+    const resolved =
+      typeof book === "string" || typeof book === "number"
+        ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
+        : book;
+    const url = resolved.file?.download_url ?? null;
+    if (!url) throw new Error("Server returned a book without a file download URL.");
+    return url;
+  };
+
+  const downloadBookBlob = async (book: LibraryBook | string | number): Promise<Blob> => {
+    const { accessToken, tokenType } = requireAuth(frozenConfig);
+    const url = await getBookDownloadUrl(book);
+    const dl = await downloadBookFile({ downloadUrl: url, accessToken, tokenType });
+    return dl.blob;
+  };
 
   return {
     config: frozenConfig,
@@ -191,19 +205,11 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return getBook({ apiBaseUrl, accessToken, tokenType, bookId });
         },
-        downloadFile: (downloadUrl) => {
-          const { accessToken, tokenType } = requireAuth(frozenConfig);
-          return downloadBookFile({ downloadUrl, accessToken, tokenType });
+        getDownloadUrl: async (book) => {
+          return getBookDownloadUrl(book);
         },
-        downloadEpub: async (book) => {
-          const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-          const resolved =
-            typeof book === "string" || typeof book === "number"
-              ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
-              : book;
-          const url = resolved.file?.download_url ?? null;
-          if (!url) throw new Error("No EPUB file available for this book.");
-          return downloadBookFile({ downloadUrl: url, accessToken, tokenType });
+        download: async (book) => {
+          return downloadBookBlob(book);
         },
       },
 
@@ -261,10 +267,8 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
             ? await getBook({ apiBaseUrl, accessToken, tokenType, bookId: String(book) })
             : book;
         const open = await openReadingSession({ apiBaseUrl, accessToken, tokenType, bookId: resolved.id });
-        const url = resolved.file?.download_url ?? null;
-        if (!url) throw new Error("No EPUB file available for this book.");
-        const dl = await downloadBookFile({ downloadUrl: url, accessToken, tokenType });
-        return { open, blob: dl.blob };
+        const blob = await downloadBookBlob(resolved);
+        return { open, blob };
       },
 
       sessions: {
@@ -325,16 +329,6 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         remove: (annotationId) => {
           const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
           return deleteReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId });
-        },
-        raw: {
-          create: (payload, options) => {
-            const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-            return createReadingAnnotation({ apiBaseUrl, accessToken, tokenType, payload, idempotencyKey: options?.idempotencyKey });
-          },
-          update: (annotationId, payload) => {
-            const { apiBaseUrl, accessToken, tokenType } = requireAuth(frozenConfig);
-            return updateReadingAnnotation({ apiBaseUrl, accessToken, tokenType, annotationId, payload });
-          },
         },
       },
     },
