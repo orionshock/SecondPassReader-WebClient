@@ -38,9 +38,23 @@ import {
   updateNoteAnnotation,
   updateReadingSession,
 } from "./readingApi";
-import type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
+import type {
+  CreateBookmarkInput,
+  CreateHighlightInput,
+  ListReadingAnnotationsInput,
+  SaveReadingProgressInput,
+  UpdateNoteInput,
+} from "./readingApi";
 
-export type { CreateBookmarkInput, CreateHighlightInput, SaveReadingProgressInput, UpdateNoteInput } from "./readingApi";
+export type {
+  CreateBookmarkInput,
+  CreateHighlightInput,
+  ListReadingAnnotationsInput,
+  ReadingAnnotationMotivation,
+  ReadingAnnotationsOrdering,
+  SaveReadingProgressInput,
+  UpdateNoteInput,
+} from "./readingApi";
 import { getShelf, listShelfItems, listShelves } from "./shelvesApi";
 import { createClientContext, requireAuth } from "./clientContext";
 
@@ -140,7 +154,7 @@ export type SecondPassClient = {
     };
 
     annotations: {
-      list(params: { sessionId: string; page?: number }): Promise<ReadingAnnotationPage>;
+      list(params: ListReadingAnnotationsInput): Promise<ReadingAnnotationPage>;
       createHighlight(input: CreateHighlightInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
       createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
       updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
@@ -305,7 +319,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       annotations: {
         list: (params) => {
           const auth = requireAuth(ctx);
-          return listReadingAnnotations({ ctx: auth, sessionId: params.sessionId, page: params.page });
+          return listReadingAnnotations({ ctx: auth, params });
         },
         createHighlight: (input, options) => {
           const auth = requireAuth(ctx);

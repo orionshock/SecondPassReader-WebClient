@@ -7,6 +7,9 @@ export type {
   SaveReadingProgressInput,
   CreateHighlightInput,
   CreateBookmarkInput,
+  ListReadingAnnotationsInput,
+  ReadingAnnotationMotivation,
+  ReadingAnnotationsOrdering,
   UpdateNoteInput,
 } from "./client";
 

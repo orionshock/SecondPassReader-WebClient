@@ -158,5 +158,15 @@ export type ReadingAnnotationCreatePayload = {
   >;
 };
 
-// For now, PATCH payload uses the same tight shape as create.
-export type ReadingAnnotationUpdatePayload = ReadingAnnotationCreatePayload;
+/**
+ * PATCH payload for updating an existing annotation.
+ *
+ * Server rules (api/v1/reading/annotations/<id>/):
+ * - Only body updates are accepted.
+ * - Anchor fields (target/selector/CFI/TextQuoteSelector) are immutable after creation.
+ * - session/book/motivation are not accepted on PATCH.
+ */
+export type ReadingAnnotationUpdatePayload = {
+  profile_version?: string;
+  body?: ReadingAnnotationCreatePayload["body"];
+};

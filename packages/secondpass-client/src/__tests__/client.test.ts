@@ -183,6 +183,70 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload.target.selector[1].exact).toBe("Selected text");
   });
 
+  it("reading.annotations.list supports repeatable motivation filters and ordering", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.list({
+      sessionId: "sess-1",
+      ordering: "-created",
+      motivation: ["highlighting", "bookmarking"],
+      page: 2,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(init?.method ?? "GET").toBe("GET");
+
+    const u = new URL(String(url));
+    expect(u.origin + u.pathname).toBe("https://api.example/reading/annotations/");
+    expect(u.searchParams.get("session_id")).toBe("sess-1");
+    expect(u.searchParams.get("ordering")).toBe("-created");
+    expect(u.searchParams.get("page")).toBe("2");
+    expect(u.searchParams.getAll("motivation").sort()).toEqual(["bookmarking", "highlighting"]);
+  });
+
+  it("reading.annotations.updateNote PATCHes body updates only (no anchors/session/motivation)", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.updateNote("ann-1", { profileVersion: "pv1", note: "Hello" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/reading/annotations/ann-1/");
+    expect(init?.method).toBe("PATCH");
+
+    const payload = JSON.parse(String(init?.body));
+    expect(Object.keys(payload).sort()).toEqual(["body", "profile_version"]);
+    expect(payload.profile_version).toBe("pv1");
+    expect(payload.body).toEqual([{ type: "TextualBody", purpose: "commenting", value: "Hello" }]);
+    expect(payload).not.toHaveProperty("target");
+    expect(payload).not.toHaveProperty("session");
+    expect(payload).not.toHaveProperty("motivation");
+  });
+
+  it("reading.annotations.updateNote can update highlight color but requires describing text", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.updateNote("ann-1", {
+      color: "#ff0",
+      text: "Selected text",
+      note: null,
+    });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(payload.body).toEqual([{ type: "TextualBody", purpose: "describing", value: "Selected text", color: "#ff0" }]);
+
+    await expect(
+      spl.reading.annotations.updateNote("ann-1", { color: "#ff0" }),
+    ).rejects.toThrowError(/requires `text`/i);
+  });
+
   it("library.books.download(book) downloads blob via internal download_url without app passing raw URL", async () => {
     const fetchMock = asMockFetch();
     const book: LibraryBook = {

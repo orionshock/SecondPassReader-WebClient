@@ -96,7 +96,11 @@ The client maps app-friendly input into the server wire payload:
 
 High-level helpers for common workflows:
 
-- `spl.reading.annotations.list({ sessionId, page? })`
+- `spl.reading.annotations.list({ sessionId, page?, motivation?, ordering? })`
+  - `motivation` may be a single value or an array; arrays are sent as **repeatable** query params:
+    - `motivation=highlighting&motivation=bookmarking`
+  - `ordering` may be:
+    - `"created" | "-created" | "modified" | "-modified"`
 - `spl.reading.annotations.createHighlight(input, { idempotencyKey? }?)`
 - `spl.reading.annotations.createBookmark(input, { idempotencyKey? }?)`
 - `spl.reading.annotations.updateNote(annotationId, input)`
@@ -127,3 +131,18 @@ Behavior:
 - `prefix` / `suffix` are optional anchoring/repair/export metadata (not display text).
 - The client clamps `quotePrefix`/`quoteSuffix` to **500 chars max** to satisfy server limits.
 - Selection heuristics (how much context to capture) belong to the reader/selection layer.
+
+## Annotation updates (PATCH immutability)
+
+The server treats anchor fields as immutable after creation:
+
+- CFI / CFI range selectors are immutable.
+- `TextQuoteSelector` exact/prefix/suffix are immutable.
+- To change a highlight range: delete the old annotation and create a new one.
+
+Client update helpers reflect this:
+
+- `spl.reading.annotations.updateNote(id, { profileVersion?, note?, color?, text? })`
+  - sends **PATCH** with **body updates only** (+ optional `profile_version`)
+  - does **not** send `target`, `selector`, `session`, `book`, or `motivation`
+  - if `color` is provided, `text` (describing body value) is required because the server stores highlight color on the describing body

@@ -163,14 +163,27 @@ export type CreateBookmarkInput = {
 };
 
 export type UpdateNoteInput = {
-  profileVersion: string;
-  sessionId: string;
-  // Keep motivation explicit for correctness; default to "commenting" for note updates.
-  motivation?: "commenting" | "highlighting" | "bookmarking" | string;
-  cfi: string;
-  note?: string;
-  color?: string;
+  profileVersion?: string;
+  note?: string | null;
+  color?: string | null;
+  /**
+   * Describing text for highlight updates.
+   *
+   * The server stores highlight color on the describing body; to update highlight color,
+   * the client must also provide the describing text value.
+   */
   text?: string;
+};
+
+export type ReadingAnnotationMotivation = "highlighting" | "bookmarking" | "commenting" | (string & {});
+
+export type ReadingAnnotationsOrdering = "created" | "-created" | "modified" | "-modified";
+
+export type ListReadingAnnotationsInput = {
+  sessionId: string;
+  page?: number;
+  motivation?: ReadingAnnotationMotivation | ReadingAnnotationMotivation[];
+  ordering?: ReadingAnnotationsOrdering;
 };
 
 export async function saveReadingProgress(input: {
@@ -307,20 +320,10 @@ export async function updateNoteAnnotation(input: {
   annotationId: string;
   update: UpdateNoteInput;
 }): Promise<ReadingAnnotation> {
-  const cfi = input.update.cfi.trim();
-  if (!cfi) throw new Error("Note update requires a cfi.");
-
   const body: ReadingAnnotationUpdatePayload["body"] = [];
-  const text = typeof input.update.text === "string" ? input.update.text.trim() : "";
-  if (text) {
-    body.push({
-      type: "TextualBody",
-      purpose: "describing",
-      value: text,
-      ...(input.update.color ? { color: input.update.color } : {}),
-    });
-  }
-  const note = typeof input.update.note === "string" ? input.update.note.trim() : "";
+
+  const noteRaw = typeof input.update.note === "string" ? input.update.note : "";
+  const note = noteRaw.trim();
   if (note) {
     body.push({
       type: "TextualBody",
@@ -329,17 +332,24 @@ export async function updateNoteAnnotation(input: {
     });
   }
 
+  const colorRaw = typeof input.update.color === "string" ? input.update.color : "";
+  const color = colorRaw.trim();
+  if (color) {
+    const textRaw = typeof input.update.text === "string" ? input.update.text : "";
+    const text = textRaw.trim();
+    if (!text) throw new Error("Updating highlight color requires `text` (describing body value).");
+    // Server profile: highlight color is stored on the describing body.
+    // We don't mutate anchors on PATCH; only body updates are allowed.
+    body.push({
+      type: "TextualBody",
+      purpose: "describing",
+      value: text,
+      color,
+    });
+  }
+
   const payload: ReadingAnnotationUpdatePayload = {
-    profile_version: input.update.profileVersion,
-    session: input.update.sessionId,
-    motivation: input.update.motivation ?? "commenting",
-    target: {
-      selector: {
-        type: "FragmentSelector",
-        conformsTo: EPUB_CFI_CONFORMS_TO,
-        value: cfi,
-      },
-    },
+    ...(input.update.profileVersion ? { profile_version: input.update.profileVersion } : {}),
     ...(body.length ? { body } : {}),
   };
 
@@ -348,12 +358,19 @@ export async function updateNoteAnnotation(input: {
 
 export async function listReadingAnnotations(input: {
   ctx: AuthenticatedClientContext;
-  sessionId: string;
-  page?: number;
+  params: ListReadingAnnotationsInput;
 }): Promise<ReadingAnnotationPage> {
   const url = new URL(resolveUrl(input.ctx.apiBaseUrl, "/reading/annotations/"));
-  url.searchParams.set("session_id", input.sessionId);
-  if (input.page !== undefined) url.searchParams.set("page", String(input.page));
+  url.searchParams.set("session_id", input.params.sessionId);
+  if (input.params.page !== undefined) url.searchParams.set("page", String(input.params.page));
+  if (input.params.ordering) url.searchParams.set("ordering", input.params.ordering);
+  if (input.params.motivation) {
+    const motivations = Array.isArray(input.params.motivation) ? input.params.motivation : [input.params.motivation];
+    for (const m of motivations) {
+      const s = typeof m === "string" ? m.trim() : "";
+      if (s) url.searchParams.append("motivation", s);
+    }
+  }
 
   return requestJson<ReadingAnnotationPage>({
     apiBaseUrl: input.ctx.apiBaseUrl,
