@@ -1,5 +1,5 @@
 import type { ReaderSettings } from "../../storage/readerSettings";
-import { AnnotationList } from "./annotations/AnnotationList";
+import { AnnotationWorkspace } from "./annotations/AnnotationWorkspace";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { ReaderTocItem } from "./domain/types";
@@ -58,7 +58,7 @@ export function ReadingActivity({
               </section>
             ) : null}
             <div className="spReaderAnnotationsRegion">
-              <AnnotationList
+              <AnnotationWorkspace
                 state={state}
                 bookmarks={bookmarks.items}
                 currentCfi={state.location?.cfi ?? null}

@@ -70,6 +70,9 @@ Key principle:
 - Reader open/download choreography should be owned by the SPL client where practical (e.g. `spl.reading.openForReading(...)` / `spl.library.books.download(...)`), with the app owning only browser concerns like `URL.createObjectURL(...)`.
 - Bookmarks are annotation-backed session state. Bookmark create/remove/list and “jump by CFI” are coordinated in the session/orchestrator layer; the shell/engine remain unaware of server payload shapes.
 - Bookmark UI labels are derived at runtime from CFI + spine/TOC and (when available) approximate location percentage. Generated labels are not persisted server-side.
+- The reader annotation section is organized as a workspace with two modes:
+  - Current session: shows annotations for the active reading session (currently bookmarks only).
+  - Previous sessions: placeholder for selecting prior session layers for reference/overlay.
 
 ## What must remain stable
 
