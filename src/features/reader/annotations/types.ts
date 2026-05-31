@@ -1,7 +1,7 @@
-import type { ReaderBookmark } from "./bookmarkUtils";
+import type { ReaderBookmarkViewModel } from "./bookmarkUtils";
 
 export type BookmarkListProps = {
-  bookmarks: ReaderBookmark[];
+  bookmarks: ReaderBookmarkViewModel[];
   currentCfi?: string | null;
   onJumpToCfi: (cfi: string) => void;
   onRemoveBookmark: (bookmarkId: string) => void;

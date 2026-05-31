@@ -1,5 +1,5 @@
 import type { ReadingSessionState } from "../session/types";
-import type { ReaderBookmark } from "./bookmarkUtils";
+import type { ReaderBookmarkViewModel } from "./bookmarkUtils";
 
 export function AnnotationList({
   state,
@@ -9,7 +9,7 @@ export function AnnotationList({
   onRemoveBookmark,
 }: {
   state: ReadingSessionState;
-  bookmarks: ReaderBookmark[];
+  bookmarks: ReaderBookmarkViewModel[];
   currentCfi?: string | null;
   onJumpToCfi: (cfi: string) => void;
   onRemoveBookmark: (bookmarkId: string) => void;
@@ -23,15 +23,19 @@ export function AnnotationList({
       {bookmarks.length > 0 ? (
         <div className="spBookmarkList">
           {bookmarks.map((b) => {
-            const isCurrent = Boolean(currentCfi && b.cfi === currentCfi);
+            const isCurrent = b.isCurrent || Boolean(currentCfi && b.cfi === currentCfi);
             return (
               <div key={b.id} className={`spBookmarkRow ${isCurrent ? "spBookmarkRowCurrent" : ""}`}>
                 <div className="spBookmarkMain">
-                  <div className="mono spBookmarkCfi" title={b.cfi}>
-                    {b.cfi.slice(0, 120)}
-                    {b.cfi.length > 120 ? "…" : ""}
+                  <div className="spBookmarkLabel" title={b.label}>
+                    {b.label}
+                    {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
                   </div>
                   {isCurrent ? <div className="muted">Current location</div> : null}
+                  <div className="mono muted spBookmarkCfi" title={b.cfi}>
+                    {b.cfi.slice(0, 80)}
+                    {b.cfi.length > 80 ? "…" : ""}
+                  </div>
                 </div>
                 <div className="spBookmarkActions">
                   <button type="button" className="button buttonCompact" onClick={() => onJumpToCfi(b.cfi)}>

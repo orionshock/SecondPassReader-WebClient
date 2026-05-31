@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderAnnotation, ReaderLocationTarget } from "../domain/types";
+import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellCommand, ReadingShellEvent } from "./types";
 
 export type ReadingShellProps = {
@@ -18,6 +19,7 @@ export type ReadingShellProps = {
     busy?: boolean;
     onToggle: () => void;
   };
+  onDescribeCfiReady?: (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => void;
 };
 
 export function ReadingShell(props: ReadingShellProps) {
@@ -54,6 +56,7 @@ export function ReadingShell(props: ReadingShellProps) {
         }
         engineRef.current = engine;
         setStatus("ready");
+        props.onDescribeCfiReady?.((cfi) => engine.describeCfi(cfi));
 
         if (deferredCommandRef.current) {
           const cmd = deferredCommandRef.current;
@@ -94,9 +97,10 @@ export function ReadingShell(props: ReadingShellProps) {
       cancelled = true;
       const engine = engineRef.current;
       engineRef.current = null;
+      props.onDescribeCfiReady?.(null);
       engine?.destroy();
     };
-  }, [mountEl, props.blob, props.initialDisplayTarget, props.onEvent]);
+  }, [mountEl, props.blob, props.initialDisplayTarget, props.onDescribeCfiReady, props.onEvent]);
 
   useEffect(() => {
     const cmd = props.command;

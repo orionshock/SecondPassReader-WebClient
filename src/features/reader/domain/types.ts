@@ -44,6 +44,23 @@ export type ReaderTocItem = {
   children?: ReaderTocItem[];
 };
 
+/**
+ * Runtime/client-only description for a CFI.
+ *
+ * This is display data derived from the current book (TOC/spine/locations)
+ * and must not be persisted as server-authoritative state.
+ */
+export type ReaderLocationDescription = {
+  cfi: string;
+  href?: string;
+  spineIndex?: number;
+  /**
+   * Approximate whole-book progress (0..1) derived from generated locations when available.
+   * Not authoritative; useful for UI labels like "21%".
+   */
+  bookProgress?: number | null;
+};
+
 export type ReaderLocationTarget =
   | { type: "cfi"; cfi: string }
   | { type: "cfiRange"; cfiRange: string }

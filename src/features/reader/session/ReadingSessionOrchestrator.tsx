@@ -5,12 +5,13 @@ import { ReadingShell } from "../shell/ReadingShell";
 import type { ReaderAnnotation, ReaderLocationTarget, ReadingShellEvent } from "../shell/types";
 import type { ReaderLocation } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
+import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReadingAnnotation } from "@secondpass/client";
-import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
+import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -22,7 +23,7 @@ export type ReadingSessionOrchestratorProps = {
     debugPanel: ReactNode;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
     bookmarks: {
-      items: ReaderBookmark[];
+      items: ReaderBookmarkViewModel[];
       status: "idle" | "loading" | "ready" | "error";
       error: string | null;
       currentBookmarkId: string | null;
@@ -45,6 +46,21 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [bookmarkStatus, setBookmarkStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [bookmarkError, setBookmarkError] = useState<string | null>(null);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
+  const [bookmarkDescriptions, setBookmarkDescriptions] = useState<
+    Record<string, { status: "idle" | "loading" | "ready" | "error"; value?: ReaderLocationDescription }>
+  >({});
+  const bookmarkDescriptionsRef = useRef(bookmarkDescriptions);
+  useEffect(() => {
+    bookmarkDescriptionsRef.current = bookmarkDescriptions;
+  }, [bookmarkDescriptions]);
+
+  const handleDescribeCfiReady = useCallback(
+    (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => {
+      setDescribeCfi(() => fn);
+    },
+    [],
+  );
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -195,6 +211,57 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return bookmarks.find((b) => b.cfi === cfi) ?? null;
   }, [bookmarks, location?.cfi]);
 
+  // Best-effort: describe bookmarks at runtime (no rendition jumps).
+  // Important: avoid cancelling in-flight descriptions due to state updates.
+  useEffect(() => {
+    if (!describeCfi) return;
+    if (bookmarks.length === 0) return;
+
+    let cancelled = false;
+
+    const current = bookmarkDescriptionsRef.current;
+    const toDescribe = bookmarks
+      .map((b) => b.cfi)
+      .filter((cfi) => !current[cfi] || current[cfi]?.status === "error");
+
+    for (const cfi of toDescribe) {
+      setBookmarkDescriptions((prev) => {
+        const existing = prev[cfi];
+        if (existing && (existing.status === "loading" || existing.status === "ready")) return prev;
+        return { ...prev, [cfi]: { status: "loading" } };
+      });
+
+      void (async () => {
+        try {
+          const desc = await describeCfi(cfi);
+          if (cancelled) return;
+          setBookmarkDescriptions((prev) => ({ ...prev, [cfi]: { status: "ready", value: desc } }));
+        } catch {
+          if (cancelled) return;
+          setBookmarkDescriptions((prev) => ({ ...prev, [cfi]: { status: "error" } }));
+        }
+      })();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookmarks, describeCfi]);
+
+  const bookmarkViewModels: ReaderBookmarkViewModel[] = useMemo(() => {
+    return bookmarks.map((b) => {
+      const entry = bookmarkDescriptions[b.cfi];
+      return toBookmarkViewModel({
+        bookmark: b,
+        currentCfi: location?.cfi ?? null,
+        toc,
+        description: entry?.value ?? null,
+        fallbackBookProgress: location?.bookProgress ?? null,
+        descriptionStatus: entry?.status ?? (describeCfi ? "idle" : "idle"),
+      });
+    });
+  }, [bookmarkDescriptions, bookmarks, describeCfi, location?.bookProgress, location?.cfi, toc]);
+
   const removeById = useCallback(
     async (bookmarkId: string) => {
       if (!props.spl) return;
@@ -252,6 +319,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onEvent={onShellEvent}
         command={pendingCommand ?? undefined}
         statusLine={statusLine}
+        onDescribeCfiReady={handleDescribeCfiReady}
         bookmark={{
           enabled: Boolean(sessionId && profileVersion && location?.cfi),
           isBookmarked: Boolean(currentBookmark),
@@ -291,7 +359,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     ),
     sendCommand,
     bookmarks: {
-      items: bookmarks,
+      items: bookmarkViewModels,
       status: bookmarkStatus,
       error: bookmarkError,
       currentBookmarkId: currentBookmark?.id ?? null,

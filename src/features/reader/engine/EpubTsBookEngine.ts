@@ -1,6 +1,7 @@
-import ePub, { type Book, type Location, type Rendition } from "@likecoin/epub-ts";
+import ePub, { EpubCFI, type Book, type Location, type Rendition } from "@likecoin/epub-ts";
 import type { ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
+import type { ReaderLocationDescription } from "../domain/types";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
@@ -16,6 +17,7 @@ export type EpubTsBookEngine = {
   display(target?: ReaderLocationTarget): Promise<void>;
   next(): Promise<void>;
   previous(): Promise<void>;
+  describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   destroy(): void;
 };
 
@@ -91,6 +93,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   rendition.on("displayerror", onDisplayError);
 
   let destroyed = false;
+  let locationsGeneratePromise: Promise<unknown> | null = null;
 
   return {
     async display(target?: ReaderLocationTarget) {
@@ -104,6 +107,46 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     async previous() {
       if (destroyed) return;
       await rendition.prev();
+    },
+    async describeCfi(cfi: string): Promise<ReaderLocationDescription> {
+      const trimmed = cfi.trim();
+      if (!trimmed) throw new Error("CFI is required.");
+      if (destroyed) throw new Error("Engine is destroyed.");
+
+      let spineIndex: number | undefined;
+      let href: string | undefined;
+      try {
+        const parsed = new EpubCFI(trimmed);
+        spineIndex = typeof parsed.spinePos === "number" ? parsed.spinePos : undefined;
+        if (typeof spineIndex === "number") {
+          const section = book.spine.get(spineIndex);
+          href = section?.href ?? undefined;
+        }
+      } catch {
+        // ignore parse/lookup errors; fall back to minimal description
+      }
+
+      let bookProgress: number | null = null;
+      try {
+        const p = book.locations.percentageFromCfi(trimmed);
+        if (typeof p === "number" && Number.isFinite(p)) {
+          bookProgress = p;
+        } else {
+          // Locations-based percentage may require generating locations first.
+          // Best-effort: generate once per engine if locations are not yet available.
+          const hasLocations = typeof book.locations.length === "function" ? book.locations.length() > 0 : false;
+          if (!hasLocations) {
+            locationsGeneratePromise ??= book.locations.generate(1000);
+            await locationsGeneratePromise;
+            const p2 = book.locations.percentageFromCfi(trimmed);
+            if (typeof p2 === "number" && Number.isFinite(p2)) bookProgress = p2;
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      return { cfi: trimmed, href, spineIndex, bookProgress };
     },
     destroy() {
       if (destroyed) return;
