@@ -150,3 +150,15 @@ Client update helpers reflect this:
   - sends **PATCH** with **body updates only** (+ optional `profile_version`)
   - does **not** send `target`, `selector`, `session`, `book`, or `motivation`
   - if `color` is provided, `text` (describing body value) is required because the server stores highlight color on the describing body
+
+## Server limits (reader-relevant)
+
+- `target` JSON max size: 16 KB
+- `body` JSON max size: 64 KB
+- `target.selector.value` (EPUB CFI) max length: 8192 chars
+- `body[].value` max length: 65536 chars
+- `TextQuoteSelector.prefix` max length: 500 chars
+- `TextQuoteSelector.suffix` max length: 500 chars
+- `TextQuoteSelector.exact` required, non-empty, max 65536 chars
+- `body[].color` max length: 64 chars (must be an allowed token)
+- `Idempotency-Key` header max length: 128 chars

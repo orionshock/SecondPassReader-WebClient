@@ -1,23 +1,10 @@
 import { useMemo, useState } from "react";
 import type { ReadingSessionState } from "../session/types";
-import type { ReaderBookmarkViewModel } from "./bookmarkUtils";
-import { toAnnotationCssVars } from "./annotationColors";
+import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors";
+import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./viewModels";
+import { ANNOTATION_LIMITS } from "./annotationLimits";
 
 type TabKey = "current" | "previous";
-
-export type HighlightViewModel = {
-  kind: "highlight";
-  id: string;
-  cfiRange: string;
-  text: string;
-  note?: string;
-  color?: string;
-  timestamp?: string;
-  label: string;
-  descriptionStatus: "idle" | "loading" | "ready" | "error";
-};
-
-export type CurrentSessionAnnotationViewModel = ReaderBookmarkViewModel | HighlightViewModel;
 
 export function AnnotationWorkspace({
   state,
@@ -28,6 +15,7 @@ export function AnnotationWorkspace({
   currentCfi,
   onJumpToTarget,
   onRemoveAnnotation,
+  onUpdateHighlight,
 }: {
   state: ReadingSessionState;
   annotations: CurrentSessionAnnotationViewModel[];
@@ -37,8 +25,14 @@ export function AnnotationWorkspace({
   currentCfi?: string | null;
   onJumpToTarget: (target: { type: "cfi"; cfi: string } | { type: "cfiRange"; cfiRange: string }) => void;
   onRemoveAnnotation: (annotationId: string) => void;
+  onUpdateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
 }) {
   const [tab, setTab] = useState<TabKey>("current");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftNote, setDraftNote] = useState<string>("");
+  const [draftColor, setDraftColor] = useState<string>("yellow");
+  const [editStatus, setEditStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const sessionLabel = useMemo(() => {
     if (state.sessionId) return state.sessionId;
@@ -132,6 +126,8 @@ export function AnnotationWorkspace({
                 const vars = toAnnotationCssVars(h.color);
                 const when =
                   h.timestamp && !Number.isNaN(Date.parse(h.timestamp)) ? new Date(h.timestamp).toLocaleString() : null;
+                const isEditing = editingId === h.id;
+                const canSave = editStatus !== "saving" && !busy;
                 return (
                   <article
                     key={h.id}
@@ -145,6 +141,7 @@ export function AnnotationWorkspace({
                         onClick={() => onJumpToTarget({ type: "cfiRange", cfiRange: h.cfiRange })}
                         aria-label="Jump to highlight"
                         title="Jump"
+                        disabled={editStatus === "saving"}
                       >
                         Jump
                       </button>
@@ -154,8 +151,25 @@ export function AnnotationWorkspace({
                         onClick={() => onRemoveAnnotation(h.id)}
                         aria-label="Remove highlight"
                         title="Remove"
+                        disabled={editStatus === "saving"}
                       >
                         Remove
+                      </button>
+                      <button
+                        type="button"
+                        className="button buttonCompact"
+                        onClick={() => {
+                          setEditingId(h.id);
+                          setDraftNote(h.note ?? "");
+                          setDraftColor(h.color ?? "yellow");
+                          setEditStatus("idle");
+                          setEditError(null);
+                        }}
+                        aria-label="Edit highlight"
+                        title="Edit"
+                        disabled={editStatus === "saving"}
+                      >
+                        Edit
                       </button>
                     </div>
 
@@ -168,7 +182,86 @@ export function AnnotationWorkspace({
                         {h.text || "Highlight"}
                       </div>
 
-                      {h.note ? <div className="spAnnotationNote">{h.note}</div> : null}
+                      {!isEditing && h.note ? <div className="spAnnotationNote">{h.note}</div> : null}
+
+                      {isEditing ? (
+                        <form
+                          className="spAnnotationEditForm"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!canSave) return;
+                            setEditStatus("saving");
+                            setEditError(null);
+                            void (async () => {
+                              try {
+                                await onUpdateHighlight(h.id, { note: draftNote, color: draftColor });
+                                setEditStatus("idle");
+                                setEditingId(null);
+                              } catch (err) {
+                                setEditStatus("error");
+                                setEditError(err instanceof Error ? err.message : "Failed to update highlight.");
+                              }
+                            })();
+                          }}
+                        >
+                          <div className="spAnnotationEditRow">
+                            <div className="spAnnotationColorSwatches" role="radiogroup" aria-label="Highlight color">
+                              {ANNOTATION_COLOR_TOKENS.map((token) => (
+                                <button
+                                  key={token}
+                                  type="button"
+                                  className={`spAnnotationSwatch ${draftColor === token ? "spAnnotationSwatchActive" : ""}`}
+                                  onClick={() => setDraftColor(token)}
+                                  aria-label={`Color ${token}`}
+                                  title={token}
+                                  disabled={editStatus === "saving"}
+                                  style={{ ["--swatch-color" as any]: toAnnotationCssVars(token).color }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="spAnnotationEditRow">
+                            <label className="muted spAnnotationEditLabel" htmlFor={`note-${h.id}`}>
+                              Note
+                            </label>
+                            <textarea
+                              id={`note-${h.id}`}
+                              className="input spAnnotationEditTextarea"
+                              rows={3}
+                              value={draftNote}
+                              onChange={(ev) => setDraftNote(ev.currentTarget.value)}
+                              placeholder="Add a note…"
+                              maxLength={ANNOTATION_LIMITS.bodyValueMaxChars}
+                              disabled={editStatus === "saving"}
+                            />
+                          </div>
+
+                          {editStatus === "error" && editError ? (
+                            <div className="spAnnotationEditError" role="alert">
+                              {editError}
+                            </div>
+                          ) : null}
+
+                          <div className="spAnnotationEditActions">
+                            <button type="submit" className="button buttonCompact" disabled={!canSave}>
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="button buttonCompact"
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditStatus("idle");
+                                setEditError(null);
+                              }}
+                              disabled={editStatus === "saving"}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : null}
 
                       <div className="muted spAnnotationMetaLine" title={h.label}>
                         {h.label}

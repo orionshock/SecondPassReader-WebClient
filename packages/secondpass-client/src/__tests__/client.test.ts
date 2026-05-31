@@ -248,6 +248,55 @@ describe("@secondpass/client high-level workflows", () => {
     ).rejects.toThrowError(/requires `text`/i);
   });
 
+  it("reading.annotations.updateNote can clear note by omitting commenting body while still sending describing body updates", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.updateNote("ann-1", {
+      profileVersion: "pv1",
+      text: "Selected text",
+      color: "yellow",
+      note: null,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/reading/annotations/ann-1/");
+    expect(init?.method).toBe("PATCH");
+
+    const payload = JSON.parse(String(init?.body));
+    expect(Object.keys(payload).sort()).toEqual(["body", "profile_version"]);
+    expect(payload.profile_version).toBe("pv1");
+    expect(payload.body).toEqual([{ type: "TextualBody", purpose: "describing", value: "Selected text", color: "yellow" }]);
+    expect(payload).not.toHaveProperty("target");
+    expect(payload).not.toHaveProperty("selector");
+    expect(payload).not.toHaveProperty("session");
+    expect(payload).not.toHaveProperty("book");
+    expect(payload).not.toHaveProperty("motivation");
+  });
+
+  it("reading.annotations.updateNote includes both describing + commenting bodies when note is non-empty", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.updateNote("ann-1", {
+      profileVersion: "pv1",
+      text: "Selected text",
+      color: "green",
+      note: "Note text",
+    });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(payload.body).toEqual([
+      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "green" },
+      { type: "TextualBody", purpose: "commenting", value: "Note text" },
+    ]);
+    expect(payload).not.toHaveProperty("target");
+    expect(payload).not.toHaveProperty("session");
+    expect(payload).not.toHaveProperty("motivation");
+  });
+
   it("library.books.download(book) downloads blob via internal download_url without app passing raw URL", async () => {
     const fetchMock = asMockFetch();
     const book: LibraryBook = {

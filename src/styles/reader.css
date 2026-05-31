@@ -322,6 +322,63 @@
   text-overflow: ellipsis;
 }
 
+.spAnnotationEditForm {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.spAnnotationEditRow {
+  display: grid;
+  gap: 6px;
+}
+
+.spAnnotationEditLabel {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.spAnnotationEditTextarea {
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.spAnnotationColorSwatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spAnnotationSwatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(17, 24, 39, 0.15);
+  background: var(--swatch-color, rgba(59, 130, 246, 0.55));
+  cursor: pointer;
+}
+
+.spAnnotationSwatchActive {
+  border-color: rgba(17, 24, 39, 0.55);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+.spAnnotationEditActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spAnnotationEditError {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: rgba(153, 27, 27, 1);
+}
+
 .spAnnotationPreviousPlaceholder {
   display: grid;
   gap: 6px;

@@ -1,3 +1,5 @@
+import { ANNOTATION_LIMITS } from "../annotations/annotationLimits";
+
 export type QuoteContext = {
   exact: string;
   before: string;
@@ -18,11 +20,11 @@ function clampToMax(s: string, max: number): string {
 /**
  * Build a TextQuoteSelector-style context, keeping:
  * - `exact` unchanged (never truncated)
- * - `prefix`/`suffix` capped to 500 chars each (server limit)
+ * - `prefix`/`suffix` capped to server limits
  *
  * Heuristic:
- * - For short selections (<= 500 chars): target ~500 total across prefix+exact+suffix.
- * - For long selections (> 500 chars): keep a smaller halo ~10% of exact length.
+ * - For short selections (<= limit): target ~limit total across prefix+exact+suffix.
+ * - For long selections (> limit): keep a smaller halo ~10% of exact length.
  */
 export function buildQuoteContext(input: QuoteContext): QuoteContextResult {
   const exact = input.exact;
@@ -31,11 +33,11 @@ export function buildQuoteContext(input: QuoteContext): QuoteContextResult {
   const rawBefore = input.before ?? "";
   const rawAfter = input.after ?? "";
 
-  const beforeMax = 500;
-  const afterMax = 500;
+  const beforeMax = ANNOTATION_LIMITS.textQuoteContextMaxChars;
+  const afterMax = ANNOTATION_LIMITS.textQuoteContextMaxChars;
 
-  if (exact.length <= 500) {
-    const remaining = Math.max(0, 500 - exact.length);
+  if (exact.length <= ANNOTATION_LIMITS.textQuoteContextMaxChars) {
+    const remaining = Math.max(0, ANNOTATION_LIMITS.textQuoteContextMaxChars - exact.length);
     const each = Math.max(0, Math.floor(remaining / 2));
 
     const prefix = rawBefore.slice(Math.max(0, rawBefore.length - Math.min(beforeMax, each)));
@@ -47,7 +49,7 @@ export function buildQuoteContext(input: QuoteContext): QuoteContextResult {
     };
   }
 
-  const halo = Math.min(500, Math.max(0, Math.ceil(exact.length * 0.1)));
+  const halo = Math.min(ANNOTATION_LIMITS.textQuoteContextMaxChars, Math.max(0, Math.ceil(exact.length * 0.1)));
   const each = Math.max(0, Math.floor(halo / 2));
   const prefix = rawBefore.slice(Math.max(0, rawBefore.length - Math.min(beforeMax, each)));
   const suffix = clampToMax(rawAfter, Math.min(afterMax, each));

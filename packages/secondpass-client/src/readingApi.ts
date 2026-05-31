@@ -322,29 +322,38 @@ export async function updateNoteAnnotation(input: {
 }): Promise<ReadingAnnotation> {
   const body: ReadingAnnotationUpdatePayload["body"] = [];
 
-  const noteRaw = typeof input.update.note === "string" ? input.update.note : "";
+  const textRaw = typeof input.update.text === "string" ? input.update.text : "";
+  const text = textRaw.trim();
+
+  const colorRaw = typeof input.update.color === "string" ? input.update.color : "";
+  const color = colorRaw.trim();
+
+  if (color && !text) throw new Error("Updating highlight color requires `text` (describing body value).");
+
+  // Server profile: highlight color is stored on the describing body.
+  // We don't mutate anchors on PATCH; only body updates are allowed.
+  // Policy:
+  // - If `text` is provided, always include the describing body.
+  //   This allows callers to clear notes by sending only the describing body.
+  if (text) {
+    body.push({
+      type: "TextualBody",
+      purpose: "describing",
+      value: text,
+      ...(color ? { color } : {}),
+    });
+  }
+
+  const noteVal = input.update.note;
+  const noteRaw = typeof noteVal === "string" ? noteVal : "";
   const note = noteRaw.trim();
+  // When `note` is null/empty, omit the commenting body so the server can
+  // replace the existing body array (effectively clearing the note).
   if (note) {
     body.push({
       type: "TextualBody",
       purpose: "commenting",
       value: note,
-    });
-  }
-
-  const colorRaw = typeof input.update.color === "string" ? input.update.color : "";
-  const color = colorRaw.trim();
-  if (color) {
-    const textRaw = typeof input.update.text === "string" ? input.update.text : "";
-    const text = textRaw.trim();
-    if (!text) throw new Error("Updating highlight color requires `text` (describing body value).");
-    // Server profile: highlight color is stored on the describing body.
-    // We don't mutate anchors on PATCH; only body updates are allowed.
-    body.push({
-      type: "TextualBody",
-      purpose: "describing",
-      value: text,
-      color,
     });
   }
 

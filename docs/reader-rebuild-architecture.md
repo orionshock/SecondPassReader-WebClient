@@ -75,6 +75,8 @@ Key principle:
   - Previous sessions: placeholder for selecting prior session layers for reference/overlay.
 - Selection is detected in the reader engine/shell layer via epub-ts rendition events. The orchestrator turns selection intent into highlight annotations using `spl.reading.annotations.createHighlight(...)`, including optional quotePrefix/quoteSuffix context.
 - Current-session highlights are painted in the viewport by `EpubTsBookEngine` via epub-ts `rendition.annotations.highlight(...)`. The orchestrator owns annotation state; the shell passes engine-facing highlight marks down to the engine.
+- Highlight edits (note + color) are initiated from the annotation workspace and coordinated in the session/orchestrator layer via `spl.reading.annotations.updateNote(...)`. Anchor fields (CFI/range/selector) remain immutable; to change a range, delete + create.
+- Annotation editing saves directly to the server (PATCH) when the user clicks Save. There is no offline/local queue in the current implementation.
 
 ## What must remain stable
 

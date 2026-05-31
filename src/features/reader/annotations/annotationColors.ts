@@ -8,6 +8,8 @@ const NAMED_COLORS: Record<string, string> = {
   red: "#ef4444",
 };
 
+export const ANNOTATION_COLOR_TOKENS = ["yellow", "green", "blue", "pink", "purple", "orange"] as const;
+
 function normalizeColor(input: string): string {
   return input.trim().toLowerCase();
 }

@@ -12,7 +12,8 @@ import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReadingAnnotation } from "@secondpass/client";
 import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
-import { getAnnotationColor, getAnnotationNoteText, getAnnotationTimestamp, isHighlightAnnotation, toReaderAnnotation } from "../annotations/annotationUtils";
+import type { HighlightViewModel } from "../annotations/viewModels";
+import { getAnnotationColor, getAnnotationDescribingText, getAnnotationNoteText, getAnnotationTimestamp, isHighlightAnnotation, toReaderAnnotation } from "../annotations/annotationUtils";
 import type { ReaderHighlightMark } from "../domain/types";
 
 export type ReadingSessionOrchestratorProps = {
@@ -25,13 +26,14 @@ export type ReadingSessionOrchestratorProps = {
     debugPanel: ReactNode | null;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
     annotations: {
-      items: Array<ReaderBookmarkViewModel | { kind: "highlight"; id: string; cfiRange: string; text: string; label: string; descriptionStatus: "idle" | "loading" | "ready" | "error" }>;
+      items: Array<ReaderBookmarkViewModel | HighlightViewModel>;
       status: "idle" | "loading" | "ready" | "error";
       error: string | null;
       busy: boolean;
       toggleBookmarkAtCurrentLocation: () => Promise<void>;
       createHighlightFromSelection: () => Promise<void>;
       removeById: (annotationId: string) => Promise<void>;
+      updateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
     };
   }) => ReactNode;
 };
@@ -406,6 +408,42 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     [props.spl],
   );
 
+  const updateHighlight = useCallback(
+    async (annotationId: string, update: { note: string; color: string }) => {
+      if (!props.spl) throw new Error("Not connected.");
+      if (!annotationId) return;
+      if (!profileVersion) throw new Error("Missing profile version.");
+
+      const raw = annotationsRaw.find((a) => a.id === annotationId) ?? null;
+      if (!raw) throw new Error("Annotation not found.");
+
+      const text = getAnnotationDescribingText(raw) ?? "";
+      if (!text.trim()) throw new Error("Cannot edit highlight without describing text.");
+
+      const nextColor = update.color.trim() || (getAnnotationColor(raw) ?? "").trim() || "yellow";
+
+      const nextNote = update.note.trim();
+
+      setAnnotationBusy(true);
+      setAnnotationError(null);
+      try {
+        const updated = await props.spl.reading.annotations.updateNote(annotationId, {
+          profileVersion,
+          text,
+          color: nextColor,
+          note: nextNote ? nextNote : null,
+        });
+        setAnnotationsRaw((prev) => [...prev.filter((a) => a.id !== annotationId), updated as unknown as ReadingAnnotation]);
+      } catch (e) {
+        setAnnotationError(e instanceof Error ? e.message : "Failed to update highlight.");
+        throw e;
+      } finally {
+        setAnnotationBusy(false);
+      }
+    },
+    [annotationsRaw, profileVersion, props.spl],
+  );
+
   const toggleBookmarkAtCurrentLocation = useCallback(async () => {
     if (!props.spl) return;
     if (!sessionId) return;
@@ -508,6 +546,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       toggleBookmarkAtCurrentLocation,
       createHighlightFromSelection,
       removeById,
+      updateHighlight,
     },
   });
 }

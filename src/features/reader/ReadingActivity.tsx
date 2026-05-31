@@ -69,6 +69,7 @@ export function ReadingActivity({
                 onRemoveAnnotation={(annotationId) => {
                   void annotations.removeById(annotationId);
                 }}
+                onUpdateHighlight={(annotationId, update) => annotations.updateHighlight(annotationId, update)}
               />
             </div>
           </div>
