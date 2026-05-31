@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
-import type { ReaderAnnotation, ReaderLocationTarget } from "../domain/types";
+import type { ReaderAnnotation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellCommand, ReadingShellEvent } from "./types";
 
@@ -13,6 +13,13 @@ export type ReadingShellProps = {
   onCommand?: (command: ReadingShellCommand) => void;
   command?: { seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } };
   statusLine?: string;
+  selection?: ReaderSelection | null;
+  selectionActions?: {
+    enabled: boolean;
+    busy?: boolean;
+    onHighlight: () => void;
+    onCancel: () => void;
+  };
   bookmark?: {
     enabled: boolean;
     isBookmarked: boolean;
@@ -49,6 +56,7 @@ export function ReadingShell(props: ReadingShellProps) {
           onLocationChanged: (location) => props.onEvent?.({ type: "locationChanged", location }),
           onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
           onLocationsReady: () => props.onEvent?.({ type: "locationsReady" }),
+          onSelectionChanged: (selection) => props.onEvent?.({ type: "selectionChanged", selection }),
           onError: (err) => props.onEvent?.({ type: "displayError", error: err }),
         });
         if (cancelled) {
@@ -154,14 +162,45 @@ export function ReadingShell(props: ReadingShellProps) {
     }
   };
 
+  const selectionActions = props.selectionActions;
+
   return (
     <div className="spReadingShell">
       <div className="spReadingShellBar">
         <div className="spReadingShellLabelBlock">
           {props.statusLine ? <div className="spReadingShellStatus">{props.statusLine}</div> : null}
         </div>
-        {props.bookmark ? (
-          <div className="spReadingShellActions">
+        <div className="spReadingShellActions">
+          {props.selection && selectionActions ? (
+            <div className="spReaderSelectionActions">
+              <div className="muted spReaderSelectionPreview">{props.selection.text.slice(0, 48)}{props.selection.text.length > 48 ? "…" : ""}</div>
+              <button
+                type="button"
+                className="button buttonCompact"
+                onClick={() => {
+                  // Clear visual selection immediately; the orchestrator already has the selection data.
+                  engineRef.current?.clearSelection();
+                  selectionActions.onHighlight();
+                }}
+                disabled={!selectionActions.enabled || status !== "ready" || Boolean(selectionActions.busy)}
+              >
+                Highlight
+              </button>
+              <button
+                type="button"
+                className="button buttonCompact"
+                onClick={() => {
+                  selectionActions.onCancel();
+                  engineRef.current?.clearSelection();
+                }}
+                disabled={status !== "ready"}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
+
+          {props.bookmark ? (
             <button
               type="button"
               className="button buttonCompact"
@@ -171,8 +210,8 @@ export function ReadingShell(props: ReadingShellProps) {
             >
               {props.bookmark.isBookmarked ? "Bookmarked" : "Bookmark"}
             </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       <ReaderViewport

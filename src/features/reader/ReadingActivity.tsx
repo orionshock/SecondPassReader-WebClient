@@ -32,7 +32,7 @@ export function ReadingActivity({
       </div>
 
       <ReadingSessionOrchestrator openedBook={openedBook} spl={spl} settings={settings}>
-        {({ state, shell, debugPanel, sendCommand, bookmarks }) => (
+        {({ state, shell, debugPanel, sendCommand, annotations }) => (
           <div className="spReaderLayout">
             <div className="spReaderViewportRegion">{shell}</div>
             {state.toc && state.toc.length > 0 ? (
@@ -60,11 +60,11 @@ export function ReadingActivity({
             <div className="spReaderAnnotationsRegion">
               <AnnotationWorkspace
                 state={state}
-                bookmarks={bookmarks.items}
+                annotations={annotations.items}
                 currentCfi={state.location?.cfi ?? null}
-                onJumpToCfi={(cfi) => sendCommand({ type: "display", target: { type: "cfi", cfi } })}
-                onRemoveBookmark={(bookmarkId) => {
-                  void bookmarks.removeById(bookmarkId);
+                onJumpToTarget={(target) => sendCommand({ type: "display", target })}
+                onRemoveAnnotation={(annotationId) => {
+                  void annotations.removeById(annotationId);
                 }}
               />
             </div>

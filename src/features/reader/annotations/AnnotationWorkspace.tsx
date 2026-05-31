@@ -6,16 +6,19 @@ type TabKey = "current" | "previous";
 
 export function AnnotationWorkspace({
   state,
-  bookmarks,
+  annotations,
   currentCfi,
-  onJumpToCfi,
-  onRemoveBookmark,
+  onJumpToTarget,
+  onRemoveAnnotation,
 }: {
   state: ReadingSessionState;
-  bookmarks: ReaderBookmarkViewModel[];
+  annotations: Array<
+    | ReaderBookmarkViewModel
+    | { kind: "highlight"; id: string; cfiRange: string; text: string; label: string; descriptionStatus: "idle" | "loading" | "ready" | "error" }
+  >;
   currentCfi?: string | null;
-  onJumpToCfi: (cfi: string) => void;
-  onRemoveBookmark: (bookmarkId: string) => void;
+  onJumpToTarget: (target: { type: "cfi"; cfi: string } | { type: "cfiRange"; cfiRange: string }) => void;
+  onRemoveAnnotation: (annotationId: string) => void;
 }) {
   const [tab, setTab] = useState<TabKey>("current");
 
@@ -52,32 +55,66 @@ export function AnnotationWorkspace({
 
       {tab === "current" ? (
         <div role="tabpanel" className="spAnnotationTabPanel">
-          <div className="muted spAnnotationWorkspaceHint">Bookmarks are shown here until highlights and notes are wired.</div>
+          <div className="muted spAnnotationWorkspaceHint">Bookmarks and highlights are shown here. Notes and painting are not wired yet.</div>
           <div className="muted">Session: {sessionLabel}</div>
 
-          {bookmarks.length === 0 ? <div className="muted">No bookmarks yet.</div> : null}
-          {bookmarks.length > 0 ? (
+          {annotations.length === 0 ? <div className="muted">No annotations yet.</div> : null}
+          {annotations.length > 0 ? (
             <div className="spBookmarkList">
-              {bookmarks.map((b) => {
-                const isCurrent = b.isCurrent || Boolean(currentCfi && b.cfi === currentCfi);
-                return (
-                  <div key={b.id} className={`spBookmarkRow ${isCurrent ? "spBookmarkRowCurrent" : ""}`}>
-                    <div className="spBookmarkMain">
-                      <div className="spBookmarkLabel" title={b.label}>
-                        {b.label}
-                        {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+              {annotations.map((a) => {
+                if ("cfi" in a) {
+                  const b = a;
+                  const isCurrent = b.isCurrent || Boolean(currentCfi && b.cfi === currentCfi);
+                  return (
+                    <div key={b.id} className={`spBookmarkRow ${isCurrent ? "spBookmarkRowCurrent" : ""}`}>
+                      <div className="spBookmarkMain">
+                        <div className="spBookmarkLabel" title={b.label}>
+                          {b.label}
+                          {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                        </div>
+                        {isCurrent ? <div className="muted">Current location</div> : null}
+                        <div className="mono muted spBookmarkCfi" title={b.cfi}>
+                          {b.cfi.slice(0, 80)}
+                          {b.cfi.length > 80 ? "…" : ""}
+                        </div>
                       </div>
-                      {isCurrent ? <div className="muted">Current location</div> : null}
-                      <div className="mono muted spBookmarkCfi" title={b.cfi}>
-                        {b.cfi.slice(0, 80)}
-                        {b.cfi.length > 80 ? "…" : ""}
+                      <div className="spBookmarkActions">
+                        <button type="button" className="button buttonCompact" onClick={() => onJumpToTarget({ type: "cfi", cfi: b.cfi })}>
+                          Jump
+                        </button>
+                        <button type="button" className="button buttonCompact" onClick={() => onRemoveAnnotation(b.id)}>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const h = a;
+                return (
+                  <div key={h.id} className="spBookmarkRow">
+                    <div className="spBookmarkMain">
+                      <div className="spBookmarkLabel" title={h.text}>
+                        {h.text ? (h.text.length > 120 ? `${h.text.slice(0, 120)}…` : h.text) : "Highlight"}
+                      </div>
+                      <div className="muted" title={h.label}>
+                        {h.label}
+                        {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                      </div>
+                      <div className="mono muted spBookmarkCfi" title={h.cfiRange}>
+                        {h.cfiRange.slice(0, 80)}
+                        {h.cfiRange.length > 80 ? "…" : ""}
                       </div>
                     </div>
                     <div className="spBookmarkActions">
-                      <button type="button" className="button buttonCompact" onClick={() => onJumpToCfi(b.cfi)}>
+                      <button
+                        type="button"
+                        className="button buttonCompact"
+                        onClick={() => onJumpToTarget({ type: "cfiRange", cfiRange: h.cfiRange })}
+                      >
                         Jump
                       </button>
-                      <button type="button" className="button buttonCompact" onClick={() => onRemoveBookmark(b.id)}>
+                      <button type="button" className="button buttonCompact" onClick={() => onRemoveAnnotation(h.id)}>
                         Remove
                       </button>
                     </div>

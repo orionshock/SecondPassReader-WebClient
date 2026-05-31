@@ -2,6 +2,8 @@ import ePub, { EpubCFI, type Book, type Location, type Rendition } from "@likeco
 import type { ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
+import type { ReaderSelection } from "../domain/types";
+import { buildQuoteContext } from "../selection/quoteContext";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
@@ -11,6 +13,7 @@ export type EpubTsBookEngineInit = {
   onLocationChanged?: (location: ReaderLocation) => void;
   onTocReady?: (toc: ReaderTocItem[]) => void;
   onLocationsReady?: () => void;
+  onSelectionChanged?: (selection: ReaderSelection | null) => void;
   onError?: (error: unknown) => void;
 };
 
@@ -18,6 +21,7 @@ export type EpubTsBookEngine = {
   display(target?: ReaderLocationTarget): Promise<void>;
   next(): Promise<void>;
   previous(): Promise<void>;
+  clearSelection(): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   destroy(): void;
 };
@@ -55,6 +59,43 @@ function normalizeTocItems(items: Array<{ id: string; href: string; label: strin
       href: i.href,
       children: Array.isArray(i.subitems) ? normalizeTocItems(i.subitems) : undefined,
     }));
+}
+
+function safeText(s: unknown): string {
+  return typeof s === "string" ? s : "";
+}
+
+function extractSelectionTextAndContext(contents: { window: Window; document: Document }): { text: string; before: string; after: string } | null {
+  const sel = contents.window.getSelection?.();
+  if (!sel || sel.rangeCount === 0) return null;
+  const text = safeText(sel.toString()).trim();
+  if (!text) return null;
+
+  const range = sel.getRangeAt(0);
+
+  // Best-effort context extraction. Prefer single-text-node slices when possible.
+  const startNode = range.startContainer;
+  const endNode = range.endContainer;
+
+  if (startNode === endNode && startNode.nodeType === Node.TEXT_NODE) {
+    const full = safeText((startNode as Text).data);
+    const before = full.slice(0, range.startOffset);
+    const after = full.slice(range.endOffset);
+    return { text, before, after };
+  }
+
+  const ancestor = range.commonAncestorContainer;
+  const haystack = safeText((ancestor as any)?.textContent);
+  if (haystack) {
+    const idx = haystack.indexOf(text);
+    if (idx >= 0) {
+      const before = haystack.slice(0, idx);
+      const after = haystack.slice(idx + text.length);
+      return { text, before, after };
+    }
+  }
+
+  return { text, before: "", after: "" };
 }
 
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
@@ -130,6 +171,38 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   rendition.on("relocated", onRelocated);
   rendition.on("displayerror", onDisplayError);
 
+  const onSelected = (cfiRange: string, contents: any) => {
+    try {
+      const ctx = extractSelectionTextAndContext(contents);
+      if (!ctx) {
+        init.onSelectionChanged?.(null);
+        return;
+      }
+      const { prefix, suffix } = buildQuoteContext({ exact: ctx.text, before: ctx.before, after: ctx.after });
+      const href = (() => {
+        try {
+          const idx = typeof contents?.sectionIndex === "number" ? contents.sectionIndex : undefined;
+          if (typeof idx === "number") return book.spine.get(idx)?.href ?? undefined;
+        } catch {
+          // ignore
+        }
+        return undefined;
+      })();
+
+      init.onSelectionChanged?.({
+        cfiRange: cfiRange.trim(),
+        text: ctx.text,
+        quotePrefix: prefix,
+        quoteSuffix: suffix,
+        href,
+      });
+    } catch (err) {
+      init.onError?.(err);
+    }
+  };
+
+  rendition.on("selected", onSelected);
+
   let destroyed = false;
   let locationsGeneratePromise: Promise<unknown> | null = null;
   let locationsReady = false;
@@ -175,6 +248,25 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       if (destroyed) return;
       await rendition.prev();
     },
+    clearSelection() {
+      if (destroyed) return;
+      try {
+        for (const c of rendition.getContents()) {
+          try {
+            c.window?.getSelection?.()?.removeAllRanges?.();
+          } catch {
+            // ignore
+          }
+        }
+      } catch {
+        // ignore
+      }
+      try {
+        init.onSelectionChanged?.(null);
+      } catch {
+        // ignore
+      }
+    },
     async describeCfi(cfi: string): Promise<ReaderLocationDescription> {
       const trimmed = cfi.trim();
       if (!trimmed) throw new Error("CFI is required.");
@@ -213,6 +305,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       try {
         rendition.off("relocated", onRelocated);
         rendition.off("displayerror", onDisplayError);
+        rendition.off("selected", onSelected);
       } catch {
         // ignore
       }

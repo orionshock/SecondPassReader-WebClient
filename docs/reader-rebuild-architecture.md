@@ -71,8 +71,9 @@ Key principle:
 - Bookmarks are annotation-backed session state. Bookmark create/remove/list and “jump by CFI” are coordinated in the session/orchestrator layer; the shell/engine remain unaware of server payload shapes.
 - Bookmark UI labels are derived at runtime from CFI + spine/TOC and (when available) approximate location percentage. Generated labels are not persisted server-side.
 - The reader annotation section is organized as a workspace with two modes:
-  - Current session: shows annotations for the active reading session (currently bookmarks only).
+  - Current session: shows annotations for the active reading session (currently bookmarks + highlights).
   - Previous sessions: placeholder for selecting prior session layers for reference/overlay.
+- Selection is detected in the reader engine/shell layer via epub-ts rendition events. The orchestrator turns selection intent into highlight annotations using `spl.reading.annotations.createHighlight(...)`, including optional quotePrefix/quoteSuffix context.
 
 ## What must remain stable
 

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
 import type { ReaderAnnotation, ReaderLocationTarget, ReadingShellEvent } from "../shell/types";
-import type { ReaderLocation } from "../domain/types";
+import type { ReaderLocation, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingSessionState } from "./types";
@@ -12,6 +12,7 @@ import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReadingAnnotation } from "@secondpass/client";
 import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
+import { isHighlightAnnotation, toReaderAnnotation } from "../annotations/annotationUtils";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -22,14 +23,14 @@ export type ReadingSessionOrchestratorProps = {
     shell: ReactNode;
     debugPanel: ReactNode;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
-    bookmarks: {
-      items: ReaderBookmarkViewModel[];
+    annotations: {
+      items: Array<ReaderBookmarkViewModel | { kind: "highlight"; id: string; cfiRange: string; text: string; label: string; descriptionStatus: "idle" | "loading" | "ready" | "error" }>;
       status: "idle" | "loading" | "ready" | "error";
       error: string | null;
-      currentBookmarkId: string | null;
       busy: boolean;
-      toggleCurrent: () => Promise<void>;
-      removeById: (bookmarkId: string) => Promise<void>;
+      toggleBookmarkAtCurrentLocation: () => Promise<void>;
+      createHighlightFromSelection: () => Promise<void>;
+      removeById: (annotationId: string) => Promise<void>;
     };
   }) => ReactNode;
 };
@@ -39,13 +40,14 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [location, setLocation] = useState<ReaderLocation | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
+  const [selection, setSelection] = useState<ReaderSelection | null>(null);
   const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
-  const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
-  const [bookmarkStatus, setBookmarkStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [bookmarkError, setBookmarkError] = useState<string | null>(null);
-  const [bookmarkBusy, setBookmarkBusy] = useState(false);
+  const [annotationsRaw, setAnnotationsRaw] = useState<ReadingAnnotation[]>([]);
+  const [annotationStatus, setAnnotationStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [annotationError, setAnnotationError] = useState<string | null>(null);
+  const [annotationBusy, setAnnotationBusy] = useState(false);
   const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
   const [locationsReady, setLocationsReady] = useState(false);
   const [bookmarkDescriptions, setBookmarkDescriptions] = useState<
@@ -75,16 +77,18 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [props.openedBook.readingOpen?.progress]);
 
   const state: ReadingSessionState = useMemo(() => {
-    const seedAnnotations: ReaderAnnotation[] = bookmarks;
+    const seedAnnotations: ReaderAnnotation[] = annotationsRaw
+      .map((a) => toReaderAnnotation(a))
+      .filter((a): a is ReaderAnnotation => Boolean(a));
     return {
       bookId: props.openedBook.book.id,
       sessionId: props.openedBook.readingOpen?.session?.id ?? null,
       location,
-      selection: null,
+      selection,
       toc,
       annotations: seedAnnotations,
     };
-  }, [bookmarks, location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, toc]);
+  }, [annotationsRaw, location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, selection, toc]);
 
   const { autosave } = useReadingProgressAutosave({
     enabled: true,
@@ -121,7 +125,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         setLastError(event.error instanceof Error ? event.error.message : "Reader error");
         return;
       case "selectionChanged":
-        // not implemented in this vertical slice
+        setSelection(event.selection ?? null);
         return;
       case "tocReady":
         setToc(event.toc);
@@ -150,13 +154,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const sessionId = state.sessionId;
 
-  const seedBookmarksFromOpen = useCallback((annotations: ReadingAnnotation[] | null | undefined) => {
-    const seeded: ReaderBookmark[] = [];
-    for (const a of annotations ?? []) {
-      const b = toReaderBookmark(a);
-      if (b) seeded.push(b);
-    }
-    if (seeded.length > 0) setBookmarks(seeded);
+  const seedAnnotationsFromOpen = useCallback((annotations: ReadingAnnotation[] | null | undefined) => {
+    const seeded: ReadingAnnotation[] = [];
+    for (const a of annotations ?? []) seeded.push(a);
+    if (seeded.length > 0) setAnnotationsRaw(seeded);
   }, []);
 
   // Seed from readingOpen response (first page) immediately when available.
@@ -168,15 +169,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     const key = `${props.openedBook.objectUrl}|${id}`;
     if (lastSeedKeyRef.current === key) return;
     lastSeedKeyRef.current = key;
-    seedBookmarksFromOpen(open?.annotations?.results as unknown as ReadingAnnotation[] | undefined);
-  }, [props.openedBook.objectUrl, props.openedBook.readingOpen, seedBookmarksFromOpen]);
+    seedAnnotationsFromOpen(open?.annotations?.results as unknown as ReadingAnnotation[] | undefined);
+  }, [props.openedBook.objectUrl, props.openedBook.readingOpen, seedAnnotationsFromOpen]);
 
   // Load bookmarks for the session (non-blocking).
   useEffect(() => {
     if (!props.spl) return;
     if (!sessionId) return;
-    setBookmarkStatus("loading");
-    setBookmarkError(null);
+    setAnnotationStatus("loading");
+    setAnnotationError(null);
 
     let cancelled = false;
     void (async () => {
@@ -190,17 +191,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
           page += 1;
         }
         if (cancelled) return;
-        const next: ReaderBookmark[] = [];
-        for (const a of all) {
-          const b = toReaderBookmark(a);
-          if (b) next.push(b);
-        }
-        setBookmarks(next);
-        setBookmarkStatus("ready");
+        setAnnotationsRaw(all);
+        setAnnotationStatus("ready");
       } catch (e) {
         if (cancelled) return;
-        setBookmarkStatus("error");
-        setBookmarkError(e instanceof Error ? e.message : "Failed to load bookmarks.");
+        setAnnotationStatus("error");
+        setAnnotationError(e instanceof Error ? e.message : "Failed to load annotations.");
       }
     })();
 
@@ -209,6 +205,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     };
   }, [props.spl, sessionId]);
 
+  const bookmarks: ReaderBookmark[] = useMemo(() => {
+    const out: ReaderBookmark[] = [];
+    for (const a of annotationsRaw) {
+      const b = toReaderBookmark(a);
+      if (b) out.push(b);
+    }
+    return out;
+  }, [annotationsRaw]);
+
   const currentBookmark = useMemo(() => {
     const cfi = location?.cfi?.trim() ?? "";
     if (!cfi) return null;
@@ -216,17 +221,27 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return bookmarks.find((b) => b.cfi === cfi) ?? null;
   }, [bookmarks, location?.cfi]);
 
+  const highlights = useMemo(() => {
+    const out: Array<{ id: string; cfiRange: string; text: string }> = [];
+    for (const a of annotationsRaw) {
+      if (!isHighlightAnnotation(a)) continue;
+      const ra = toReaderAnnotation(a);
+      if (ra?.kind !== "highlight") continue;
+      out.push({ id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "" });
+    }
+    return out;
+  }, [annotationsRaw]);
+
   // Best-effort: describe bookmarks at runtime (no rendition jumps).
   // Important: avoid cancelling in-flight descriptions due to state updates.
   useEffect(() => {
     if (!describeCfi) return;
-    if (bookmarks.length === 0) return;
+    if (bookmarks.length === 0 && highlights.length === 0) return;
 
     let cancelled = false;
 
     const current = bookmarkDescriptionsRef.current;
-    const toDescribe = bookmarks
-      .map((b) => b.cfi)
+    const toDescribe = [...bookmarks.map((b) => b.cfi), ...highlights.map((h) => h.cfiRange)]
       .filter((cfi) => {
         const entry = current[cfi];
         if (!entry) return true;
@@ -265,7 +280,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return () => {
       cancelled = true;
     };
-  }, [bookmarks, describeCfi, locationsReady]);
+  }, [bookmarks, describeCfi, highlights, locationsReady]);
 
   const bookmarkViewModels: ReaderBookmarkViewModel[] = useMemo(() => {
     return bookmarks.map((b) => {
@@ -281,25 +296,47 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     });
   }, [bookmarkDescriptions, bookmarks, describeCfi, location?.bookProgress, location?.cfi, toc]);
 
+  const highlightViewModels = useMemo(() => {
+    return highlights.map((h) => {
+      const entry = bookmarkDescriptions[h.cfiRange];
+      const href = entry?.value?.href ?? undefined;
+      const chapterLabel = href && toc ? findTocLabelForHref(toc, href) : null;
+      const label = chapterLabel
+        ? chapterLabel
+        : typeof entry?.value?.bookProgress === "number" && Number.isFinite(entry.value.bookProgress)
+          ? `${Math.round(entry.value.bookProgress * 100)}%`
+          : "Saved location";
+
+      return {
+        kind: "highlight" as const,
+        id: h.id,
+        cfiRange: h.cfiRange,
+        text: h.text,
+        label,
+        descriptionStatus: entry?.status ?? "idle",
+      };
+    });
+  }, [bookmarkDescriptions, highlights, toc]);
+
   const removeById = useCallback(
-    async (bookmarkId: string) => {
+    async (annotationId: string) => {
       if (!props.spl) return;
-      if (!bookmarkId) return;
-      setBookmarkBusy(true);
-      setBookmarkError(null);
+      if (!annotationId) return;
+      setAnnotationBusy(true);
+      setAnnotationError(null);
       try {
-        await props.spl.reading.annotations.remove(bookmarkId);
-        setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
+        await props.spl.reading.annotations.remove(annotationId);
+        setAnnotationsRaw((prev) => prev.filter((a) => a.id !== annotationId));
       } catch (e) {
-        setBookmarkError(e instanceof Error ? e.message : "Failed to remove bookmark.");
+        setAnnotationError(e instanceof Error ? e.message : "Failed to remove annotation.");
       } finally {
-        setBookmarkBusy(false);
+        setAnnotationBusy(false);
       }
     },
     [props.spl],
   );
 
-  const toggleCurrent = useCallback(async () => {
+  const toggleBookmarkAtCurrentLocation = useCallback(async () => {
     if (!props.spl) return;
     if (!sessionId) return;
     if (!profileVersion) return;
@@ -311,8 +348,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       return;
     }
 
-    setBookmarkBusy(true);
-    setBookmarkError(null);
+    setAnnotationBusy(true);
+    setAnnotationError(null);
     try {
       const created = await props.spl.reading.annotations.createBookmark({
         sessionId,
@@ -320,13 +357,42 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         cfi,
       });
       const b = toReaderBookmark(created as unknown as ReadingAnnotation);
-      if (b) setBookmarks((prev) => [...prev.filter((x) => x.id !== b.id), b]);
+      if (b) {
+        setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== b.id), created as unknown as ReadingAnnotation]);
+      }
     } catch (e) {
-      setBookmarkError(e instanceof Error ? e.message : "Failed to create bookmark.");
+      setAnnotationError(e instanceof Error ? e.message : "Failed to create bookmark.");
     } finally {
-      setBookmarkBusy(false);
+      setAnnotationBusy(false);
     }
   }, [currentBookmark, location?.cfi, profileVersion, props.spl, removeById, sessionId]);
+
+  const createHighlightFromSelection = useCallback(async () => {
+    if (!props.spl) return;
+    if (!sessionId) return;
+    if (!profileVersion) return;
+    const sel = selection;
+    if (!sel?.cfiRange || !sel.text) return;
+
+    setAnnotationBusy(true);
+    setAnnotationError(null);
+    try {
+      const created = await props.spl.reading.annotations.createHighlight({
+        sessionId,
+        profileVersion,
+        cfiRange: sel.cfiRange,
+        text: sel.text,
+        quotePrefix: sel.quotePrefix,
+        quoteSuffix: sel.quoteSuffix,
+      });
+      setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== created.id), created as unknown as ReadingAnnotation]);
+      setSelection(null);
+    } catch (e) {
+      setAnnotationError(e instanceof Error ? e.message : "Failed to create highlight.");
+    } finally {
+      setAnnotationBusy(false);
+    }
+  }, [profileVersion, props.spl, selection, sessionId]);
 
   return props.children({
     state,
@@ -339,12 +405,23 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         command={pendingCommand ?? undefined}
         statusLine={statusLine}
         onDescribeCfiReady={handleDescribeCfiReady}
+        selection={selection}
+        selectionActions={{
+          enabled: Boolean(sessionId && profileVersion && selection?.cfiRange && selection?.text),
+          busy: annotationBusy,
+          onHighlight: () => {
+            void createHighlightFromSelection();
+          },
+          onCancel: () => {
+            setSelection(null);
+          },
+        }}
         bookmark={{
           enabled: Boolean(sessionId && profileVersion && location?.cfi),
           isBookmarked: Boolean(currentBookmark),
-          busy: bookmarkBusy,
+          busy: annotationBusy,
           onToggle: () => {
-            void toggleCurrent();
+            void toggleBookmarkAtCurrentLocation();
           },
         }}
       />
@@ -360,7 +437,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         </div>
         {autosave.error ? <div className="errorText">{autosave.error}</div> : null}
         {lastError ? <div className="errorText">{lastError}</div> : null}
-        {bookmarkError ? <div className="errorText">{bookmarkError}</div> : null}
+        {annotationError ? <div className="errorText">{annotationError}</div> : null}
         <div className="spReaderDebugGrid">
           <div className="muted">cfi</div>
           <div className="mono">{state.location?.cfi ?? ""}</div>
@@ -376,13 +453,13 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       </section>
     ),
     sendCommand,
-    bookmarks: {
-      items: bookmarkViewModels,
-      status: bookmarkStatus,
-      error: bookmarkError,
-      currentBookmarkId: currentBookmark?.id ?? null,
-      busy: bookmarkBusy,
-      toggleCurrent,
+    annotations: {
+      items: [...bookmarkViewModels, ...highlightViewModels],
+      status: annotationStatus,
+      error: annotationError,
+      busy: annotationBusy,
+      toggleBookmarkAtCurrentLocation,
+      createHighlightFromSelection,
       removeById,
     },
   });

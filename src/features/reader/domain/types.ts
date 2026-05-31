@@ -34,6 +34,18 @@ export type ReaderLocation = {
 export type ReaderSelection = {
   cfiRange: string;
   text: string;
+  /**
+   * Optional quote context for anchoring/repair/export.
+   *
+   * The selection layer decides how much context is useful.
+   * The server enforces `<= 500` chars for each of prefix/suffix.
+   */
+  quotePrefix?: string;
+  quoteSuffix?: string;
+  /**
+   * Useful context (typically a spine href) for display/TOC matching.
+   */
+  href?: string;
   anchor?: { x: number; y: number };
 };
 
@@ -71,12 +83,16 @@ export type ReaderAnnotation =
       kind: "highlight";
       id: string;
       cfiRange: string;
+      text?: string;
       color?: string;
+      href?: string;
+      note?: string;
       readOnly?: boolean;
     }
   | {
       kind: "bookmark";
       id: string;
       cfi: string;
+      href?: string;
       readOnly?: boolean;
     };

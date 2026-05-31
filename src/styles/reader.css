@@ -135,6 +135,19 @@
   flex-wrap: wrap;
 }
 
+.spReaderSelectionActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spReaderSelectionPreview {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .spReadingShellLabelBlock {
   display: grid;
   gap: 2px;
