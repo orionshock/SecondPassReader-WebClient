@@ -230,7 +230,7 @@
 
 .spAnnotationCard {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--sp-border);
@@ -252,6 +252,33 @@
   align-content: start;
 }
 
+.spAnnotationRightRail {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+}
+
+.spIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.spIconButtonLabel {
+  line-height: 1;
+}
+
+.material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.spReaderPageNavIcon {
+  font-size: 22px;
+}
+
 .spAnnotationBody {
   display: grid;
   gap: 6px;
@@ -271,6 +298,13 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: rgba(17, 24, 39, 0.72);
+}
+
+.spAnnotationKindDetail {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(17, 24, 39, 0.82);
 }
 
 .spAnnotationBadge {
@@ -299,6 +333,8 @@
   border-radius: 10px;
   line-height: 1.35;
   overflow: hidden;
+  width: fit-content;
+  max-width: min(72ch, 100%);
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
@@ -312,6 +348,8 @@
   color: var(--sp-text);
   font-size: 13px;
   line-height: 1.35;
+  width: fit-content;
+  max-width: min(72ch, 100%);
 }
 
 .spAnnotationMetaLine {
@@ -365,6 +403,13 @@
 }
 
 .spAnnotationEditActions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.spAnnotationEditPrimaryActions {
   display: flex;
   gap: 8px;
   align-items: center;

@@ -3,6 +3,7 @@ import type { ReadingSessionState } from "../session/types";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors";
 import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./viewModels";
 import { ANNOTATION_LIMITS } from "./annotationLimits";
+import { MaterialIcon } from "../../../components/MaterialIcon";
 
 type TabKey = "current" | "previous";
 
@@ -87,36 +88,38 @@ export function AnnotationWorkspace({
                       <div className="spAnnotationActionRail" aria-label="Bookmark actions">
                         <button
                           type="button"
-                          className="button buttonCompact"
+                          className="button buttonCompact spIconButton"
                           onClick={() => onJumpToTarget({ type: "cfi", cfi: b.cfi })}
                           aria-label="Jump to bookmark"
                           title="Jump"
                         >
-                          Jump
-                        </button>
-                        <button
-                          type="button"
-                          className="button buttonCompact"
-                          onClick={() => onRemoveAnnotation(b.id)}
-                          aria-label="Remove bookmark"
-                          title="Remove"
-                        >
-                          Remove
+                          <MaterialIcon name="open_in_new" />
                         </button>
                       </div>
 
                       <div className="spAnnotationBody">
                         <div className="spAnnotationKindRow">
-                          <span className="spAnnotationKind">Bookmark</span>
+                          <span className="spAnnotationKind">
+                            Bookmark<span className="spAnnotationKindDetail">{` - ${b.label}`}</span>
+                          </span>
                           {isCurrent ? <span className="spAnnotationBadge">Current</span> : null}
                         </div>
 
-                        <div className="spAnnotationPrimary" title={b.label}>
-                          {b.label}
-                          {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                        <div className="muted spAnnotationMetaLine">
+                          {b.descriptionStatus === "loading" ? <span className="muted">{`Resolving${"\u2026"}`}</span> : null}
                         </div>
+                      </div>
 
-                        <div className="muted spAnnotationMetaLine">Saved location</div>
+                      <div className="spAnnotationRightRail" aria-label="Bookmark actions">
+                        <button
+                          type="button"
+                          className="button buttonCompact spIconButton"
+                          onClick={() => onRemoveAnnotation(b.id)}
+                          aria-label="Remove bookmark"
+                          title="Remove"
+                        >
+                          <MaterialIcon name="delete" />
+                        </button>
                       </div>
                     </article>
                   );
@@ -137,27 +140,17 @@ export function AnnotationWorkspace({
                     <div className="spAnnotationActionRail" aria-label="Highlight actions">
                       <button
                         type="button"
-                        className="button buttonCompact"
+                        className="button buttonCompact spIconButton"
                         onClick={() => onJumpToTarget({ type: "cfiRange", cfiRange: h.cfiRange })}
                         aria-label="Jump to highlight"
                         title="Jump"
                         disabled={editStatus === "saving"}
                       >
-                        Jump
+                        <MaterialIcon name="open_in_new" />
                       </button>
                       <button
                         type="button"
-                        className="button buttonCompact"
-                        onClick={() => onRemoveAnnotation(h.id)}
-                        aria-label="Remove highlight"
-                        title="Remove"
-                        disabled={editStatus === "saving"}
-                      >
-                        Remove
-                      </button>
-                      <button
-                        type="button"
-                        className="button buttonCompact"
+                        className="button buttonCompact spIconButton"
                         onClick={() => {
                           setEditingId(h.id);
                           setDraftNote(h.note ?? "");
@@ -169,15 +162,11 @@ export function AnnotationWorkspace({
                         title="Edit"
                         disabled={editStatus === "saving"}
                       >
-                        Edit
+                        <MaterialIcon name="edit" />
                       </button>
                     </div>
 
                     <div className="spAnnotationBody">
-                      <div className="spAnnotationKindRow">
-                        <span className="spAnnotationKind">Highlight</span>
-                      </div>
-
                       <div className="spAnnotationQuote" title={h.text}>
                         {h.text || "Highlight"}
                       </div>
@@ -205,6 +194,43 @@ export function AnnotationWorkspace({
                           }}
                         >
                           <div className="spAnnotationEditRow">
+                            <textarea
+                              id={`note-${h.id}`}
+                              className="input spAnnotationEditTextarea"
+                              rows={3}
+                              value={draftNote}
+                              onChange={(ev) => setDraftNote(ev.currentTarget.value)}
+                              placeholder="Highlight Note"
+                              maxLength={ANNOTATION_LIMITS.bodyValueMaxChars}
+                              disabled={editStatus === "saving"}
+                            />
+                          </div>
+
+                          {editStatus === "error" && editError ? (
+                            <div className="spAnnotationEditError" role="alert">
+                              {editError}
+                            </div>
+                          ) : null}
+
+                          <div className="spAnnotationEditActions">
+                            <div className="spAnnotationEditPrimaryActions">
+                              <button type="submit" className="button buttonCompact" disabled={!canSave}>
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                className="button buttonCompact"
+                                onClick={() => {
+                                  setEditingId(null);
+                                  setEditStatus("idle");
+                                  setEditError(null);
+                                }}
+                                disabled={editStatus === "saving"}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+
                             <div className="spAnnotationColorSwatches" role="radiogroup" aria-label="Highlight color">
                               {ANNOTATION_COLOR_TOKENS.map((token) => (
                                 <button
@@ -220,46 +246,6 @@ export function AnnotationWorkspace({
                               ))}
                             </div>
                           </div>
-
-                          <div className="spAnnotationEditRow">
-                            <label className="muted spAnnotationEditLabel" htmlFor={`note-${h.id}`}>
-                              Note
-                            </label>
-                            <textarea
-                              id={`note-${h.id}`}
-                              className="input spAnnotationEditTextarea"
-                              rows={3}
-                              value={draftNote}
-                              onChange={(ev) => setDraftNote(ev.currentTarget.value)}
-                              placeholder="Add a note…"
-                              maxLength={ANNOTATION_LIMITS.bodyValueMaxChars}
-                              disabled={editStatus === "saving"}
-                            />
-                          </div>
-
-                          {editStatus === "error" && editError ? (
-                            <div className="spAnnotationEditError" role="alert">
-                              {editError}
-                            </div>
-                          ) : null}
-
-                          <div className="spAnnotationEditActions">
-                            <button type="submit" className="button buttonCompact" disabled={!canSave}>
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              className="button buttonCompact"
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditStatus("idle");
-                                setEditError(null);
-                              }}
-                              disabled={editStatus === "saving"}
-                            >
-                              Cancel
-                            </button>
-                          </div>
                         </form>
                       ) : null}
 
@@ -268,6 +254,19 @@ export function AnnotationWorkspace({
                         {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
                         {when ? <span className="muted">{` \u00B7 ${when}`}</span> : null}
                       </div>
+                    </div>
+
+                    <div className="spAnnotationRightRail" aria-label="Highlight actions">
+                      <button
+                        type="button"
+                        className="button buttonCompact spIconButton"
+                        onClick={() => onRemoveAnnotation(h.id)}
+                        aria-label="Remove highlight"
+                        title="Remove"
+                        disabled={editStatus === "saving"}
+                      >
+                        <MaterialIcon name="delete" />
+                      </button>
                     </div>
                   </article>
                 );

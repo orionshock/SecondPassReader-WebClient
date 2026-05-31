@@ -4,6 +4,7 @@ import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellCommand, ReadingShellEvent } from "./types";
+import { MaterialIcon } from "../../../components/MaterialIcon";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -204,7 +205,8 @@ export function ReadingShell(props: ReadingShellProps) {
                 }}
                 disabled={!selectionActions.enabled || status !== "ready" || Boolean(selectionActions.busy)}
               >
-                Highlight
+                <MaterialIcon name="border_color" />
+                <span className="spIconButtonLabel">Highlight</span>
               </button>
               <button
                 type="button"
@@ -215,7 +217,8 @@ export function ReadingShell(props: ReadingShellProps) {
                 }}
                 disabled={status !== "ready"}
               >
-                Cancel
+                <MaterialIcon name="close" />
+                <span className="spIconButtonLabel">Cancel</span>
               </button>
             </div>
           ) : null}
@@ -227,8 +230,10 @@ export function ReadingShell(props: ReadingShellProps) {
               onClick={props.bookmark.onToggle}
               disabled={!props.bookmark.enabled || status !== "ready" || Boolean(props.bookmark.busy)}
               title={!props.bookmark.enabled ? "Bookmark is unavailable until a reading location is known." : undefined}
+              aria-label={props.bookmark.isBookmarked ? "Remove bookmark" : "Add bookmark"}
             >
-              {props.bookmark.isBookmarked ? "Bookmarked" : "Bookmark"}
+              <MaterialIcon name={props.bookmark.isBookmarked ? "bookmark_added" : "bookmark_add"} />
+              <span className="spIconButtonLabel">{props.bookmark.isBookmarked ? "Bookmarked" : "Bookmark"}</span>
             </button>
           ) : null}
         </div>
@@ -248,7 +253,7 @@ export function ReadingShell(props: ReadingShellProps) {
               aria-label="Previous page"
               title="Previous page"
             >
-              Prev
+              <MaterialIcon name="chevron_left" className="spReaderPageNavIcon" />
             </button>
             <button
               type="button"
@@ -258,7 +263,7 @@ export function ReadingShell(props: ReadingShellProps) {
               aria-label="Next page"
               title="Next page"
             >
-              Next
+              <MaterialIcon name="chevron_right" className="spReaderPageNavIcon" />
             </button>
           </>
         }
