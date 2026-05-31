@@ -111,3 +111,19 @@ The client throws normal JavaScript errors. For server failures, the package exp
 
 Callers should catch errors and render user-friendly messages. Never log or persist bearer tokens.
 
+## Highlight quote context (TextQuoteSelector)
+
+`createHighlight` accepts optional quote context fields:
+
+- `quotePrefix?: string`
+- `quoteSuffix?: string`
+
+Behavior:
+
+- CFI (from `cfiRange`) remains the primary anchor (`FragmentSelector`).
+- If `quotePrefix` or `quoteSuffix` is provided, the client sends `target.selector` as:
+  - `[FragmentSelector, TextQuoteSelector]`
+- `TextQuoteSelector.exact` is the highlight `text` (must match the describing body text).
+- `prefix` / `suffix` are optional anchoring/repair/export metadata (not display text).
+- The client clamps `quotePrefix`/`quoteSuffix` to **500 chars max** to satisfy server limits.
+- Selection heuristics (how much context to capture) belong to the reader/selection layer.

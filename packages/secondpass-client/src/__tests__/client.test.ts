@@ -102,6 +102,18 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload.target?.selector?.value).toBe("epubcfi(/6/2[chap01]!/4/1:0)");
   });
 
+  it("reading.annotations.createBookmark does not add TextQuoteSelector context", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.createBookmark({ sessionId: "sess-1", profileVersion: "pv1", cfi: "epubcfi(/6/2[chap01]!/4/1:0)" });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(payload.target.selector.type).toBe("FragmentSelector");
+    expect(Array.isArray(payload.target.selector)).toBe(false);
+  });
+
   it("reading.annotations.createHighlight builds highlight payload including text/color and note bodies", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
@@ -122,11 +134,53 @@ describe("@secondpass/client high-level workflows", () => {
 
     const payload = JSON.parse(String(init?.body));
     expect(payload.motivation).toBe("highlighting");
+    expect(payload.target?.selector?.type).toBe("FragmentSelector");
     expect(payload.target?.selector?.value).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
     expect(payload.body).toEqual([
       { type: "TextualBody", purpose: "describing", value: "Selected text", color: "#ff0" },
       { type: "TextualBody", purpose: "commenting", value: "A note" },
     ]);
+  });
+
+  it("reading.annotations.createHighlight without quote context uses a single FragmentSelector", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.createHighlight({
+      sessionId: "sess-1",
+      profileVersion: "pv1",
+      cfiRange: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
+      text: "Selected text",
+    });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(payload.target.selector).toMatchObject({ type: "FragmentSelector", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
+  });
+
+  it("reading.annotations.createHighlight with quotePrefix/suffix uses selector array with TextQuoteSelector and clamps context to 500 chars", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
+
+    const long = "x".repeat(800);
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.createHighlight({
+      sessionId: "sess-1",
+      profileVersion: "pv1",
+      cfiRange: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
+      text: "Selected text",
+      quotePrefix: ` ${long} `,
+      quoteSuffix: long,
+    });
+
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(Array.isArray(payload.target.selector)).toBe(true);
+    expect(payload.target.selector[0]).toMatchObject({ type: "FragmentSelector", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
+    expect(payload.target.selector[1]).toMatchObject({ type: "TextQuoteSelector", exact: "Selected text" });
+    expect(payload.target.selector[1].prefix.length).toBe(500);
+    expect(payload.target.selector[1].suffix.length).toBe(500);
+    // Selected text is not clamped
+    expect(payload.target.selector[1].exact).toBe("Selected text");
   });
 
   it("library.books.download(book) downloads blob via internal download_url without app passing raw URL", async () => {
@@ -239,4 +293,3 @@ describe("@secondpass/client high-level workflows", () => {
     await expect(spl.reading.sessions.list()).rejects.toMatchObject({ kind: "unauthorized", status: 401 });
   });
 });
-

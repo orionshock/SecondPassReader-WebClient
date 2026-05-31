@@ -144,6 +144,16 @@ export type CreateHighlightInput = {
   text?: string;
   color?: string;
   note?: string;
+  /**
+   * Optional W3C TextQuoteSelector context.
+   *
+   * - `cfiRange` remains the primary anchor.
+   * - prefix/suffix are repair/export metadata, not display text.
+   * - The reader/selection layer decides what context is useful.
+   * - The client clamps prefix/suffix to server limits (500 chars).
+   */
+  quotePrefix?: string;
+  quoteSuffix?: string;
 };
 
 export type CreateBookmarkInput = {
@@ -200,6 +210,23 @@ export async function createHighlightAnnotation(input: {
 
   const body: ReadingAnnotationCreatePayload["body"] = [];
   const text = typeof input.create.text === "string" ? input.create.text.trim() : "";
+  const quotePrefixRaw = typeof input.create.quotePrefix === "string" ? input.create.quotePrefix : "";
+  const quoteSuffixRaw = typeof input.create.quoteSuffix === "string" ? input.create.quoteSuffix : "";
+
+  const clampQuoteContext = (value: string): string | undefined => {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.length <= 500) return trimmed;
+    return trimmed.slice(0, 500);
+  };
+
+  const quotePrefix = clampQuoteContext(quotePrefixRaw);
+  const quoteSuffix = clampQuoteContext(quoteSuffixRaw);
+  const hasQuoteContext = Boolean(quotePrefix || quoteSuffix);
+  if (hasQuoteContext && !text) {
+    throw new Error("Highlight quote context requires `text` (used as TextQuoteSelector.exact).");
+  }
+
   if (text) {
     body.push({
       type: "TextualBody",
@@ -217,16 +244,33 @@ export async function createHighlightAnnotation(input: {
     });
   }
 
+  const fragmentSelector: ReadingAnnotationCreatePayload["target"]["selector"] =
+    // Cast the fragment selector shape; the schema type allows this object directly.
+    {
+      type: "FragmentSelector",
+      conformsTo: EPUB_CFI_CONFORMS_TO,
+      value: cfiRange,
+    } as ReadingAnnotationCreatePayload["target"]["selector"];
+
+  const selector: ReadingAnnotationCreatePayload["target"]["selector"] = hasQuoteContext
+    ? ([
+        fragmentSelector,
+        {
+          type: "TextQuoteSelector",
+          // Must match the describing body text when both are present.
+          exact: text,
+          ...(quotePrefix ? { prefix: quotePrefix } : {}),
+          ...(quoteSuffix ? { suffix: quoteSuffix } : {}),
+        },
+      ] as unknown as ReadingAnnotationCreatePayload["target"]["selector"])
+    : fragmentSelector;
+
   const payload: ReadingAnnotationCreatePayload = {
     profile_version: input.create.profileVersion,
     session: input.create.sessionId,
     motivation: "highlighting",
     target: {
-      selector: {
-        type: "FragmentSelector",
-        conformsTo: EPUB_CFI_CONFORMS_TO,
-        value: cfiRange,
-      },
+      selector,
     },
     ...(body.length ? { body } : {}),
   };

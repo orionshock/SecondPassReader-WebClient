@@ -20,3 +20,12 @@ App/UI code should not treat “file availability” as an optional feature flag
 - Canonical annotations are **W3C Web Annotation JSON-LD** (with EPUB CFI selectors).
 - App code should use `spl.reading.annotations.*` helpers for common workflows instead of constructing raw payloads.
 
+### Highlight anchoring context
+
+For highlights, the server accepts optional `TextQuoteSelector` context alongside the EPUB CFI selector:
+
+- `target.selector = FragmentSelector`
+  or
+- `target.selector = [FragmentSelector, TextQuoteSelector]`
+
+CFI remains the primary anchor. Quote prefix/suffix are optional repair/export metadata.
