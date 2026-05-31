@@ -6,7 +6,6 @@ import { HomePage } from "../features/home/HomePage";
 import { ReadingActivity, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
-import type { LibraryBook } from "@secondpass/client";
 import type { AppRoute } from "./navigation";
 import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
 import {
@@ -342,11 +341,6 @@ export default function App() {
     navigateTo({ kind: "reader", bookId: String(opened.book.id) });
   }
 
-  async function handleOpenBookFromReader(book: LibraryBook) {
-    // Route is canonical; App's reader-route effect owns opening/restoring the book.
-    navigateTo({ kind: "reader", bookId: String(book.id) });
-  }
-
   function handleCloseReader() {
     if (DEBUG_NAV) {
       // eslint-disable-next-line no-console
@@ -487,7 +481,6 @@ export default function App() {
                       handleCloseReader();
                     }}
                     spl={splClient}
-                    onOpenBook={handleOpenBookFromReader}
                   />
                 </section>
               ) : route?.kind === "shelves" ? (

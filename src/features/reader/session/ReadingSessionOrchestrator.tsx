@@ -9,6 +9,8 @@ import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 import type { SecondPassClient } from "@secondpass/client";
+import type { ReadingAnnotation } from "@secondpass/client";
+import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -19,6 +21,15 @@ export type ReadingSessionOrchestratorProps = {
     shell: ReactNode;
     debugPanel: ReactNode;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
+    bookmarks: {
+      items: ReaderBookmark[];
+      status: "idle" | "loading" | "ready" | "error";
+      error: string | null;
+      currentBookmarkId: string | null;
+      busy: boolean;
+      toggleCurrent: () => Promise<void>;
+      removeById: (bookmarkId: string) => Promise<void>;
+    };
   }) => ReactNode;
 };
 
@@ -30,6 +41,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
+  const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
+  const [bookmarkStatus, setBookmarkStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [bookmarkError, setBookmarkError] = useState<string | null>(null);
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -42,7 +57,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [props.openedBook.readingOpen?.progress]);
 
   const state: ReadingSessionState = useMemo(() => {
-    const seedAnnotations: ReaderAnnotation[] = [];
+    const seedAnnotations: ReaderAnnotation[] = bookmarks;
     return {
       bookId: props.openedBook.book.id,
       sessionId: props.openedBook.readingOpen?.session?.id ?? null,
@@ -51,7 +66,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       toc,
       annotations: seedAnnotations,
     };
-  }, [location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, toc]);
+  }, [bookmarks, location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, toc]);
 
   const { autosave } = useReadingProgressAutosave({
     enabled: true,
@@ -112,6 +127,121 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     sendCommand({ type: "display", target: initialDisplayTarget });
   }, [initialDisplayTarget, props.openedBook.objectUrl, sendCommand]);
 
+  const sessionId = state.sessionId;
+
+  const seedBookmarksFromOpen = useCallback((annotations: ReadingAnnotation[] | null | undefined) => {
+    const seeded: ReaderBookmark[] = [];
+    for (const a of annotations ?? []) {
+      const b = toReaderBookmark(a);
+      if (b) seeded.push(b);
+    }
+    if (seeded.length > 0) setBookmarks(seeded);
+  }, []);
+
+  // Seed from readingOpen response (first page) immediately when available.
+  const lastSeedKeyRef = useRef<string>("");
+  useEffect(() => {
+    const open = props.openedBook.readingOpen;
+    const id = open?.session?.id ?? "";
+    if (!id) return;
+    const key = `${props.openedBook.objectUrl}|${id}`;
+    if (lastSeedKeyRef.current === key) return;
+    lastSeedKeyRef.current = key;
+    seedBookmarksFromOpen(open?.annotations?.results as unknown as ReadingAnnotation[] | undefined);
+  }, [props.openedBook.objectUrl, props.openedBook.readingOpen, seedBookmarksFromOpen]);
+
+  // Load bookmarks for the session (non-blocking).
+  useEffect(() => {
+    if (!props.spl) return;
+    if (!sessionId) return;
+    setBookmarkStatus("loading");
+    setBookmarkError(null);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const all: ReadingAnnotation[] = [];
+        let page = 1;
+        for (let guard = 0; guard < 50; guard += 1) {
+          const res = await props.spl!.reading.annotations.list({ sessionId, page });
+          all.push(...(res.results as unknown as ReadingAnnotation[]));
+          if (!res.next) break;
+          page += 1;
+        }
+        if (cancelled) return;
+        const next: ReaderBookmark[] = [];
+        for (const a of all) {
+          const b = toReaderBookmark(a);
+          if (b) next.push(b);
+        }
+        setBookmarks(next);
+        setBookmarkStatus("ready");
+      } catch (e) {
+        if (cancelled) return;
+        setBookmarkStatus("error");
+        setBookmarkError(e instanceof Error ? e.message : "Failed to load bookmarks.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [props.spl, sessionId]);
+
+  const currentBookmark = useMemo(() => {
+    const cfi = location?.cfi?.trim() ?? "";
+    if (!cfi) return null;
+    // v1: exact CFI string match
+    return bookmarks.find((b) => b.cfi === cfi) ?? null;
+  }, [bookmarks, location?.cfi]);
+
+  const removeById = useCallback(
+    async (bookmarkId: string) => {
+      if (!props.spl) return;
+      if (!bookmarkId) return;
+      setBookmarkBusy(true);
+      setBookmarkError(null);
+      try {
+        await props.spl.reading.annotations.remove(bookmarkId);
+        setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
+      } catch (e) {
+        setBookmarkError(e instanceof Error ? e.message : "Failed to remove bookmark.");
+      } finally {
+        setBookmarkBusy(false);
+      }
+    },
+    [props.spl],
+  );
+
+  const toggleCurrent = useCallback(async () => {
+    if (!props.spl) return;
+    if (!sessionId) return;
+    if (!profileVersion) return;
+    const cfi = location?.cfi?.trim() ?? "";
+    if (!cfi) return;
+
+    if (currentBookmark) {
+      await removeById(currentBookmark.id);
+      return;
+    }
+
+    setBookmarkBusy(true);
+    setBookmarkError(null);
+    try {
+      const created = await props.spl.reading.annotations.createBookmark({
+        sessionId,
+        profileVersion,
+        cfi,
+      });
+      const b = toReaderBookmark(created as unknown as ReadingAnnotation);
+      if (b) setBookmarks((prev) => [...prev.filter((x) => x.id !== b.id), b]);
+    } catch (e) {
+      setBookmarkError(e instanceof Error ? e.message : "Failed to create bookmark.");
+    } finally {
+      setBookmarkBusy(false);
+    }
+  }, [currentBookmark, location?.cfi, profileVersion, props.spl, removeById, sessionId]);
+
   return props.children({
     state,
     shell: (
@@ -122,6 +252,14 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onEvent={onShellEvent}
         command={pendingCommand ?? undefined}
         statusLine={statusLine}
+        bookmark={{
+          enabled: Boolean(sessionId && profileVersion && location?.cfi),
+          isBookmarked: Boolean(currentBookmark),
+          busy: bookmarkBusy,
+          onToggle: () => {
+            void toggleCurrent();
+          },
+        }}
       />
     ),
     debugPanel: (
@@ -136,6 +274,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         </div>
         {autosave.error ? <div className="errorText">{autosave.error}</div> : null}
         {lastError ? <div className="errorText">{lastError}</div> : null}
+        {bookmarkError ? <div className="errorText">{bookmarkError}</div> : null}
         <div className="spReaderDebugGrid">
           <div className="muted">cfi</div>
           <div className="mono">{state.location?.cfi ?? ""}</div>
@@ -151,6 +290,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       </section>
     ),
     sendCommand,
+    bookmarks: {
+      items: bookmarks,
+      status: bookmarkStatus,
+      error: bookmarkError,
+      currentBookmarkId: currentBookmark?.id ?? null,
+      busy: bookmarkBusy,
+      toggleCurrent,
+      removeById,
+    },
   });
 }
 

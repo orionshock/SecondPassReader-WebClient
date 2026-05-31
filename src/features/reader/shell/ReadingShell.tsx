@@ -12,6 +12,12 @@ export type ReadingShellProps = {
   onCommand?: (command: ReadingShellCommand) => void;
   command?: { seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } };
   statusLine?: string;
+  bookmark?: {
+    enabled: boolean;
+    isBookmarked: boolean;
+    busy?: boolean;
+    onToggle: () => void;
+  };
 };
 
 export function ReadingShell(props: ReadingShellProps) {
@@ -151,6 +157,17 @@ export function ReadingShell(props: ReadingShellProps) {
           {props.statusLine ? <div className="muted spReadingShellStatus">{props.statusLine}</div> : null}
         </div>
         <div className="spReadingShellNav">
+          {props.bookmark ? (
+            <button
+              type="button"
+              className="button buttonCompact"
+              onClick={props.bookmark.onToggle}
+              disabled={!props.bookmark.enabled || status !== "ready" || Boolean(props.bookmark.busy)}
+              title={!props.bookmark.enabled ? "Bookmark is unavailable until a reading location is known." : undefined}
+            >
+              {props.bookmark.isBookmarked ? "Remove bookmark" : "Bookmark"}
+            </button>
+          ) : null}
           <button type="button" className="button buttonCompact" onClick={goPrev} disabled={status !== "ready"}>
             Previous
           </button>

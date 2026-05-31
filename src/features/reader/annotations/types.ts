@@ -1,6 +1,8 @@
-import type { ReaderAnnotation } from "../shell/types";
+import type { ReaderBookmark } from "./bookmarkUtils";
 
-export type AnnotationListProps = {
-  annotations: ReaderAnnotation[];
+export type BookmarkListProps = {
+  bookmarks: ReaderBookmark[];
+  currentCfi?: string | null;
+  onJumpToCfi: (cfi: string) => void;
+  onRemoveBookmark: (bookmarkId: string) => void;
 };
-

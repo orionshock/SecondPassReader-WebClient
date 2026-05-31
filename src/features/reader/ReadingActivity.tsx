@@ -1,4 +1,3 @@
-import type { LibraryBook } from "@secondpass/client";
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { AnnotationList } from "./annotations/AnnotationList";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
@@ -10,13 +9,11 @@ export function ReadingActivity({
   openedBook,
   onBackToLibrary,
   spl,
-  onOpenBook,
   settings,
 }: {
   openedBook: OpenedBook | null;
   onBackToLibrary: () => void;
   spl?: SecondPassClient | null;
-  onOpenBook?: (book: LibraryBook) => Promise<void>;
   settings?: ReaderSettings;
 }) {
   if (!openedBook) return <p className="muted">No book open.</p>;
@@ -36,7 +33,7 @@ export function ReadingActivity({
       </div>
 
       <ReadingSessionOrchestrator openedBook={openedBook} spl={spl} settings={settings}>
-        {({ state, shell, debugPanel, sendCommand }) => (
+        {({ state, shell, debugPanel, sendCommand, bookmarks }) => (
           <div className="spReaderLayout">
             <div className="spReaderViewportRegion">{shell}</div>
             {state.toc && state.toc.length > 0 ? (
@@ -62,7 +59,15 @@ export function ReadingActivity({
               </section>
             ) : null}
             <div className="spReaderAnnotationsRegion">
-              <AnnotationList state={state} onOpenBook={onOpenBook} />
+              <AnnotationList
+                state={state}
+                bookmarks={bookmarks.items}
+                currentCfi={state.location?.cfi ?? null}
+                onJumpToCfi={(cfi) => sendCommand({ type: "display", target: { type: "cfi", cfi } })}
+                onRemoveBookmark={(bookmarkId) => {
+                  void bookmarks.removeById(bookmarkId);
+                }}
+              />
             </div>
             <div className="spReaderDebugRegion">{debugPanel}</div>
           </div>

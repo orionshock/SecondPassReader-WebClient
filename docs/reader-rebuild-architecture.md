@@ -68,6 +68,7 @@ Key principle:
 - Progress autosave lives in the session layer (orchestrator-owned hook) and calls `spl.reading.progress.save(...)`. The shell/engine never call SPL directly.
 - Autosave persists `current_location.cfi` as the meaningful restore anchor; `progression` is populated from `bookProgress` only as approximate presentation metadata.
 - Reader open/download choreography should be owned by the SPL client where practical (e.g. `spl.reading.openForReading(...)` / `spl.library.books.download(...)`), with the app owning only browser concerns like `URL.createObjectURL(...)`.
+- Bookmarks are annotation-backed session state. Bookmark create/remove/list and “jump by CFI” are coordinated in the session/orchestrator layer; the shell/engine remain unaware of server payload shapes.
 
 ## What must remain stable
 
