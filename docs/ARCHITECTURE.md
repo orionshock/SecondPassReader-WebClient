@@ -50,7 +50,7 @@ This app is a standalone static web client that talks to a Second Pass Library s
 - Feature modules (`src/features/*`) should call the configured SPL client returned by `createSecondPassClient()` and not depend on endpoint URLs, headers, auth construction, or pagination details.
 - Endpoint modules inside the package are free to change internally as long as the facade remains stable.
 - Schema/types for server contracts live in the package and are re-exported from `@secondpass/client`.
-- SPL API contract doc: `docs/SPL_API.md`.
+- SPL client docs: `packages/secondpass-client/README.md` (pointer: `docs/SPL_API.md`).
 
 Future (optional): if the facade grows too endpoint-shaped, we can introduce a dedicated `src/spl/` package for app-facing domain methods while keeping the package's internal endpoint/transport layer private.
 

@@ -16,6 +16,12 @@ Server convention: **1 book === 1 backing file**. Client/UI code should not trea
 - Current renderer implementation uses `@likecoin/epub-ts` behind an app-owned boundary (`ReadingShell` + `EpubTsBookEngine`).
 - Renderer state remains an implementation detail; app/session state remains renderer-agnostic.
 
+## Client package notes
+
+Client-library-specific details live in:
+
+- `packages/secondpass-client/docs/DATA_MODEL.md`
+
 ## Sessions
 
 - Old reading sessions are **immutable** (historical record).
