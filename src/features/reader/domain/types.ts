@@ -96,3 +96,11 @@ export type ReaderAnnotation =
       href?: string;
       readOnly?: boolean;
     };
+
+export type ReaderHighlightMark = {
+  id: string;
+  cfiRange: string;
+  color?: string;
+  text?: string;
+  note?: string;
+};

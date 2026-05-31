@@ -74,6 +74,7 @@ Key principle:
   - Current session: shows annotations for the active reading session (currently bookmarks + highlights).
   - Previous sessions: placeholder for selecting prior session layers for reference/overlay.
 - Selection is detected in the reader engine/shell layer via epub-ts rendition events. The orchestrator turns selection intent into highlight annotations using `spl.reading.annotations.createHighlight(...)`, including optional quotePrefix/quoteSuffix context.
+- Current-session highlights are painted in the viewport by `EpubTsBookEngine` via epub-ts `rendition.annotations.highlight(...)`. The orchestrator owns annotation state; the shell passes engine-facing highlight marks down to the engine.
 
 ## What must remain stable
 

@@ -4,6 +4,7 @@ import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
+import type { ReaderHighlightMark } from "../domain/types";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
@@ -22,6 +23,7 @@ export type EpubTsBookEngine = {
   next(): Promise<void>;
   previous(): Promise<void>;
   clearSelection(): void;
+  setHighlightMarks(marks: ReaderHighlightMark[]): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   destroy(): void;
 };
@@ -235,6 +237,20 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   startLocationsGeneration();
 
+  const paintedHighlightsById = new Map<string, { cfiRange: string }>();
+
+  const toHighlightAttributes = (color: string | undefined): Record<string, string> | undefined => {
+    const c = typeof color === "string" ? color.trim() : "";
+    if (!c) return undefined;
+    // epub-ts will default to yellow; support simple named tokens / hex / css colors by passing them through.
+    // Avoid trying to parse arbitrary strings here.
+    return {
+      fill: c,
+      "fill-opacity": "0.22",
+      "mix-blend-mode": "multiply",
+    };
+  };
+
   return {
     async display(target?: ReaderLocationTarget) {
       if (destroyed) return;
@@ -265,6 +281,51 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         init.onSelectionChanged?.(null);
       } catch {
         // ignore
+      }
+    },
+    setHighlightMarks(marks: ReaderHighlightMark[]) {
+      if (destroyed) return;
+      const nextIds = new Set<string>();
+      for (const m of marks) {
+        if (!m || typeof m.id !== "string") continue;
+        const id = m.id;
+        const cfiRange = typeof m.cfiRange === "string" ? m.cfiRange.trim() : "";
+        if (!id || !cfiRange) continue;
+        nextIds.add(id);
+
+        const existing = paintedHighlightsById.get(id);
+        if (existing && existing.cfiRange === cfiRange) continue;
+
+        // If this id moved, remove the old one first (epub-ts keys by cfiRange+type).
+        try {
+          if (existing?.cfiRange) rendition.annotations.remove(existing.cfiRange, "highlight");
+        } catch {
+          // ignore
+        }
+
+        try {
+          rendition.annotations.highlight(
+            cfiRange,
+            { id },
+            undefined,
+            "sp-annotation-hl",
+            toHighlightAttributes(m.color),
+          );
+          paintedHighlightsById.set(id, { cfiRange });
+        } catch (err) {
+          init.onError?.(err);
+        }
+      }
+
+      // Remove any painted highlights that are no longer present.
+      for (const [id, existing] of paintedHighlightsById) {
+        if (nextIds.has(id)) continue;
+        try {
+          rendition.annotations.remove(existing.cfiRange, "highlight");
+        } catch {
+          // ignore
+        }
+        paintedHighlightsById.delete(id);
       }
     },
     async describeCfi(cfi: string): Promise<ReaderLocationDescription> {
@@ -314,6 +375,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       } catch {
         // ignore
       }
+      paintedHighlightsById.clear();
       try {
         // epubjs-style API (Book#destroy exists in upstream; keep defensive).
         (book as any).destroy?.();

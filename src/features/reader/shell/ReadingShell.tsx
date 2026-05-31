@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
-import type { ReaderAnnotation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellCommand, ReadingShellEvent } from "./types";
 
@@ -15,6 +15,7 @@ export type ReadingShellProps = {
   statusLine?: string;
   autosaveStatus?: { text: string; title?: string } | null;
   selection?: ReaderSelection | null;
+  highlightMarks?: ReaderHighlightMark[];
   selectionActions?: {
     enabled: boolean;
     busy?: boolean;
@@ -142,6 +143,11 @@ export function ReadingShell(props: ReadingShellProps) {
       }
     })();
   }, [props.command, props.onEvent]);
+
+  useEffect(() => {
+    if (!engineRef.current) return;
+    engineRef.current.setHighlightMarks(props.highlightMarks ?? []);
+  }, [props.highlightMarks]);
 
   const goPrev = async () => {
     try {

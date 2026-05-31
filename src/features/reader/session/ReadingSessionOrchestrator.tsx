@@ -13,6 +13,7 @@ import type { SecondPassClient } from "@secondpass/client";
 import type { ReadingAnnotation } from "@secondpass/client";
 import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import { getAnnotationColor, getAnnotationNoteText, getAnnotationTimestamp, isHighlightAnnotation, toReaderAnnotation } from "../annotations/annotationUtils";
+import type { ReaderHighlightMark } from "../domain/types";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -368,6 +369,18 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     });
   }, [annotationsRaw, bookmarkDescriptions, highlights, toc]);
 
+  const highlightMarks: ReaderHighlightMark[] = useMemo(() => {
+    return highlightViewModels
+      .map((h) => ({
+        id: h.id,
+        cfiRange: h.cfiRange,
+        color: h.color,
+        text: h.text,
+        note: h.note,
+      }))
+      .filter((m) => Boolean(m.id && m.cfiRange));
+  }, [highlightViewModels]);
+
   const removeById = useCallback(
     async (annotationId: string) => {
       if (!props.spl) return;
@@ -457,6 +470,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         autosaveStatus={autosaveStatus}
         onDescribeCfiReady={handleDescribeCfiReady}
         selection={selection}
+        highlightMarks={highlightMarks}
         selectionActions={{
           enabled: Boolean(sessionId && profileVersion && selection?.cfiRange && selection?.text),
           busy: annotationBusy,
