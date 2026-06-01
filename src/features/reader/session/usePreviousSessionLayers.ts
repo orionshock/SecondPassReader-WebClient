@@ -42,7 +42,7 @@ export type PreviousSessionAnnotationGroup = {
   items?: PreviousSessionAnnotationItem[];
 };
 
-function toSessionLabel(input: { startedAt?: string | null; updatedAt?: string | null; createdAt?: string | null; completedAt?: string | null; fallbackId: string }): string {
+function toSessionTimeLabel(input: { startedAt?: string | null; updatedAt?: string | null; createdAt?: string | null; completedAt?: string | null; fallbackId: string }): string {
   const ts =
     (typeof input.updatedAt === "string" ? input.updatedAt : null) ??
     (typeof input.completedAt === "string" ? input.completedAt : null) ??
@@ -52,6 +52,12 @@ function toSessionLabel(input: { startedAt?: string | null; updatedAt?: string |
   const ms = Date.parse(ts);
   if (!Number.isFinite(ms)) return input.fallbackId;
   return new Date(ms).toLocaleString();
+}
+
+function buildLayerLabel(input: { name?: string | null; timeLabel: string; highlightCount: number }): string {
+  const n = typeof input.name === "string" ? input.name.trim() : "";
+  const base = n ? `${n} \u00B7 ${input.timeLabel}` : input.timeLabel;
+  return `${base} \u00B7 ${input.highlightCount} highlight${input.highlightCount === 1 ? "" : "s"}`;
 }
 
 function toHighlightMarks(annotations: ReadingAnnotation[]): { marks: ReaderHighlightMark[]; highlightCount: number } {
@@ -134,7 +140,7 @@ export function usePreviousSessionLayers(args: {
 }) {
   const [listStatus, setListStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [listError, setListError] = useState<string | null>(null);
-  const [sessionSummaries, setSessionSummaries] = useState<Array<{ sessionId: string; label: string; annotationCount: number | null }>>([]);
+  const [sessionSummaries, setSessionSummaries] = useState<Array<{ sessionId: string; timeLabel: string; name: string | null; annotationCount: number | null }>>([]);
 
   const [selectedPreviousSessionIds, setSelectedPreviousSessionIds] = useState<string[]>([]);
   const cacheRef = useRef<Map<string, CachedSessionAnnotations>>(new Map());
@@ -160,15 +166,16 @@ export function usePreviousSessionLayers(args: {
         const items = results
           .map((s: any) => {
             const sessionId = typeof s.id === "string" ? s.id : "";
-            const label = toSessionLabel({
+            const timeLabel = toSessionTimeLabel({
               updatedAt: s.updated_at ?? null,
               completedAt: s.completed_at ?? null,
               startedAt: s.started_at ?? null,
               createdAt: s.created_at ?? null,
               fallbackId: sessionId || "(unknown session)",
             });
+            const name = typeof s.name === "string" ? s.name : null;
             const annotationCount = typeof s.annotation_count === "number" ? s.annotation_count : null;
-            return { sessionId, label, annotationCount, updatedAt: s.updated_at ?? null };
+            return { sessionId, timeLabel, name, annotationCount, updatedAt: s.updated_at ?? null };
           })
           .filter((x) => Boolean(x.sessionId && x.sessionId !== currentId))
           .sort((a, b) => {
@@ -240,7 +247,7 @@ export function usePreviousSessionLayers(args: {
           : typeof s.annotationCount === "number"
             ? s.annotationCount
             : 0;
-      const label = `${s.label} \u00B7 ${highlightCount} highlight${highlightCount === 1 ? "" : "s"}`;
+      const label = buildLayerLabel({ name: s.name, timeLabel: s.timeLabel, highlightCount });
       return { sessionId: s.sessionId, label, highlightCount, status, error: cached?.error };
     });
   }, [sessionSummaries, cacheVersion]);
@@ -256,7 +263,7 @@ export function usePreviousSessionLayers(args: {
           : typeof s.annotationCount === "number"
             ? s.annotationCount
             : 0;
-      const label = `${s.label} \u00B7 ${highlightCount} highlight${highlightCount === 1 ? "" : "s"}`;
+      const label = buildLayerLabel({ name: s.name, timeLabel: s.timeLabel, highlightCount });
       const items = cached?.status === "ready" && cached.annotations ? toPreviousSessionItems(cached.annotations) : undefined;
       return { sessionId: s.sessionId, label, highlightCount, selected: selected.has(s.sessionId), status, error: cached?.error, items };
     });

@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
-import type { ReadingSessionState } from "../session/types";
+import { useState } from "react";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors";
 import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./viewModels";
 import { ANNOTATION_LIMITS } from "./annotationLimits";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel";
 import type { PreviousSessionAnnotationGroup } from "../session/usePreviousSessionLayers";
+import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadataEditor";
 
 type TabKey = "current" | "previous";
 
@@ -17,7 +17,6 @@ function normalizeQuoteTextForDisplay(text: string): string {
 }
 
 export function AnnotationWorkspace({
-  state,
   annotations,
   status,
   error,
@@ -25,10 +24,11 @@ export function AnnotationWorkspace({
   currentCfi,
   previousSessionGroups,
   onEnablePreviousSession,
+  currentSessionMeta,
+  onUpdateCurrentSessionMeta,
   onRemoveAnnotation,
   onUpdateHighlight,
 }: {
-  state: ReadingSessionState;
   annotations: CurrentSessionAnnotationViewModel[];
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
@@ -36,6 +36,8 @@ export function AnnotationWorkspace({
   currentCfi?: string | null;
   previousSessionGroups?: PreviousSessionAnnotationGroup[];
   onEnablePreviousSession?: (sessionId: string) => void;
+  currentSessionMeta?: { name: string | null; notes: string | null; status: "idle" | "loading" | "ready" | "error"; error: string | null };
+  onUpdateCurrentSessionMeta?: (update: { name: string; notes: string }) => Promise<void>;
   onRemoveAnnotation: (annotationId: string) => void;
   onUpdateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
 }) {
@@ -46,38 +48,44 @@ export function AnnotationWorkspace({
   const [editStatus, setEditStatus] = useState<"idle" | "saving" | "error">("idle");
   const [editError, setEditError] = useState<string | null>(null);
 
-  const sessionLabel = useMemo(() => {
-    if (state.sessionId) return state.sessionId;
-    return "(none yet)";
-  }, [state.sessionId]);
-
   return (
     <section className="panel spAnnotationWorkspace">
       <div className="spAnnotationWorkspaceHeader">
-        <h2 className="panelTitle spAnnotationWorkspaceTitle">Annotations</h2>
-        <div className="spAnnotationTabs" role="tablist" aria-label="Annotation tabs">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "current"}
-            className={`spAnnotationTab ${tab === "current" ? "spAnnotationTabActive" : ""}`}
-            onClick={() => setTab("current")}
-          >
-            Current session
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "previous"}
-            className={`spAnnotationTab ${tab === "previous" ? "spAnnotationTabActive" : ""}`}
-            onClick={() => setTab("previous")}
-          >
-            Previous sessions
-          </button>
+        <div className="spAnnotationWorkspaceHeaderTop">
+          <h2 className="panelTitle spAnnotationWorkspaceTitle">Annotations</h2>
+          <div className="spAnnotationTabs" role="tablist" aria-label="Annotation tabs">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "current"}
+              className={`spAnnotationTab ${tab === "current" ? "spAnnotationTabActive" : ""}`}
+              onClick={() => setTab("current")}
+            >
+              Current session
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "previous"}
+              className={`spAnnotationTab ${tab === "previous" ? "spAnnotationTabActive" : ""}`}
+              onClick={() => setTab("previous")}
+            >
+              Previous sessions
+            </button>
+          </div>
         </div>
-        <div className="muted spAnnotationSessionId" title={sessionLabel}>
-          Session: {sessionLabel}
-        </div>
+        {currentSessionMeta && onUpdateCurrentSessionMeta ? (
+          <div className="spAnnotationWorkspaceHeaderMeta">
+            <CurrentSessionMetadataEditor
+              name={currentSessionMeta.name}
+              notes={currentSessionMeta.notes}
+              loadStatus={currentSessionMeta.status}
+              loadError={currentSessionMeta.error}
+              busy={busy}
+              onSave={onUpdateCurrentSessionMeta}
+            />
+          </div>
+        ) : null}
       </div>
 
       {tab === "current" ? (

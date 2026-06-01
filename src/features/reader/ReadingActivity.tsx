@@ -88,7 +88,6 @@ export function ReadingActivity({
                 <div className="spReaderViewportRegion">{shell}</div>
                 <div className="spReaderAnnotationsRegion">
                   <AnnotationWorkspace
-                    state={state}
                     annotations={annotations.items}
                     status={annotations.status}
                     error={annotations.error}
@@ -96,6 +95,8 @@ export function ReadingActivity({
                     currentCfi={state.location?.cfi ?? null}
                     previousSessionGroups={annotations.previousSessionGroups}
                     onEnablePreviousSession={annotations.enablePreviousSession}
+                    currentSessionMeta={annotations.currentSessionMeta}
+                    onUpdateCurrentSessionMeta={annotations.updateCurrentSessionMeta}
                     onRemoveAnnotation={(annotationId) => {
                       void annotations.removeById(annotationId);
                     }}

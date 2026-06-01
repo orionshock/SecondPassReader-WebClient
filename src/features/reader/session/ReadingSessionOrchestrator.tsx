@@ -45,6 +45,8 @@ export type ReadingSessionOrchestratorProps = {
       updateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
       previousSessionGroups: PreviousSessionAnnotationGroup[];
       enablePreviousSession: (sessionId: string) => void;
+      currentSessionMeta: { name: string | null; notes: string | null; status: "idle" | "loading" | "ready" | "error"; error: string | null };
+      updateCurrentSessionMeta: (update: { name: string; notes: string }) => Promise<void>;
     };
   }) => ReactNode;
 };
@@ -58,6 +60,52 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const [annotationBusy, setAnnotationBusy] = useState(false);
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
+
+  const [currentSessionMeta, setCurrentSessionMeta] = useState<{
+    name: string | null;
+    notes: string | null;
+    status: "idle" | "loading" | "ready" | "error";
+    error: string | null;
+  }>({ name: null, notes: null, status: "idle", error: null });
+
+  useEffect(() => {
+    if (!props.spl) return;
+    if (!sessionId) return;
+    setCurrentSessionMeta((prev) => ({ ...prev, status: "loading", error: null }));
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await props.spl!.reading.sessions.get(sessionId);
+        if (cancelled) return;
+        const name = typeof (s as any).name === "string" ? (s as any).name : null;
+        const notes = typeof (s as any).notes === "string" ? (s as any).notes : null;
+        setCurrentSessionMeta({ name, notes, status: "ready", error: null });
+      } catch (e) {
+        if (cancelled) return;
+        setCurrentSessionMeta((prev) => ({ ...prev, status: "error", error: e instanceof Error ? e.message : "Failed to load session details." }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.spl, sessionId]);
+
+  const updateCurrentSessionMeta = useCallback(
+    async (update: { name: string; notes: string }) => {
+      if (!props.spl) throw new Error("Not connected.");
+      if (!sessionId) throw new Error("Missing session id.");
+      const name = update.name.trim();
+      const notes = update.notes.trim();
+      const updated = await props.spl.reading.sessions.updateDetails(sessionId, {
+        name: name ? name : "",
+        notes: notes ? notes : "",
+      });
+      const nextName = typeof (updated as any).name === "string" ? (updated as any).name : (name ? name : "");
+      const nextNotes = typeof (updated as any).notes === "string" ? (updated as any).notes : (notes ? notes : "");
+      setCurrentSessionMeta({ name: nextName || null, notes: nextNotes || null, status: "ready", error: null });
+    },
+    [props.spl, sessionId],
+  );
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -376,6 +424,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       updateHighlight,
       previousSessionGroups: previousLayers.previousAnnotationGroups,
       enablePreviousSession: previousLayers.togglePreviousSession,
+      currentSessionMeta,
+      updateCurrentSessionMeta,
     },
   });
 }

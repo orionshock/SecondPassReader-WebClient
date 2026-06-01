@@ -406,11 +406,20 @@
 }
 
 .spAnnotationWorkspaceHeader {
+  display: grid;
+  gap: 10px;
+}
+
+.spAnnotationWorkspaceHeaderTop {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.spAnnotationWorkspaceHeaderMeta {
+  display: block;
 }
 
 .spAnnotationTabs {
@@ -425,6 +434,89 @@
 .spAnnotationSessionId {
   font-size: 12px;
   white-space: nowrap;
+}
+
+.spCurrentSessionMeta {
+  display: grid;
+  gap: 6px;
+}
+
+.spCurrentSessionMetaSummaryRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spCurrentSessionMetaSummaryLabel {
+  font-size: 12px;
+  color: var(--sp-muted);
+  white-space: nowrap;
+}
+
+.spCurrentSessionMetaSummaryValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.spCurrentSessionMetaSummaryName {
+  font-weight: 600;
+}
+
+.spCurrentSessionMetaSummaryNotes {
+  color: var(--sp-muted);
+}
+
+.spCurrentSessionMetaGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 10px;
+  align-items: start;
+}
+
+.spCurrentSessionMetaFieldLabel {
+  font-size: 13px;
+  color: var(--sp-muted);
+  padding-top: 8px;
+}
+
+.spCurrentSessionMetaFieldBody {
+  min-width: 0;
+}
+
+.spCurrentSessionMetaName {
+  width: 100%;
+}
+
+.spCurrentSessionMetaNotes {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+
+.spCurrentSessionMetaActionsRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.spCurrentSessionMetaHint {
+  font-size: 12px;
+}
+
+.spCurrentSessionMetaError {
+  font-size: 12px;
+}
+
+.spCurrentSessionMetaActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .spAnnotationTab {
