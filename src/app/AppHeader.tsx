@@ -1,5 +1,6 @@
 import type { ConnectionProfile } from "../storage/connectionProfiles";
 import type { AppRoute } from "./navigation";
+import { MaterialIcon } from "../components/MaterialIcon";
 
 export function AppHeader({
   profile,
@@ -124,7 +125,7 @@ export function AppHeader({
               title="Settings"
               aria-label="Settings"
             >
-              {"\u2699"}
+              <MaterialIcon name="settings" />
             </button>
           </>
         ) : null}
