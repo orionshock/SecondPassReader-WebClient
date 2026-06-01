@@ -13,10 +13,8 @@ export type SelectionHighlightToolbarProps = {
   noteDraft: string;
   busy?: boolean;
   onPickColorAndCommit: (color: string) => void;
-  onOpenNote: () => void;
+  onToggleNote: () => void;
   onChangeNoteDraft: (value: string) => void;
-  onSaveNote: () => void;
-  onCloseNote: () => void;
   onCancel: () => void;
 };
 
@@ -60,30 +58,26 @@ export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps)
           })}
         </div>
 
-        {!props.noteOpen ? (
-          <>
-            <button
-              type="button"
-              className="button buttonCompact spIconButton spIconButtonTight"
-              onClick={props.onOpenNote}
-              aria-label="Add note"
-              title="Note"
-              disabled={Boolean(props.busy)}
-            >
-              <MaterialIcon name="edit_note" />
-            </button>
-            <button
-              type="button"
-              className="button buttonCompact spIconButton spIconButtonTight"
-              onClick={props.onCancel}
-              aria-label="Cancel"
-              title="Cancel"
-              disabled={Boolean(props.busy)}
-            >
-              <MaterialIcon name="close" />
-            </button>
-          </>
-        ) : null}
+        <button
+          type="button"
+          className="button buttonCompact spIconButton spIconButtonTight"
+          onClick={props.onToggleNote}
+          aria-label={props.noteOpen ? "Hide note" : "Add note"}
+          title="Note"
+          disabled={Boolean(props.busy)}
+        >
+          <MaterialIcon name="edit_note" />
+        </button>
+        <button
+          type="button"
+          className="button buttonCompact spIconButton spIconButtonTight"
+          onClick={props.onCancel}
+          aria-label="Cancel"
+          title="Cancel"
+          disabled={Boolean(props.busy)}
+        >
+          <MaterialIcon name="close" />
+        </button>
       </div>
 
       {props.noteOpen ? (
@@ -97,38 +91,6 @@ export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps)
             placeholder="Highlight Note"
             disabled={Boolean(props.busy)}
           />
-          <div className="spSelectionToolbarRow spSelectionToolbarRowActions">
-            <button
-              type="button"
-              className="button buttonCompact spIconButton spIconButtonTight"
-              onClick={props.onSaveNote}
-              aria-label="Save highlight with note"
-              title="Save"
-              disabled={Boolean(props.busy) || !props.noteDraft.trim()}
-            >
-              <MaterialIcon name="check" />
-            </button>
-            <button
-              type="button"
-              className="button buttonCompact spIconButton spIconButtonTight"
-              onClick={props.onCloseNote}
-              aria-label="Close note editor"
-              title="Close"
-              disabled={Boolean(props.busy)}
-            >
-              <MaterialIcon name="close" />
-            </button>
-            <button
-              type="button"
-              className="button buttonCompact spIconButton spIconButtonTight"
-              onClick={props.onCancel}
-              aria-label="Cancel"
-              title="Cancel"
-              disabled={Boolean(props.busy)}
-            >
-              <MaterialIcon name="close" />
-            </button>
-          </div>
         </div>
       ) : null}
     </div>

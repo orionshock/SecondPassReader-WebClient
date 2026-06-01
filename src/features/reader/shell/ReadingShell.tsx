@@ -266,10 +266,8 @@ export function ReadingShell(props: ReadingShellProps) {
                 noteDraft={staged.noteDraft}
                 busy={staged.commitBusy}
                 onPickColorAndCommit={staged.commitColor}
-                onOpenNote={staged.openNote}
+                onToggleNote={staged.toggleNote}
                 onChangeNoteDraft={staged.setNoteDraft}
-                onSaveNote={staged.saveNote}
-                onCloseNote={staged.closeNote}
                 onCancel={staged.cancelStaged}
               />
             ) : null}

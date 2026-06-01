@@ -23,6 +23,7 @@ export function useStagedSelectionToolbar(args: {
   const [toolbarPos, setToolbarPos] = useState<StagedSelectionToolbarPos | null>(null);
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(args.highlightMarks ?? []);
+  const noteDraftRef = useRef<string>("");
   useEffect(() => {
     highlightMarksRef.current = args.highlightMarks ?? [];
   }, [args.highlightMarks]);
@@ -30,6 +31,10 @@ export function useStagedSelectionToolbar(args: {
   useEffect(() => {
     stagedSelectionRef.current = stagedSelection;
   }, [stagedSelection]);
+
+  useEffect(() => {
+    noteDraftRef.current = noteDraft;
+  }, [noteDraft]);
 
   const cancelStaged = useCallback(() => {
     setStagedSelection(null);
@@ -107,8 +112,13 @@ export function useStagedSelectionToolbar(args: {
     async (color: string) => {
       if (!args.onCommitHighlight || !stagedSelectionRef.current) return;
       setStagedColor(color);
+      const noteTrimmed = noteDraftRef.current.trim();
       try {
-        await args.onCommitHighlight({ selection: stagedSelectionRef.current, color });
+        await args.onCommitHighlight({
+          selection: stagedSelectionRef.current,
+          color,
+          note: noteTrimmed ? noteTrimmed : undefined,
+        });
         cancelStaged();
       } catch {
         // Keep staged highlight + toolbar open on failure.
@@ -116,17 +126,6 @@ export function useStagedSelectionToolbar(args: {
     },
     [args.onCommitHighlight, cancelStaged],
   );
-
-  const saveNote = useCallback(async () => {
-    const sel = stagedSelectionRef.current;
-    if (!args.onCommitHighlight || !sel) return;
-    try {
-      await args.onCommitHighlight({ selection: sel, color: stagedColor, note: noteDraft.trim() });
-      cancelStaged();
-    } catch {
-      // Keep staged highlight + toolbar open on failure.
-    }
-  }, [args.onCommitHighlight, cancelStaged, noteDraft, stagedColor]);
 
   return {
     stagedSelection,
@@ -138,11 +137,8 @@ export function useStagedSelectionToolbar(args: {
     onSelectionChanged,
     cancelStaged,
     setNoteDraft,
-    openNote: () => setNoteOpen(true),
-    closeNote: () => setNoteOpen(false),
+    toggleNote: () => setNoteOpen((v) => !v),
     commitColor,
-    saveNote,
     commitBusy: Boolean(args.commitBusy),
   };
 }
-

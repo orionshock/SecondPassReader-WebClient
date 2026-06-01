@@ -72,6 +72,86 @@ function safeText(s: unknown): string {
   return typeof s === "string" ? s : "";
 }
 
+function prevTextNode(root: Node, from: Node): Text | null {
+  const prevNode = (node: Node): Node | null => {
+    if (node === root) return null;
+    if (node.previousSibling) {
+      let n: Node = node.previousSibling;
+      while (n.lastChild) n = n.lastChild;
+      return n;
+    }
+    return node.parentNode;
+  };
+
+  let n: Node | null = from;
+  while (n) {
+    n = prevNode(n);
+    if (!n) return null;
+    if (n.nodeType === Node.TEXT_NODE) {
+      const t = n as Text;
+      if (t.data) return t;
+    }
+  }
+  return null;
+}
+
+function nextTextNode(root: Node, from: Node): Text | null {
+  const nextNode = (node: Node): Node | null => {
+    if (node === root) return null;
+    if (node.nextSibling) {
+      let n: Node = node.nextSibling;
+      while (n.firstChild) n = n.firstChild;
+      return n;
+    }
+    return node.parentNode;
+  };
+
+  let n: Node | null = from;
+  while (n) {
+    n = nextNode(n);
+    if (!n) return null;
+    if (n.nodeType === Node.TEXT_NODE) {
+      const t = n as Text;
+      if (t.data) return t;
+    }
+  }
+  return null;
+}
+
+function extractRangeContext(range: Range, doc: Document): { before: string; after: string } {
+  const root: Node = doc.body ?? doc.documentElement ?? doc;
+  const MAX_CONTEXT = 2000;
+
+  const beforeParts: string[] = [];
+  const afterParts: string[] = [];
+
+  const startNode = range.startContainer;
+  if (startNode.nodeType === Node.TEXT_NODE) {
+    beforeParts.push(safeText((startNode as Text).data).slice(0, range.startOffset));
+  }
+  let prev = prevTextNode(root, startNode);
+  while (prev && beforeParts.join("").length < MAX_CONTEXT) {
+    beforeParts.unshift(safeText(prev.data));
+    prev = prevTextNode(root, prev);
+  }
+  let before = beforeParts.join("");
+  if (before.length > MAX_CONTEXT) before = before.slice(before.length - MAX_CONTEXT);
+
+  const endNode = range.endContainer;
+  if (endNode.nodeType === Node.TEXT_NODE) {
+    afterParts.push(safeText((endNode as Text).data).slice(range.endOffset));
+  }
+  let next = nextTextNode(root, endNode);
+  while (next && afterParts.join("").length < MAX_CONTEXT) {
+    afterParts.push(safeText(next.data));
+    next = nextTextNode(root, next);
+  }
+  let after = afterParts.join("");
+  if (after.length > MAX_CONTEXT) after = after.slice(0, MAX_CONTEXT);
+
+  return { before, after };
+}
+
 function extractSelectionTextAndContext(contents: { window: Window; document: Document }): { text: string; before: string; after: string; anchor?: { x: number; y: number } } | null {
   const sel = contents.window.getSelection?.();
   if (!sel || sel.rangeCount === 0) return null;
@@ -95,7 +175,8 @@ function extractSelectionTextAndContext(contents: { window: Window; document: Do
     }
   })();
 
-  // Best-effort context extraction. Prefer single-text-node slices when possible.
+  // Best-effort context extraction. Avoid relying on `textContent.indexOf(text)` because
+  // selections often span multiple nodes and whitespace normalization can differ.
   const startNode = range.startContainer;
   const endNode = range.endContainer;
 
@@ -106,18 +187,8 @@ function extractSelectionTextAndContext(contents: { window: Window; document: Do
     return { text, before, after, anchor };
   }
 
-  const ancestor = range.commonAncestorContainer;
-  const haystack = safeText((ancestor as any)?.textContent);
-  if (haystack) {
-    const idx = haystack.indexOf(text);
-    if (idx >= 0) {
-      const before = haystack.slice(0, idx);
-      const after = haystack.slice(idx + text.length);
-      return { text, before, after, anchor };
-    }
-  }
-
-  return { text, before: "", after: "", anchor };
+  const { before, after } = extractRangeContext(range, contents.document);
+  return { text, before, after, anchor };
 }
 
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
