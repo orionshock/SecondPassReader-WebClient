@@ -271,7 +271,7 @@ export function usePreviousSessionLayers(args: {
       out.push(...cached.highlightMarks);
     }
     return out;
-  }, [selectedPreviousSessionIds]);
+  }, [cacheVersion, selectedPreviousSessionIds]);
 
   return {
     listStatus,
