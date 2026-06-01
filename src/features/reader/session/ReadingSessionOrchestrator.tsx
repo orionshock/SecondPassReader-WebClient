@@ -158,6 +158,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return parts.join(" \u00B7 ");
   }, [state.location?.bookProgress, state.location?.displayedPage, state.location?.displayedTotal, state.location?.href, state.toc]);
 
+  const sendCommand = useCallback((command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => {
+    commandSeqRef.current += 1;
+    setPendingCommand({ seq: commandSeqRef.current, value: command });
+  }, []);
+
   // Keep this callback referentially stable: `ReadingShell`'s engine init effect depends on `onEvent`.
   // Unstable callbacks here can cause destroy/re-init loops (duplicated network requests, blank viewport).
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
@@ -176,13 +181,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       case "locationsReady":
         onLocationsReady();
         return;
+      case "navigate":
+        sendCommand({ type: "display", target: event.target });
+        return;
     }
-  }, [onLocationsReady]);
-
-  const sendCommand = useCallback((command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => {
-    commandSeqRef.current += 1;
-    setPendingCommand({ seq: commandSeqRef.current, value: command });
-  }, []);
+  }, [onLocationsReady, sendCommand]);
 
   // Restore saved location via the same command path used for future navigation.
   // Best-effort: this command may be deferred by the shell until the engine exists.
@@ -322,6 +325,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         command={pendingCommand ?? undefined}
         statusLine={statusLine}
         autosaveStatus={autosaveStatus}
+        toc={toc}
         onDescribeCfiReady={handleDescribeCfiReady}
         highlightMarks={highlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}

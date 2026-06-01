@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellEvent } from "./types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
+import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 
 export type ReadingShellProps = {
   blob: Blob;
   initialDisplayTarget?: ReaderLocationTarget;
   onEvent?: (event: ReadingShellEvent) => void;
+  toc?: ReaderTocItem[] | null;
   command?: {
     seq: number;
     value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" };
@@ -39,6 +41,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [tocOpen, setTocOpen] = useState(false);
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
   useEffect(() => {
@@ -234,6 +237,27 @@ export function ReadingShell(props: ReadingShellProps) {
         errorMessage={errorMessage ?? undefined}
         overlay={
           <>
+            <button
+              type="button"
+              className="spReaderTocButton"
+              onClick={() => setTocOpen(true)}
+              disabled={status !== "ready"}
+              aria-label="Table of Contents"
+              title="Table of Contents"
+            >
+              <MaterialIcon name="menu" className="spReaderTocButtonIcon" />
+            </button>
+
+            <TableOfContentsDrawer
+              open={tocOpen}
+              toc={props.toc}
+              onClose={() => setTocOpen(false)}
+              onPickItem={(item) => {
+                const href = typeof item.href === "string" ? item.href.trim() : "";
+                if (href) props.onEvent?.({ type: "navigate", target: { type: "href", href } });
+                setTocOpen(false);
+              }}
+            />
             <button
               type="button"
               className="spReaderPageNav spReaderPageNavPrev"
