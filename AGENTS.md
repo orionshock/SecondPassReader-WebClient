@@ -44,6 +44,20 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
   - orchestrators wire behavior together; avoid “dumping ground” growth
 - When extracting, avoid broad rewrites; make small focused modules with explicit boundaries.
 
+## Folders and file size
+
+- If an activity has more than one meaningful subview, it should become a folder.
+- If a component needs dedicated hooks, helpers, or local types, it should usually become a folder.
+- If a file crosses ~300 lines, split by responsibility before adding more behavior.
+- Treat 300 lines as a heuristic, not a hard rule; prefer extraction when adding new behavior to an already-large mixed-responsibility file.
+- Prefer folder layouts that make boundaries obvious, e.g.:
+  - `ComponentName.tsx`
+  - `useComponentBehavior.ts`
+  - `componentHelpers.ts`
+  - `componentTypes.ts`
+  - subcomponents as needed
+- Avoid creating index/barrel files unless the package already consistently uses them.
+
 ## Hook dependency stability
 
 - Custom hooks that return callbacks/arrays/objects used by shell/engine/orchestrator components should be referentially stable where practical.
