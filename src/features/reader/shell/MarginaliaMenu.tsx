@@ -20,6 +20,7 @@ export function MarginaliaMenu(props: {
   onTogglePreviousSession: (sessionId: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -38,27 +39,24 @@ export function MarginaliaMenu(props: {
   useEffect(() => {
     if (!props.open) return;
     const updatePos = () => {
-      const host = hostRef.current;
-      const panel = panelRef.current;
-      if (!host || !panel) return;
-      const hostRect = host.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-      const panelW = panelRect.width || 340;
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const btnRect = btn.getBoundingClientRect();
+      const panelW = Math.min(340, Math.max(240, window.innerWidth - 24));
 
       const margin = 12;
-      const top = Math.max(margin, hostRect.bottom + 8);
-      const desiredLeft = hostRect.right - panelW;
+      const top = Math.max(margin, btnRect.bottom + 8);
+      // Align the right edge with the button (or as close as possible if clamped).
+      const desiredLeft = btnRect.right - panelW;
       const left = Math.min(Math.max(margin, desiredLeft), Math.max(margin, window.innerWidth - panelW - margin));
       setPanelPos({ top, left });
     };
 
-    // Defer until after initial paint so the panel has a measurable width.
-    const id = window.setTimeout(updatePos, 0);
+    updatePos();
     window.addEventListener("resize", updatePos);
     const onScroll = () => props.onClose();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.clearTimeout(id);
       window.removeEventListener("resize", updatePos);
       window.removeEventListener("scroll", onScroll);
     };
@@ -74,6 +72,7 @@ export function MarginaliaMenu(props: {
         onClick={() => (props.open ? props.onClose() : props.onOpen())}
         aria-label="Marginalia"
         title="Marginalia"
+        ref={buttonRef}
       >
         <MaterialIcon name="ink_highlighter" />
         <span className="spIconButtonLabel">Marginalia</span>
@@ -93,7 +92,7 @@ export function MarginaliaMenu(props: {
           <div
             ref={panelRef}
             className="spMarginaliaMenuPanel"
-            style={panelPos ? { top: panelPos.top, left: panelPos.left } : undefined}
+            style={panelPos ? { top: panelPos.top, left: panelPos.left } : { visibility: "hidden" }}
             role="dialog"
             aria-modal="true"
             aria-label="Marginalia"

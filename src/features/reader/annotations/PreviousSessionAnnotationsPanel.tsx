@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import type { PreviousSessionAnnotationGroup, PreviousSessionAnnotationItem } from "../session/usePreviousSessionLayers";
+import { toAnnotationCssVars } from "./annotationColors";
 
 function normalizeQuoteTextForDisplay(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -32,11 +33,15 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
   }
 
   const when = formatWhen(item.timestamp);
+  const vars = toAnnotationCssVars(item.color);
   return (
-    <article className="spAnnotationCard spAnnotationCardHighlight spAnnotationCardReadOnly">
+    <article
+      className="spAnnotationCard spAnnotationCardHighlight spAnnotationCardReadOnly"
+      style={{ ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
+    >
       <div className="spAnnotationLeftRail" aria-hidden="true">
         <span className="spAnnotationTypeIcon" title="Highlight">
-          <MaterialIcon name="ink_highlighter" />
+          <MaterialIcon name="border_color" />
         </span>
       </div>
       <div className="spAnnotationBody">
@@ -71,36 +76,37 @@ export function PreviousSessionAnnotationsPanel(props: {
       {groups.map((g) => (
         <section key={g.sessionId} className="spPreviousSessionGroup">
           <div className="spPreviousSessionHeader">
-            <div className="spPreviousSessionTitle" title={g.label}>
-              {g.label}
-            </div>
-            {!g.selected ? (
+            <div className="spPreviousSessionHeaderActions">
               <button
                 type="button"
                 className="button buttonCompact"
                 onClick={() => props.onEnableInMarginalia(g.sessionId)}
-                title="Enable in Marginalia"
+                title={g.selected ? "Disable layer" : "Enable layer"}
+                disabled={g.status === "loading"}
               >
-                Enable
+                {g.selected ? "Disable" : "Enable"}
               </button>
-            ) : (
-              <span className="muted spPreviousSessionLayerOn" title="Layer is enabled in Marginalia">
-                Layer on
-              </span>
-            )}
+            </div>
+            <div className="spPreviousSessionTitle" title={g.label}>
+              {g.label}
+            </div>
           </div>
 
-          {g.status === "loading" ? <div className="muted">Loading annotations…</div> : null}
-          {g.status === "error" ? <div className="muted">Failed to load annotations{g.error ? `: ${g.error}` : "."}</div> : null}
-          {g.status === "idle" ? <div className="muted">Enable in Marginalia to load highlights.</div> : null}
-          {g.status === "ready" && (!g.items || g.items.length === 0) ? <div className="muted">No annotations in this session.</div> : null}
+          {g.selected ? (
+            <>
+              {g.status === "loading" ? <div className="muted">Loading annotations…</div> : null}
+              {g.status === "error" ? <div className="muted">Failed to load annotations{g.error ? `: ${g.error}` : "."}</div> : null}
+              {g.status === "idle" ? <div className="muted">Enable in Marginalia to load highlights.</div> : null}
+              {g.status === "ready" && (!g.items || g.items.length === 0) ? <div className="muted">No annotations in this session.</div> : null}
 
-          {g.status === "ready" && g.items && g.items.length > 0 ? (
-            <div className="spAnnotationList" aria-label="Previous session annotations list">
-              {g.items.map((item) => (
-                <ReadOnlyItemRow key={`${item.kind}:${item.id}`} item={item} />
-              ))}
-            </div>
+              {g.status === "ready" && g.items && g.items.length > 0 ? (
+                <div className="spAnnotationList" aria-label="Previous session annotations list">
+                  {g.items.map((item) => (
+                    <ReadOnlyItemRow key={`${item.kind}:${item.id}`} item={item} />
+                  ))}
+                </div>
+              ) : null}
+            </>
           ) : null}
         </section>
       ))}

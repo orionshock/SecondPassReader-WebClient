@@ -548,21 +548,23 @@
 .spPreviousSessionHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.spPreviousSessionHeaderActions {
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
 }
 
 .spPreviousSessionTitle {
   font-weight: 700;
   font-size: 13px;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.spPreviousSessionLayerOn {
-  font-size: 12px;
   white-space: nowrap;
 }
 
