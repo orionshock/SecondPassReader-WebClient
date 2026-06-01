@@ -94,6 +94,8 @@ export function ReadingActivity({
                     error={annotations.error}
                     busy={annotations.busy}
                     currentCfi={state.location?.cfi ?? null}
+                    previousSessionGroups={annotations.previousSessionGroups}
+                    onEnablePreviousSession={annotations.enablePreviousSession}
                     onRemoveAnnotation={(annotationId) => {
                       void annotations.removeById(annotationId);
                     }}

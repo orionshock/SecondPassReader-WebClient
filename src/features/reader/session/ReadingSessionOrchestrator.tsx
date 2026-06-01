@@ -14,7 +14,7 @@ import { toReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/b
 import type { HighlightViewModel } from "../annotations/viewModels";
 import { getAnnotationColor, getAnnotationDescribingText, toReaderAnnotation } from "../annotations/annotationUtils";
 import { useSessionAnnotations } from "./useSessionAnnotations";
-import { usePreviousSessionLayers } from "./usePreviousSessionLayers";
+import { usePreviousSessionLayers, type PreviousSessionAnnotationGroup } from "./usePreviousSessionLayers";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -43,6 +43,8 @@ export type ReadingSessionOrchestratorProps = {
       createHighlight: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
       removeById: (annotationId: string) => Promise<void>;
       updateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
+      previousSessionGroups: PreviousSessionAnnotationGroup[];
+      enablePreviousSession: (sessionId: string) => void;
     };
   }) => ReactNode;
 };
@@ -372,6 +374,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       createHighlight,
       removeById,
       updateHighlight,
+      previousSessionGroups: previousLayers.previousAnnotationGroups,
+      enablePreviousSession: previousLayers.togglePreviousSession,
     },
   });
 }

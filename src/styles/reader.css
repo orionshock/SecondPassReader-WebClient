@@ -535,6 +535,41 @@
   align-items: start;
 }
 
+.spPreviousSessionsPanel {
+  display: grid;
+  gap: 14px;
+}
+
+.spPreviousSessionGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.spPreviousSessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.spPreviousSessionTitle {
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spPreviousSessionLayerOn {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.spAnnotationCardReadOnly .spAnnotationRightRail {
+  display: none;
+}
+
 .spAnnotationKindRow {
   display: flex;
   align-items: center;

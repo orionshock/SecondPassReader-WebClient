@@ -4,6 +4,8 @@ import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors
 import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./viewModels";
 import { ANNOTATION_LIMITS } from "./annotationLimits";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel";
+import type { PreviousSessionAnnotationGroup } from "../session/usePreviousSessionLayers";
 
 type TabKey = "current" | "previous";
 
@@ -21,6 +23,8 @@ export function AnnotationWorkspace({
   error,
   busy,
   currentCfi,
+  previousSessionGroups,
+  onEnablePreviousSession,
   onRemoveAnnotation,
   onUpdateHighlight,
 }: {
@@ -30,6 +34,8 @@ export function AnnotationWorkspace({
   error: string | null;
   busy: boolean;
   currentCfi?: string | null;
+  previousSessionGroups?: PreviousSessionAnnotationGroup[];
+  onEnablePreviousSession?: (sessionId: string) => void;
   onRemoveAnnotation: (annotationId: string) => void;
   onUpdateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
 }) {
@@ -295,15 +301,10 @@ export function AnnotationWorkspace({
         </div>
       ) : (
         <div role="tabpanel" className="spAnnotationTabPanel">
-          <div className="muted">Previous session layers are not wired yet.</div>
-          <div className="spAnnotationPreviousPlaceholder">
-            <label className="muted" htmlFor="prevLayers">
-              Select layers
-            </label>
-            <select id="prevLayers" className="input" disabled value="">
-              <option value="">Select layers…</option>
-            </select>
-          </div>
+          <PreviousSessionAnnotationsPanel
+            groups={previousSessionGroups ?? []}
+            onEnableInMarginalia={(sessionId) => onEnablePreviousSession?.(sessionId)}
+          />
         </div>
       )}
     </section>
