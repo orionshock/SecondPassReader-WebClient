@@ -286,22 +286,37 @@ export function useSessionAnnotations(args: {
     return combined as Array<ReaderBookmarkViewModel | HighlightViewModel>;
   }, [bookmarkViewModels, highlightViewModels]);
 
-  return {
-    raw,
-    setRaw,
-    status,
-    error,
-    setError,
-    setStatus,
-    handleDescribeCfiReady,
-    onLocationsReady,
-    bookmarks,
-    currentBookmark,
-    bookmarkViewModels,
-    highlightViewModels,
-    highlightMarks,
-    items,
-  };
+  return useMemo(
+    () => ({
+      raw,
+      setRaw,
+      status,
+      error,
+      setError,
+      setStatus,
+      handleDescribeCfiReady,
+      onLocationsReady,
+      bookmarks,
+      currentBookmark,
+      bookmarkViewModels,
+      highlightViewModels,
+      highlightMarks,
+      items,
+    }),
+    [
+      bookmarks,
+      bookmarkViewModels,
+      currentBookmark,
+      error,
+      handleDescribeCfiReady,
+      highlightMarks,
+      highlightViewModels,
+      items,
+      onLocationsReady,
+      raw,
+      status,
+    ],
+  );
 }
 
 function normalizeHrefForCompare(href: string): string {
