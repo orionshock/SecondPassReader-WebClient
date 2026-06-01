@@ -94,9 +94,24 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     // continue
   }
 
+  let locationsReady = false;
+  let lastRelocatedLoc: Location | null = null;
+
   const onRelocated = (loc: Location) => {
+    lastRelocatedLoc = loc;
     try {
-      init.onLocationChanged?.(normalizeLocation(loc));
+      const bookProgress = (() => {
+        try {
+          if (!locationsReady) return undefined;
+          const cfi = loc.start?.cfi;
+          if (!cfi) return undefined;
+          const p = book.locations.percentageFromCfi(cfi);
+          return typeof p === "number" && Number.isFinite(p) ? p : undefined;
+        } catch {
+          return undefined;
+        }
+      })();
+      init.onLocationChanged?.(normalizeLocation(loc, { bookProgress }));
     } catch (err) {
       init.onError?.(err);
     }
@@ -144,7 +159,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   let destroyed = false;
   let locationsGeneratePromise: Promise<unknown> | null = null;
-  let locationsReady = false;
 
   // Start locations generation in the background. This enables approximate whole-book
   // percentage lookups (Location.percentage / percentageFromCfi) without needing to
@@ -157,10 +171,16 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
           await book.locations.generate(1000);
           if (destroyed) return;
           const hasLocations = typeof book.locations.length === "function" ? book.locations.length() > 0 : false;
-          if (hasLocations) {
-            locationsReady = true;
-            init.onLocationsReady?.();
-          }
+           if (hasLocations) {
+             locationsReady = true;
+             init.onLocationsReady?.();
+             // Refresh current location so book-level percentage can update without waiting for navigation.
+             try {
+               if (lastRelocatedLoc && !destroyed) onRelocated(lastRelocatedLoc);
+             } catch {
+               // ignore
+             }
+           }
         } catch (err: unknown) {
           if (destroyed) return;
           // Non-fatal: percentage labels should degrade gracefully.

@@ -62,16 +62,16 @@ export function ReadingShell(props: ReadingShellProps) {
 
     void (async () => {
       try {
-        const engine = await createEpubTsBookEngine({
-          source: props.blob,
-          mountEl,
-          // Locations generation currently can throw unhandled errors in epub-ts for some books.
-          // Keep it opt-in until upstream behavior is reliable.
-          enableLocationsGeneration: false,
-          onLocationChanged: (location) => {
-            if (stagedSelectionRef.current) cancelStaged();
-            props.onEvent?.({ type: "locationChanged", location });
-          },
+         const engine = await createEpubTsBookEngine({
+           source: props.blob,
+           mountEl,
+           // Locations generation currently can throw unhandled errors in epub-ts for some books.
+           // Keep it opt-in until upstream behavior is reliable.
+           enableLocationsGeneration: true,
+           onLocationChanged: (location) => {
+             if (stagedSelectionRef.current) cancelStaged();
+             props.onEvent?.({ type: "locationChanged", location });
+           },
           onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
           onLocationsReady: () => props.onEvent?.({ type: "locationsReady" }),
           onSelectionChanged,

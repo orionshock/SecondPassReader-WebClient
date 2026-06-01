@@ -13,12 +13,12 @@ export function toRenditionTarget(target: ReaderLocationTarget | undefined): str
   }
 }
 
-export function normalizeLocation(loc: Location): ReaderLocation {
+export function normalizeLocation(loc: Location, opts?: { bookProgress?: number | undefined }): ReaderLocation {
   const start = loc.start;
   return {
     cfi: start.cfi,
     href: start.href,
-    bookProgress: typeof start.percentage === "number" ? start.percentage : undefined,
+    bookProgress: typeof opts?.bookProgress === "number" ? opts.bookProgress : typeof start.percentage === "number" ? start.percentage : undefined,
     displayedPage: start.displayed?.page,
     displayedTotal: start.displayed?.total,
     raw: loc,
@@ -35,4 +35,3 @@ export function normalizeTocItems(items: Array<{ id: string; href: string; label
       children: Array.isArray(i.subitems) ? normalizeTocItems(i.subitems) : undefined,
     }));
 }
-
