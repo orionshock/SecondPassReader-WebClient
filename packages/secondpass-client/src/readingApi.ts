@@ -345,15 +345,24 @@ export async function updateNoteAnnotation(input: {
   }
 
   const noteVal = input.update.note;
-  const noteRaw = typeof noteVal === "string" ? noteVal : "";
+  const noteRaw = typeof noteVal === "string" ? noteVal : noteVal === null ? "" : "";
   const note = noteRaw.trim();
-  // When `note` is null/empty, omit the commenting body so the server can
-  // replace the existing body array (effectively clearing the note).
+  // Server contract: note/comment text is stored in a `commenting` TextualBody.
+  // Clearing a note should be an explicit operation on PATCH.
+  // - `note: null` or whitespace-only indicates the note should be removed.
+  // - Encode removal by sending an explicit commenting body with an empty value.
+  //   The server treats this as a clear/remove instruction.
   if (note) {
     body.push({
       type: "TextualBody",
       purpose: "commenting",
       value: note,
+    });
+  } else if (noteVal === null || (typeof noteVal === "string" && noteVal.length > 0)) {
+    body.push({
+      type: "TextualBody",
+      purpose: "commenting",
+      value: "",
     });
   }
 

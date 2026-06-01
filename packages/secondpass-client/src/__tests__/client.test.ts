@@ -241,14 +241,17 @@ describe("@secondpass/client high-level workflows", () => {
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.body).toEqual([{ type: "TextualBody", purpose: "describing", value: "Selected text", color: "#ff0" }]);
+    expect(payload.body).toEqual([
+      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "#ff0" },
+      { type: "TextualBody", purpose: "commenting", value: "" },
+    ]);
 
     await expect(
       spl.reading.annotations.updateNote("ann-1", { color: "#ff0" }),
     ).rejects.toThrowError(/requires `text`/i);
   });
 
-  it("reading.annotations.updateNote can clear note by omitting commenting body while still sending describing body updates", async () => {
+  it("reading.annotations.updateNote can clear note while still sending describing body updates", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
 
@@ -267,7 +270,10 @@ describe("@secondpass/client high-level workflows", () => {
     const payload = JSON.parse(String(init?.body));
     expect(Object.keys(payload).sort()).toEqual(["body", "profile_version"]);
     expect(payload.profile_version).toBe("pv1");
-    expect(payload.body).toEqual([{ type: "TextualBody", purpose: "describing", value: "Selected text", color: "yellow" }]);
+    expect(payload.body).toEqual([
+      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "yellow" },
+      { type: "TextualBody", purpose: "commenting", value: "" },
+    ]);
     expect(payload).not.toHaveProperty("target");
     expect(payload).not.toHaveProperty("selector");
     expect(payload).not.toHaveProperty("session");
