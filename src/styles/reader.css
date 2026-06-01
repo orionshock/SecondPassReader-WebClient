@@ -89,6 +89,44 @@
   pointer-events: none;
 }
 
+.spSelectionToolbar {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12);
+  max-width: min(520px, calc(100% - 16px));
+}
+
+.spSelectionToolbarRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.spSelectionToolbarChips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spSelectionToolbarNote {
+  display: grid;
+  gap: 8px;
+}
+
+.spSelectionToolbarTextarea {
+  font-size: 13px;
+  line-height: 1.35;
+  resize: vertical;
+}
+
 .spReaderPageNav {
   pointer-events: auto;
   position: absolute;
@@ -139,19 +177,6 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-.spReaderSelectionActions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.spReaderSelectionPreview {
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .spReadingShellLabelBlock {

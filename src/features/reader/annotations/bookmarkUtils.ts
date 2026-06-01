@@ -9,6 +9,7 @@ export type ReaderBookmarkViewModel = {
   cfi: string;
   href?: string;
   label: string;
+  timestamp?: string;
   isCurrent: boolean;
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 };
@@ -99,6 +100,7 @@ export function toBookmarkViewModel(input: {
   toc?: ReaderTocItem[] | null;
   description?: ReaderLocationDescription | null;
   fallbackBookProgress?: number | null | undefined;
+  timestamp?: string | null;
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 }): ReaderBookmarkViewModel {
   const isCurrent = Boolean(input.currentCfi && input.bookmark.cfi === input.currentCfi);
@@ -113,6 +115,7 @@ export function toBookmarkViewModel(input: {
     cfi: input.bookmark.cfi,
     href,
     label,
+    timestamp: input.timestamp ?? undefined,
     isCurrent,
     descriptionStatus: input.descriptionStatus,
   };

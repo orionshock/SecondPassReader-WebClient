@@ -7,6 +7,13 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 
 type TabKey = "current" | "previous";
 
+function normalizeQuoteTextForDisplay(text: string): string {
+  // Selections and describing bodies can contain hard line separators and trailing whitespace.
+  // For card display, normalize to a single-line flow so we don't render what looks like a
+  // "blank line" at the end of the quote block.
+  return text.replace(/\s+/g, " ").trim();
+}
+
 export function AnnotationWorkspace({
   state,
   annotations,
@@ -122,6 +129,7 @@ export function AnnotationWorkspace({
 
                 const h = a as HighlightViewModel;
                 const vars = toAnnotationCssVars(h.color);
+                const quoteText = h.text ? normalizeQuoteTextForDisplay(h.text) : "";
                 const when =
                   h.timestamp && !Number.isNaN(Date.parse(h.timestamp)) ? new Date(h.timestamp).toLocaleString() : null;
                 const isEditing = editingId === h.id;
@@ -139,8 +147,8 @@ export function AnnotationWorkspace({
                     </div>
 
                     <div className="spAnnotationBody">
-                      <div className="spAnnotationQuote" title={h.text}>
-                        {h.text || "Highlight"}
+                      <div className="spAnnotationQuote" title={quoteText || "Highlight"}>
+                        {quoteText || "Highlight"}
                       </div>
 
                       {!isEditing && h.note ? <div className="spAnnotationNote">{h.note}</div> : null}

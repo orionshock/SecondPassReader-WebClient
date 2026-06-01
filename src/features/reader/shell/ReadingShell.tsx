@@ -5,6 +5,7 @@ import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, Reade
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellCommand, ReadingShellEvent } from "./types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -12,17 +13,15 @@ export type ReadingShellProps = {
   annotations?: ReaderAnnotation[];
   onEvent?: (event: ReadingShellEvent) => void;
   onCommand?: (command: ReadingShellCommand) => void;
-  command?: { seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } };
+  command?: {
+    seq: number;
+    value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" };
+  };
   statusLine?: string;
   autosaveStatus?: { text: string; title?: string } | null;
-  selection?: ReaderSelection | null;
   highlightMarks?: ReaderHighlightMark[];
-  selectionActions?: {
-    enabled: boolean;
-    busy?: boolean;
-    onHighlight: () => void;
-    onCancel: () => void;
-  };
+  onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
+  highlightCommitBusy?: boolean;
   bookmark?: {
     enabled: boolean;
     isBookmarked: boolean;
@@ -34,19 +33,43 @@ export type ReadingShellProps = {
 
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
+  const mountWrapperRef = useRef<HTMLDivElement | null>(null);
   const lastHandledCommandSeqRef = useRef<number | null>(null);
   const deferredCommandRef = useRef<ReadingShellProps["command"] | null>(null);
+
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
 
+  const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
   useEffect(() => {
     highlightMarksRef.current = props.highlightMarks ?? [];
   }, [props.highlightMarks]);
 
+  const [stagedSelection, setStagedSelection] = useState<ReaderSelection | null>(null);
+  const stagedSelectionRef = useRef<ReaderSelection | null>(null);
+  const [stagedColor, setStagedColor] = useState<string>("yellow");
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number; placement: "above" | "below" } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    stagedSelectionRef.current = stagedSelection;
+  }, [stagedSelection]);
+
   const mountRef = useCallback((el: HTMLDivElement | null) => {
     setMountEl(el);
+  }, []);
+
+  const cancelStaged = useCallback(() => {
+    setStagedSelection(null);
+    setStagedColor("yellow");
+    setNoteOpen(false);
+    setNoteDraft("");
+    setToolbarPos(null);
+    engineRef.current?.clearSelection();
   }, []);
 
   useEffect(() => {
@@ -61,16 +84,47 @@ export function ReadingShell(props: ReadingShellProps) {
         const engine = await createEpubTsBookEngine({
           source: props.blob,
           mountEl,
-          onLocationChanged: (location) => props.onEvent?.({ type: "locationChanged", location }),
+          onLocationChanged: (location) => {
+            if (stagedSelectionRef.current) cancelStaged();
+            props.onEvent?.({ type: "locationChanged", location });
+          },
           onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
           onLocationsReady: () => props.onEvent?.({ type: "locationsReady" }),
-          onSelectionChanged: (selection) => props.onEvent?.({ type: "selectionChanged", selection }),
+          onSelectionChanged: (selection) => {
+            if (!selection) {
+              if (stagedSelectionRef.current) cancelStaged();
+              return;
+            }
+
+            // Selecting new text discards any previous uncommitted staged highlight.
+            setStagedSelection(selection);
+            setStagedColor("yellow");
+            setNoteOpen(false);
+            setNoteDraft("");
+
+            const wrapper = mountWrapperRef.current;
+            const anchor = selection.anchor;
+            if (wrapper && anchor) {
+              const r = wrapper.getBoundingClientRect();
+              const left = Math.max(12, Math.min(r.width - 12, anchor.x - r.left));
+              const topRaw = Math.max(0, Math.min(r.height, anchor.y - r.top));
+              const placement: "above" | "below" = topRaw < 72 ? "below" : "above";
+              setToolbarPos({ left, top: topRaw, placement });
+            } else if (wrapper) {
+              const r = wrapper.getBoundingClientRect();
+              setToolbarPos({ left: r.width / 2, top: 18, placement: "below" });
+            } else {
+              setToolbarPos(null);
+            }
+          },
           onError: (err) => props.onEvent?.({ type: "displayError", error: err }),
         });
+
         if (cancelled) {
           engine.destroy();
           return;
         }
+
         engineRef.current = engine;
         setStatus("ready");
         props.onDescribeCfiReady?.((cfi) => engine.describeCfi(cfi));
@@ -82,7 +136,6 @@ export function ReadingShell(props: ReadingShellProps) {
           const cmd = deferredCommandRef.current;
           deferredCommandRef.current = null;
           if (cmd) {
-            // best-effort execute deferred command now that engine exists
             try {
               if (cmd.value.type === "display") await engine.display(cmd.value.target);
               else if (cmd.value.type === "next") await engine.next();
@@ -95,7 +148,6 @@ export function ReadingShell(props: ReadingShellProps) {
           }
         }
 
-        // If nothing has asked for a specific display target yet, display the default start location.
         if (!props.initialDisplayTarget) {
           try {
             await engine.display();
@@ -120,7 +172,7 @@ export function ReadingShell(props: ReadingShellProps) {
       props.onDescribeCfiReady?.(null);
       engine?.destroy();
     };
-  }, [mountEl, props.blob, props.initialDisplayTarget, props.onDescribeCfiReady, props.onEvent]);
+  }, [cancelStaged, mountEl, props.blob, props.initialDisplayTarget, props.onDescribeCfiReady, props.onEvent]);
 
   useEffect(() => {
     const cmd = props.command;
@@ -155,8 +207,22 @@ export function ReadingShell(props: ReadingShellProps) {
 
   useEffect(() => {
     if (!engineRef.current) return;
-    engineRef.current.setHighlightMarks(props.highlightMarks ?? []);
-  }, [props.highlightMarks]);
+    const staged: ReaderHighlightMark[] =
+      stagedSelection?.cfiRange ? [{ id: "__staged_selection__", cfiRange: stagedSelection.cfiRange, color: stagedColor }] : [];
+    engineRef.current.setHighlightMarks([...(props.highlightMarks ?? []), ...staged]);
+  }, [props.highlightMarks, stagedColor, stagedSelection]);
+
+  useEffect(() => {
+    if (!stagedSelection) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelStaged();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cancelStaged, stagedSelection]);
 
   const goPrev = async () => {
     try {
@@ -178,8 +244,6 @@ export function ReadingShell(props: ReadingShellProps) {
     }
   };
 
-  const selectionActions = props.selectionActions;
-
   return (
     <div className="spReadingShell">
       <div className="spReadingShellBar">
@@ -192,37 +256,6 @@ export function ReadingShell(props: ReadingShellProps) {
           ) : null}
         </div>
         <div className="spReadingShellActions">
-          {props.selection && selectionActions ? (
-            <div className="spReaderSelectionActions">
-              <div className="muted spReaderSelectionPreview">{props.selection.text.slice(0, 48)}{props.selection.text.length > 48 ? "…" : ""}</div>
-              <button
-                type="button"
-                className="button buttonCompact"
-                onClick={() => {
-                  // Clear visual selection immediately; the orchestrator already has the selection data.
-                  engineRef.current?.clearSelection();
-                  selectionActions.onHighlight();
-                }}
-                disabled={!selectionActions.enabled || status !== "ready" || Boolean(selectionActions.busy)}
-              >
-                <MaterialIcon name="border_color" />
-                <span className="spIconButtonLabel">Highlight</span>
-              </button>
-              <button
-                type="button"
-                className="button buttonCompact"
-                onClick={() => {
-                  selectionActions.onCancel();
-                  engineRef.current?.clearSelection();
-                }}
-                disabled={status !== "ready"}
-              >
-                <MaterialIcon name="close" />
-                <span className="spIconButtonLabel">Cancel</span>
-              </button>
-            </div>
-          ) : null}
-
           {props.bookmark ? (
             <button
               type="button"
@@ -241,6 +274,7 @@ export function ReadingShell(props: ReadingShellProps) {
 
       <ReaderViewport
         ref={mountRef}
+        mountWrapperRef={mountWrapperRef}
         status={status}
         errorMessage={errorMessage ?? undefined}
         overlay={
@@ -265,6 +299,42 @@ export function ReadingShell(props: ReadingShellProps) {
             >
               <MaterialIcon name="chevron_right" className="spReaderPageNavIcon" />
             </button>
+
+            {stagedSelection && toolbarPos ? (
+              <SelectionHighlightToolbar
+                open={true}
+                left={toolbarPos.left}
+                top={toolbarPos.top}
+                placement={toolbarPos.placement}
+                color={stagedColor}
+                noteOpen={noteOpen}
+                noteDraft={noteDraft}
+                busy={Boolean(props.highlightCommitBusy)}
+                onPickColorAndCommit={async (color) => {
+                  if (!props.onCommitHighlight || !stagedSelection) return;
+                  setStagedColor(color);
+                  try {
+                    await props.onCommitHighlight({ selection: stagedSelection, color });
+                    cancelStaged();
+                  } catch {
+                    // Keep staged highlight + toolbar open on failure.
+                  }
+                }}
+                onOpenNote={() => setNoteOpen(true)}
+                onChangeNoteDraft={(value) => setNoteDraft(value)}
+                onSaveNote={async () => {
+                  if (!props.onCommitHighlight || !stagedSelection) return;
+                  try {
+                    await props.onCommitHighlight({ selection: stagedSelection, color: stagedColor, note: noteDraft.trim() });
+                    cancelStaged();
+                  } catch {
+                    // Keep staged highlight + toolbar open on failure.
+                  }
+                }}
+                onCloseNote={() => setNoteOpen(false)}
+                onCancel={cancelStaged}
+              />
+            ) : null}
           </>
         }
       />

@@ -31,7 +31,7 @@ export type ReadingSessionOrchestratorProps = {
       error: string | null;
       busy: boolean;
       toggleBookmarkAtCurrentLocation: () => Promise<void>;
-      createHighlightFromSelection: () => Promise<void>;
+      createHighlight: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
       removeById: (annotationId: string) => Promise<void>;
       updateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
     };
@@ -42,7 +42,6 @@ export type ReadingSessionOrchestratorProps = {
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
   const [location, setLocation] = useState<ReaderLocation | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
-  const [selection, setSelection] = useState<ReaderSelection | null>(null);
   const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
@@ -86,11 +85,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       bookId: props.openedBook.book.id,
       sessionId: props.openedBook.readingOpen?.session?.id ?? null,
       location,
-      selection,
       toc,
       annotations: seedAnnotations,
     };
-  }, [annotationsRaw, location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, selection, toc]);
+  }, [annotationsRaw, location, props.openedBook.book.id, props.openedBook.readingOpen?.session?.id, toc]);
 
   const { autosave } = useReadingProgressAutosave({
     enabled: true,
@@ -170,9 +168,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         // eslint-disable-next-line no-console
         console.error("Reader error", event.error);
         return;
-      case "selectionChanged":
-        setSelection(event.selection ?? null);
-        return;
       case "tocReady":
         setToc(event.toc);
         return;
@@ -197,6 +192,22 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     lastRestoreKeyRef.current = key;
     sendCommand({ type: "display", target: initialDisplayTarget });
   }, [initialDisplayTarget, props.openedBook.objectUrl, sendCommand]);
+
+  const sortedAnnotationsRaw = useMemo(() => {
+    const copy = [...annotationsRaw];
+    const tsMs = (a: ReadingAnnotation): number => {
+      const s = getAnnotationTimestamp(a);
+      if (!s) return 0;
+      const ms = Date.parse(s);
+      return Number.isFinite(ms) ? ms : 0;
+    };
+    copy.sort((a, b) => {
+      const d = tsMs(b) - tsMs(a);
+      if (d !== 0) return d;
+      return String(b.id).localeCompare(String(a.id));
+    });
+    return copy;
+  }, [annotationsRaw]);
 
   const sessionId = state.sessionId;
 
@@ -260,12 +271,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const bookmarks: ReaderBookmark[] = useMemo(() => {
     const out: ReaderBookmark[] = [];
-    for (const a of annotationsRaw) {
+    for (const a of sortedAnnotationsRaw) {
       const b = toReaderBookmark(a);
       if (b) out.push(b);
     }
     return out;
-  }, [annotationsRaw]);
+  }, [sortedAnnotationsRaw]);
 
   const currentBookmark = useMemo(() => {
     const cfi = location?.cfi?.trim() ?? "";
@@ -276,14 +287,14 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const highlights = useMemo(() => {
     const out: Array<{ id: string; cfiRange: string; text: string }> = [];
-    for (const a of annotationsRaw) {
+    for (const a of sortedAnnotationsRaw) {
       if (!isHighlightAnnotation(a)) continue;
       const ra = toReaderAnnotation(a);
       if (ra?.kind !== "highlight") continue;
       out.push({ id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "" });
     }
     return out;
-  }, [annotationsRaw]);
+  }, [sortedAnnotationsRaw]);
 
   // Best-effort: describe bookmarks at runtime (no rendition jumps).
   // Important: avoid cancelling in-flight descriptions due to state updates.
@@ -337,6 +348,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const bookmarkViewModels: ReaderBookmarkViewModel[] = useMemo(() => {
     return bookmarks.map((b) => {
+      const raw = sortedAnnotationsRaw.find((a) => a.id === b.id) ?? null;
+      const timestamp = raw ? getAnnotationTimestamp(raw) : null;
       const entry = bookmarkDescriptions[b.cfi];
       return toBookmarkViewModel({
         bookmark: b,
@@ -344,14 +357,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         toc,
         description: entry?.value ?? null,
         fallbackBookProgress: location?.bookProgress ?? null,
+        timestamp,
         descriptionStatus: entry?.status ?? (describeCfi ? "idle" : "idle"),
       });
     });
-  }, [bookmarkDescriptions, bookmarks, describeCfi, location?.bookProgress, location?.cfi, toc]);
+  }, [bookmarkDescriptions, bookmarks, describeCfi, location?.bookProgress, location?.cfi, sortedAnnotationsRaw, toc]);
 
   const highlightViewModels = useMemo(() => {
     return highlights.map((h) => {
-      const raw = annotationsRaw.find((a) => a.id === h.id) ?? null;
+      const raw = sortedAnnotationsRaw.find((a) => a.id === h.id) ?? null;
       const note = raw ? getAnnotationNoteText(raw) : null;
       const color = raw ? getAnnotationColor(raw) : null;
       const timestamp = raw ? getAnnotationTimestamp(raw) : null;
@@ -376,7 +390,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         descriptionStatus: entry?.status ?? "idle",
       };
     });
-  }, [annotationsRaw, bookmarkDescriptions, highlights, toc]);
+  }, [sortedAnnotationsRaw, bookmarkDescriptions, highlights, toc]);
 
   const highlightMarks: ReaderHighlightMark[] = useMemo(() => {
     return highlightViewModels
@@ -475,32 +489,37 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     }
   }, [currentBookmark, location?.cfi, profileVersion, props.spl, removeById, sessionId]);
 
-  const createHighlightFromSelection = useCallback(async () => {
-    if (!props.spl) return;
-    if (!sessionId) return;
-    if (!profileVersion) return;
-    const sel = selection;
-    if (!sel?.cfiRange || !sel.text) return;
+  const createHighlight = useCallback(
+    async (input: { selection: ReaderSelection; color: string; note?: string }) => {
+      if (!props.spl) throw new Error("Not connected.");
+      if (!sessionId) throw new Error("Missing session.");
+      if (!profileVersion) throw new Error("Missing profile version.");
+      const sel = input.selection;
+      if (!sel?.cfiRange || !sel.text) throw new Error("Missing selection.");
 
-    setAnnotationBusy(true);
-    setAnnotationError(null);
-    try {
-      const created = await props.spl.reading.annotations.createHighlight({
-        sessionId,
-        profileVersion,
-        cfiRange: sel.cfiRange,
-        text: sel.text,
-        quotePrefix: sel.quotePrefix,
-        quoteSuffix: sel.quoteSuffix,
-      });
-      setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== created.id), created as unknown as ReadingAnnotation]);
-      setSelection(null);
-    } catch (e) {
-      setAnnotationError(e instanceof Error ? e.message : "Failed to create highlight.");
-    } finally {
-      setAnnotationBusy(false);
-    }
-  }, [profileVersion, props.spl, selection, sessionId]);
+      setAnnotationBusy(true);
+      setAnnotationError(null);
+      try {
+        const created = await props.spl.reading.annotations.createHighlight({
+          sessionId,
+          profileVersion,
+          cfiRange: sel.cfiRange,
+          text: sel.text,
+          color: input.color,
+          note: input.note,
+          quotePrefix: sel.quotePrefix,
+          quoteSuffix: sel.quoteSuffix,
+        });
+        setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== created.id), created as unknown as ReadingAnnotation]);
+      } catch (e) {
+        setAnnotationError(e instanceof Error ? e.message : "Failed to create highlight.");
+        throw e;
+      } finally {
+        setAnnotationBusy(false);
+      }
+    },
+    [profileVersion, props.spl, sessionId],
+  );
 
   return props.children({
     state,
@@ -514,18 +533,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         statusLine={statusLine}
         autosaveStatus={autosaveStatus}
         onDescribeCfiReady={handleDescribeCfiReady}
-        selection={selection}
         highlightMarks={highlightMarks}
-        selectionActions={{
-          enabled: Boolean(sessionId && profileVersion && selection?.cfiRange && selection?.text),
-          busy: annotationBusy,
-          onHighlight: () => {
-            void createHighlightFromSelection();
-          },
-          onCancel: () => {
-            setSelection(null);
-          },
-        }}
+        onCommitHighlight={async (arg) => createHighlight(arg)}
+        highlightCommitBusy={annotationBusy}
         bookmark={{
           enabled: Boolean(sessionId && profileVersion && location?.cfi),
           isBookmarked: Boolean(currentBookmark),
@@ -539,12 +549,26 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     debugPanel: null,
     sendCommand,
     annotations: {
-      items: [...bookmarkViewModels, ...highlightViewModels],
+      items: (() => {
+        const combined = [...bookmarkViewModels, ...highlightViewModels];
+        const tsMs = (vm: { timestamp?: string; id: string }): number => {
+          const s = typeof vm.timestamp === "string" ? vm.timestamp.trim() : "";
+          if (!s) return 0;
+          const ms = Date.parse(s);
+          return Number.isFinite(ms) ? ms : 0;
+        };
+        combined.sort((a, b) => {
+          const d = tsMs(b) - tsMs(a);
+          if (d !== 0) return d;
+          return String((b as any).id).localeCompare(String((a as any).id));
+        });
+        return combined;
+      })(),
       status: annotationStatus,
       error: annotationError,
       busy: annotationBusy,
       toggleBookmarkAtCurrentLocation,
-      createHighlightFromSelection,
+      createHighlight,
       removeById,
       updateHighlight,
     },

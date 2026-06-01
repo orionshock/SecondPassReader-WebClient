@@ -67,13 +67,28 @@ function safeText(s: unknown): string {
   return typeof s === "string" ? s : "";
 }
 
-function extractSelectionTextAndContext(contents: { window: Window; document: Document }): { text: string; before: string; after: string } | null {
+function extractSelectionTextAndContext(contents: { window: Window; document: Document }): { text: string; before: string; after: string; anchor?: { x: number; y: number } } | null {
   const sel = contents.window.getSelection?.();
   if (!sel || sel.rangeCount === 0) return null;
   const text = safeText(sel.toString()).trim();
   if (!text) return null;
 
   const range = sel.getRangeAt(0);
+  const rect = range.getBoundingClientRect?.();
+  const anchor = (() => {
+    try {
+      if (!rect) return undefined;
+      const frameEl = contents.window.frameElement as HTMLElement | null;
+      if (!frameEl) return undefined;
+      const frameRect = frameEl.getBoundingClientRect();
+      const x = frameRect.left + rect.left + rect.width / 2;
+      const y = frameRect.top + rect.top;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+      return { x, y };
+    } catch {
+      return undefined;
+    }
+  })();
 
   // Best-effort context extraction. Prefer single-text-node slices when possible.
   const startNode = range.startContainer;
@@ -83,7 +98,7 @@ function extractSelectionTextAndContext(contents: { window: Window; document: Do
     const full = safeText((startNode as Text).data);
     const before = full.slice(0, range.startOffset);
     const after = full.slice(range.endOffset);
-    return { text, before, after };
+    return { text, before, after, anchor };
   }
 
   const ancestor = range.commonAncestorContainer;
@@ -93,11 +108,11 @@ function extractSelectionTextAndContext(contents: { window: Window; document: Do
     if (idx >= 0) {
       const before = haystack.slice(0, idx);
       const after = haystack.slice(idx + text.length);
-      return { text, before, after };
+      return { text, before, after, anchor };
     }
   }
 
-  return { text, before: "", after: "" };
+  return { text, before: "", after: "", anchor };
 }
 
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
@@ -197,6 +212,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         quotePrefix: prefix,
         quoteSuffix: suffix,
         href,
+        anchor: ctx.anchor,
       });
     } catch (err) {
       init.onError?.(err);
@@ -237,19 +253,27 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   startLocationsGeneration();
 
-  const paintedHighlightsById = new Map<string, { cfiRange: string }>();
+  const paintedHighlightsById = new Map<string, { cfiRange: string; colorKey: string }>();
 
   const toHighlightAttributes = (color: string | undefined): Record<string, string> | undefined => {
     const c = typeof color === "string" ? color.trim() : "";
     if (!c) return undefined;
     // epub-ts will default to yellow; support simple named tokens / hex / css colors by passing them through.
     // Avoid trying to parse arbitrary strings here.
+    //
+    // Note: epub-ts highlight implementations vary by view; some apply styles to SVG overlays (fill),
+    // others apply styles to DOM elements (background-color). Provide both so color changes reliably
+    // reflect in the viewport without depending on a specific internal representation.
     return {
       fill: c,
       "fill-opacity": "0.22",
       "mix-blend-mode": "multiply",
+      "background-color": c,
+      "background": c,
     };
   };
+
+  const colorKeyOf = (color: string | undefined): string => (typeof color === "string" ? color.trim().toLowerCase() : "");
 
   return {
     async display(target?: ReaderLocationTarget) {
@@ -294,7 +318,8 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         nextIds.add(id);
 
         const existing = paintedHighlightsById.get(id);
-        if (existing && existing.cfiRange === cfiRange) continue;
+        const nextColorKey = colorKeyOf(m.color);
+        if (existing && existing.cfiRange === cfiRange && existing.colorKey === nextColorKey) continue;
 
         // If this id moved, remove the old one first (epub-ts keys by cfiRange+type).
         try {
@@ -311,7 +336,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
             "sp-annotation-hl",
             toHighlightAttributes(m.color),
           );
-          paintedHighlightsById.set(id, { cfiRange });
+          paintedHighlightsById.set(id, { cfiRange, colorKey: nextColorKey });
         } catch (err) {
           init.onError?.(err);
         }
