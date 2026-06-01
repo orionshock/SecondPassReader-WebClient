@@ -225,14 +225,14 @@
 
 .spAnnotationList {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .spAnnotationCard {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  padding: 10px;
+  gap: 8px;
+  padding: 8px;
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.96);
@@ -246,16 +246,32 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
-.spAnnotationActionRail {
+.spAnnotationLeftRail {
   display: grid;
-  gap: 8px;
   align-content: start;
+  justify-items: center;
+  padding-top: 2px;
+  width: 32px;
+}
+
+.spAnnotationCardBookmark .spAnnotationLeftRail {
+  align-content: center;
+  padding-top: 0;
+}
+
+.spAnnotationTypeIcon {
+  color: rgba(17, 24, 39, 0.45);
+}
+
+.spAnnotationTypeIcon .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .spAnnotationRightRail {
   display: grid;
   align-content: center;
   justify-items: center;
+  gap: 8px;
 }
 
 .spIconButton {
@@ -263,6 +279,13 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.spIconButtonTight {
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 9px;
+  min-width: 28px;
 }
 
 .spIconButtonLabel {
@@ -281,7 +304,7 @@
 
 .spAnnotationBody {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -324,10 +347,29 @@
   min-width: 0;
 }
 
+.spAnnotationBookmarkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.spAnnotationBookmarkText {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(17, 24, 39, 0.82);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .spAnnotationQuote {
   font-size: 14px;
   color: var(--sp-text);
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-left: 3px solid var(--annotation-color);
   background: var(--annotation-bg);
   border-radius: 10px;
@@ -342,7 +384,7 @@
 
 .spAnnotationNote {
   margin-left: 8px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 10px;
   background: rgba(17, 24, 39, 0.02);
   color: var(--sp-text);
@@ -353,6 +395,21 @@
 }
 
 .spAnnotationMetaLine {
+  font-size: 12px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spAnnotationActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.spAnnotationActionMeta {
   font-size: 12px;
   min-width: 0;
   white-space: nowrap;
@@ -404,7 +461,7 @@
 
 .spAnnotationEditActions {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto auto minmax(0, 1fr);
   gap: 10px;
   align-items: start;
 }
