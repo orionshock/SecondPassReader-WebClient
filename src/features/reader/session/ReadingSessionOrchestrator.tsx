@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
 import type { ReaderAnnotation, ReaderLocationTarget, ReadingShellEvent } from "../shell/types";
-import type { ReaderLocation, ReaderSelection } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocation, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
@@ -21,9 +21,16 @@ export type ReadingSessionOrchestratorProps = {
   settings?: ReaderSettings;
   children: (arg: {
     state: ReadingSessionState;
+    statusLine: string;
+    autosaveStatus: { text: string; title?: string } | null;
     shell: ReactNode;
     debugPanel: ReactNode | null;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
+    marginalia: {
+      previousLayers: Array<{ sessionId: string; label: string; highlightCount: number }>;
+      selectedPreviousSessionIds: string[];
+      togglePreviousSession: (sessionId: string) => void;
+    };
     annotations: {
       items: Array<ReaderBookmarkViewModel | HighlightViewModel>;
       status: "idle" | "loading" | "ready" | "error";
@@ -46,6 +53,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const [annotationBusy, setAnnotationBusy] = useState(false);
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
+  const [selectedPreviousSessionIds, setSelectedPreviousSessionIds] = useState<string[]>([]);
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -71,7 +79,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     error: annotationError,
     setError: setAnnotationError,
     items: annotationItems,
-    highlightMarks,
+    highlightMarkLayers,
     handleDescribeCfiReady,
     onLocationsReady,
     currentBookmark,
@@ -157,6 +165,23 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
     return parts.join(" \u00B7 ");
   }, [state.location?.bookProgress, state.location?.displayedPage, state.location?.displayedTotal, state.location?.href, state.toc]);
+
+  const togglePreviousSession = useCallback((sid: string) => {
+    const id = typeof sid === "string" ? sid.trim() : "";
+    if (!id) return;
+    setSelectedPreviousSessionIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const visibleHighlightMarks: ReaderHighlightMark[] = useMemo(() => {
+    const selected = new Set(selectedPreviousSessionIds);
+    const out: ReaderHighlightMark[] = [...highlightMarkLayers.current];
+    for (const layer of highlightMarkLayers.previous) {
+      if (!selected.has(layer.sessionId)) continue;
+      out.push(...layer.marks);
+    }
+    // Preserve existing behavior: staged selection mark composes in the shell; durable marks are filtered here only.
+    return out;
+  }, [highlightMarkLayers.current, highlightMarkLayers.previous, selectedPreviousSessionIds]);
 
   const sendCommand = useCallback((command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => {
     commandSeqRef.current += 1;
@@ -317,31 +342,28 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   return props.children({
     state,
+    statusLine,
+    autosaveStatus,
     shell: (
       <ReadingShell
         blob={props.openedBook.blob}
         initialDisplayTarget={initialDisplayTarget}
         onEvent={onShellEvent}
         command={pendingCommand ?? undefined}
-        statusLine={statusLine}
-        autosaveStatus={autosaveStatus}
         toc={toc}
         onDescribeCfiReady={handleDescribeCfiReady}
-        highlightMarks={highlightMarks}
+        highlightMarks={visibleHighlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}
         highlightCommitBusy={annotationBusy}
-        bookmark={{
-          enabled: Boolean(sessionId && profileVersion && location?.cfi),
-          isBookmarked: Boolean(currentBookmark),
-          busy: annotationBusy,
-          onToggle: () => {
-            void toggleBookmarkAtCurrentLocation();
-          },
-        }}
       />
     ),
     debugPanel: null,
     sendCommand,
+    marginalia: {
+      previousLayers: highlightMarkLayers.previous.map((p) => ({ sessionId: p.sessionId, label: p.label, highlightCount: p.highlightCount })),
+      selectedPreviousSessionIds,
+      togglePreviousSession,
+    },
     annotations: {
       items: annotationItems,
       status: annotationStatus,

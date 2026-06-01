@@ -18,17 +18,9 @@ export type ReadingShellProps = {
     seq: number;
     value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" };
   };
-  statusLine?: string;
-  autosaveStatus?: { text: string; title?: string } | null;
   highlightMarks?: ReaderHighlightMark[];
   onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
   highlightCommitBusy?: boolean;
-  bookmark?: {
-    enabled: boolean;
-    isBookmarked: boolean;
-    busy?: boolean;
-    onToggle: () => void;
-  };
   onDescribeCfiReady?: (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => void;
 };
 
@@ -204,32 +196,6 @@ export function ReadingShell(props: ReadingShellProps) {
 
   return (
     <div className="spReadingShell">
-      <div className="spReadingShellBar">
-        <div className="spReadingShellLabelBlock">
-          {props.statusLine ? <div className="spReadingShellStatus">{props.statusLine}</div> : null}
-          {props.autosaveStatus ? (
-            <div className="muted spReadingShellAutosave" title={props.autosaveStatus.title}>
-              {props.autosaveStatus.text}
-            </div>
-          ) : null}
-        </div>
-        <div className="spReadingShellActions">
-          {props.bookmark ? (
-            <button
-              type="button"
-              className="button buttonCompact"
-              onClick={props.bookmark.onToggle}
-              disabled={!props.bookmark.enabled || status !== "ready" || Boolean(props.bookmark.busy)}
-              title={!props.bookmark.enabled ? "Bookmark is unavailable until a reading location is known." : undefined}
-              aria-label={props.bookmark.isBookmarked ? "Remove bookmark" : "Add bookmark"}
-            >
-              <MaterialIcon name={props.bookmark.isBookmarked ? "bookmark_added" : "bookmark_add"} />
-              <span className="spIconButtonLabel">{props.bookmark.isBookmarked ? "Bookmarked" : "Bookmark"}</span>
-            </button>
-          ) : null}
-        </div>
-      </div>
-
       <ReaderViewport
         ref={mountRef}
         mountWrapperRef={mountWrapperRef}

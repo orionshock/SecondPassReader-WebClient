@@ -3,8 +3,18 @@
 .spReaderActivity {
   display: grid;
   gap: 12px;
-  /* Prevent engine-rendered content from expanding the page horizontally. */
-  overflow-x: hidden;
+  /* Keep default overflow behavior so sticky chrome can work reliably. */
+}
+
+.spReaderChrome {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--sp-border);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+  backdrop-filter: blur(6px);
+  border-radius: 0;
 }
 
 .spReaderTopBar {
@@ -13,6 +23,24 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+  padding: 10px 12px;
+}
+
+.spReaderActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.spReaderTitle {
+  min-width: 0;
+}
+
+.spReaderStatusLine,
+.spReaderAutosaveLine {
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .spReaderTitleLine {
@@ -34,6 +62,11 @@
 .spReaderAnnotationsRegion,
 .spReaderDebugRegion {
   min-width: 0;
+}
+
+.spReaderViewportRegion {
+  /* Prevent engine-rendered content from expanding the page horizontally. */
+  overflow-x: hidden;
 }
 
 .spReaderViewport {
@@ -92,7 +125,7 @@
 .spSelectionToolbar {
   position: absolute;
   pointer-events: auto;
-  z-index: 20;
+  z-index: 120;
   display: grid;
   gap: 8px;
   padding: 8px;
@@ -183,7 +216,7 @@
   position: absolute;
   inset: 0;
   background: rgba(17, 24, 39, 0.35);
-  z-index: 30;
+  z-index: 100;
 }
 
 .spTocDrawer {
@@ -274,13 +307,74 @@
   background: rgba(17, 24, 39, 0.06);
 }
 
-.spReadingShellStatus {
-  font-size: 12px;
-  line-height: 1.2;
+.spMarginaliaMenuHost {
+  position: relative;
 }
 
-.spReadingShellAutosave {
+.spMarginaliaMenuBackdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 110;
+}
+
+.spMarginaliaMenuPanel {
+  position: fixed;
+  width: min(340px, calc(100vw - 24px));
+  background: var(--sp-panel);
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(17, 24, 39, 0.18);
+  overflow: hidden;
+}
+
+.spMarginaliaMenuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-border);
+}
+
+.spMarginaliaMenuTitle {
+  font-weight: 700;
+}
+
+.spMarginaliaMenuCloseButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.spMarginaliaMenuBody {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.spMarginaliaMenuSectionTitle {
   font-size: 12px;
+}
+
+.spMarginaliaEmpty {
+  font-size: 13px;
+}
+
+.spMarginaliaLayerList {
+  display: grid;
+  gap: 8px;
+}
+
+.spMarginaliaLayerRow {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 10px;
+  align-items: start;
+  font-size: 13px;
+}
+
+.spMarginaliaLayerLabel {
   line-height: 1.2;
 }
 
@@ -289,20 +383,6 @@
   gap: 10px;
   min-width: 0;
   max-width: 100%;
-}
-
-.spReadingShellBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.spReadingShellLabelBlock {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
 }
 
 .spReaderShellStack {

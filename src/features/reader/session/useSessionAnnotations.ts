@@ -30,6 +30,11 @@ export type SessionAnnotations = {
   highlightViewModels: HighlightViewModel[];
   highlightMarks: ReaderHighlightMark[];
 
+  highlightMarkLayers: {
+    current: ReaderHighlightMark[];
+    previous: Array<{ sessionId: string; label: string; highlightCount: number; marks: ReaderHighlightMark[] }>;
+  };
+
   items: Array<ReaderBookmarkViewModel | HighlightViewModel>;
 };
 
@@ -270,6 +275,60 @@ export function useSessionAnnotations(args: {
       .filter((m) => Boolean(m.id && m.cfiRange));
   }, [highlightViewModels]);
 
+  const highlightMarkLayers = useMemo(() => {
+    const currentSessionId = args.sessionId ?? "";
+    const marksBySessionId = new Map<string, ReaderHighlightMark[]>();
+    const highlightCountBySessionId = new Map<string, number>();
+    const lastActivityMsBySessionId = new Map<string, number>();
+
+    for (const a of sortedRaw) {
+      if (!isHighlightAnnotation(a)) continue;
+      const ra = toReaderAnnotation(a);
+      if (ra?.kind !== "highlight") continue;
+
+      const sessionId = typeof (a as any)?.session === "string" ? String((a as any).session).trim() : "";
+      if (!sessionId) continue;
+
+      const mark: ReaderHighlightMark = { id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "" };
+      const color = getAnnotationColor(a);
+      if (color) mark.color = color;
+      const note = getAnnotationNoteText(a);
+      if (note) mark.note = note;
+
+      const list = marksBySessionId.get(sessionId) ?? [];
+      list.push(mark);
+      marksBySessionId.set(sessionId, list);
+
+      highlightCountBySessionId.set(sessionId, (highlightCountBySessionId.get(sessionId) ?? 0) + 1);
+
+      const ts = getAnnotationTimestamp(a);
+      const ms = ts ? Date.parse(ts) : NaN;
+      if (Number.isFinite(ms)) {
+        const prev = lastActivityMsBySessionId.get(sessionId) ?? 0;
+        if (ms > prev) lastActivityMsBySessionId.set(sessionId, ms);
+      }
+    }
+
+    const current = currentSessionId ? (marksBySessionId.get(currentSessionId) ?? []) : highlightMarks;
+
+    const previous: Array<{ sessionId: string; label: string; highlightCount: number; lastActivityMs: number; marks: ReaderHighlightMark[] }> = [];
+    for (const [sessionId, marks] of marksBySessionId) {
+      if (sessionId === currentSessionId) continue;
+      const count = highlightCountBySessionId.get(sessionId) ?? marks.length;
+      const lastMs = lastActivityMsBySessionId.get(sessionId) ?? 0;
+      const when = lastMs > 0 ? new Date(lastMs).toLocaleString() : "Unknown date";
+      const label = `${when} \u00B7 ${count} highlight${count === 1 ? "" : "s"}`;
+      previous.push({ sessionId, label, highlightCount: count, lastActivityMs: lastMs, marks });
+    }
+    previous.sort((a, b) => {
+      const d = (b.lastActivityMs || 0) - (a.lastActivityMs || 0);
+      if (d !== 0) return d;
+      return b.highlightCount - a.highlightCount;
+    });
+
+    return { current, previous: previous.map(({ lastActivityMs, ...rest }) => rest) };
+  }, [args.sessionId, highlightMarks, sortedRaw]);
+
   const items: Array<ReaderBookmarkViewModel | HighlightViewModel> = useMemo(() => {
     const combined: Array<any> = [...bookmarkViewModels, ...highlightViewModels];
     const tsMs = (vm: { timestamp?: string; id: string }): number => {
@@ -301,6 +360,7 @@ export function useSessionAnnotations(args: {
       bookmarkViewModels,
       highlightViewModels,
       highlightMarks,
+      highlightMarkLayers,
       items,
     }),
     [
@@ -310,6 +370,7 @@ export function useSessionAnnotations(args: {
       error,
       handleDescribeCfiReady,
       highlightMarks,
+      highlightMarkLayers,
       highlightViewModels,
       items,
       onLocationsReady,
