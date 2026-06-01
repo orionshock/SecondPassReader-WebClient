@@ -59,14 +59,16 @@ export function ReadingActivity({
                       <span className="spIconButtonLabel">{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
                     </button>
 
-                    <MarginaliaMenu
-                      open={marginaliaOpen}
-                      onOpen={() => setMarginaliaOpen(true)}
-                      onClose={() => setMarginaliaOpen(false)}
-                      previousLayers={marginalia.previousLayers}
-                      selectedPreviousSessionIds={selectedPreviousSessionIds}
-                      onTogglePreviousSession={marginalia.togglePreviousSession}
-                    />
+                  <MarginaliaMenu
+                    open={marginaliaOpen}
+                    onOpen={() => setMarginaliaOpen(true)}
+                    onClose={() => setMarginaliaOpen(false)}
+                    listStatus={marginalia.listStatus}
+                    listError={marginalia.listError}
+                    previousLayers={marginalia.previousLayers}
+                    selectedPreviousSessionIds={selectedPreviousSessionIds}
+                    onTogglePreviousSession={marginalia.togglePreviousSession}
+                  />
 
                     <button
                       type="button"

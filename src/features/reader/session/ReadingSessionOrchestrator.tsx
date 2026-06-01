@@ -14,6 +14,7 @@ import { toReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/b
 import type { HighlightViewModel } from "../annotations/viewModels";
 import { getAnnotationColor, getAnnotationDescribingText, toReaderAnnotation } from "../annotations/annotationUtils";
 import { useSessionAnnotations } from "./useSessionAnnotations";
+import { usePreviousSessionLayers } from "./usePreviousSessionLayers";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -27,7 +28,9 @@ export type ReadingSessionOrchestratorProps = {
     debugPanel: ReactNode | null;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
     marginalia: {
-      previousLayers: Array<{ sessionId: string; label: string; highlightCount: number }>;
+      listStatus: "idle" | "loading" | "ready" | "error";
+      listError: string | null;
+      previousLayers: Array<{ sessionId: string; label: string; highlightCount: number; status: "idle" | "loading" | "ready" | "error"; error?: string }>;
       selectedPreviousSessionIds: string[];
       togglePreviousSession: (sessionId: string) => void;
     };
@@ -53,7 +56,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const [annotationBusy, setAnnotationBusy] = useState(false);
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
-  const [selectedPreviousSessionIds, setSelectedPreviousSessionIds] = useState<string[]>([]);
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -79,11 +81,17 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     error: annotationError,
     setError: setAnnotationError,
     items: annotationItems,
-    highlightMarkLayers,
+    highlightMarks,
     handleDescribeCfiReady,
     onLocationsReady,
     currentBookmark,
   } = sessionAnnotations;
+
+  const previousLayers = usePreviousSessionLayers({
+    spl: props.spl,
+    bookId: props.openedBook.book.id,
+    currentSessionId: sessionId,
+  });
 
   const state: ReadingSessionState = useMemo(() => {
     const seedAnnotations: ReaderAnnotation[] = annotationsRaw
@@ -166,22 +174,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return parts.join(" \u00B7 ");
   }, [state.location?.bookProgress, state.location?.displayedPage, state.location?.displayedTotal, state.location?.href, state.toc]);
 
-  const togglePreviousSession = useCallback((sid: string) => {
-    const id = typeof sid === "string" ? sid.trim() : "";
-    if (!id) return;
-    setSelectedPreviousSessionIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }, []);
-
   const visibleHighlightMarks: ReaderHighlightMark[] = useMemo(() => {
-    const selected = new Set(selectedPreviousSessionIds);
-    const out: ReaderHighlightMark[] = [...highlightMarkLayers.current];
-    for (const layer of highlightMarkLayers.previous) {
-      if (!selected.has(layer.sessionId)) continue;
-      out.push(...layer.marks);
-    }
+    const out: ReaderHighlightMark[] = [...highlightMarks, ...previousLayers.selectedHighlightMarks];
     // Preserve existing behavior: staged selection mark composes in the shell; durable marks are filtered here only.
     return out;
-  }, [highlightMarkLayers.current, highlightMarkLayers.previous, selectedPreviousSessionIds]);
+  }, [highlightMarks, previousLayers.selectedHighlightMarks]);
 
   const sendCommand = useCallback((command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => {
     commandSeqRef.current += 1;
@@ -360,9 +357,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     debugPanel: null,
     sendCommand,
     marginalia: {
-      previousLayers: highlightMarkLayers.previous.map((p) => ({ sessionId: p.sessionId, label: p.label, highlightCount: p.highlightCount })),
-      selectedPreviousSessionIds,
-      togglePreviousSession,
+      listStatus: previousLayers.listStatus,
+      listError: previousLayers.listError,
+      previousLayers: previousLayers.previousLayers,
+      selectedPreviousSessionIds: previousLayers.selectedPreviousSessionIds,
+      togglePreviousSession: previousLayers.togglePreviousSession,
     },
     annotations: {
       items: annotationItems,

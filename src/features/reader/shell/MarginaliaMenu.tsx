@@ -5,19 +5,23 @@ export type MarginaliaLayerSummary = {
   sessionId: string;
   label: string;
   highlightCount: number;
+  status?: "idle" | "loading" | "ready" | "error";
+  error?: string;
 };
 
 export function MarginaliaMenu(props: {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
+  listStatus?: "idle" | "loading" | "ready" | "error";
+  listError?: string | null;
   previousLayers: MarginaliaLayerSummary[];
   selectedPreviousSessionIds: Set<string>;
   onTogglePreviousSession: (sessionId: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (!props.open) return;
@@ -35,20 +39,30 @@ export function MarginaliaMenu(props: {
     if (!props.open) return;
     const updatePos = () => {
       const host = hostRef.current;
-      if (!host) return;
-      const rect = host.getBoundingClientRect();
-      const top = rect.bottom + 8;
-      const right = Math.max(12, window.innerWidth - rect.right);
-      setPanelPos({ top: Math.max(8, top), right });
+      const panel = panelRef.current;
+      if (!host || !panel) return;
+      const hostRect = host.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const panelW = panelRect.width || 340;
+
+      const margin = 12;
+      const top = Math.max(margin, hostRect.bottom + 8);
+      const desiredLeft = hostRect.right - panelW;
+      const left = Math.min(Math.max(margin, desiredLeft), Math.max(margin, window.innerWidth - panelW - margin));
+      setPanelPos({ top, left });
     };
-    updatePos();
+
+    // Defer until after initial paint so the panel has a measurable width.
+    const id = window.setTimeout(updatePos, 0);
     window.addEventListener("resize", updatePos);
-    window.addEventListener("scroll", updatePos, { passive: true });
+    const onScroll = () => props.onClose();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      window.clearTimeout(id);
       window.removeEventListener("resize", updatePos);
-      window.removeEventListener("scroll", updatePos);
+      window.removeEventListener("scroll", onScroll);
     };
-  }, [props.open]);
+  }, [props.onClose, props.open]);
 
   const previousLayers = useMemo(() => props.previousLayers ?? [], [props.previousLayers]);
 
@@ -79,7 +93,7 @@ export function MarginaliaMenu(props: {
           <div
             ref={panelRef}
             className="spMarginaliaMenuPanel"
-            style={panelPos ? { top: panelPos.top, right: panelPos.right } : undefined}
+            style={panelPos ? { top: panelPos.top, left: panelPos.left } : undefined}
             role="dialog"
             aria-modal="true"
             aria-label="Marginalia"
@@ -100,17 +114,23 @@ export function MarginaliaMenu(props: {
 
             <div className="spMarginaliaMenuBody">
               <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
-              {previousLayers.length === 0 ? <div className="muted spMarginaliaEmpty">No previous sessions.</div> : null}
+              {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading…</div> : null}
+              {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">Failed to load sessions: {props.listError}</div> : null}
+              {props.listStatus !== "loading" && previousLayers.length === 0 ? (
+                <div className="muted spMarginaliaEmpty">No previous sessions.</div>
+              ) : null}
               {previousLayers.length > 0 ? (
                 <div className="spMarginaliaLayerList" role="group" aria-label="Previous session layers">
                   {previousLayers.map((layer) => {
                     const checked = props.selectedPreviousSessionIds.has(layer.sessionId);
+                    const disabled = layer.status === "loading";
                     return (
                       <label key={layer.sessionId} className="spMarginaliaLayerRow">
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => props.onTogglePreviousSession(layer.sessionId)}
+                          disabled={disabled}
                         />
                         <span className="spMarginaliaLayerLabel">{layer.label}</span>
                       </label>
