@@ -6,6 +6,7 @@ import type { ReaderSelection } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import type { ReaderHighlightMark } from "../domain/types";
 import { createHighlightMarkPainter } from "./highlightMarks";
+import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
@@ -34,41 +35,6 @@ export type EpubTsBookEngine = {
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   destroy(): void;
 };
-
-function toRenditionTarget(target: ReaderLocationTarget | undefined): string | number | undefined {
-  if (!target) return undefined;
-  switch (target.type) {
-    case "cfi":
-      return target.cfi;
-    case "cfiRange":
-      return target.cfiRange;
-    case "href":
-      return target.href;
-  }
-}
-
-function normalizeLocation(loc: Location): ReaderLocation {
-  const start = loc.start;
-  return {
-    cfi: start.cfi,
-    href: start.href,
-    bookProgress: typeof start.percentage === "number" ? start.percentage : undefined,
-    displayedPage: start.displayed?.page,
-    displayedTotal: start.displayed?.total,
-    raw: loc,
-  };
-}
-
-function normalizeTocItems(items: Array<{ id: string; href: string; label: string; subitems?: any[] }>): ReaderTocItem[] {
-  return items
-    .filter((i) => i && typeof i.href === "string" && typeof i.label === "string")
-    .map((i) => ({
-      id: i.id,
-      label: i.label,
-      href: i.href,
-      children: Array.isArray(i.subitems) ? normalizeTocItems(i.subitems) : undefined,
-    }));
-}
 
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
   const book: Book = ePub(init.source as any, { replacements: "blobUrl" });
