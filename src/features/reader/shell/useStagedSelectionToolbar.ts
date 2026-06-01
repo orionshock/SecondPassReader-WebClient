@@ -88,12 +88,16 @@ export function useStagedSelectionToolbar(args: {
       : [];
   }, [stagedColor, stagedSelection]);
 
+  const combinedMarks = useMemo(() => {
+    return [...(args.highlightMarks ?? []), ...stagedMark];
+  }, [args.highlightMarks, stagedMark]);
+
   // Keep engine highlight marks in sync with current durable marks + any staged mark.
   useEffect(() => {
     const engine = args.engineRef.current;
     if (!engine) return;
-    engine.setHighlightMarks([...highlightMarksRef.current, ...stagedMark]);
-  }, [args.engineRef, stagedMark]);
+    engine.setHighlightMarks(combinedMarks);
+  }, [args.engineRef, combinedMarks]);
 
   // Escape cancels staged highlight without server write.
   useEffect(() => {
