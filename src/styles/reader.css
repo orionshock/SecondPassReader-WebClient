@@ -332,6 +332,7 @@
   display: grid;
   gap: 5px;
   min-width: 0;
+  align-items: start;
 }
 
 .spAnnotationKindRow {
@@ -408,6 +409,7 @@
   /* Defensive: ensure no JS/old styles lock quote height. */
   height: auto !important;
   padding-bottom: 6px !important;
+  align-self: start;
 }
 
 .spAnnotationNote {
@@ -420,6 +422,7 @@
   line-height: 1.35;
   width: fit-content;
   max-width: min(72ch, 100%);
+  align-self: start;
 }
 
 .spAnnotationMetaLine {
