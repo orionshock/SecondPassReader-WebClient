@@ -16,6 +16,11 @@ export type EpubTsBookEngineInit = {
   onLocationsReady?: () => void;
   onSelectionChanged?: (selection: ReaderSelection | null) => void;
   onError?: (error: unknown) => void;
+  /**
+   * Enables background locations generation for approximate whole-book percentages.
+   * Some epub-ts builds/books throw unhandled errors during generation; keep opt-in.
+   */
+  enableLocationsGeneration?: boolean;
 };
 
 export type EpubTsBookEngine = {
@@ -116,7 +121,7 @@ function extractSelectionTextAndContext(contents: { window: Window; document: Do
 }
 
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
-  const book: Book = ePub(init.source, { replacements: "blobUrl" });
+  const book: Book = ePub(init.source as any, { replacements: "blobUrl" });
 
   // Ensure parsing/opening completes before rendering.
   await book.opened;
@@ -231,27 +236,27 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   const startLocationsGeneration = () => {
     if (locationsGeneratePromise) return;
     try {
-      locationsGeneratePromise = book.locations
-        .generate(1000)
-        .then(() => {
+      locationsGeneratePromise = (async () => {
+        try {
+          await book.locations.generate(1000);
           if (destroyed) return;
           const hasLocations = typeof book.locations.length === "function" ? book.locations.length() > 0 : false;
           if (hasLocations) {
             locationsReady = true;
             init.onLocationsReady?.();
           }
-        })
-        .catch((err: unknown) => {
+        } catch (err: unknown) {
           if (destroyed) return;
           // Non-fatal: percentage labels should degrade gracefully.
           init.onError?.(err);
-        });
+        }
+      })();
     } catch (err) {
       // ignore
     }
   };
 
-  startLocationsGeneration();
+  if (init.enableLocationsGeneration) startLocationsGeneration();
 
   const paintedHighlightsById = new Map<string, { cfiRange: string; colorKey: string }>();
 

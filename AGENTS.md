@@ -32,6 +32,27 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - Keep layers explicit; avoid “magic” abstractions.
 - If a change would introduce a large new dependency or framework, ask first and explain why.
 
+## Refactor conventions
+
+- When adding non-trivial new behavior, prefer a dedicated file/module/hook/component instead of growing an already-large file.
+- Large files should usually only be modified to wire new modules in.
+- Keep responsibilities narrow:
+  - components render UI
+  - hooks own interaction/lifecycle state
+  - helpers own pure mapping/formatting/sorting
+  - adapters own API/schema translation
+  - orchestrators wire behavior together; avoid “dumping ground” growth
+- When extracting, avoid broad rewrites; make small focused modules with explicit boundaries.
+
+## Hook dependency stability
+
+- Custom hooks that return callbacks/arrays/objects used by shell/engine/orchestrator components should be referentially stable where practical.
+- Wrap returned callbacks in `useCallback`; wrap derived arrays/objects passed as props in `useMemo`. Consider memoizing the returned hook object itself.
+- At call sites, destructure the specific values/callbacks needed; avoid depending on aggregate hook result objects in dependency arrays (e.g. `sessionAnnotations`, `stagedToolbar`).
+- Reader engine lifecycle effects are especially sensitive: unstable props/callbacks can cause destroy/re-init loops, duplicated network requests, or blank viewports.
+- When extracting around reader shell/orchestrator code, verify engine init effects do not begin depending on rapidly changing UI state (e.g. staged selection/toolbar state, derived annotation arrays, aggregate hook objects).
+- If a stable callback needs current mutable state, prefer a ref pattern over putting that state into a lifecycle effect dependency list.
+
 ## Spec junction (read-only reference)
 
 - `docs/specs/reading-session-annotation-profile` is a **Windows junction** / reference copy of a **server-owned** spec.
@@ -39,4 +60,3 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - If the spec needs changes, stop and ask; changes must be made in the server/spec owner project first.
 - Client implementation may reference the spec, but runtime TypeScript types belong in `src/schemas/`.
 - Do not import runtime app code from `docs/` (docs are reference material only).
-

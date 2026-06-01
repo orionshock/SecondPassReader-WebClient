@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
-import type { ReadingShellCommand, ReadingShellEvent } from "./types";
+import type { ReadingShellEvent } from "./types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
+import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 
 export type ReadingShellProps = {
   blob: Blob;
   initialDisplayTarget?: ReaderLocationTarget;
-  annotations?: ReaderAnnotation[];
   onEvent?: (event: ReadingShellEvent) => void;
-  onCommand?: (command: ReadingShellCommand) => void;
   command?: {
     seq: number;
     value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" };
@@ -46,31 +45,18 @@ export function ReadingShell(props: ReadingShellProps) {
     highlightMarksRef.current = props.highlightMarks ?? [];
   }, [props.highlightMarks]);
 
-  const [stagedSelection, setStagedSelection] = useState<ReaderSelection | null>(null);
-  const stagedSelectionRef = useRef<ReaderSelection | null>(null);
-  const [stagedColor, setStagedColor] = useState<string>("yellow");
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number; placement: "above" | "below" } | null>(
-    null,
-  );
-
-  useEffect(() => {
-    stagedSelectionRef.current = stagedSelection;
-  }, [stagedSelection]);
-
   const mountRef = useCallback((el: HTMLDivElement | null) => {
     setMountEl(el);
   }, []);
 
-  const cancelStaged = useCallback(() => {
-    setStagedSelection(null);
-    setStagedColor("yellow");
-    setNoteOpen(false);
-    setNoteDraft("");
-    setToolbarPos(null);
-    engineRef.current?.clearSelection();
-  }, []);
+  const staged = useStagedSelectionToolbar({
+    engineRef,
+    mountWrapperRef,
+    highlightMarks: props.highlightMarks,
+    onCommitHighlight: props.onCommitHighlight,
+    commitBusy: props.highlightCommitBusy,
+  });
+  const { onSelectionChanged, cancelStaged, stagedSelectionRef } = staged;
 
   useEffect(() => {
     if (!mountEl) return;
@@ -84,39 +70,16 @@ export function ReadingShell(props: ReadingShellProps) {
         const engine = await createEpubTsBookEngine({
           source: props.blob,
           mountEl,
+          // Locations generation currently can throw unhandled errors in epub-ts for some books.
+          // Keep it opt-in until upstream behavior is reliable.
+          enableLocationsGeneration: false,
           onLocationChanged: (location) => {
             if (stagedSelectionRef.current) cancelStaged();
             props.onEvent?.({ type: "locationChanged", location });
           },
           onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
           onLocationsReady: () => props.onEvent?.({ type: "locationsReady" }),
-          onSelectionChanged: (selection) => {
-            if (!selection) {
-              if (stagedSelectionRef.current) cancelStaged();
-              return;
-            }
-
-            // Selecting new text discards any previous uncommitted staged highlight.
-            setStagedSelection(selection);
-            setStagedColor("yellow");
-            setNoteOpen(false);
-            setNoteDraft("");
-
-            const wrapper = mountWrapperRef.current;
-            const anchor = selection.anchor;
-            if (wrapper && anchor) {
-              const r = wrapper.getBoundingClientRect();
-              const left = Math.max(12, Math.min(r.width - 12, anchor.x - r.left));
-              const topRaw = Math.max(0, Math.min(r.height, anchor.y - r.top));
-              const placement: "above" | "below" = topRaw < 72 ? "below" : "above";
-              setToolbarPos({ left, top: topRaw, placement });
-            } else if (wrapper) {
-              const r = wrapper.getBoundingClientRect();
-              setToolbarPos({ left: r.width / 2, top: 18, placement: "below" });
-            } else {
-              setToolbarPos(null);
-            }
-          },
+          onSelectionChanged,
           onError: (err) => props.onEvent?.({ type: "displayError", error: err }),
         });
 
@@ -172,7 +135,16 @@ export function ReadingShell(props: ReadingShellProps) {
       props.onDescribeCfiReady?.(null);
       engine?.destroy();
     };
-  }, [cancelStaged, mountEl, props.blob, props.initialDisplayTarget, props.onDescribeCfiReady, props.onEvent]);
+  }, [
+    cancelStaged,
+    mountEl,
+    onSelectionChanged,
+    props.blob,
+    props.initialDisplayTarget,
+    props.onDescribeCfiReady,
+    props.onEvent,
+    stagedSelectionRef,
+  ]);
 
   useEffect(() => {
     const cmd = props.command;
@@ -205,24 +177,7 @@ export function ReadingShell(props: ReadingShellProps) {
     })();
   }, [props.command, props.onEvent]);
 
-  useEffect(() => {
-    if (!engineRef.current) return;
-    const staged: ReaderHighlightMark[] =
-      stagedSelection?.cfiRange ? [{ id: "__staged_selection__", cfiRange: stagedSelection.cfiRange, color: stagedColor }] : [];
-    engineRef.current.setHighlightMarks([...(props.highlightMarks ?? []), ...staged]);
-  }, [props.highlightMarks, stagedColor, stagedSelection]);
-
-  useEffect(() => {
-    if (!stagedSelection) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        cancelStaged();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [cancelStaged, stagedSelection]);
+  // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
   const goPrev = async () => {
     try {
@@ -300,39 +255,22 @@ export function ReadingShell(props: ReadingShellProps) {
               <MaterialIcon name="chevron_right" className="spReaderPageNavIcon" />
             </button>
 
-            {stagedSelection && toolbarPos ? (
+            {staged.stagedSelection && staged.toolbarPos ? (
               <SelectionHighlightToolbar
                 open={true}
-                left={toolbarPos.left}
-                top={toolbarPos.top}
-                placement={toolbarPos.placement}
-                color={stagedColor}
-                noteOpen={noteOpen}
-                noteDraft={noteDraft}
-                busy={Boolean(props.highlightCommitBusy)}
-                onPickColorAndCommit={async (color) => {
-                  if (!props.onCommitHighlight || !stagedSelection) return;
-                  setStagedColor(color);
-                  try {
-                    await props.onCommitHighlight({ selection: stagedSelection, color });
-                    cancelStaged();
-                  } catch {
-                    // Keep staged highlight + toolbar open on failure.
-                  }
-                }}
-                onOpenNote={() => setNoteOpen(true)}
-                onChangeNoteDraft={(value) => setNoteDraft(value)}
-                onSaveNote={async () => {
-                  if (!props.onCommitHighlight || !stagedSelection) return;
-                  try {
-                    await props.onCommitHighlight({ selection: stagedSelection, color: stagedColor, note: noteDraft.trim() });
-                    cancelStaged();
-                  } catch {
-                    // Keep staged highlight + toolbar open on failure.
-                  }
-                }}
-                onCloseNote={() => setNoteOpen(false)}
-                onCancel={cancelStaged}
+                left={staged.toolbarPos.left}
+                top={staged.toolbarPos.top}
+                placement={staged.toolbarPos.placement}
+                color={staged.stagedColor}
+                noteOpen={staged.noteOpen}
+                noteDraft={staged.noteDraft}
+                busy={staged.commitBusy}
+                onPickColorAndCommit={staged.commitColor}
+                onOpenNote={staged.openNote}
+                onChangeNoteDraft={staged.setNoteDraft}
+                onSaveNote={staged.saveNote}
+                onCloseNote={staged.closeNote}
+                onCancel={staged.cancelStaged}
               />
             ) : null}
           </>
