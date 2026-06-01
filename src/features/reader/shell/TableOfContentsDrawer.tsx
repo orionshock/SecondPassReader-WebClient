@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReaderTocItem } from "../domain/types";
+import { MaterialIcon } from "../../../components/MaterialIcon";
 
 type FilteredTocItem = ReaderTocItem & { children?: FilteredTocItem[] };
 
@@ -32,7 +33,11 @@ function TocTree({
   onPick: (item: ReaderTocItem) => void;
 }) {
   return (
-    <ul className="spTocList" role={depth === 0 ? "tree" : "group"} aria-label={depth === 0 ? "Table of contents" : undefined}>
+    <ul
+      className={depth === 0 ? "spTocList spTocListRoot" : "spTocList spTocListNested"}
+      role={depth === 0 ? "tree" : "group"}
+      aria-label={depth === 0 ? "Table of contents" : undefined}
+    >
       {items.map((item) => {
         const key = `${item.id ?? ""}|${item.href ?? ""}|${item.label ?? ""}`;
         const hasChildren = Boolean(item.children && item.children.length > 0);
@@ -74,6 +79,7 @@ export function TableOfContentsDrawer({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.preventDefault();
+      e.stopPropagation();
       onClose();
     };
     window.addEventListener("keydown", onKeyDown);
@@ -94,7 +100,9 @@ export function TableOfContentsDrawer({
     <div
       className="spTocDrawerBackdrop"
       role="presentation"
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (panelRef.current && panelRef.current.contains(e.target as Node)) return;
         onClose();
       }}
@@ -105,12 +113,22 @@ export function TableOfContentsDrawer({
         role="dialog"
         aria-modal="true"
         aria-label="Table of Contents"
-        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => {
+          // Prevent click-away handler from firing while keeping default behavior
+          // for interactive controls within the drawer (focus, text selection).
+          e.stopPropagation();
+        }}
       >
         <div className="spTocDrawerHeader">
           <div className="spTocDrawerTitle">Table of Contents</div>
-          <button type="button" className="button buttonCompact" onClick={onClose} aria-label="Close table of contents" title="Close">
-            ×
+          <button
+            type="button"
+            className="button buttonCompact spTocDrawerCloseButton"
+            onClick={onClose}
+            aria-label="Close table of contents"
+            title="Close"
+          >
+            <MaterialIcon name="close" />
           </button>
         </div>
 
@@ -119,7 +137,7 @@ export function TableOfContentsDrawer({
             className="input spTocDrawerSearchInput"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search..."
             aria-label="Search table of contents"
           />
         </div>
@@ -141,4 +159,3 @@ export function TableOfContentsDrawer({
     </div>
   );
 }
-
