@@ -20,6 +20,8 @@ export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
   spl?: SecondPassClient | null;
   settings?: ReaderSettings;
+  onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
+  onSettingsReset?: () => void;
   children: (arg: {
     state: ReadingSessionState;
     statusLine: string;
@@ -402,6 +404,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         highlightMarks={visibleHighlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}
         highlightCommitBusy={annotationBusy}
+        settings={props.settings}
+        onSettingsChange={props.onSettingsChange}
+        onSettingsReset={props.onSettingsReset}
       />
     ),
     debugPanel: null,

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
+import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellEvent } from "./types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
@@ -22,6 +24,9 @@ export type ReadingShellProps = {
   onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
   highlightCommitBusy?: boolean;
   onDescribeCfiReady?: (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => void;
+  settings?: ReaderSettings;
+  onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
+  onSettingsReset?: () => void;
 };
 
 export function ReadingShell(props: ReadingShellProps) {
@@ -34,6 +39,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tocOpen, setTocOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
   useEffect(() => {
@@ -224,6 +230,17 @@ export function ReadingShell(props: ReadingShellProps) {
                 setTocOpen(false);
               }}
             />
+            {props.settings && props.onSettingsChange ? (
+              <ReaderDisplaySettingsMenu
+                open={settingsOpen}
+                disabled={status !== "ready"}
+                settings={props.settings}
+                onOpen={() => setSettingsOpen(true)}
+                onClose={() => setSettingsOpen(false)}
+                onChange={props.onSettingsChange}
+                onReset={props.onSettingsReset}
+              />
+            ) : null}
             <button
               type="button"
               className="spReaderPageNav spReaderPageNavPrev"

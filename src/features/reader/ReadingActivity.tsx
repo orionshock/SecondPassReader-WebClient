@@ -1,11 +1,14 @@
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { AnnotationWorkspace } from "./annotations/AnnotationWorkspace";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
+import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
+import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
 
 export function ReadingActivity({
   openedBook,
@@ -21,10 +24,26 @@ export function ReadingActivity({
   if (!openedBook) return <p className="muted">No book open.</p>;
 
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
+  const readerDisplaySettings = useReaderDisplaySettings(settings);
+  const displaySettings = readerDisplaySettings.settings;
 
   return (
-    <div className="spReaderActivity">
-      <ReadingSessionOrchestrator openedBook={openedBook} spl={spl} settings={settings}>
+    <div
+      className="spReaderActivity"
+      data-reader-theme={displaySettings.theme}
+      data-reader-width={displaySettings.readerWidth}
+      data-reader-line-height={displaySettings.lineHeight}
+      data-reader-font-size={displaySettings.fontSizePercent}
+      data-reader-font={displaySettings.fontFamily}
+      style={{ "--sp-reader-font-scale": getReaderFontSizeScale(displaySettings) } as CSSProperties}
+    >
+      <ReadingSessionOrchestrator
+        openedBook={openedBook}
+        spl={spl}
+        settings={displaySettings}
+        onSettingsChange={readerDisplaySettings.updateSettings}
+        onSettingsReset={readerDisplaySettings.resetSettings}
+      >
         {({ state, statusLine, autosaveStatus, shell, annotations, marginalia }) => {
           const canBookmark = Boolean(openedBook.readingOpen?.session?.id && openedBook.readingOpen?.profile_version && state.location?.cfi);
           const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
@@ -59,16 +78,16 @@ export function ReadingActivity({
                       <span className="spIconButtonLabel">{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
                     </button>
 
-                  <MarginaliaMenu
-                    open={marginaliaOpen}
-                    onOpen={() => setMarginaliaOpen(true)}
-                    onClose={() => setMarginaliaOpen(false)}
-                    listStatus={marginalia.listStatus}
-                    listError={marginalia.listError}
-                    previousLayers={marginalia.previousLayers}
-                    selectedPreviousSessionIds={selectedPreviousSessionIds}
-                    onTogglePreviousSession={marginalia.togglePreviousSession}
-                  />
+                    <MarginaliaMenu
+                      open={marginaliaOpen}
+                      onOpen={() => setMarginaliaOpen(true)}
+                      onClose={() => setMarginaliaOpen(false)}
+                      listStatus={marginalia.listStatus}
+                      listError={marginalia.listError}
+                      previousLayers={marginalia.previousLayers}
+                      selectedPreviousSessionIds={selectedPreviousSessionIds}
+                      onTogglePreviousSession={marginalia.togglePreviousSession}
+                    />
 
                     <button
                       type="button"

@@ -1,6 +1,6 @@
 export type ReaderTheme = "light" | "sepia" | "dark";
 export type ReaderWidth = "narrow" | "normal" | "wide";
-export type ReaderLineHeight = "compact" | "normal" | "relaxed" | "loose";
+export type ReaderLineHeight = "compact" | "normal" | "spacious";
 export type ReaderFontFamily = "publisher" | "serif" | "sans";
 export type ReaderPageMargin = "compact" | "normal" | "wide";
 
@@ -24,13 +24,16 @@ const DEFAULTS: ReaderSettings = {
   pageMargin: "normal",
 };
 
-export const FONT_SIZE_MIN = 75;
-export const FONT_SIZE_MAX = 180;
+export const READER_FONT_SIZE_OPTIONS = [90, 100, 110, 120, 140] as const;
+export type ReaderFontSizePercent = (typeof READER_FONT_SIZE_OPTIONS)[number];
 
 function clampFontSizePercent(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return DEFAULTS.fontSizePercent;
-  return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(n)));
+  const rounded = Math.round(n);
+  return READER_FONT_SIZE_OPTIONS.reduce((best, option) => {
+    return Math.abs(option - rounded) < Math.abs(best - rounded) ? option : best;
+  }, READER_FONT_SIZE_OPTIONS[0]);
 }
 
 function isTheme(value: unknown): value is ReaderTheme {
@@ -41,8 +44,10 @@ function isWidth(value: unknown): value is ReaderWidth {
   return value === "narrow" || value === "normal" || value === "wide";
 }
 
-function isLineHeight(value: unknown): value is ReaderLineHeight {
-  return value === "compact" || value === "normal" || value === "relaxed" || value === "loose";
+function normalizeLineHeight(value: unknown): ReaderLineHeight {
+  if (value === "compact" || value === "normal" || value === "spacious") return value;
+  if (value === "relaxed" || value === "loose") return "spacious";
+  return DEFAULTS.lineHeight;
 }
 
 function isFontFamily(value: unknown): value is ReaderFontFamily {
@@ -58,7 +63,7 @@ export function normalizeReaderSettings(input: Partial<ReaderSettings> | null | 
     fontSizePercent: clampFontSizePercent(input?.fontSizePercent),
     theme: isTheme(input?.theme) ? input.theme : DEFAULTS.theme,
     readerWidth: isWidth(input?.readerWidth) ? input.readerWidth : DEFAULTS.readerWidth,
-    lineHeight: isLineHeight((input as any)?.lineHeight) ? (input as any).lineHeight : DEFAULTS.lineHeight,
+    lineHeight: normalizeLineHeight((input as any)?.lineHeight),
     fontFamily: isFontFamily((input as any)?.fontFamily) ? (input as any).fontFamily : DEFAULTS.fontFamily,
     pageMargin: isPageMargin((input as any)?.pageMargin) ? (input as any).pageMargin : DEFAULTS.pageMargin,
   };
