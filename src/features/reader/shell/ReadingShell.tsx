@@ -34,6 +34,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const mountWrapperRef = useRef<HTMLDivElement | null>(null);
   const lastHandledCommandSeqRef = useRef<number | null>(null);
   const deferredCommandRef = useRef<ReadingShellProps["command"] | null>(null);
+  const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
@@ -42,6 +43,10 @@ export function ReadingShell(props: ReadingShellProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
+  useEffect(() => {
+    settingsRef.current = props.settings;
+  }, [props.settings]);
+
   useEffect(() => {
     highlightMarksRef.current = props.highlightMarks ?? [];
   }, [props.highlightMarks]);
@@ -74,6 +79,7 @@ export function ReadingShell(props: ReadingShellProps) {
            // Locations generation currently can throw unhandled errors in epub-ts for some books.
            // Keep it opt-in until upstream behavior is reliable.
            enableLocationsGeneration: true,
+           displaySettings: settingsRef.current,
            onLocationChanged: (location) => {
              if (stagedSelectionRef.current) cancelStaged();
              props.onEvent?.({ type: "locationChanged", location });
@@ -177,6 +183,22 @@ export function ReadingShell(props: ReadingShellProps) {
       }
     })();
   }, [props.command, props.onEvent]);
+
+  useEffect(() => {
+    if (!props.settings) return;
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    void (async () => {
+      try {
+        await engine.applyDisplaySettings(props.settings!);
+      } catch (err) {
+        setStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : "Display settings failed.");
+        props.onEvent?.({ type: "displayError", error: err });
+      }
+    })();
+  }, [props.onEvent, props.settings]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 

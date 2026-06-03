@@ -1,4 +1,5 @@
 import ePub, { EpubCFI, type Book, type Location, type Rendition } from "@likecoin/epub-ts";
+import { normalizeReaderSettings, type ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
@@ -8,6 +9,12 @@ import type { ReaderHighlightMark } from "../domain/types";
 import { createHighlightMarkPainter } from "./highlightMarks";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
+import {
+  getReaderEpubDisplayRules,
+  getReaderEpubThemeRules,
+  getReaderFontFamilyCssValue,
+  getReaderLineHeightCssValue,
+} from "../settings/readerDisplaySettings";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
@@ -24,6 +31,7 @@ export type EpubTsBookEngineInit = {
    * Some epub-ts builds/books throw unhandled errors during generation; keep opt-in.
    */
   enableLocationsGeneration?: boolean;
+  displaySettings?: ReaderSettings;
 };
 
 export type EpubTsBookEngine = {
@@ -31,6 +39,7 @@ export type EpubTsBookEngine = {
   next(): Promise<void>;
   previous(): Promise<void>;
   clearSelection(): void;
+  applyDisplaySettings(settings: ReaderSettings): Promise<void>;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   destroy(): void;
@@ -94,8 +103,74 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     // continue
   }
 
+  let destroyed = false;
   let locationsReady = false;
   let lastRelocatedLoc: Location | null = null;
+
+  const registerReaderThemes = () => {
+    rendition.themes.registerRules("light", getReaderEpubThemeRules("light"));
+    rendition.themes.registerRules("sepia", getReaderEpubThemeRules("sepia"));
+    rendition.themes.registerRules("dark", getReaderEpubThemeRules("dark"));
+  };
+
+  let lastAppliedDisplaySettingsKey = "";
+
+  const getCurrentCfi = (): string | null => {
+    try {
+      const current = rendition.currentLocation();
+      const cfi = current?.start?.cfi;
+      if (typeof cfi === "string" && cfi.trim()) return cfi.trim();
+    } catch {
+      // ignore
+    }
+    const relocatedCfi = lastRelocatedLoc?.start?.cfi;
+    return typeof relocatedCfi === "string" && relocatedCfi.trim() ? relocatedCfi.trim() : null;
+  };
+
+  const applyDisplaySettingsInternal = async (settings: ReaderSettings, options?: { reanchor?: boolean }) => {
+    if (destroyed) return;
+    const normalized = normalizeReaderSettings(settings);
+    const key = JSON.stringify({
+      theme: normalized.theme,
+      fontFamily: normalized.fontFamily,
+      fontSizePercent: normalized.fontSizePercent,
+      lineHeight: normalized.lineHeight,
+    });
+    if (lastAppliedDisplaySettingsKey === key) return;
+
+    const reanchorCfi = options?.reanchor ? getCurrentCfi() : null;
+    const lineHeight = getReaderLineHeightCssValue(normalized.lineHeight);
+    const fontFamily = getReaderFontFamilyCssValue(normalized.fontFamily);
+
+    rendition.themes.registerRules("default", getReaderEpubDisplayRules(normalized));
+    rendition.themes.select(normalized.theme);
+    rendition.themes.fontSize(`${normalized.fontSizePercent}%`);
+    rendition.themes.override("line-height", lineHeight, true);
+
+    if (fontFamily) rendition.themes.font(fontFamily);
+    else rendition.themes.removeOverride("font-family");
+
+    lastAppliedDisplaySettingsKey = key;
+
+    if (reanchorCfi && !destroyed) {
+      await rendition.display(reanchorCfi);
+    } else if (options?.reanchor && !destroyed) {
+      try {
+        await rendition.reportLocation();
+      } catch {
+        // Location may be unavailable before the first display.
+      }
+    }
+  };
+
+  registerReaderThemes();
+  if (init.displaySettings) {
+    try {
+      await applyDisplaySettingsInternal(init.displaySettings, { reanchor: false });
+    } catch (err) {
+      init.onError?.(err);
+    }
+  }
 
   const onRelocated = (loc: Location) => {
     lastRelocatedLoc = loc;
@@ -157,7 +232,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   rendition.on("selected", onSelected);
 
-  let destroyed = false;
   let locationsGeneratePromise: Promise<unknown> | null = null;
 
   // Start locations generation in the background. This enables approximate whole-book
@@ -227,6 +301,10 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       } catch {
         // ignore
       }
+    },
+    async applyDisplaySettings(settings: ReaderSettings) {
+      if (destroyed) return;
+      await applyDisplaySettingsInternal(settings, { reanchor: true });
     },
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;
