@@ -11,6 +11,7 @@ import {
   isHighlightAnnotation,
   toReaderAnnotation,
 } from "../annotations/annotationUtils";
+import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../storage/marginaliaLayerPreferences";
 
 export type PreviousSessionLayerSummary = {
   sessionId: string;
@@ -149,6 +150,16 @@ export function usePreviousSessionLayers(args: {
   const bump = useCallback(() => setCacheVersion((n) => n + 1), []);
 
   useEffect(() => {
+    const bookId = args.bookId;
+    if (bookId == null) {
+      setSelectedPreviousSessionIds([]);
+      return;
+    }
+
+    setSelectedPreviousSessionIds(loadMarginaliaLayerPreferences(bookId));
+  }, [args.bookId]);
+
+  useEffect(() => {
     if (!args.spl) return;
     const bookId = args.bookId;
     if (bookId == null) return;
@@ -199,6 +210,10 @@ export function usePreviousSessionLayers(args: {
     };
   }, [args.bookId, args.currentSessionId, args.spl]);
 
+  const availableSessionIds = useMemo(() => {
+    return sessionSummaries.map((s) => s.sessionId);
+  }, [sessionSummaries]);
+
   const ensureLoaded = useCallback(
     async (sessionId: string) => {
       if (!args.spl) return;
@@ -222,6 +237,31 @@ export function usePreviousSessionLayers(args: {
     },
     [args.spl, bump],
   );
+
+  useEffect(() => {
+    const bookId = args.bookId;
+    if (bookId == null) return;
+    if (listStatus !== "ready") return;
+
+    const available = new Set(availableSessionIds);
+    const nextSelectedIds = selectedPreviousSessionIds.filter((id, index, arr) => {
+      return available.has(id) && arr.indexOf(id) === index;
+    });
+
+    const changed =
+      nextSelectedIds.length !== selectedPreviousSessionIds.length ||
+      nextSelectedIds.some((id, index) => id !== selectedPreviousSessionIds[index]);
+
+    if (changed) {
+      setSelectedPreviousSessionIds(nextSelectedIds);
+      return;
+    }
+
+    saveMarginaliaLayerPreferences(bookId, nextSelectedIds);
+    for (const sessionId of nextSelectedIds) {
+      void ensureLoaded(sessionId);
+    }
+  }, [args.bookId, availableSessionIds, ensureLoaded, listStatus, selectedPreviousSessionIds]);
 
   const togglePreviousSession = useCallback(
     (sessionId: string) => {
