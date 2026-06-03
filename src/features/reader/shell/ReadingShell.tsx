@@ -35,6 +35,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const lastHandledCommandSeqRef = useRef<number | null>(null);
   const deferredCommandRef = useRef<ReadingShellProps["command"] | null>(null);
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
+  const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
@@ -200,6 +201,34 @@ export function ReadingShell(props: ReadingShellProps) {
     })();
   }, [props.onEvent, props.settings]);
 
+  useEffect(() => {
+    const readerWidth = props.settings?.readerWidth;
+    if (!readerWidth) return;
+    if (lastHandledReaderWidthRef.current === readerWidth) return;
+    lastHandledReaderWidthRef.current = readerWidth;
+
+    const engine = engineRef.current;
+    if (!engine) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        await waitForReaderLayout();
+        if (cancelled) return;
+        await engine.resizeToMount();
+      } catch (err) {
+        if (cancelled) return;
+        setStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : "Reader resize failed.");
+        props.onEvent?.({ type: "displayError", error: err });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [props.onEvent, props.settings?.readerWidth]);
+
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
   const goPrev = async () => {
@@ -305,4 +334,12 @@ export function ReadingShell(props: ReadingShellProps) {
       />
     </div>
   );
+}
+
+function waitForReaderLayout(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
 }

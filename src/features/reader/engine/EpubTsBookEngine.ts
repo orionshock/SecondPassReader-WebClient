@@ -40,6 +40,7 @@ export type EpubTsBookEngine = {
   previous(): Promise<void>;
   clearSelection(): void;
   applyDisplaySettings(settings: ReaderSettings): Promise<void>;
+  resizeToMount(): Promise<void>;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   destroy(): void;
@@ -305,6 +306,15 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     async applyDisplaySettings(settings: ReaderSettings) {
       if (destroyed) return;
       await applyDisplaySettingsInternal(settings, { reanchor: true });
+    },
+    async resizeToMount() {
+      if (destroyed) return;
+      const { width, height } = measureMount();
+      if (width <= 0 || height <= 0) return;
+      const cfi = getCurrentCfi();
+      rendition.resize(width, height, cfi ?? undefined);
+      if (cfi && !destroyed) await rendition.display(cfi);
+      else if (!destroyed) await rendition.reportLocation();
     },
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;
