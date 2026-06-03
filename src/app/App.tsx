@@ -1,7 +1,7 @@
 import "./App.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
-import { LibraryLandingPage } from "../features/library";
+import { LibraryLandingPage } from "../features/library/LibraryLandingPage";
 import { HomePage } from "../features/home/HomePage";
 import { ReadingActivity, type OpenedBook } from "../features/reader";
 import { DebugDetails } from "./DebugDetails";
