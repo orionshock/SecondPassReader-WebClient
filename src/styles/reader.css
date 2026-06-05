@@ -100,8 +100,8 @@
   position: sticky;
   top: 0;
   z-index: 80;
-  background: rgba(255, 255, 255, 0.96);
-  border-bottom: 1px solid var(--sp-border);
+  background: var(--sp-reader-surface);
+  border-bottom: 1px solid var(--sp-reader-border);
   box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
   backdrop-filter: blur(6px);
   border-radius: 0;
@@ -137,7 +137,7 @@
   font-weight: 700;
   font-size: 16px;
   line-height: 1.2;
-  color: var(--sp-text);
+  color: var(--sp-reader-text);
 }
 
 .spReaderLayout {
@@ -160,10 +160,10 @@
 }
 
 .spReaderViewport {
-  border: 1px solid var(--sp-border);
+  border: 1px solid var(--sp-reader-border);
   border-radius: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--sp-reader-surface);
   display: grid;
   gap: 10px;
   min-height: 60vh;
@@ -179,11 +179,11 @@
 }
 
 .spReaderViewportMount {
-  border: 1px dashed var(--sp-border);
+  border: 1px dashed var(--sp-reader-border);
   border-radius: 10px;
   /* Prefer a tall reading area; annotation workspace scrolls below. */
   height: clamp(420px, 68vh, 920px);
-  background: rgba(17, 24, 39, 0.02);
+  background: var(--sp-reader-hover);
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -219,9 +219,9 @@
   display: grid;
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--sp-border);
+  border: 1px solid var(--sp-reader-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--sp-reader-surface);
   box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12);
   max-width: min(520px, calc(100% - 16px));
 }
@@ -258,9 +258,9 @@
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  border: 1px solid var(--sp-border);
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--sp-text);
+  border: 1px solid var(--sp-reader-border);
+  background: var(--sp-reader-control-bg);
+  color: var(--sp-reader-text);
   font-size: 12px;
   font-weight: 600;
 }
@@ -285,9 +285,9 @@
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  border: 1px solid var(--sp-border);
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--sp-text);
+  border: 1px solid var(--sp-reader-border);
+  background: var(--sp-reader-control-bg);
+  color: var(--sp-reader-text);
   display: grid;
   place-items: center;
   z-index: 15;
@@ -316,7 +316,7 @@
   height: 100%;
   width: min(360px, calc(100% - 40px));
   background: var(--sp-panel);
-  border-right: 1px solid var(--sp-border);
+  border-right: 1px solid var(--sp-reader-border);
   display: grid;
   grid-template-rows: auto auto 1fr;
   box-shadow: 0 20px 60px rgba(17, 24, 39, 0.18);
@@ -328,7 +328,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--sp-border);
+  border-bottom: 1px solid var(--sp-reader-border);
 }
 
 .spTocDrawerTitle {
@@ -337,7 +337,7 @@
 
 .spTocDrawerSearch {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--sp-border);
+  border-bottom: 1px solid var(--sp-reader-border);
 }
 
 .spTocDrawerSearchInput {
@@ -361,7 +361,7 @@
 
 .spTocListNested {
   margin-left: 10px;
-  border-left: 1px solid rgba(17, 24, 39, 0.12);
+  border-left: 1px solid var(--sp-reader-border);
 }
 
 .spTocListNested > .spTocItem > .spTocItemButton {
@@ -386,7 +386,7 @@
   text-align: left;
   border: 0;
   background: transparent;
-  color: var(--sp-text);
+  color: var(--sp-reader-text);
   padding: 8px 12px;
   cursor: pointer;
   font-size: 13px;
@@ -394,7 +394,7 @@
 }
 
 .spTocItemButton:hover {
-  background: rgba(17, 24, 39, 0.06);
+  background: var(--sp-reader-hover);
 }
 
 .spMarginaliaMenuHost {
@@ -412,7 +412,7 @@
   position: fixed;
   width: min(340px, calc(100vw - 24px));
   background: var(--sp-panel);
-  border: 1px solid var(--sp-border);
+  border: 1px solid var(--sp-reader-border);
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(17, 24, 39, 0.18);
   overflow: hidden;
@@ -424,7 +424,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--sp-border);
+  border-bottom: 1px solid var(--sp-reader-border);
 }
 
 .spMarginaliaMenuTitle {
@@ -516,9 +516,9 @@
   display: inline-flex;
   gap: 6px;
   padding: 4px;
-  border: 1px solid var(--sp-border);
+  border: 1px solid var(--sp-reader-border);
   border-radius: 999px;
-  background: rgba(17, 24, 39, 0.03);
+  background: var(--sp-reader-hover);
 }
 
 .spAnnotationSessionId {
@@ -612,7 +612,7 @@
 .spAnnotationTab {
   border: 0;
   background: transparent;
-  color: var(--sp-text);
+  color: var(--sp-reader-text);
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 12px;
@@ -621,8 +621,8 @@
 }
 
 .spAnnotationTabActive {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--sp-border);
+  background: var(--sp-reader-control-bg);
+  border: 1px solid var(--sp-reader-border);
 }
 
 .spAnnotationTabPanel {
@@ -641,9 +641,9 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--sp-border);
+  border: 1px solid var(--sp-reader-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--sp-reader-surface);
   min-width: 0;
   --annotation-color: rgba(59, 130, 246, 0.55);
   --annotation-bg: rgba(59, 130, 246, 0.08);
@@ -668,7 +668,7 @@
 }
 
 .spAnnotationTypeIcon {
-  color: rgba(17, 24, 39, 0.45);
+  color: var(--sp-reader-muted);
 }
 
 .spAnnotationTypeIcon .material-symbols-outlined {
@@ -766,14 +766,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(17, 24, 39, 0.72);
+  color: var(--sp-reader-muted);
 }
 
 .spAnnotationKindDetail {
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0;
-  color: rgba(17, 24, 39, 0.82);
+  color: var(--sp-reader-text);
 }
 
 .spAnnotationBadge {
@@ -789,7 +789,7 @@
 .spAnnotationPrimary {
   font-size: 14px;
   font-weight: 600;
-  color: var(--sp-text);
+  color: var(--sp-reader-text);
   min-width: 0;
 }
 
@@ -805,7 +805,7 @@
 .spAnnotationBookmarkText {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(17, 24, 39, 0.82);
+  color: var(--sp-reader-text);
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -814,7 +814,7 @@
 
 .spAnnotationQuote {
   font-size: 14px;
-  color: var(--sp-text);
+  color: var(--sp-reader-text);
   padding: 6px 10px;
   border-left: 3px solid var(--annotation-color);
   background: var(--annotation-bg);
@@ -835,8 +835,8 @@
   margin-left: 8px;
   padding: 7px 9px;
   border-radius: 10px;
-  background: rgba(17, 24, 39, 0.02);
-  color: var(--sp-text);
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-text);
   font-size: 13px;
   line-height: 1.35;
   width: fit-content;
@@ -905,8 +905,8 @@
 }
 
 .spAnnotationSwatchActive {
-  border-color: rgba(17, 24, 39, 0.55);
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  border-color: var(--sp-reader-text);
+  box-shadow: 0 0 0 3px var(--sp-reader-hover);
 }
 
 .spAnnotationEditActions {
@@ -1169,3 +1169,4 @@
 .spReaderActivity[data-reader-theme="dark"] .spAnnotationQuote {
   background: rgba(59, 130, 246, 0.16);
 }
+

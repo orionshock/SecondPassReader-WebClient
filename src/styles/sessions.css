@@ -19,14 +19,16 @@
   border: 1px solid var(--sp-border);
   border-radius: 999px;
   padding: 6px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   cursor: pointer;
   font: inherit;
 }
 
 .sessionsFilterActive {
-  border-color: rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.06);
+  border-color: var(--sp-primary-border);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 
 .sessionsList {
@@ -43,7 +45,8 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   display: grid;
   grid-template-columns: 52px 1fr;
   gap: 12px;
@@ -51,7 +54,7 @@
 }
 
 .sessionsRow:hover {
-  background: rgba(17, 24, 39, 0.01);
+  background: var(--color-hover-bg);
 }
 
 .sessionsRow:focus-visible {
@@ -65,7 +68,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(17, 24, 39, 0.03);
+  background: var(--color-surface-muted);
   display: grid;
   place-items: center;
 }
@@ -113,7 +116,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(17, 24, 39, 0.03);
+  background: var(--color-surface-muted);
   display: grid;
   place-items: center;
 }
@@ -214,7 +217,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 10px;
   padding: 8px 10px;
-  background: rgba(17, 24, 39, 0.02);
+  background: var(--color-surface-muted);
   max-width: 360px;
 }
 
@@ -245,7 +248,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
   display: grid;
   grid-template-columns: 28px 1fr;
   gap: 10px;
@@ -273,11 +276,12 @@
 
 .sessionAnnoQuote {
   padding: 8px 10px;
-  border-left: 3px solid rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.04);
+  border-left: 3px solid var(--sp-primary-border);
+  background: var(--color-surface-muted);
   border-radius: 10px;
   overflow-wrap: anywhere;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .sessionAnnoNote {

@@ -18,7 +18,8 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -40,7 +41,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
   display: grid;
   grid-template-columns: 44px 1fr auto;
   gap: 12px;
@@ -53,7 +54,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(17, 24, 39, 0.03);
+  background: var(--color-surface-muted);
   display: grid;
   place-items: center;
 }

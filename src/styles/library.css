@@ -14,7 +14,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 8px 10px;
-  background: rgba(17, 24, 39, 0.01);
+  background: var(--color-surface-muted);
   min-width: 0;
 }
 
@@ -61,7 +61,7 @@
   border-top: 1px solid var(--sp-border);
   position: sticky;
   bottom: 0;
-  background: #fff;
+  background: var(--color-surface);
   z-index: 2;
 }
 
@@ -77,13 +77,15 @@
   border: 1px solid var(--sp-border);
   border-radius: 999px;
   padding: 6px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   cursor: pointer;
 }
 
 .libraryBrowseTabActive {
-  border-color: rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.06);
+  border-color: var(--sp-primary-border);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 
 .libraryEntityList {
@@ -96,7 +98,8 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
@@ -111,7 +114,7 @@
 }
 
 .libraryEntityCardButton:hover {
-  background: rgba(17, 24, 39, 0.01);
+  background: var(--color-hover-bg);
 }
 
 .libraryEntityCardButton:focus-visible {
@@ -161,11 +164,12 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
 .bookCardButton:hover {
-  background: rgba(17, 24, 39, 0.01);
+  background: var(--color-hover-bg);
 }
 
 .bookCardButton:focus-visible {
@@ -186,7 +190,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(17, 24, 39, 0.03);
+  background: var(--color-surface-muted);
   display: grid;
   place-items: center;
 }
@@ -207,8 +211,9 @@
 }
 
 .bookCardSelected {
-  border-color: rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.04);
+  border-color: var(--sp-primary-border);
+  background: var(--color-primary-bg);
+  color: var(--color-text);
 }
 
 .bookTitle {
@@ -261,7 +266,7 @@
   border: 1px solid var(--sp-border);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(17, 24, 39, 0.03);
+  background: var(--color-surface-muted);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -370,7 +375,7 @@
   overflow: hidden;
   border: 1px solid var(--sp-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
   display: grid;
   grid-template-rows: auto 1fr;
@@ -383,7 +388,7 @@
   gap: 12px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--sp-border);
-  background: rgba(17, 24, 39, 0.01);
+  background: var(--color-surface-muted);
 }
 
 .modalTitle {
@@ -407,5 +412,5 @@
   padding: 10px 12px;
   display: grid;
   gap: 4px;
-  background: rgba(18, 140, 63, 0.04);
+  background: rgba(18, 140, 63, 0.08);
 }
