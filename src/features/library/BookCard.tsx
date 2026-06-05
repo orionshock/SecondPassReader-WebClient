@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { LibraryBook } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
+import { InlineMeta } from "../../components/MetaSeparator";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -67,7 +68,7 @@ export function BookCard({
             {seriesText ? <div className="bookLine">{seriesText}</div> : null}
 
             <div className="bookLine muted">
-              {[book.language || null, book.published_date || null, fileSize || null].filter(Boolean).join(` ${"\u00B7"} `)}
+              <InlineMeta items={[book.language || null, book.published_date || null, fileSize || null]} />
             </div>
           </div>
         </div>

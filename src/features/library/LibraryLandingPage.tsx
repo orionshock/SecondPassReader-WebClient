@@ -5,6 +5,7 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookList } from "./BookList";
 import { createSplClientFromProfile } from "../../app/createSplClient";
+import { InlineMeta } from "../../components/MetaSeparator";
 
 type BrowseMode = "books" | "series" | "authors";
 
@@ -356,7 +357,7 @@ export function LibraryLandingPage({
                 <>
                   <div className="libraryMetaRow">
                     <div className="muted">
-                      Page {booksPage} of {booksPager?.totalPages ?? 1} {"\u00B7"} {booksData.count} books
+                      <InlineMeta items={[`Page ${booksPage} of ${booksPager?.totalPages ?? 1}`, `${booksData.count} books`]} />
                     </div>
                     <div className="pagerButtons">
                       <button
@@ -403,7 +404,7 @@ export function LibraryLandingPage({
 
                   <div className="libraryMetaRow libraryMetaRowBottom">
                     <div className="muted">
-                      Page {booksPage} of {booksPager?.totalPages ?? 1} {"\u00B7"} {booksData.count} books
+                      <InlineMeta items={[`Page ${booksPage} of ${booksPager?.totalPages ?? 1}`, `${booksData.count} books`]} />
                     </div>
                     <div className="pagerButtons">
                       <button
@@ -476,7 +477,7 @@ export function LibraryLandingPage({
               {seriesData ? (
                 <div className="libraryMetaRow">
                   <div className="muted">
-                    Page {seriesPage} {"\u00B7"} {seriesData.count} series
+                    <InlineMeta items={[`Page ${seriesPage}`, `${seriesData.count} series`]} />
                   </div>
                   <div className="pagerButtons">
                     <button
@@ -528,7 +529,7 @@ export function LibraryLandingPage({
               {authorsData ? (
                 <div className="libraryMetaRow">
                   <div className="muted">
-                    Page {authorsPage} {"\u00B7"} {authorsData.count} authors
+                    <InlineMeta items={[`Page ${authorsPage}`, `${authorsData.count} authors`]} />
                   </div>
                   <div className="pagerButtons">
                     <button

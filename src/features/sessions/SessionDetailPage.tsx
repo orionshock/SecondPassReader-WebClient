@@ -5,6 +5,8 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
+import { InlineMeta } from "../../components/MetaSeparator";
+import { MaterialIcon } from "../../components/MaterialIcon";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -80,7 +82,7 @@ function getAnnotationTexts(annotation: unknown): { quote: string | null; note: 
   return { quote: textBodies[0]?.value ?? null, note: null };
 }
 
-function getAnnotationDisplay(annotation: unknown): { icon: string; label: string } {
+function getAnnotationDisplay(annotation: unknown): { iconName: string; label: string } {
   const rawMotivation = (annotation as any)?.motivation;
   const motivations: string[] = Array.isArray(rawMotivation)
     ? rawMotivation.filter((x): x is string => typeof x === "string")
@@ -88,10 +90,10 @@ function getAnnotationDisplay(annotation: unknown): { icon: string; label: strin
       ? [rawMotivation]
       : [];
 
-  if (motivations.includes("bookmarking")) return { icon: "🔖", label: "Bookmark" };
-  if (motivations.includes("highlighting")) return { icon: "🖍️", label: "Highlight" };
-  if (motivations.includes("commenting")) return { icon: "💬", label: "Comment" };
-  return { icon: "📝", label: "Annotation" };
+  if (motivations.includes("bookmarking")) return { iconName: "bookmark", label: "Bookmark" };
+  if (motivations.includes("highlighting")) return { iconName: "border_color", label: "Highlight" };
+  if (motivations.includes("commenting")) return { iconName: "chat_bubble", label: "Comment" };
+  return { iconName: "edit_note", label: "Annotation" };
 }
 
 export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
@@ -288,7 +290,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     const seriesName = session?.book?.series?.name ?? null;
     const idx = session?.book?.series_index;
     const series = seriesName ? (idx === null || idx === undefined || idx === "" ? seriesName : `${seriesName} #${idx}`) : null;
-    return [authors || null, series || null].filter(Boolean).join(` ${"\u00B7"} `);
+    return [authors || null, series || null].filter(Boolean);
   }, [session?.book?.authors, session?.book?.series?.name, session?.book?.series_index]);
 
   const canOpenReader = Boolean(session?.book?.id);
@@ -313,12 +315,12 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             </div>
             <div className="sessionHeaderMain">
               <div className="bookTitle">{session.book?.title ?? "Book"}</div>
-              {bookLine ? <div className="muted">{bookLine}</div> : null}
+              {bookLine.length ? <div className="muted"><InlineMeta items={bookLine} /></div> : null}
               <div className="muted">
                 <span className="sessionsId">{session.id}</span>
               </div>
               <div className="muted">
-                {[statusText || null, progressText || null, annoText || null].filter(Boolean).join(` ${"\u00B7"} `)}
+                <InlineMeta items={[statusText || null, progressText || null, annoText || null]} />
               </div>
             </div>
             <div className="sessionHeaderActions">
@@ -510,7 +512,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             {annoPage?.results?.length ? (
               <div className="sessionAnnoList">
                 {annoPage.results.map((a) => {
-                  const { icon, label } = getAnnotationDisplay(a);
+                  const { iconName, label } = getAnnotationDisplay(a);
                   const updated = (a.updated_at as any) || (a.modified as any) || (a.created_at as any) || (a.created as any);
                   const when = typeof updated === "string" ? formatIso(updated) : null;
                   const { quote, note } = getAnnotationTexts(a);
@@ -521,7 +523,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                       className="sessionAnnoRow"
                     >
                       <div className="sessionAnnoIcon" aria-hidden="true" title={label}>
-                        <span title={label}>{icon}</span>
+                        <MaterialIcon name={iconName} />
                       </div>
                       <div className="sessionAnnoMain">
                         {quote ? (
@@ -534,12 +536,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                         ) : null}
                         {metaBits.length ? (
                           <div className="sessionAnnoMeta muted">
-                            {metaBits.map((m, idx) => (
-                              <span key={idx}>
-                                {idx > 0 ? ` ${"\u00B7"} ` : null}
-                                {m}
-                              </span>
-                            ))}
+                            <InlineMeta items={metaBits} />
                           </div>
                         ) : null}
                       </div>

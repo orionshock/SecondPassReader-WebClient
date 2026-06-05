@@ -6,6 +6,7 @@ import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator
 import type { OpenedBook } from "./types";
 import type { SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
+import { InlineMeta } from "../../components/MetaSeparator";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
@@ -55,7 +56,7 @@ export function ReadingActivity({
                 <div className="spReaderTopBar">
                   <div className="spReaderTitle">
                     <div className="spReaderTitleLine">{openedBook.book.title}</div>
-                    {statusLine ? <div className="spReaderStatusLine muted">{statusLine}</div> : null}
+                    {statusLine.length ? <div className="spReaderStatusLine muted"><InlineMeta items={statusLine} /></div> : null}
                     {autosaveStatus ? (
                       <div className="spReaderAutosaveLine muted" title={autosaveStatus.title}>
                         {autosaveStatus.text}

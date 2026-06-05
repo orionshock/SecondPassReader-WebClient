@@ -4,6 +4,7 @@ import { navigateTo } from "../../app/navigation";
 import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
+import { InlineMeta } from "../../components/MetaSeparator";
 
 function shelfOwnerLabel(shelf: Shelf): string {
   if (shelf.owner_type === "group") {
@@ -92,8 +93,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
                 <div className="shelfCardTitle">{s.name}</div>
                 {s.description ? <div className="muted">{s.description}</div> : null}
                 <div className="muted">
-                  {(s.item_count ?? 0).toString()} items {"\u00B7"} {shelfOwnerLabel(s)}
-                  {s.can_edit ? ` ${"\u00B7"} can edit` : ""}
+                  <InlineMeta items={[`${(s.item_count ?? 0).toString()} items`, shelfOwnerLabel(s), s.can_edit ? "can edit" : null]} />
                 </div>
               </button>
             ))}
@@ -114,8 +114,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
                 <div className="shelfCardTitle">{s.name}</div>
                 {s.description ? <div className="muted">{s.description}</div> : null}
                 <div className="muted">
-                  {(s.item_count ?? 0).toString()} items {"\u00B7"} {shelfOwnerLabel(s)}
-                  {s.can_edit ? ` ${"\u00B7"} can edit` : ""}
+                  <InlineMeta items={[`${(s.item_count ?? 0).toString()} items`, shelfOwnerLabel(s), s.can_edit ? "can edit" : null]} />
                 </div>
               </button>
             ))}

@@ -1,7 +1,7 @@
 import type { ReadingAnnotation } from "@secondpass/client";
 import type { ReaderAnnotation } from "../domain/types";
 import type { ReaderLocationDescription, ReaderTocItem } from "../domain/types";
-import { deriveBookmarkLabel } from "./bookmarkLabels";
+import { deriveBookmarkLabel, deriveBookmarkLabelParts } from "./bookmarkLabels";
 
 export type ReaderBookmark = Extract<ReaderAnnotation, { kind: "bookmark" }>;
 export type ReaderBookmarkViewModel = {
@@ -9,6 +9,7 @@ export type ReaderBookmarkViewModel = {
   cfi: string;
   href?: string;
   label: string;
+  labelParts: string[];
   timestamp?: string;
   isCurrent: boolean;
   descriptionStatus: "idle" | "loading" | "ready" | "error";
@@ -110,11 +111,16 @@ export function toBookmarkViewModel(input: {
     chapterLabel,
     bookProgress: input.description?.bookProgress ?? (isCurrent ? input.fallbackBookProgress : null),
   });
+  const labelParts = deriveBookmarkLabelParts({
+    chapterLabel,
+    bookProgress: input.description?.bookProgress ?? (isCurrent ? input.fallbackBookProgress : null),
+  });
   return {
     id: input.bookmark.id,
     cfi: input.bookmark.cfi,
     href,
     label,
+    labelParts,
     timestamp: input.timestamp ?? undefined,
     isCurrent,
     descriptionStatus: input.descriptionStatus,

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import { InlineMeta } from "../../../components/MetaSeparator";
 import type { PreviousSessionAnnotationGroup, PreviousSessionAnnotationItem } from "../session/usePreviousSessionLayers";
 import { toAnnotationCssVars } from "./annotationColors";
 
@@ -48,8 +49,7 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
         <div className="spAnnotationQuote">{normalizeQuoteTextForDisplay(item.text)}</div>
         {item.note ? <div className="spAnnotationNote muted">{item.note}</div> : null}
         <div className="muted spAnnotationActionMeta">
-          {when ? when : null}
-          {item.color ? <span className="muted">{` \u00B7 ${item.color}`}</span> : null}
+          <InlineMeta items={[when, item.color]} />
         </div>
       </div>
     </article>
@@ -88,7 +88,7 @@ export function PreviousSessionAnnotationsPanel(props: {
               </button>
             </div>
             <div className="spPreviousSessionTitle" title={g.label}>
-              {g.label}
+              <InlineMeta items={g.labelParts.length ? g.labelParts : [g.label]} />
             </div>
           </div>
 

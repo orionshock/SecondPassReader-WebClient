@@ -24,7 +24,7 @@ export type ReadingSessionOrchestratorProps = {
   onSettingsReset?: () => void;
   children: (arg: {
     state: ReadingSessionState;
-    statusLine: string;
+    statusLine: string[];
     autosaveStatus: { text: string; title?: string } | null;
     shell: ReactNode;
     debugPanel: ReactNode | null;
@@ -32,7 +32,7 @@ export type ReadingSessionOrchestratorProps = {
     marginalia: {
       listStatus: "idle" | "loading" | "ready" | "error";
       listError: string | null;
-      previousLayers: Array<{ sessionId: string; label: string; highlightCount: number; status: "idle" | "loading" | "ready" | "error"; error?: string }>;
+      previousLayers: Array<{ sessionId: string; label: string; labelParts: string[]; highlightCount: number; status: "idle" | "loading" | "ready" | "error"; error?: string }>;
       selectedPreviousSessionIds: string[];
       togglePreviousSession: (sessionId: string) => void;
     };
@@ -223,7 +223,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       parts.push(`p${state.location.displayedPage}/${state.location.displayedTotal}`);
     }
 
-    return parts.join(" \u00B7 ");
+    return parts;
   }, [state.location?.bookProgress, state.location?.displayedPage, state.location?.displayedTotal, state.location?.href, state.toc]);
 
   const visibleHighlightMarks: ReaderHighlightMark[] = useMemo(() => {

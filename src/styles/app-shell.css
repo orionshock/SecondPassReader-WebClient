@@ -91,11 +91,27 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: baseline;
   font-size: 13px;
 }
 
-.appHeaderMeta .sep {
-  opacity: 0.8;
+.material-symbols-outlined.appHeaderMetaIcon {
+  font-size: 16px;
+  line-height: 1;
+  color: currentColor;
+  transform: translateY(2px);
+}
+
+.metaSeparator {
+  display: inline-flex;
+  width: 0.28rem;
+  height: 0.28rem;
+  margin-inline: 0.45rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.65;
+  vertical-align: middle;
+  transform: translateY(-0.08em);
 }
 
 .appHeaderNav {

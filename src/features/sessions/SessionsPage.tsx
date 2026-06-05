@@ -5,6 +5,7 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
+import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
 
 function formatAuthors(session: ReadingSessionSummary): string {
   const authors = session.book?.authors ?? [];
@@ -133,7 +134,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
         <>
           <div className="libraryMetaRow">
             <div className="muted">
-              Page {page} {"\u00B7"} {data.count} sessions
+              <InlineMeta items={[`Page ${page}`, `${data.count} sessions`]} />
             </div>
             <div className="pagerButtons">
               <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
@@ -185,16 +186,16 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
                     </div>
                     <div className="sessionsMeta muted">
                       {sessionName ? <span className="mono">{sessionName}</span> : null}
-                      {sessionName ? <span className="sep">{"\u00B7"}</span> : null}
+                      {sessionName ? <MetaSeparator /> : null}
                       <span className="sessionsId">{s.id}</span>
                     </div>
                     <div className="sessionsMeta muted">
                       {statusLine ? <span>{statusLine}</span> : null}
-                      {statusLine && progress ? <span className="sep">{"\u00B7"}</span> : null}
+                      {statusLine && progress ? <MetaSeparator /> : null}
                       {progress ? <span>{progress}</span> : null}
-                      {(statusLine || progress) && annoText ? <span className="sep">{"\u00B7"}</span> : null}
+                      {(statusLine || progress) && annoText ? <MetaSeparator /> : null}
                       {annoText ? <span>{annoText}</span> : null}
-                      {(statusLine || progress || annoText) && updated ? <span className="sep">{"\u00B7"}</span> : null}
+                      {(statusLine || progress || annoText) && updated ? <MetaSeparator /> : null}
                       {updated ? <span>{updated}</span> : null}
                     </div>
                   </div>
@@ -205,7 +206,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
 
           <div className="libraryMetaRow libraryMetaRowBottom">
             <div className="muted">
-              Page {page} {"\u00B7"} {data.count} sessions
+              <InlineMeta items={[`Page ${page}`, `${data.count} sessions`]} />
             </div>
             <div className="pagerButtons">
               <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import { InlineMeta } from "../../../components/MetaSeparator";
 
 export type MarginaliaLayerSummary = {
   sessionId: string;
   label: string;
+  labelParts?: string[];
   highlightCount: number;
   status?: "idle" | "loading" | "ready" | "error";
   error?: string;
@@ -131,7 +133,9 @@ export function MarginaliaMenu(props: {
                           onChange={() => props.onTogglePreviousSession(layer.sessionId)}
                           disabled={disabled}
                         />
-                        <span className="spMarginaliaLayerLabel">{layer.label}</span>
+                        <span className="spMarginaliaLayerLabel">
+                          {layer.labelParts?.length ? <InlineMeta items={layer.labelParts} /> : layer.label}
+                        </span>
                       </label>
                     );
                   })}

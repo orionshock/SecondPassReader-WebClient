@@ -1,6 +1,7 @@
 import type { ConnectionProfile } from "../storage/connectionProfiles";
 import type { AppRoute } from "./navigation";
 import { MaterialIcon } from "../components/MaterialIcon";
+import { MetaSeparator } from "../components/MetaSeparator";
 
 export function AppHeader({
   profile,
@@ -97,11 +98,11 @@ export function AppHeader({
         <div className="appHeaderMeta muted">
           {serverName ? (
             <>
-              <span aria-hidden="true">{"\u{1F4DA}"}</span>
+              <MaterialIcon name="local_library" className="appHeaderMetaIcon" ariaHidden />
               <span>{serverName}</span>
             </>
           ) : null}
-          {serverName && userLabel ? <span className="sep">{"\u00B7"}</span> : null}
+          {serverName && userLabel ? <MetaSeparator /> : null}
           {userLabel ? <span className="mono">{userLabel}</span> : null}
         </div>
       </div>

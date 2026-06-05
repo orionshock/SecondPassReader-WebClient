@@ -3,6 +3,7 @@ import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors
 import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./viewModels";
 import { ANNOTATION_LIMITS } from "./annotationLimits";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import { InlineMeta } from "../../../components/MetaSeparator";
 import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel";
 import type { PreviousSessionAnnotationGroup } from "../session/usePreviousSessionLayers";
 import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadataEditor";
@@ -116,7 +117,7 @@ export function AnnotationWorkspace({
                       <div className="spAnnotationBody">
                         <div className="spAnnotationBookmarkRow" title={b.label}>
                           <span className="spAnnotationBookmarkText">
-                            {`Bookmark · ${b.label}`}
+                            <InlineMeta items={["Bookmark", ...b.labelParts]} />
                             {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
                           </span>
                           {isCurrent ? <span className="spAnnotationBadge">Current</span> : null}
@@ -170,9 +171,8 @@ export function AnnotationWorkspace({
                       {!isEditing ? (
                         <div className="spAnnotationActionRow">
                           <div className="muted spAnnotationActionMeta" title={h.label}>
-                            {h.label}
+                            <InlineMeta items={[h.label, when]} />
                             {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                            {when ? <span className="muted">{` \u00B7 ${when}`}</span> : null}
                           </div>
                         </div>
                       ) : null}
@@ -259,9 +259,8 @@ export function AnnotationWorkspace({
                             </div>
 
                             <div className="muted spAnnotationActionMeta" title={h.label}>
-                              {h.label}
+                              <InlineMeta items={[h.label, when]} />
                               {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                              {when ? <span className="muted">{` \u00B7 ${when}`}</span> : null}
                             </div>
                           </div>
                         </form>

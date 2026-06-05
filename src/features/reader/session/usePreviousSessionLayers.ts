@@ -16,6 +16,7 @@ import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "
 export type PreviousSessionLayerSummary = {
   sessionId: string;
   label: string;
+  labelParts: string[];
   highlightCount: number;
   status: "idle" | "loading" | "ready" | "error";
   error?: string;
@@ -36,6 +37,7 @@ export type PreviousSessionAnnotationItem =
 export type PreviousSessionAnnotationGroup = {
   sessionId: string;
   label: string;
+  labelParts: string[];
   highlightCount: number;
   selected: boolean;
   status: "idle" | "loading" | "ready" | "error";
@@ -55,10 +57,13 @@ function toSessionTimeLabel(input: { startedAt?: string | null; updatedAt?: stri
   return new Date(ms).toLocaleString();
 }
 
-function buildLayerLabel(input: { name?: string | null; timeLabel: string; highlightCount: number }): string {
+function buildLayerLabelParts(input: { name?: string | null; timeLabel: string; highlightCount: number }): string[] {
   const n = typeof input.name === "string" ? input.name.trim() : "";
-  const base = n ? `${n} \u00B7 ${input.timeLabel}` : input.timeLabel;
-  return `${base} \u00B7 ${input.highlightCount} highlight${input.highlightCount === 1 ? "" : "s"}`;
+  return [
+    n || null,
+    input.timeLabel,
+    `${input.highlightCount} highlight${input.highlightCount === 1 ? "" : "s"}`,
+  ].filter((part): part is string => Boolean(part));
 }
 
 function toHighlightMarks(annotations: ReadingAnnotation[]): { marks: ReaderHighlightMark[]; highlightCount: number } {
@@ -287,8 +292,8 @@ export function usePreviousSessionLayers(args: {
           : typeof s.annotationCount === "number"
             ? s.annotationCount
             : 0;
-      const label = buildLayerLabel({ name: s.name, timeLabel: s.timeLabel, highlightCount });
-      return { sessionId: s.sessionId, label, highlightCount, status, error: cached?.error };
+      const labelParts = buildLayerLabelParts({ name: s.name, timeLabel: s.timeLabel, highlightCount });
+      return { sessionId: s.sessionId, label: labelParts.join(" "), labelParts, highlightCount, status, error: cached?.error };
     });
   }, [sessionSummaries, cacheVersion]);
 
@@ -303,9 +308,9 @@ export function usePreviousSessionLayers(args: {
           : typeof s.annotationCount === "number"
             ? s.annotationCount
             : 0;
-      const label = buildLayerLabel({ name: s.name, timeLabel: s.timeLabel, highlightCount });
+      const labelParts = buildLayerLabelParts({ name: s.name, timeLabel: s.timeLabel, highlightCount });
       const items = cached?.status === "ready" && cached.annotations ? toPreviousSessionItems(cached.annotations) : undefined;
-      return { sessionId: s.sessionId, label, highlightCount, selected: selected.has(s.sessionId), status, error: cached?.error, items };
+      return { sessionId: s.sessionId, label: labelParts.join(" "), labelParts, highlightCount, selected: selected.has(s.sessionId), status, error: cached?.error, items };
     });
   }, [cacheVersion, selectedPreviousSessionIds, sessionSummaries]);
 

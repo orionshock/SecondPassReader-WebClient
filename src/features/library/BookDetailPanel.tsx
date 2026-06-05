@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { LibraryBook } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
+import { InlineMeta } from "../../components/MetaSeparator";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -74,7 +75,7 @@ export function BookDetailPanel({
           {seriesText ? <div className="muted">{seriesText}</div> : null}
 
           <div className="bookDetailMetaLine muted">
-            {[book.publisher || null, book.language || null, book.published_date || null].filter(Boolean).join(` ${"\u00B7"} `)}
+            <InlineMeta items={[book.publisher || null, book.language || null, book.published_date || null]} />
           </div>
         </div>
 
