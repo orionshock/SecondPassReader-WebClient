@@ -57,7 +57,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
       return;
     }
     if (!profile.accessToken) {
-      setState({ phase: "error", message: "Profile is not linked yet (no access token)." });
+      setState({ phase: "error", message: "Library is not linked yet (no access token)." });
       return;
     }
 
@@ -82,7 +82,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
       if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
         setState({
           phase: "error",
-          message: "Token is invalid/revoked/not allowed. Re-link this profile if needed, then verify again.",
+          message: "Token is invalid/revoked/not allowed. Re-link this library if needed, then verify again.",
         });
         return;
       }
@@ -93,8 +93,8 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
   if (!selectedProfileId) {
     return (
       <section className="panel">
-        <h2 className="panelTitle">/me verification</h2>
-        <p className="muted">Select a connection profile to verify.</p>
+        <h2 className="panelTitle">Verify connection</h2>
+        <p className="muted">Connect a library to verify.</p>
       </section>
     );
   }
@@ -102,8 +102,8 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
   if (!profile) {
     return (
       <section className="panel">
-        <h2 className="panelTitle">/me verification</h2>
-        <p className="muted">Selected profile not found.</p>
+        <h2 className="panelTitle">Verify connection</h2>
+        <p className="muted">Connected library not found.</p>
       </section>
     );
   }
@@ -111,15 +111,15 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
   if (!profile.accessToken) {
     return (
       <section className="panel">
-        <h2 className="panelTitle">/me verification</h2>
-        <p className="muted">Profile is not linked yet.</p>
+        <h2 className="panelTitle">Verify connection</h2>
+        <p className="muted">Library is not linked yet.</p>
       </section>
     );
   }
 
   return (
     <section className="panel">
-      <h2 className="panelTitle">/me verification</h2>
+      <h2 className="panelTitle">Verify connection</h2>
 
       {profile.verifiedAt && profile.verifiedUser ? (
         <div className="discoveryBox">

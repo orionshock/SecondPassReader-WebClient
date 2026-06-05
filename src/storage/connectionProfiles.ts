@@ -29,51 +29,85 @@ export type ConnectionProfile = {
   };
   createdAt: string;
   lastUsedAt?: string;
+  lastCheckedAt?: string;
 };
 
-const STORAGE_KEY = "secondpass.connectionProfiles.v1";
+const ACTIVE_CONNECTION_KEY = "secondpass.activeConnection.v1";
+const OLD_PROFILES_KEY = "secondpass.connectionProfiles.v1";
+const OLD_SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
-function readAll(): ConnectionProfile[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
+export type ActiveConnection = ConnectionProfile;
+
+function readActive(): ActiveConnection | null {
+  const raw = localStorage.getItem(ACTIVE_CONNECTION_KEY);
+  if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed as ConnectionProfile[];
+    if (!parsed || typeof parsed !== "object") return null;
+    const connection = parsed as Partial<ActiveConnection>;
+    if (!connection.id || !connection.serverBaseUrl || !connection.createdAt) return null;
+    return connection as ActiveConnection;
   } catch {
-    return [];
+    return null;
   }
 }
 
-function writeAll(profiles: ConnectionProfile[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+function writeActive(connection: ActiveConnection) {
+  localStorage.setItem(ACTIVE_CONNECTION_KEY, JSON.stringify(connection));
+}
+
+export function getActiveConnection(): ActiveConnection | null {
+  return readActive();
+}
+
+export function saveActiveConnection(connection: ActiveConnection): void {
+  writeActive(connection);
+  try {
+    localStorage.removeItem(OLD_PROFILES_KEY);
+    localStorage.removeItem(OLD_SELECTED_PROFILE_KEY);
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
+export function clearActiveConnection(): void {
+  localStorage.removeItem(ACTIVE_CONNECTION_KEY);
+  try {
+    localStorage.removeItem(OLD_PROFILES_KEY);
+    localStorage.removeItem(OLD_SELECTED_PROFILE_KEY);
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
+export function touchActiveConnectionLastUsed(isoNow = new Date().toISOString()): void {
+  const connection = readActive();
+  if (!connection) return;
+  writeActive({ ...connection, lastUsedAt: isoNow });
 }
 
 export function listConnectionProfiles(): ConnectionProfile[] {
-  return readAll().sort((a, b) => (b.lastUsedAt ?? b.createdAt).localeCompare(a.lastUsedAt ?? a.createdAt));
+  const active = readActive();
+  return active ? [active] : [];
 }
 
 export function getConnectionProfile(profileId: string): ConnectionProfile | undefined {
-  return readAll().find((p) => p.id === profileId);
+  const active = readActive();
+  if (!active) return undefined;
+  return active.id === profileId ? active : undefined;
 }
 
 export function saveConnectionProfile(profile: ConnectionProfile): void {
-  const profiles = readAll();
-  const index = profiles.findIndex((p) => p.id === profile.id);
-  if (index >= 0) profiles[index] = profile;
-  else profiles.push(profile);
-  writeAll(profiles);
+  saveActiveConnection(profile);
 }
 
 export function deleteConnectionProfile(profileId: string): void {
-  const profiles = readAll().filter((p) => p.id !== profileId);
-  writeAll(profiles);
+  const active = readActive();
+  if (active?.id === profileId) clearActiveConnection();
 }
 
 export function touchConnectionProfileLastUsed(profileId: string, isoNow = new Date().toISOString()): void {
-  const profiles = readAll();
-  const index = profiles.findIndex((p) => p.id === profileId);
-  if (index < 0) return;
-  profiles[index] = { ...profiles[index], lastUsedAt: isoNow };
-  writeAll(profiles);
+  const active = readActive();
+  if (active?.id !== profileId) return;
+  writeActive({ ...active, lastUsedAt: isoNow });
 }

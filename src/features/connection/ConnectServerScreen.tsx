@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { SecondPassDiscovery } from "@secondpass/client";
 import {
-  listConnectionProfiles,
+  getActiveConnection,
   saveConnectionProfile,
   touchConnectionProfileLastUsed,
   type ConnectionProfile,
@@ -43,14 +43,8 @@ function formatDiscoverySummary(discovery: SecondPassDiscovery) {
 
 export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChange, onProfilesChanged }: Props) {
   const [serverUrlInput, setServerUrlInput] = useState("");
-  const [labelInput, setLabelInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedProfile = useMemo(() => {
-    if (!selectedProfileId) return null;
-    return listConnectionProfiles().find((p) => p.id === selectedProfileId) ?? null;
-  }, [selectedProfileId]);
 
   async function handleConnect() {
     setError(null);
@@ -60,19 +54,14 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
       const discovery = await discoverSecondPass(serverBaseUrl);
       const summary = formatDiscoverySummary(discovery);
 
-      const profiles = listConnectionProfiles();
       const now = new Date().toISOString();
-      const existing = profiles.find((p) => p.serverBaseUrl === serverBaseUrl) ?? null;
+      const existing = getActiveConnection();
 
-      const label =
-        labelInput.trim() ||
-        existing?.label ||
-        summary.serverName ||
-        summary.serverDescription ||
-        serverBaseUrl;
+      const label = summary.serverName || summary.serverDescription || serverBaseUrl;
 
       const updated: ConnectionProfile = {
-        ...(existing ?? { id: newProfileId(), createdAt: now }),
+        id: existing?.id ?? selectedProfileId ?? newProfileId(),
+        createdAt: existing?.createdAt ?? now,
         label,
         serverBaseUrl,
         serverName: summary.serverName,
@@ -118,20 +107,6 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
           <div className="fieldHelp muted">Examples: localhost:8000, http://localhost:8000/app/</div>
         </label>
 
-        <details className="connectAdvanced">
-          <summary className="muted">Optional label</summary>
-          <label className="field">
-            <span className="fieldLabel">Label</span>
-            <input
-              className="input"
-              value={labelInput}
-              onChange={(e) => setLabelInput(e.target.value)}
-              placeholder="Home server"
-              autoComplete="off"
-            />
-          </label>
-        </details>
-
         <div className="formActions">
           <button className="button buttonPrimary" type="submit" disabled={busy}>
             {busy ? "Connecting..." : "Connect"}
@@ -140,12 +115,6 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
 
         {error ? <p className="errorText">{error}</p> : null}
       </form>
-
-      {selectedProfile ? (
-        <div className="muted">
-          Current selection: <span className="mono">{selectedProfile.serverBaseUrl}</span>
-        </div>
-      ) : null}
     </section>
   );
 }

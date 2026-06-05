@@ -61,7 +61,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   async function startLinking() {
     if (!profile) return;
     if (!discovery) {
-      setState({ phase: "error", message: "Run discovery first (Test discovery) so client API endpoints are known." });
+      setState({ phase: "error", message: "Connect a library first so client API endpoints are known." });
       return;
     }
 
@@ -119,8 +119,8 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   if (!selectedProfileId) {
     return (
       <section className="panel">
-        <h2 className="panelTitle">Client API linking</h2>
-        <p className="muted">Select a connection profile to start linking.</p>
+        <h2 className="panelTitle">Link this browser</h2>
+        <p className="muted">Connect a library to start linking.</p>
       </section>
     );
   }
@@ -128,20 +128,18 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   if (!profile) {
     return (
       <section className="panel">
-        <h2 className="panelTitle">Client API linking</h2>
-        <p className="muted">Selected profile not found. Re-select a profile.</p>
+        <h2 className="panelTitle">Link this browser</h2>
+        <p className="muted">Connected library not found. Connect a library again.</p>
       </section>
     );
   }
 
   return (
     <section className="panel">
-      <h2 className="panelTitle">Client API linking</h2>
+      <h2 className="panelTitle">Link this browser</h2>
 
       {!discovery ? (
-        <p className="muted">
-          Client API endpoints are unknown for this profile. Run <strong>Test discovery</strong> first.
-        </p>
+        <p className="muted">Client API endpoints are unknown for this library. Connect the library again.</p>
       ) : null}
 
       <label className="field">

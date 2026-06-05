@@ -1,8 +1,43 @@
-/* Extracted from src/app/App.css (audit pass 2) */
-
 .settingsLayout {
+  width: min(920px, 100%);
+  margin: 0 auto;
   display: grid;
   gap: 14px;
+}
+
+.settingsSection {
+  display: grid;
+  gap: 6px;
+}
+
+.settingsTitle {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.settingsCard {
+  display: grid;
+  gap: 14px;
+}
+
+.settingsSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.settingsLabel {
+  font-weight: 650;
 }
 
 .settingsGrid {
@@ -11,15 +46,80 @@
 }
 
 .settingsActions {
-  margin-top: 10px;
-  display: grid;
-  gap: 6px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.settingsAdvanced > summary {
+.settingsEmpty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.settingsDangerCard {
+  border-color: rgba(185, 28, 28, 0.26);
+}
+
+.settingsNotice {
+  margin: 0;
+  color: #047857;
+  font-weight: 600;
+}
+
+.settingsDiagnostics {
+  color: var(--sp-muted);
+}
+
+.settingsDiagnostics > summary {
   cursor: pointer;
 }
 
-.settingsAdvancedBody {
+.settingsDiagnosticsBody {
   margin-top: 12px;
+}
+
+.segmentedControl {
+  display: inline-grid;
+  grid-auto-flow: column;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--sp-panel);
+}
+
+.segmentedButton {
+  min-width: 84px;
+  border: 0;
+  border-right: 1px solid var(--sp-border);
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--sp-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.segmentedButton:last-child {
+  border-right: 0;
+}
+
+.segmentedButtonActive {
+  background: var(--sp-text);
+  color: var(--sp-panel);
+}
+
+@media (max-width: 560px) {
+  .settingsRow {
+    align-items: stretch;
+  }
+
+  .segmentedControl {
+    width: 100%;
+    grid-auto-columns: 1fr;
+  }
+
+  .segmentedButton {
+    min-width: 0;
+  }
 }

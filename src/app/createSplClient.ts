@@ -2,8 +2,8 @@ import { createSecondPassClient, type SecondPassClient } from "@secondpass/clien
 import type { ConnectionProfile } from "../storage/connectionProfiles";
 
 export function createSplClientFromProfile(profile: ConnectionProfile): SecondPassClient {
-  if (!profile.apiBaseUrl) throw new Error("Profile is missing apiBaseUrl. Run discovery again.");
-  if (!profile.accessToken) throw new Error("Profile is not linked.");
+  if (!profile.apiBaseUrl) throw new Error("Library connection is missing apiBaseUrl. Connect again.");
+  if (!profile.accessToken) throw new Error("Library is not linked.");
 
   return createSecondPassClient({
     apiBaseUrl: profile.apiBaseUrl,
@@ -11,4 +11,3 @@ export function createSplClientFromProfile(profile: ConnectionProfile): SecondPa
     tokenType: profile.tokenType ?? "Bearer",
   });
 }
-

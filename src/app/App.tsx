@@ -4,16 +4,16 @@ import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "..
 import { LibraryLandingPage } from "../features/library/LibraryLandingPage";
 import { HomePage } from "../features/home/HomePage";
 import { ReadingActivity, type OpenedBook } from "../features/reader";
-import { DebugDetails } from "./DebugDetails";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { AppRoute } from "./navigation";
 import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
 import {
-  deleteConnectionProfile,
-  getConnectionProfile,
-  listConnectionProfiles,
+  clearActiveConnection,
+  getActiveConnection,
   saveConnectionProfile,
+  type ConnectionProfile,
 } from "../storage/connectionProfiles";
+import { getAppTheme, saveAppTheme, type AppTheme } from "../storage/appTheme";
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
@@ -26,8 +26,6 @@ import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
 import type { SecondPassClient } from "@secondpass/client";
 
-const SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
-
 export default function App() {
   const DEBUG_NAV = import.meta.env.DEV;
   const [profilesVersion, setProfilesVersion] = useState(0);
@@ -36,18 +34,13 @@ export default function App() {
   const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
   const [readerRestoreError, setReaderRestoreError] = useState<string | null>(null);
   const [readerRestoreAttempt, setReaderRestoreAttempt] = useState(0);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(SELECTED_PROFILE_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => getAppTheme());
 
   const selectedProfile = useMemo(() => {
-    if (!selectedProfileId) return null;
-    return getConnectionProfile(selectedProfileId) ?? null;
-  }, [selectedProfileId, profilesVersion]);
+    void profilesVersion;
+    return getActiveConnection();
+  }, [profilesVersion]);
+  const selectedProfileId = selectedProfile?.id ?? null;
 
   const splClient: SecondPassClient | null = useMemo(() => {
     if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return null;
@@ -65,6 +58,12 @@ export default function App() {
     window.addEventListener("hashchange", handler);
     return () => window.removeEventListener("hashchange", handler);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = appTheme;
+    document.documentElement.style.colorScheme = appTheme === "dark" ? "dark" : appTheme === "light" ? "light" : "";
+    saveAppTheme(appTheme);
+  }, [appTheme]);
 
   useEffect(() => {
     if (!DEBUG_NAV) return;
@@ -308,25 +307,6 @@ export default function App() {
     readerRestoreAttempt,
   ]);
 
-  useEffect(() => {
-    const profiles = listConnectionProfiles();
-    if (selectedProfileId && profiles.some((p) => p.id === selectedProfileId)) return;
-    if (profiles.length === 0) {
-      setSelectedProfileId(null);
-      return;
-    }
-    setSelectedProfileId(profiles[0].id);
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (selectedProfileId) localStorage.setItem(SELECTED_PROFILE_KEY, selectedProfileId);
-      else localStorage.removeItem(SELECTED_PROFILE_KEY);
-    } catch {
-      // ignore storage errors
-    }
-  }, [selectedProfileId]);
-
   function refreshProfiles() {
     setProfilesVersion((v) => v + 1);
   }
@@ -354,9 +334,7 @@ export default function App() {
   }
 
   function handleForgetServer() {
-    if (!selectedProfileId) return;
-    deleteConnectionProfile(selectedProfileId);
-    setSelectedProfileId(null);
+    clearActiveConnection();
     handleCloseReader();
     refreshProfiles();
     setView("main");
@@ -399,20 +377,19 @@ export default function App() {
           <>
             <SettingsPanel
               profile={selectedProfile}
-              selectedProfileId={selectedProfileId}
-              onSelectedProfileIdChange={setSelectedProfileId}
               onProfilesChanged={refreshProfiles}
-              profilesVersion={profilesVersion}
               onForgetServer={handleForgetServer}
+              appTheme={appTheme}
+              onAppThemeChange={setAppTheme}
+              workflowStep={workflowStep}
             />
-            <DebugDetails step={workflowStep} selectedProfileId={selectedProfileId} profile={selectedProfile} />
           </>
         ) : (
           <>
             {workflowStep === "connect_server" ? (
               <ConnectServerScreen
                 selectedProfileId={selectedProfileId}
-                onSelectedProfileIdChange={setSelectedProfileId}
+                onSelectedProfileIdChange={() => undefined}
                 onProfilesChanged={refreshProfiles}
               />
             ) : null}
@@ -572,15 +549,15 @@ export default function App() {
   );
 }
 
-function ServerSummary({ profile }: { profile: ReturnType<typeof getConnectionProfile> | null }) {
-  if (!profile) return <p className="muted">No profile selected.</p>;
+function ServerSummary({ profile }: { profile: ConnectionProfile | null }) {
+  if (!profile) return <p className="muted">No library connected.</p>;
   return (
     <div className="serverSummary">
       <div className="detailRow">
-        <span className="muted">Profile:</span> {profile.label}
+        <span className="muted">Library:</span> {profile.serverName ?? profile.label}
       </div>
       <div className="detailRow">
-        <span className="muted">Server:</span> <span className="mono">{profile.serverBaseUrl}</span>
+        <span className="muted">Server URL:</span> <span className="mono">{profile.serverBaseUrl}</span>
       </div>
       {profile.serverName ? (
         <div className="detailRow">

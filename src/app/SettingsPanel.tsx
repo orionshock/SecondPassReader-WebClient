@@ -1,102 +1,252 @@
-import { ConnectionSetup } from "../features/connection";
+import { useState } from "react";
 import type { ConnectionProfile } from "../storage/connectionProfiles";
+import { saveConnectionProfile } from "../storage/connectionProfiles";
+import type { AppTheme } from "../storage/appTheme";
 import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
+import { discoverSecondPass } from "../features/connection/connectionUtils";
+import { createSplClientFromProfile } from "./createSplClient";
+import type { AppWorkflowStep } from "./appWorkflow";
+import { navigateTo } from "./navigation";
+
+type Props = {
+  profile: ConnectionProfile | null;
+  onProfilesChanged: () => void;
+  onForgetServer: () => void;
+  appTheme: AppTheme;
+  onAppThemeChange: (theme: AppTheme) => void;
+  workflowStep: AppWorkflowStep;
+};
+
+type ActionState =
+  | { phase: "idle" }
+  | { phase: "checking" }
+  | { phase: "logging_out" }
+  | { phase: "success"; message: string }
+  | { phase: "error"; message: string; action: "check" | "logout" };
 
 export function SettingsPanel({
   profile,
-  selectedProfileId,
-  onSelectedProfileIdChange,
   onProfilesChanged,
-  profilesVersion,
   onForgetServer,
-}: {
-  profile: ConnectionProfile | null;
-  selectedProfileId: string | null;
-  onSelectedProfileIdChange: (id: string | null) => void;
-  onProfilesChanged: () => void;
-  profilesVersion: number;
-  onForgetServer: () => void;
-}) {
+  appTheme,
+  onAppThemeChange,
+  workflowStep,
+}: Props) {
+  const [state, setState] = useState<ActionState>({ phase: "idle" });
+
+  async function checkConnection() {
+    if (!profile) return;
+    if (!profile.accessToken) {
+      setState({ phase: "error", action: "check", message: "This library is not linked yet." });
+      return;
+    }
+
+    setState({ phase: "checking" });
+    try {
+      const discovery = await discoverSecondPass(profile.serverBaseUrl);
+      const now = new Date().toISOString();
+      const discoveredProfile: ConnectionProfile = {
+        ...profile,
+        serverName: discovery.server_name,
+        serverDescription: discovery.server_description,
+        apiBaseUrl: discovery.api_base_url,
+        clientApi: {
+          discoveryVersion: discovery.client_api.discovery_version,
+          discoveryEndpoint: discovery.client_api.discovery_endpoint,
+          loginRequestEndpoint: discovery.client_api.login_request_endpoint,
+          authorizeUrl: discovery.client_api.authorize_url,
+          pollEndpointTemplate: discovery.client_api.poll_endpoint_template,
+        },
+        lastCheckedAt: now,
+      };
+
+      const me = await createSplClientFromProfile(discoveredProfile).account.getCurrent();
+      saveConnectionProfile({
+        ...discoveredProfile,
+        verifiedAt: now,
+        lastUsedAt: now,
+        verifiedUser: {
+          id: me.id,
+          username: me.username,
+          displayName: me.display_name,
+          firstName: me.first_name,
+          lastName: me.last_name,
+          email: me.email,
+        },
+        mustChangePassword: me.must_change_password ?? false,
+      });
+      onProfilesChanged();
+      setState({ phase: "success", message: "Connection checked successfully." });
+    } catch (e) {
+      setState({
+        phase: "error",
+        action: "check",
+        message: e instanceof Error ? e.message : "Connection check failed.",
+      });
+    }
+  }
+
+  async function logOut() {
+    if (!profile?.apiBaseUrl || !profile.accessToken || !profile.clientSessionId) {
+      setState({
+        phase: "error",
+        action: "logout",
+        message: "This library is missing the session details needed to revoke the server session.",
+      });
+      return;
+    }
+
+    setState({ phase: "logging_out" });
+    try {
+      const endpoint = new URL(
+        `/api/v1/accounts/me/client-sessions/${encodeURIComponent(profile.clientSessionId)}/`,
+        profile.apiBaseUrl,
+      );
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+        headers: {
+          Authorization: `${profile.tokenType ?? "Bearer"} ${profile.accessToken}`,
+        },
+      });
+      if (!response.ok) throw new Error(`Logout failed with HTTP ${response.status}.`);
+      onForgetServer();
+    } catch (e) {
+      setState({
+        phase: "error",
+        action: "logout",
+        message: e instanceof Error ? e.message : "Logout failed.",
+      });
+    }
+  }
+
+  function forgetLocally() {
+    onForgetServer();
+  }
+
+  const status = getConnectionStatus(profile);
+  const busy = state.phase === "checking" || state.phase === "logging_out";
+
   return (
     <div className="settingsLayout">
-      <section className="panel">
-        <h2 className="panelTitle">Current server</h2>
-        {!profile ? (
-          <p className="muted">No profile selected.</p>
-        ) : (
-          <div className="settingsGrid">
-            <div className="detailRow">
-              <span className="muted">Label:</span> {profile.label}
-            </div>
-            <div className="detailRow">
-              <span className="muted">Server:</span> <span className="mono">{profile.serverBaseUrl}</span>
-            </div>
-            {profile.serverName ? (
-              <div className="detailRow">
-                <span className="muted">Name:</span> {profile.serverName}
-              </div>
-            ) : null}
-            {profile.serverDescription ? (
-              <div className="detailRow">
-                <span className="muted">Description:</span> {profile.serverDescription}
-              </div>
-            ) : null}
-            {profile.apiBaseUrl ? (
-              <div className="detailRow">
-                <span className="muted">API base:</span> <span className="mono">{profile.apiBaseUrl}</span>
-              </div>
-            ) : null}
-            <div className="detailRow">
-              <span className="muted">Status:</span> {getConnectionStatusLabel(getConnectionStatus(profile))}
-            </div>
-            {profile.linkedAt ? (
-              <div className="detailRow">
-                <span className="muted">Linked at:</span> {profile.linkedAt}
-              </div>
-            ) : null}
-            {profile.clientSessionId ? (
-              <div className="detailRow">
-                <span className="muted">Client session:</span> <span className="mono">{profile.clientSessionId}</span>
-              </div>
-            ) : null}
-            {profile.clientSessionName ? (
-              <div className="detailRow">
-                <span className="muted">Client name:</span> {profile.clientSessionName}
-              </div>
-            ) : null}
-            {profile.verifiedUser ? (
-              <div className="detailRow">
-                <span className="muted">Verified user:</span> <span className="mono">{profile.verifiedUser.username}</span>
-              </div>
-            ) : null}
-            {profile.verifiedAt ? (
-              <div className="detailRow">
-                <span className="muted">Verified at:</span> {profile.verifiedAt}
-              </div>
-            ) : null}
+      <section className="settingsSection">
+        <h1 className="settingsTitle">Settings</h1>
+      </section>
 
-            <div className="settingsActions">
-              <button type="button" className="button buttonDanger" onClick={onForgetServer} disabled={!selectedProfileId}>
-                Forget this server
-              </button>
-              <div className="muted settingsHint">Deletes the selected profile from this browser only.</div>
-            </div>
+      <section className="panel settingsCard">
+        <div className="settingsSectionHeader">
+          <h2 className="panelTitle">Appearance</h2>
+        </div>
+        <div className="settingsRow">
+          <div>
+            <div className="settingsLabel">Theme</div>
           </div>
+          <div className="segmentedControl" role="radiogroup" aria-label="Theme">
+            {(["system", "light", "dark"] as AppTheme[]).map((theme) => (
+              <button
+                key={theme}
+                type="button"
+                className={`segmentedButton${appTheme === theme ? " segmentedButtonActive" : ""}`}
+                role="radio"
+                aria-checked={appTheme === theme}
+                onClick={() => onAppThemeChange(theme)}
+              >
+                {theme[0].toUpperCase() + theme.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel settingsCard">
+        <div className="settingsSectionHeader">
+          <h2 className="panelTitle">Connected library</h2>
+          <span className={`pill ${status === "verified" ? "pillOk" : status === "not_configured" ? "pillIdle" : "pillWarn"}`}>
+            {getConnectionStatusLabel(status)}
+          </span>
+        </div>
+
+        {!profile ? (
+          <div className="settingsEmpty">
+            <p className="muted">No library is connected in this browser.</p>
+            <button type="button" className="button buttonPrimary" onClick={() => navigateTo({ kind: "connect" })}>
+              Connect library
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="settingsGrid">
+              <Detail label="Library" value={profile.serverName ?? profile.label} />
+              {profile.serverDescription ? <Detail label="Description" value={profile.serverDescription} /> : null}
+              <Detail label="Server URL" value={profile.serverBaseUrl} mono />
+              <Detail label="API base URL" value={profile.apiBaseUrl ?? "Unknown"} mono />
+              <Detail label="Signed-in user" value={formatUser(profile)} />
+              <Detail label="Client session" value={profile.clientSessionName ?? profile.clientSessionId ?? "Unknown"} />
+              <Detail label="Last checked" value={profile.lastCheckedAt ?? profile.verifiedAt ?? "Never"} />
+            </div>
+            <div className="settingsActions">
+              <button type="button" className="button" onClick={() => void checkConnection()} disabled={busy}>
+                {state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
+              </button>
+            </div>
+          </>
         )}
       </section>
 
-      <details className="panel settingsAdvanced">
-        <summary className="panelTitle">Advanced profile tools</summary>
-        <div className="settingsAdvancedBody">
-          <ConnectionSetup
-            selectedProfileId={selectedProfileId}
-            onSelectedProfileIdChange={onSelectedProfileIdChange}
-            onProfilesChanged={onProfilesChanged}
-            profilesVersion={profilesVersion}
-            showSelectedProfilePanel
-          />
+      <section className="panel settingsCard settingsDangerCard">
+        <div className="settingsSectionHeader">
+          <h2 className="panelTitle">Session</h2>
+        </div>
+        <p className="muted">
+          Log out revokes this client session on the server and removes the local connection from this browser. Server
+          books and annotations are not deleted.
+        </p>
+        <div className="settingsActions">
+          <button type="button" className="button buttonDanger" onClick={() => void logOut()} disabled={!profile || busy}>
+            {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}
+          </button>
+          {(state.phase === "error" && state.action === "logout") || profile ? (
+            <button type="button" className="button" onClick={forgetLocally} disabled={!profile || state.phase === "logging_out"}>
+              Forget locally
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
+      {state.phase === "error" ? <p className="errorText">{state.message}</p> : null}
+
+      <details className="panel settingsDiagnostics">
+        <summary className="panelTitle">Diagnostics</summary>
+        <div className="settingsGrid settingsDiagnosticsBody">
+          <Detail label="Current workflow step" value={workflowStep} mono />
+          <Detail label="Server URL" value={profile?.serverBaseUrl ?? "None"} mono />
+          <Detail label="API base URL" value={profile?.apiBaseUrl ?? "None"} mono />
+          <Detail label="Client session id" value={profile?.clientSessionId ?? "None"} mono />
+          <Detail label="Token type" value={profile?.accessToken ? profile.tokenType ?? "Bearer" : "None"} mono />
+          <Detail label="Linked at" value={profile?.linkedAt ?? "None"} mono />
+          <Detail label="Verified at" value={profile?.verifiedAt ?? "None"} mono />
+          <Detail label="Last checked at" value={profile?.lastCheckedAt ?? "None"} mono />
+          <Detail label="Discovery endpoint" value={profile?.clientApi?.discoveryEndpoint ?? "None"} mono />
+          <Detail label="Login request endpoint" value={profile?.clientApi?.loginRequestEndpoint ?? "None"} mono />
+          <Detail label="Authorize URL" value={profile?.clientApi?.authorizeUrl ?? "None"} mono />
+          <Detail label="Poll endpoint template" value={profile?.clientApi?.pollEndpointTemplate ?? "None"} mono />
+          <Detail label="Last error" value={state.phase === "error" ? state.message : "None"} />
         </div>
       </details>
     </div>
   );
+}
+
+function Detail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="detailRow">
+      <span className="muted">{label}:</span> <span className={mono ? "mono" : undefined}>{value}</span>
+    </div>
+  );
+}
+
+function formatUser(profile: ConnectionProfile): string {
+  const user = profile.verifiedUser;
+  if (!user) return "Unknown";
+  return user.displayName || user.username || "Unknown";
 }
