@@ -58,14 +58,35 @@
   justify-items: start;
 }
 
-.settingsDangerCard {
-  border-color: rgba(185, 28, 28, 0.26);
-}
-
 .settingsNotice {
   margin: 0;
   color: #047857;
   font-weight: 600;
+}
+
+.settingsLocalFallback {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.settingsLinkButton {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--sp-primary-text);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.settingsLinkButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .settingsDiagnostics {
@@ -105,8 +126,8 @@
 }
 
 .segmentedButtonActive {
-  background: var(--sp-text);
-  color: var(--sp-panel);
+  background: var(--sp-segment-active-bg);
+  color: var(--sp-segment-active-text);
 }
 
 @media (max-width: 560px) {

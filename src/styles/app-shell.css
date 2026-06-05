@@ -46,6 +46,7 @@
   border: 0;
   padding: 0;
   background: transparent;
+  color: var(--sp-text);
   cursor: pointer;
   text-align: left;
 }
@@ -65,6 +66,7 @@
   border: 0;
   padding: 0;
   background: transparent;
+  color: var(--sp-muted);
   cursor: pointer;
   text-align: left;
   justify-self: start;
@@ -164,7 +166,7 @@
   font-size: 12px;
   line-height: 18px;
   border: 1px solid var(--sp-border);
-  background: #fff;
+  background: var(--sp-button-bg);
 }
 
 .pillOk {
@@ -217,7 +219,8 @@
 
 .button {
   border: 1px solid var(--sp-border);
-  background: #fff;
+  background: var(--sp-button-bg);
+  color: var(--sp-button-text);
   border-radius: 10px;
   padding: 9px 12px;
   font: inherit;
@@ -230,13 +233,15 @@
 }
 
 .buttonPrimary {
-  border-color: rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--sp-primary-border);
+  background: var(--sp-primary-bg);
+  color: var(--sp-primary-text);
 }
 
 .buttonDanger {
-  border-color: rgba(185, 28, 28, 0.35);
-  background: rgba(185, 28, 28, 0.06);
+  border-color: var(--sp-danger-border);
+  background: var(--sp-danger-bg);
+  color: var(--sp-danger-text);
 }
 
 .buttonCompact {

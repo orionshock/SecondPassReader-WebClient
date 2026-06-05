@@ -178,10 +178,9 @@ export function SettingsPanel({
               <Detail label="Library" value={profile.serverName ?? profile.label} />
               {profile.serverDescription ? <Detail label="Description" value={profile.serverDescription} /> : null}
               <Detail label="Server URL" value={profile.serverBaseUrl} mono />
-              <Detail label="API base URL" value={profile.apiBaseUrl ?? "Unknown"} mono />
               <Detail label="Signed-in user" value={formatUser(profile)} />
-              <Detail label="Client session" value={profile.clientSessionName ?? profile.clientSessionId ?? "Unknown"} />
-              <Detail label="Last checked" value={profile.lastCheckedAt ?? profile.verifiedAt ?? "Never"} />
+              <Detail label="Client session" value={profile.clientSessionName ?? "Unknown"} />
+              <Detail label="Last checked" value={formatTimestamp(profile.lastCheckedAt ?? profile.verifiedAt)} />
             </div>
             <div className="settingsActions">
               <button type="button" className="button" onClick={() => void checkConnection()} disabled={busy}>
@@ -192,7 +191,7 @@ export function SettingsPanel({
         )}
       </section>
 
-      <section className="panel settingsCard settingsDangerCard">
+      <section className="panel settingsCard">
         <div className="settingsSectionHeader">
           <h2 className="panelTitle">Session</h2>
         </div>
@@ -204,12 +203,20 @@ export function SettingsPanel({
           <button type="button" className="button buttonDanger" onClick={() => void logOut()} disabled={!profile || busy}>
             {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}
           </button>
-          {(state.phase === "error" && state.action === "logout") || profile ? (
-            <button type="button" className="button" onClick={forgetLocally} disabled={!profile || state.phase === "logging_out"}>
+        </div>
+        {profile ? (
+          <div className="settingsLocalFallback">
+            <span className="muted">If logout fails, you can forget this connection locally.</span>
+            <button
+              type="button"
+              className="settingsLinkButton"
+              onClick={forgetLocally}
+              disabled={state.phase === "logging_out"}
+            >
               Forget locally
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </section>
 
       {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
@@ -248,5 +255,23 @@ function Detail({ label, value, mono = false }: { label: string; value: string; 
 function formatUser(profile: ConnectionProfile): string {
   const user = profile.verifiedUser;
   if (!user) return "Unknown";
-  return user.displayName || user.username || "Unknown";
+  const first = typeof user.firstName === "string" ? user.firstName.trim() : "";
+  const last = typeof user.lastName === "string" ? user.lastName.trim() : "";
+  const display = typeof user.displayName === "string" ? user.displayName.trim() : "";
+  const username = typeof user.username === "string" ? user.username.trim() : "";
+  const name = first && last ? `${first} ${last}` : display;
+  if (name && username) return `<${name}>@${username}`;
+  if (name) return `<${name}>`;
+  if (username) return `@${username}`;
+  return "Unknown";
+}
+
+function formatTimestamp(value?: string): string {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }

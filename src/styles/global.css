@@ -5,6 +5,16 @@
   --sp-text: #111827;
   --sp-muted: #6b7280;
   --sp-border: rgba(17, 24, 39, 0.12);
+  --sp-button-bg: #ffffff;
+  --sp-button-text: #111827;
+  --sp-primary-bg: rgba(37, 99, 235, 0.08);
+  --sp-primary-text: #1d4ed8;
+  --sp-primary-border: rgba(37, 99, 235, 0.35);
+  --sp-danger-bg: rgba(185, 28, 28, 0.06);
+  --sp-danger-text: #991b1b;
+  --sp-danger-border: rgba(185, 28, 28, 0.35);
+  --sp-segment-active-bg: #111827;
+  --sp-segment-active-text: #ffffff;
 }
 
 :root[data-theme="light"] {
@@ -18,6 +28,16 @@
   --sp-text: #f3f4f6;
   --sp-muted: #a1a1aa;
   --sp-border: rgba(255, 255, 255, 0.14);
+  --sp-button-bg: #22262c;
+  --sp-button-text: #f3f4f6;
+  --sp-primary-bg: rgba(96, 165, 250, 0.18);
+  --sp-primary-text: #bfdbfe;
+  --sp-primary-border: rgba(96, 165, 250, 0.45);
+  --sp-danger-bg: rgba(248, 113, 113, 0.16);
+  --sp-danger-text: #fecaca;
+  --sp-danger-border: rgba(248, 113, 113, 0.45);
+  --sp-segment-active-bg: #e5e7eb;
+  --sp-segment-active-text: #111827;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +48,16 @@
     --sp-text: #f3f4f6;
     --sp-muted: #a1a1aa;
     --sp-border: rgba(255, 255, 255, 0.14);
+    --sp-button-bg: #22262c;
+    --sp-button-text: #f3f4f6;
+    --sp-primary-bg: rgba(96, 165, 250, 0.18);
+    --sp-primary-text: #bfdbfe;
+    --sp-primary-border: rgba(96, 165, 250, 0.45);
+    --sp-danger-bg: rgba(248, 113, 113, 0.16);
+    --sp-danger-text: #fecaca;
+    --sp-danger-border: rgba(248, 113, 113, 0.45);
+    --sp-segment-active-bg: #e5e7eb;
+    --sp-segment-active-text: #111827;
   }
 }
 
