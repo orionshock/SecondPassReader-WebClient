@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
+import { BOOKMARK_DISPLAY, getHighlightAnnotationDisplay } from "./annotationDisplay";
 import type { PreviousSessionAnnotationGroup, PreviousSessionAnnotationItem } from "../session/usePreviousSessionLayers";
 import { toAnnotationCssVars } from "./annotationColors";
 
@@ -21,8 +22,8 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
     return (
       <article className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
         <div className="spAnnotationLeftRail" aria-hidden="true">
-          <span className="spAnnotationTypeIcon" title="Bookmark">
-            <MaterialIcon name="bookmark" />
+          <span className="spAnnotationTypeIcon" title={BOOKMARK_DISPLAY.label}>
+            <MaterialIcon name={BOOKMARK_DISPLAY.iconName} />
           </span>
         </div>
         <div className="spAnnotationBody">
@@ -35,14 +36,15 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
 
   const when = formatWhen(item.timestamp);
   const vars = toAnnotationCssVars(item.color);
+  const display = getHighlightAnnotationDisplay(item.note);
   return (
     <article
       className="spAnnotationCard spAnnotationCardHighlight spAnnotationCardReadOnly"
       style={{ ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
     >
       <div className="spAnnotationLeftRail" aria-hidden="true">
-        <span className="spAnnotationTypeIcon" title="Highlight">
-          <MaterialIcon name="border_color" />
+        <span className="spAnnotationTypeIcon" title={display.label}>
+          <MaterialIcon name={display.iconName} />
         </span>
       </div>
       <div className="spAnnotationBody">

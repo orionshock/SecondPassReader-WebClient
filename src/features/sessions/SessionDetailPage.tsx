@@ -7,6 +7,7 @@ import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
+import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -80,20 +81,6 @@ function getAnnotationTexts(annotation: unknown): { quote: string | null; note: 
   if (isComment && textBodies.length === 1) return { quote: null, note: textBodies[0]?.value ?? null };
 
   return { quote: textBodies[0]?.value ?? null, note: null };
-}
-
-function getAnnotationDisplay(annotation: unknown): { iconName: string; label: string } {
-  const rawMotivation = (annotation as any)?.motivation;
-  const motivations: string[] = Array.isArray(rawMotivation)
-    ? rawMotivation.filter((x): x is string => typeof x === "string")
-    : typeof rawMotivation === "string"
-      ? [rawMotivation]
-      : [];
-
-  if (motivations.includes("bookmarking")) return { iconName: "bookmark", label: "Bookmark" };
-  if (motivations.includes("highlighting")) return { iconName: "border_color", label: "Highlight" };
-  if (motivations.includes("commenting")) return { iconName: "chat_bubble", label: "Comment" };
-  return { iconName: "edit_note", label: "Annotation" };
 }
 
 export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
@@ -512,10 +499,10 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             {annoPage?.results?.length ? (
               <div className="sessionAnnoList">
                 {annoPage.results.map((a) => {
-                  const { iconName, label } = getAnnotationDisplay(a);
                   const updated = (a.updated_at as any) || (a.modified as any) || (a.created_at as any) || (a.created as any);
                   const when = typeof updated === "string" ? formatIso(updated) : null;
                   const { quote, note } = getAnnotationTexts(a);
+                  const { iconName, label } = getRawAnnotationDisplay(a, note);
                   const metaBits = [when ? when : null].filter(Boolean);
                   return (
                     <div

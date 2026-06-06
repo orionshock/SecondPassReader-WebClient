@@ -4,6 +4,7 @@ import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./vi
 import { ANNOTATION_LIMITS } from "./annotationLimits";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
+import { BOOKMARK_DISPLAY, getHighlightAnnotationDisplay } from "./annotationDisplay";
 import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel";
 import type { PreviousSessionAnnotationGroup } from "../session/usePreviousSessionLayers";
 import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadataEditor";
@@ -109,8 +110,8 @@ export function AnnotationWorkspace({
                       className={`spAnnotationCard spAnnotationCardBookmark ${isCurrent ? "spAnnotationCardCurrent" : ""}`}
                     >
                       <div className="spAnnotationLeftRail" aria-hidden="true">
-                        <span className="spAnnotationTypeIcon" title="Bookmark">
-                          <MaterialIcon name="bookmark" />
+                        <span className="spAnnotationTypeIcon" title={BOOKMARK_DISPLAY.label}>
+                          <MaterialIcon name={BOOKMARK_DISPLAY.iconName} />
                         </span>
                       </div>
 
@@ -149,6 +150,7 @@ export function AnnotationWorkspace({
                   h.timestamp && !Number.isNaN(Date.parse(h.timestamp)) ? new Date(h.timestamp).toLocaleString() : null;
                 const isEditing = editingId === h.id;
                 const canSave = editStatus !== "saving" && !busy;
+                const display = getHighlightAnnotationDisplay(h.note);
                 return (
                   <article
                     key={h.id}
@@ -156,8 +158,8 @@ export function AnnotationWorkspace({
                     style={{ ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
                   >
                     <div className="spAnnotationLeftRail" aria-hidden="true">
-                      <span className="spAnnotationTypeIcon" title="Highlight">
-                        <MaterialIcon name="border_color" />
+                      <span className="spAnnotationTypeIcon" title={display.label}>
+                        <MaterialIcon name={display.iconName} />
                       </span>
                     </div>
 
