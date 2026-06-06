@@ -234,6 +234,10 @@
   flex-wrap: wrap;
 }
 
+.sessionCloseConfirmActionsWide {
+  justify-content: flex-start;
+}
+
 .sessionAnnotations {
   margin-top: 14px;
 }

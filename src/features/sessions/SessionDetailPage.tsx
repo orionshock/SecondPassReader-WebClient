@@ -173,6 +173,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
   const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile);
   const statusText = normalizeStatus(typeof session?.status === "string" ? session.status : null, session?.is_active ?? null);
   const annoText = formatAnnotationCount(session?.annotation_count ?? null);
+  const sessionHasSavedName = typeof session?.name === "string" && session.name.trim().length > 0;
 
   const headerTitle = session?.book?.title
     ? `Marginalia for ${"\u201C"}${session.book.title}${"\u201D"}`
@@ -330,17 +331,48 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                     </button>
                   ) : (
                     <div className="sessionCloseConfirm" role="group" aria-label="Close session confirmation">
-                      <div className="sessionCloseConfirmText muted">
-                        Close this session? Name, notes, progress, and annotations become read-only.
-                      </div>
-                      <div className="sessionCloseConfirmActions">
-                        <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
-                          {closeBusy ? `Closing${"\u2026"}` : "Confirm close"}
-                        </button>
-                        <button type="button" className="button buttonCompact" onClick={() => setConfirmClose(false)} disabled={closeBusy}>
-                          Cancel
-                        </button>
-                      </div>
+                      {sessionHasSavedName ? (
+                        <>
+                          <div className="sessionCloseConfirmText muted">
+                            Close this session? Name, notes, progress, and annotations become read-only.
+                          </div>
+                          <div className="sessionCloseConfirmActions">
+                            <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
+                              {closeBusy ? `Closing${"\u2026"}` : "Confirm close"}
+                            </button>
+                            <button type="button" className="button buttonCompact" onClick={() => setConfirmClose(false)} disabled={closeBusy}>
+                              Cancel
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="sessionCloseConfirmText">
+                            This session has no name. Closed sessions cannot be renamed later.
+                          </div>
+                          <div className="sessionCloseConfirmActions sessionCloseConfirmActionsWide">
+                            <button
+                              type="button"
+                              className="button buttonPrimary buttonCompact"
+                              onClick={() => {
+                                setConfirmClose(false);
+                                setCloseError(null);
+                                setDraftName(typeof session.name === "string" ? session.name : "");
+                                setEditingName(true);
+                              }}
+                              disabled={closeBusy}
+                            >
+                              Name session
+                            </button>
+                            <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
+                              {closeBusy ? `Closing${"\u2026"}` : "Close unnamed"}
+                            </button>
+                            <button type="button" className="button buttonCompact" onClick={() => setConfirmClose(false)} disabled={closeBusy}>
+                              Cancel
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </>
