@@ -399,6 +399,7 @@
 
 .spMarginaliaMenuHost {
   position: relative;
+  display: inline-flex;
 }
 
 .spMarginaliaMenuBackdrop {
@@ -409,13 +410,21 @@
 }
 
 .spMarginaliaMenuPanel {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
   width: min(340px, calc(100vw - 24px));
   background: var(--sp-panel);
   border: 1px solid var(--sp-reader-border);
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(17, 24, 39, 0.18);
   overflow: hidden;
+}
+
+.spMarginaliaMenuPanelAbove {
+  top: auto;
+  bottom: calc(100% + 8px);
 }
 
 .spMarginaliaMenuHeader {

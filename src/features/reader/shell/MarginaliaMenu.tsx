@@ -25,7 +25,10 @@ export function MarginaliaMenu(props: {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+  const [panelPos, setPanelPos] = useState<{ offsetX: number; placement: "above" | "below" }>({
+    offsetX: 0,
+    placement: "below",
+  });
 
   useEffect(() => {
     if (!props.open) return;
@@ -42,27 +45,27 @@ export function MarginaliaMenu(props: {
   useLayoutEffect(() => {
     if (!props.open) return;
     const updatePos = () => {
-      const btn = buttonRef.current;
+      const host = hostRef.current;
       const panel = panelRef.current;
-      if (!btn || !panel) return;
-      const btnRect = btn.getBoundingClientRect();
+      if (!host || !panel) return;
+      const hostRect = host.getBoundingClientRect();
+      const previousTransform = panel.style.transform;
+      panel.style.transform = "";
       const panelRect = panel.getBoundingClientRect();
+      panel.style.transform = previousTransform;
 
       const margin = 12;
       const gap = 8;
-      const panelW = panelRect.width;
       const panelH = panelRect.height;
       const viewportRight = window.innerWidth - margin;
       const viewportBottom = window.innerHeight - margin;
 
-      const preferredTop = btnRect.bottom + gap;
-      const flippedTop = btnRect.top - panelH - gap;
-      const top = preferredTop + panelH <= viewportBottom ? preferredTop : Math.max(margin, flippedTop);
+      const placement = hostRect.bottom + gap + panelH <= viewportBottom ? "below" : "above";
+      const overflowLeft = Math.max(0, margin - panelRect.left);
+      const overflowRight = Math.max(0, panelRect.right - viewportRight);
+      const offsetX = overflowLeft || overflowRight ? overflowLeft - overflowRight : 0;
 
-      const preferredLeft = btnRect.right - panelW;
-      const maxLeft = Math.max(margin, viewportRight - panelW);
-      const left = Math.min(Math.max(margin, preferredLeft), maxLeft);
-      setPanelPos({ top, left });
+      setPanelPos({ offsetX, placement });
     };
 
     updatePos();
@@ -94,20 +97,20 @@ export function MarginaliaMenu(props: {
       </button>
 
       {props.open ? (
-        <div
-          className="spMarginaliaMenuBackdrop"
-          role="presentation"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (panelRef.current && panelRef.current.contains(e.target as Node)) return;
-            props.onClose();
-          }}
-        >
+        <>
+          <div
+            className="spMarginaliaMenuBackdrop"
+            role="presentation"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              props.onClose();
+            }}
+          />
           <div
             ref={panelRef}
-            className="spMarginaliaMenuPanel"
-            style={panelPos ? { top: panelPos.top, left: panelPos.left } : { visibility: "hidden" }}
+            className={`spMarginaliaMenuPanel ${panelPos.placement === "above" ? "spMarginaliaMenuPanelAbove" : ""}`}
+            style={panelPos.offsetX ? { transform: `translateX(${panelPos.offsetX}px)` } : undefined}
             role="dialog"
             aria-modal="true"
             aria-label="Marginalia"
@@ -172,7 +175,7 @@ export function MarginaliaMenu(props: {
               ) : null}
             </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );
