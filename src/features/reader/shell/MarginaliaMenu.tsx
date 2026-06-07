@@ -130,12 +130,51 @@ export function MarginaliaMenu(props: {
             </div>
 
             <div className="spMarginaliaMenuBody">
+              <div className="spMarginaliaMenuSection">
+                <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
+                {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading…</div> : null}
+                {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">Failed to load sessions: {props.listError}</div> : null}
+                {props.listStatus !== "loading" && previousLayers.length === 0 ? (
+                  <div className="muted spMarginaliaEmpty">No previous sessions.</div>
+                ) : null}
+                {previousLayers.length > 0 ? (
+                  <div className="spMarginaliaLayerList" role="group" aria-label="Previous session layers">
+                    {previousLayers.map((layer) => {
+                      const checked = props.selectedPreviousSessionIds.has(layer.sessionId);
+                      const disabled = layer.status === "loading";
+                      return (
+                        <label
+                          key={layer.sessionId}
+                          className={`spMarginaliaLayerRow ${checked ? "spMarginaliaLayerRowSelected" : ""}`}
+                        >
+                          <input
+                            className="srOnly"
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => props.onTogglePreviousSession(layer.sessionId)}
+                            disabled={disabled}
+                          />
+                          <span className="spMarginaliaLayerIndicator" aria-hidden="true">
+                            <MaterialIcon name={checked ? "check_circle" : "radio_button_unchecked"} />
+                          </span>
+                          <span className="spMarginaliaLayerLabel">
+                            {layer.labelParts?.length ? <InlineMeta items={layer.labelParts} /> : layer.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+
               {props.onCloseSession ? (
-                <div className="spMarginaliaMenuSection">
-                  <div className="spMarginaliaMenuSectionTitle muted">Session</div>
+                <div className="spMarginaliaMenuFooter">
+                  <div className="muted spMarginaliaSessionNote">
+                    Edit Session Details in Annotations below the book text.
+                  </div>
                   <button
                     type="button"
-                    className="button buttonCompact"
+                    className="button buttonCompact spMarginaliaCloseSessionButton"
                     onClick={() => {
                       props.onClose();
                       props.onCloseSession?.();
@@ -143,34 +182,6 @@ export function MarginaliaMenu(props: {
                   >
                     Close session
                   </button>
-                </div>
-              ) : null}
-
-              <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
-              {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading…</div> : null}
-              {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">Failed to load sessions: {props.listError}</div> : null}
-              {props.listStatus !== "loading" && previousLayers.length === 0 ? (
-                <div className="muted spMarginaliaEmpty">No previous sessions.</div>
-              ) : null}
-              {previousLayers.length > 0 ? (
-                <div className="spMarginaliaLayerList" role="group" aria-label="Previous session layers">
-                  {previousLayers.map((layer) => {
-                    const checked = props.selectedPreviousSessionIds.has(layer.sessionId);
-                    const disabled = layer.status === "loading";
-                    return (
-                      <label key={layer.sessionId} className="spMarginaliaLayerRow">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => props.onTogglePreviousSession(layer.sessionId)}
-                          disabled={disabled}
-                        />
-                        <span className="spMarginaliaLayerLabel">
-                          {layer.labelParts?.length ? <InlineMeta items={layer.labelParts} /> : layer.label}
-                        </span>
-                      </label>
-                    );
-                  })}
                 </div>
               ) : null}
             </div>

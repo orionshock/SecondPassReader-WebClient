@@ -449,13 +449,13 @@
 .spMarginaliaMenuBody {
   padding: 10px 12px 12px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .spMarginaliaMenuSection {
   display: grid;
   gap: 8px;
-  justify-items: start;
+  min-width: 0;
 }
 
 .spMarginaliaMenuSectionTitle {
@@ -468,19 +468,75 @@
 
 .spMarginaliaLayerList {
   display: grid;
-  gap: 8px;
+  gap: 4px;
+  max-height: min(260px, 42vh);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .spMarginaliaLayerRow {
   display: grid;
-  grid-template-columns: 16px 1fr;
-  gap: 10px;
-  align-items: start;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
   font-size: 13px;
+  border-radius: 9px;
+  padding: 5px 6px;
+  cursor: pointer;
+}
+
+.spMarginaliaLayerRow:hover {
+  background: var(--sp-reader-hover);
+}
+
+.spMarginaliaLayerRow:focus-within {
+  outline: 2px solid var(--sp-primary-border);
+  outline-offset: 1px;
+}
+
+.spMarginaliaLayerRowSelected {
+  background: var(--color-primary-bg);
+}
+
+.spMarginaliaLayerIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sp-reader-muted);
+}
+
+.spMarginaliaLayerRowSelected .spMarginaliaLayerIndicator {
+  color: var(--color-primary);
+}
+
+.spMarginaliaLayerIndicator .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .spMarginaliaLayerLabel {
   line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.spMarginaliaMenuFooter {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-reader-border);
+}
+
+.spMarginaliaSessionNote {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.spMarginaliaCloseSessionButton {
+  border-color: rgba(185, 28, 28, 0.32);
+  background: rgba(185, 28, 28, 0.08);
+  color: #991b1b;
 }
 
 .spReadingShell {
@@ -997,6 +1053,18 @@
   background: var(--sp-reader-control-bg);
   border-color: var(--sp-reader-border);
   color: var(--sp-reader-text);
+}
+
+.spReaderActivity .spMarginaliaCloseSessionButton {
+  background: rgba(185, 28, 28, 0.08);
+  border-color: rgba(185, 28, 28, 0.32);
+  color: #991b1b;
+}
+
+.spReaderActivity[data-reader-theme="dark"] .spMarginaliaCloseSessionButton {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.42);
+  color: #fecaca;
 }
 
 .spReaderActivity .spReaderViewportRegion {
