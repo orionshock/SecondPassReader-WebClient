@@ -9,9 +9,10 @@ import type { LibraryBook, SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
+import { EndOfBookDialog } from "./EndOfBookDialog";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
-import { CloseSessionDialog, type CloseSessionInput } from "../sessions/CloseSessionDialog";
+import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../sessions/CloseSessionDialog";
 import { navigateTo } from "../../app/navigation";
 import { findNextSeriesBook, normalizeSeriesIndex } from "../library/seriesUtils";
 
@@ -33,6 +34,7 @@ export function ReadingActivity({
 
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
 
@@ -62,6 +64,8 @@ export function ReadingActivity({
             setMarginaliaOpen={setMarginaliaOpen}
             closeDialogOpen={closeDialogOpen}
             setCloseDialogOpen={setCloseDialogOpen}
+            endBookDialogOpen={endBookDialogOpen}
+            setEndBookDialogOpen={setEndBookDialogOpen}
             spl={spl}
           />
         )}
@@ -78,6 +82,8 @@ function ReaderActivityContent({
   setMarginaliaOpen,
   closeDialogOpen,
   setCloseDialogOpen,
+  endBookDialogOpen,
+  setEndBookDialogOpen,
   spl,
 }: {
   readerState: ReaderActivityRenderState;
@@ -87,11 +93,13 @@ function ReaderActivityContent({
   setMarginaliaOpen: (open: boolean) => void;
   closeDialogOpen: boolean;
   setCloseDialogOpen: (open: boolean) => void;
+  endBookDialogOpen: boolean;
+  setEndBookDialogOpen: (open: boolean) => void;
   spl?: SecondPassClient | null;
 }) {
   const { state, statusLine, autosaveStatus, shell, annotations, marginalia } = readerState;
   const currentSessionId = state.sessionId;
-  const shownFinishSessionIdsRef = useRef<Set<string>>(new Set());
+  const shownEndBookSessionIdsRef = useRef<Set<string>>(new Set());
   const progress = state.location?.bookProgress;
   const nearEnd = typeof progress === "number" && Number.isFinite(progress) && progress >= READER_FINISH_PROGRESS_THRESHOLD;
   const showFinishControls = Boolean(currentSessionId && nearEnd);
@@ -99,50 +107,82 @@ function ReaderActivityContent({
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
   const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
   const [nextSeriesBook, setNextSeriesBook] = useState<LibraryBook | null>(null);
+  const [nextSeriesStatus, setNextSeriesStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const seriesId = openedBook.book.series?.id;
   const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series_index);
+  const canLookupNextBook = seriesId != null && currentSeriesIndex != null;
+  const headerEndLabel = nextSeriesBook ? "Next book…" : "End options…";
+  const closeAfterOptions: CloseSessionAfterOption[] = [
+    ...(nextSeriesBook ? [{ action: "nextBook" as const, label: "Start next book" }] : []),
+    { action: "restartBook", label: "Start this book again" },
+    { action: "home", label: "Go Home" },
+    { action: "detail", label: "View closed session" },
+    { action: "sessions", label: "Go to sessions" },
+  ];
 
   useEffect(() => {
-    if (!currentSessionId || !nearEnd || closeDialogOpen) return;
-    if (shownFinishSessionIdsRef.current.has(currentSessionId)) return;
-    shownFinishSessionIdsRef.current.add(currentSessionId);
-    setCloseDialogOpen(true);
-  }, [closeDialogOpen, currentSessionId, nearEnd, setCloseDialogOpen]);
+    if (!currentSessionId || !nearEnd || endBookDialogOpen || closeDialogOpen) return;
+    if (shownEndBookSessionIdsRef.current.has(currentSessionId)) return;
+    shownEndBookSessionIdsRef.current.add(currentSessionId);
+    setEndBookDialogOpen(true);
+  }, [closeDialogOpen, currentSessionId, endBookDialogOpen, nearEnd, setEndBookDialogOpen]);
 
   useEffect(() => {
-    if (!showFinishControls || !spl || seriesId == null || currentSeriesIndex == null) {
+    if (!showFinishControls || !spl || !canLookupNextBook) {
       setNextSeriesBook(null);
+      setNextSeriesStatus("idle");
       return;
     }
 
     let cancelled = false;
     setNextSeriesBook(null);
+    setNextSeriesStatus("loading");
     void (async () => {
       try {
         const books = await spl.library.series.books(String(seriesId), { ordering: "series_index", pageSize: 100 });
         if (cancelled) return;
         setNextSeriesBook(findNextSeriesBook(openedBook.book, books.results));
+        setNextSeriesStatus("ready");
       } catch {
-        if (!cancelled) setNextSeriesBook(null);
+        if (!cancelled) {
+          setNextSeriesBook(null);
+          setNextSeriesStatus("error");
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [currentSeriesIndex, openedBook.book, seriesId, showFinishControls, spl]);
+  }, [canLookupNextBook, openedBook.book, seriesId, showFinishControls, spl]);
 
   const closeSession = async (input: CloseSessionInput) => {
     if (!currentSessionId) throw new Error("Missing session id.");
     await annotations.closeCurrentSession({ name: input.name, notes: input.notes });
     setCloseDialogOpen(false);
-    if (input.afterAction === "sessions") navigateTo({ kind: "sessions" });
-    else navigateTo({ kind: "session", sessionId: currentSessionId });
+    if (input.afterAction === "nextBook" && nextSeriesBook) {
+      navigateTo({ kind: "reader", bookId: String(nextSeriesBook.id) });
+    } else if (input.afterAction === "restartBook") {
+      navigateTo({ kind: "reader", bookId: String(openedBook.book.id) }, { replace: true });
+      window.location.reload();
+    } else if (input.afterAction === "home") {
+      onBackToLibrary();
+    } else if (input.afterAction === "sessions") {
+      navigateTo({ kind: "sessions" });
+    } else {
+      navigateTo({ kind: "session", sessionId: currentSessionId });
+    }
   };
 
   const startNextBook = (book: LibraryBook) => {
+    setEndBookDialogOpen(false);
     setCloseDialogOpen(false);
     navigateTo({ kind: "reader", bookId: String(book.id) });
+  };
+
+  const finishCurrentSession = () => {
+    setEndBookDialogOpen(false);
+    setCloseDialogOpen(true);
   };
 
   return (
@@ -164,10 +204,10 @@ function ReaderActivityContent({
               <button
                 type="button"
                 className="button buttonCompact spIconButton"
-                onClick={() => setCloseDialogOpen(true)}
+                onClick={() => setEndBookDialogOpen(true)}
               >
-                <MaterialIcon name="flag" />
-                <span className="spIconButtonLabel">Finish…</span>
+                <MaterialIcon name={nextSeriesBook ? "arrow_forward" : "flag"} />
+                <span className="spIconButtonLabel">{headerEndLabel}</span>
               </button>
             ) : null}
           </div>
@@ -238,10 +278,22 @@ function ReaderActivityContent({
         <CloseSessionDialog
           initialName={annotations.currentSessionMeta.name ?? ""}
           initialNotes={annotations.currentSessionMeta.notes ?? ""}
-          nextBook={nextSeriesBook}
+          afterOptions={closeAfterOptions}
+          defaultAfterAction={nextSeriesBook ? "nextBook" : "home"}
           onCancel={() => setCloseDialogOpen(false)}
           onSaveAndClose={closeSession}
+        />
+      ) : null}
+
+      {endBookDialogOpen ? (
+        <EndOfBookDialog
+          nextBook={nextSeriesBook}
+          nextBookStatus={nextSeriesStatus}
+          hasSeries={Boolean(canLookupNextBook)}
           onStartNextBook={startNextBook}
+          onFinishSession={finishCurrentSession}
+          onKeepReading={() => setEndBookDialogOpen(false)}
+          onGoToLibrary={nextSeriesBook ? undefined : onBackToLibrary}
         />
       ) : null}
     </>

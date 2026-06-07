@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { LibraryBook } from "@secondpass/client";
-import { formatSeriesIndex } from "../library/seriesUtils";
 
-export type CloseSessionAfterAction = "detail" | "sessions";
+export type CloseSessionAfterAction = "nextBook" | "restartBook" | "home" | "detail" | "sessions";
 
 export type CloseSessionInput = {
   name: string;
@@ -10,31 +8,44 @@ export type CloseSessionInput = {
   afterAction: CloseSessionAfterAction;
 };
 
+export type CloseSessionAfterOption = {
+  action: CloseSessionAfterAction;
+  label: string;
+};
+
+const DEFAULT_AFTER_OPTIONS: CloseSessionAfterOption[] = [
+  { action: "detail", label: "View closed session" },
+  { action: "sessions", label: "Go to sessions" },
+];
+
 export function CloseSessionDialog({
   initialName,
   initialNotes,
-  nextBook,
+  afterOptions = DEFAULT_AFTER_OPTIONS,
+  defaultAfterAction,
   onCancel,
   onSaveAndClose,
-  onStartNextBook,
 }: {
   initialName: string;
   initialNotes: string;
-  nextBook?: LibraryBook | null;
+  afterOptions?: CloseSessionAfterOption[];
+  defaultAfterAction?: CloseSessionAfterAction;
   onCancel: () => void;
   onSaveAndClose: (input: CloseSessionInput) => Promise<void>;
-  onStartNextBook?: (book: LibraryBook) => void;
 }) {
+  const initialAfterAction =
+    defaultAfterAction && afterOptions.some((option) => option.action === defaultAfterAction)
+      ? defaultAfterAction
+      : afterOptions[0]?.action ?? "detail";
   const [name, setName] = useState(initialName);
   const [notes, setNotes] = useState(initialNotes);
-  const [afterAction, setAfterAction] = useState<CloseSessionAfterAction>("detail");
+  const [afterAction, setAfterAction] = useState<CloseSessionAfterAction>(initialAfterAction);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement | null>(null);
 
   const trimmedName = name.trim();
   const unnamed = trimmedName.length === 0;
-  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -108,47 +119,19 @@ export function CloseSessionDialog({
 
           <fieldset className="closeSessionAfter">
             <legend className="fieldLabel">After closing</legend>
-            <label className="closeSessionAfterOption">
-              <input
-                type="radio"
-                name="close-session-after"
-                checked={afterAction === "detail"}
-                onChange={() => setAfterAction("detail")}
-                disabled={busy}
-              />
-              <span>View session detail</span>
-            </label>
-            <label className="closeSessionAfterOption">
-              <input
-                type="radio"
-                name="close-session-after"
-                checked={afterAction === "sessions"}
-                onChange={() => setAfterAction("sessions")}
-                disabled={busy}
-              />
-              <span>Go to sessions</span>
-            </label>
-            {/* TODO: Add "Start new session from beginning" when the app has a direct reader workflow for it. */}
+            {afterOptions.map((option) => (
+              <label key={option.action} className="closeSessionAfterOption">
+                <input
+                  type="radio"
+                  name="close-session-after"
+                  checked={afterAction === option.action}
+                  onChange={() => setAfterAction(option.action)}
+                  disabled={busy}
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
           </fieldset>
-
-          {nextBook && onStartNextBook ? (
-            <div className="closeSessionNextBook">
-              <div className="closeSessionNextBookEyebrow">Next in series</div>
-              <div className="closeSessionNextBookTitle">{nextBook.title}</div>
-              {nextBook.subtitle ? <div className="muted closeSessionNextBookSubtitle">{nextBook.subtitle}</div> : null}
-              {nextBookSeriesIndex ? (
-                <div className="muted closeSessionNextBookMeta">Series index {nextBookSeriesIndex}</div>
-              ) : null}
-              <button
-                type="button"
-                className="button buttonCompact closeSessionNextBookButton"
-                onClick={() => onStartNextBook(nextBook)}
-                disabled={busy}
-              >
-                Start next book
-              </button>
-            </div>
-          ) : null}
 
           {error ? <p className="errorText">{error}</p> : null}
         </div>
