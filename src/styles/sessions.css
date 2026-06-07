@@ -216,18 +216,18 @@
   margin-top: 14px;
 }
 
-.closeSessionOverlay {
+.modalOverlay.closeSessionOverlay {
   z-index: 1200;
   background: rgba(15, 23, 42, 0.55);
 }
 
-.closeSessionDialog {
+.modalOverlay.closeSessionOverlay .closeSessionDialog {
   width: min(560px, calc(100vw - 36px));
   max-height: calc(100vh - 36px);
   overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: 14px;
-  background: var(--color-surface);
+  background: var(--color-surface-raised);
   color: var(--color-text);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
 }
@@ -249,44 +249,45 @@
   padding: 12px 16px 16px;
 }
 
-.closeSessionDialog .muted,
-.closeSessionDialog .fieldLabel {
+.modalOverlay.closeSessionOverlay .closeSessionDialog .muted,
+.modalOverlay.closeSessionOverlay .closeSessionDialog .fieldLabel {
   color: var(--color-text-muted);
 }
 
-.closeSessionDialog .input,
-.closeSessionDialog input[type="text"],
-.closeSessionDialog textarea {
+.modalOverlay.closeSessionOverlay .closeSessionDialog .input,
+.modalOverlay.closeSessionOverlay .closeSessionDialog input[type="text"],
+.modalOverlay.closeSessionOverlay .closeSessionDialog textarea {
   background: var(--color-input-bg);
   border-color: var(--color-border);
   color: var(--color-text);
 }
 
-.closeSessionDialog .input:focus,
-.closeSessionDialog input[type="text"]:focus,
-.closeSessionDialog textarea:focus {
+.modalOverlay.closeSessionOverlay .closeSessionDialog .input:focus,
+.modalOverlay.closeSessionOverlay .closeSessionDialog input[type="text"]:focus,
+.modalOverlay.closeSessionOverlay .closeSessionDialog textarea:focus {
   outline: 2px solid var(--sp-primary-border);
   outline-offset: 2px;
 }
 
-.closeSessionDialog .button {
+.modalOverlay.closeSessionOverlay .closeSessionDialog .button {
   background: var(--sp-button-bg);
   border-color: var(--color-border);
   color: var(--sp-button-text);
 }
 
-.closeSessionDialog .buttonPrimary {
+.modalOverlay.closeSessionOverlay .closeSessionDialog .button.buttonPrimary {
   background: var(--sp-primary-bg);
   border-color: var(--sp-primary-border);
   color: var(--sp-primary-text);
 }
 
-.closeSessionWarning {
+.modalOverlay.closeSessionOverlay .closeSessionDialog .warningText.closeSessionWarning {
   margin: 0;
   padding: 9px 10px;
-  border: 1px solid rgba(185, 106, 0, 0.3);
+  border: 1px solid var(--sp-danger-border);
   border-radius: 10px;
-  background: rgba(185, 106, 0, 0.08);
+  background: var(--sp-danger-bg);
+  color: var(--sp-danger-text);
 }
 
 .closeSessionNotes {
@@ -298,25 +299,25 @@
   font-size: 12px;
 }
 
-.closeSessionAfter {
+.modalOverlay.closeSessionOverlay .closeSessionAfter {
   display: grid;
   gap: 8px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 10px 12px;
   margin: 0;
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
-.closeSessionAfterOption {
+.modalOverlay.closeSessionOverlay .closeSessionAfterOption {
   display: flex;
   gap: 8px;
   align-items: center;
   color: var(--color-text);
 }
 
-.closeSessionAfterOption input {
+.modalOverlay.closeSessionOverlay .closeSessionAfterOption input {
   accent-color: var(--color-primary);
 }
 

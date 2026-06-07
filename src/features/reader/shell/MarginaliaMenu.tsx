@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
 
@@ -39,28 +39,40 @@ export function MarginaliaMenu(props: {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [props.onClose, props.open]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!props.open) return;
     const updatePos = () => {
       const btn = buttonRef.current;
-      if (!btn) return;
+      const panel = panelRef.current;
+      if (!btn || !panel) return;
       const btnRect = btn.getBoundingClientRect();
-      const panelW = Math.min(340, Math.max(240, window.innerWidth - 24));
+      const panelRect = panel.getBoundingClientRect();
 
       const margin = 12;
-      const top = Math.max(margin, btnRect.bottom + 8);
-      // Align the right edge with the button (or as close as possible if clamped).
-      const desiredLeft = btnRect.right - panelW;
-      const left = Math.min(Math.max(margin, desiredLeft), Math.max(margin, window.innerWidth - panelW - margin));
+      const gap = 8;
+      const panelW = panelRect.width;
+      const panelH = panelRect.height;
+      const viewportRight = window.innerWidth - margin;
+      const viewportBottom = window.innerHeight - margin;
+
+      const preferredTop = btnRect.bottom + gap;
+      const flippedTop = btnRect.top - panelH - gap;
+      const top = preferredTop + panelH <= viewportBottom ? preferredTop : Math.max(margin, flippedTop);
+
+      const preferredLeft = btnRect.right - panelW;
+      const maxLeft = Math.max(margin, viewportRight - panelW);
+      const left = Math.min(Math.max(margin, preferredLeft), maxLeft);
       setPanelPos({ top, left });
     };
 
     updatePos();
     window.addEventListener("resize", updatePos);
+    window.addEventListener("orientationchange", updatePos);
     const onScroll = () => props.onClose();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("resize", updatePos);
+      window.removeEventListener("orientationchange", updatePos);
       window.removeEventListener("scroll", onScroll);
     };
   }, [props.onClose, props.open]);
