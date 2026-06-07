@@ -110,6 +110,7 @@ function ReaderActivityContent({
   const [nextSeriesStatus, setNextSeriesStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const seriesId = openedBook.book.series?.id;
   const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series_index);
+  const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
   const canLookupNextBook = seriesId != null && currentSeriesIndex != null;
   const headerEndLabel = nextSeriesBook ? "Next book…" : "End options…";
   const closeAfterOptions: CloseSessionAfterOption[] = [
@@ -280,6 +281,8 @@ function ReaderActivityContent({
           initialNotes={annotations.currentSessionMeta.notes ?? ""}
           afterOptions={closeAfterOptions}
           defaultAfterAction={nextSeriesBook ? "nextBook" : "home"}
+          nextBook={nextSeriesBook}
+          coverBase={coverBase}
           onCancel={() => setCloseDialogOpen(false)}
           onSaveAndClose={closeSession}
         />
@@ -289,6 +292,7 @@ function ReaderActivityContent({
         <EndOfBookDialog
           nextBook={nextSeriesBook}
           nextBookStatus={nextSeriesStatus}
+          coverBase={coverBase}
           hasSeries={Boolean(canLookupNextBook)}
           onStartNextBook={startNextBook}
           onFinishSession={finishCurrentSession}

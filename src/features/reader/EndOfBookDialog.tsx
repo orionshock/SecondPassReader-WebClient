@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import type { LibraryBook } from "@secondpass/client";
+import { getBookCoverUrl } from "../library/coverUtils";
 import { formatSeriesIndex } from "../library/seriesUtils";
 
 export function EndOfBookDialog({
   nextBook,
   nextBookStatus,
+  coverBase,
   hasSeries,
   onStartNextBook,
   onFinishSession,
@@ -13,6 +15,7 @@ export function EndOfBookDialog({
 }: {
   nextBook: LibraryBook | null;
   nextBookStatus: "idle" | "loading" | "ready" | "error";
+  coverBase?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null;
   hasSeries: boolean;
   onStartNextBook: (book: LibraryBook) => void;
   onFinishSession: () => void;
@@ -20,6 +23,7 @@ export function EndOfBookDialog({
   onGoToLibrary?: () => void;
 }) {
   const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
+  const coverSrc = getBookCoverUrl(nextBook, coverBase);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -48,12 +52,23 @@ export function EndOfBookDialog({
           {nextBook ? (
             <div className="endBookNextCard">
               <div className="endBookEyebrow">Next in series</div>
-              <div className="endBookNextTitle">{nextBook.title}</div>
-              {nextBook.subtitle ? <div className="muted endBookNextSubtitle">{nextBook.subtitle}</div> : null}
-              {seriesIndex ? <div className="muted endBookNextMeta">Series index {seriesIndex}</div> : null}
-              <button type="button" className="button buttonPrimary endBookPrimary" onClick={() => onStartNextBook(nextBook)}>
-                Start next book
-              </button>
+              <div className="endBookNextContent">
+                <div className="endBookNextCover" aria-hidden={coverSrc ? undefined : "true"}>
+                  {coverSrc ? (
+                    <img className="endBookNextCoverImg" src={coverSrc} alt={`${nextBook.title} cover`} loading="lazy" />
+                  ) : (
+                    <div className="endBookNextCoverPlaceholder">No cover</div>
+                  )}
+                </div>
+                <div className="endBookNextMain">
+                  <div className="endBookNextTitle">{nextBook.title}</div>
+                  {nextBook.subtitle ? <div className="muted endBookNextSubtitle">{nextBook.subtitle}</div> : null}
+                  {seriesIndex ? <div className="muted endBookNextMeta">Series index {seriesIndex}</div> : null}
+                  <button type="button" className="button buttonPrimary endBookPrimary" onClick={() => onStartNextBook(nextBook)}>
+                    Start next book
+                  </button>
+                </div>
+              </div>
             </div>
           ) : nextBookStatus === "loading" ? (
             <p className="muted endBookMessage">Looking for the next book in this series.</p>

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import type { LibraryBook } from "@secondpass/client";
+import { getBookCoverUrl } from "../library/coverUtils";
+import { formatSeriesIndex } from "../library/seriesUtils";
 
 export type CloseSessionAfterAction = "nextBook" | "restartBook" | "home" | "detail" | "sessions";
 
@@ -23,6 +26,8 @@ export function CloseSessionDialog({
   initialNotes,
   afterOptions = DEFAULT_AFTER_OPTIONS,
   defaultAfterAction,
+  nextBook,
+  coverBase,
   onCancel,
   onSaveAndClose,
 }: {
@@ -30,6 +35,8 @@ export function CloseSessionDialog({
   initialNotes: string;
   afterOptions?: CloseSessionAfterOption[];
   defaultAfterAction?: CloseSessionAfterAction;
+  nextBook?: LibraryBook | null;
+  coverBase?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null;
   onCancel: () => void;
   onSaveAndClose: (input: CloseSessionInput) => Promise<void>;
 }) {
@@ -46,6 +53,9 @@ export function CloseSessionDialog({
 
   const trimmedName = name.trim();
   const unnamed = trimmedName.length === 0;
+  const showNextBookPreview = afterAction === "nextBook" && Boolean(nextBook);
+  const nextBookCoverSrc = getBookCoverUrl(nextBook, coverBase);
+  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -132,6 +142,24 @@ export function CloseSessionDialog({
               </label>
             ))}
           </fieldset>
+
+          {showNextBookPreview && nextBook ? (
+            <div className="closeSessionNextPreview">
+              <div className="closeSessionNextCover" aria-hidden={nextBookCoverSrc ? undefined : "true"}>
+                {nextBookCoverSrc ? (
+                  <img className="closeSessionNextCoverImg" src={nextBookCoverSrc} alt={`${nextBook.title} cover`} loading="lazy" />
+                ) : (
+                  <div className="closeSessionNextCoverPlaceholder">No cover</div>
+                )}
+              </div>
+              <div className="closeSessionNextMain">
+                <div className="closeSessionNextEyebrow">Next in series</div>
+                <div className="closeSessionNextTitle">{nextBook.title}</div>
+                {nextBook.subtitle ? <div className="muted closeSessionNextSubtitle">{nextBook.subtitle}</div> : null}
+                {nextBookSeriesIndex ? <div className="muted closeSessionNextMeta">Series index {nextBookSeriesIndex}</div> : null}
+              </div>
+            </div>
+          ) : null}
 
           {error ? <p className="errorText">{error}</p> : null}
         </div>
