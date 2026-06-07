@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
 
@@ -98,15 +99,18 @@ export function MarginaliaMenu(props: {
 
       {props.open ? (
         <>
-          <div
-            className="spMarginaliaMenuBackdrop"
-            role="presentation"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              props.onClose();
-            }}
-          />
+          {createPortal(
+            <div
+              className="spMarginaliaMenuBackdrop"
+              role="presentation"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                props.onClose();
+              }}
+            />,
+            document.body,
+          )}
           <div
             ref={panelRef}
             className={`spMarginaliaMenuPanel ${panelPos.placement === "above" ? "spMarginaliaMenuPanelAbove" : ""}`}
