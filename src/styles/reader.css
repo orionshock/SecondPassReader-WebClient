@@ -108,12 +108,18 @@
 }
 
 .spReaderTopBar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
   padding: 10px 12px;
+}
+
+.spReaderContextActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
 }
 
 .spReaderActions {
@@ -121,6 +127,8 @@
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .spReaderTitle {
@@ -138,6 +146,20 @@
   font-size: 16px;
   line-height: 1.2;
   color: var(--sp-reader-text);
+}
+
+@media (max-width: 720px) {
+  .spReaderTopBar {
+    grid-template-columns: 1fr;
+  }
+
+  .spReaderContextActions {
+    justify-content: flex-start;
+  }
+
+  .spReaderActions {
+    justify-content: flex-start;
+  }
 }
 
 .spReaderLayout {
