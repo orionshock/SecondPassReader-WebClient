@@ -20,6 +20,7 @@ export function MarginaliaMenu(props: {
   previousLayers: MarginaliaLayerSummary[];
   selectedPreviousSessionIds: Set<string>;
   onTogglePreviousSession: (sessionId: string) => void;
+  onCloseSession?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -114,6 +115,22 @@ export function MarginaliaMenu(props: {
             </div>
 
             <div className="spMarginaliaMenuBody">
+              {props.onCloseSession ? (
+                <div className="spMarginaliaMenuSection">
+                  <div className="spMarginaliaMenuSectionTitle muted">Session</div>
+                  <button
+                    type="button"
+                    className="button buttonCompact"
+                    onClick={() => {
+                      props.onClose();
+                      props.onCloseSession?.();
+                    }}
+                  >
+                    Close session
+                  </button>
+                </div>
+              ) : null}
+
               <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
               {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading…</div> : null}
               {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">Failed to load sessions: {props.listError}</div> : null}

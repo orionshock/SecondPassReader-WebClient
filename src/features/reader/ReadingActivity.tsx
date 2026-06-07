@@ -10,6 +10,8 @@ import { InlineMeta } from "../../components/MetaSeparator";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
+import { CloseSessionDialog, type CloseSessionInput } from "../sessions/CloseSessionDialog";
+import { navigateTo } from "../../app/navigation";
 
 export function ReadingActivity({
   openedBook,
@@ -25,6 +27,7 @@ export function ReadingActivity({
   if (!openedBook) return <p className="muted">No book open.</p>;
 
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
 
@@ -49,6 +52,15 @@ export function ReadingActivity({
           const canBookmark = Boolean(openedBook.readingOpen?.session?.id && openedBook.readingOpen?.profile_version && state.location?.cfi);
           const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
           const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
+          const currentSessionId = state.sessionId;
+
+          const closeSession = async (input: CloseSessionInput) => {
+            if (!currentSessionId) throw new Error("Missing session id.");
+            await annotations.closeCurrentSession({ name: input.name, notes: input.notes });
+            setCloseDialogOpen(false);
+            if (input.afterAction === "sessions") navigateTo({ kind: "sessions" });
+            else navigateTo({ kind: "session", sessionId: currentSessionId });
+          };
 
           return (
             <>
@@ -88,6 +100,7 @@ export function ReadingActivity({
                       previousLayers={marginalia.previousLayers}
                       selectedPreviousSessionIds={selectedPreviousSessionIds}
                       onTogglePreviousSession={marginalia.togglePreviousSession}
+                      onCloseSession={currentSessionId ? () => setCloseDialogOpen(true) : undefined}
                     />
 
                     <button
@@ -124,6 +137,15 @@ export function ReadingActivity({
                   />
                 </div>
               </div>
+
+              {closeDialogOpen ? (
+                <CloseSessionDialog
+                  initialName={annotations.currentSessionMeta.name ?? ""}
+                  initialNotes={annotations.currentSessionMeta.notes ?? ""}
+                  onCancel={() => setCloseDialogOpen(false)}
+                  onSaveAndClose={closeSession}
+                />
+              ) : null}
             </>
           );
         }}

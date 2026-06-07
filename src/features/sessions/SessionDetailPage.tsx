@@ -8,6 +8,7 @@ import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
+import { CloseSessionDialog, type CloseSessionInput } from "./CloseSessionDialog";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -97,9 +98,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
   const [editingName, setEditingName] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
 
-  const [closeBusy, setCloseBusy] = useState(false);
-  const [closeError, setCloseError] = useState<string | null>(null);
-  const [confirmClose, setConfirmClose] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
 
   const [annoBusy, setAnnoBusy] = useState(false);
   const [annoError, setAnnoError] = useState<string | null>(null);
@@ -159,7 +158,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setError(null);
     setBusy(false);
     setSaveError(null);
-    setCloseError(null);
+    setCloseDialogOpen(false);
     setAnnoPage(null);
     setAnnoError(null);
     setAnnoBusy(false);
@@ -173,7 +172,6 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
   const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile);
   const statusText = normalizeStatus(typeof session?.status === "string" ? session.status : null, session?.is_active ?? null);
   const annoText = formatAnnotationCount(session?.annotation_count ?? null);
-  const sessionHasSavedName = typeof session?.name === "string" && session.name.trim().length > 0;
 
   const headerTitle = session?.book?.title
     ? `Marginalia for ${"\u201C"}${session.book.title}${"\u201D"}`
@@ -217,14 +215,21 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     }
   }, [draftNotes, isActive, profile, session, sessionId]);
 
-  const handleClose = useCallback(async () => {
+  const handleSaveAndClose = useCallback(async (input: CloseSessionInput) => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
     if (!sessionId) return;
-    setCloseBusy(true);
-    setCloseError(null);
-    setConfirmClose(false);
+    if (!session) return;
+
     try {
       const spl = createSplClientFromProfile(profile);
+      const savedName = typeof session.name === "string" ? session.name.trim() : "";
+      const savedNotes = typeof session.notes === "string" ? session.notes : "";
+      const payload: { name?: string; notes?: string } = {};
+      if (input.name !== savedName) payload.name = input.name;
+      if (input.notes !== savedNotes) payload.notes = input.notes;
+      if (Object.keys(payload).length > 0) {
+        await spl.reading.sessions.updateDetails(sessionId, payload);
+      }
       await spl.reading.sessions.close(sessionId);
       const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
@@ -232,13 +237,12 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
       setDraftNotes(typeof refreshed.notes === "string" ? refreshed.notes : "");
       setEditingName(false);
       setEditingNotes(false);
+      setCloseDialogOpen(false);
+      if (input.afterAction === "sessions") navigateTo({ kind: "sessions" });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to close session.";
-      setCloseError(message);
-    } finally {
-      setCloseBusy(false);
+      throw e instanceof Error ? e : new Error("Failed to close session.");
     }
-  }, [profile, sessionId]);
+  }, [profile, session, sessionId]);
 
   const handleLoadMoreAnnotations = useCallback(async () => {
     if (annoLoadingMore) return;
@@ -316,71 +320,12 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
                 Open reader
               </button>
               {isActive ? (
-                <>
-                  {!confirmClose ? (
-                    <button
-                      type="button"
-                      className="button buttonCompact"
-                      onClick={() => {
-                        setCloseError(null);
-                        setConfirmClose(true);
-                      }}
-                      disabled={closeBusy}
-                    >
-                      Close session
-                    </button>
-                  ) : (
-                    <div className="sessionCloseConfirm" role="group" aria-label="Close session confirmation">
-                      {sessionHasSavedName ? (
-                        <>
-                          <div className="sessionCloseConfirmText muted">
-                            Close this session? Name, notes, progress, and annotations become read-only.
-                          </div>
-                          <div className="sessionCloseConfirmActions">
-                            <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
-                              {closeBusy ? `Closing${"\u2026"}` : "Confirm close"}
-                            </button>
-                            <button type="button" className="button buttonCompact" onClick={() => setConfirmClose(false)} disabled={closeBusy}>
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="sessionCloseConfirmText">
-                            This session has no name. Closed sessions cannot be renamed later.
-                          </div>
-                          <div className="sessionCloseConfirmActions sessionCloseConfirmActionsWide">
-                            <button
-                              type="button"
-                              className="button buttonPrimary buttonCompact"
-                              onClick={() => {
-                                setConfirmClose(false);
-                                setCloseError(null);
-                                setDraftName(typeof session.name === "string" ? session.name : "");
-                                setEditingName(true);
-                              }}
-                              disabled={closeBusy}
-                            >
-                              Name session
-                            </button>
-                            <button type="button" className="button buttonCompact" onClick={() => void handleClose()} disabled={closeBusy}>
-                              {closeBusy ? `Closing${"\u2026"}` : "Close unnamed"}
-                            </button>
-                            <button type="button" className="button buttonCompact" onClick={() => setConfirmClose(false)} disabled={closeBusy}>
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </>
+                <button type="button" className="button buttonCompact" onClick={() => setCloseDialogOpen(true)}>
+                  Close session
+                </button>
               ) : null}
             </div>
           </div>
-
-          {closeError ? <div className="errorText">{closeError}</div> : null}
 
           <div className="sessionMetaGrid">
             {session.started_at ? <div className="detailRow"><span className="muted">Started:</span> {formatIso(session.started_at)}</div> : null}
@@ -576,6 +521,15 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
             ) : null}
           </div>
         </>
+      ) : null}
+
+      {closeDialogOpen && session ? (
+        <CloseSessionDialog
+          initialName={typeof session.name === "string" ? session.name : ""}
+          initialNotes={typeof session.notes === "string" ? session.notes : ""}
+          onCancel={() => setCloseDialogOpen(false)}
+          onSaveAndClose={handleSaveAndClose}
+        />
       ) : null}
     </section>
   );

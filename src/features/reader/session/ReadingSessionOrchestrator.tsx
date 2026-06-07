@@ -49,6 +49,7 @@ export type ReadingSessionOrchestratorProps = {
       enablePreviousSession: (sessionId: string) => void;
       currentSessionMeta: { name: string | null; notes: string | null; status: "idle" | "loading" | "ready" | "error"; error: string | null };
       updateCurrentSessionMeta: (update: { name: string; notes: string }) => Promise<void>;
+      closeCurrentSession: (input: { name: string; notes: string }) => Promise<void>;
     };
   }) => ReactNode;
 };
@@ -107,6 +108,25 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       setCurrentSessionMeta({ name: nextName || null, notes: nextNotes || null, status: "ready", error: null });
     },
     [props.spl, sessionId],
+  );
+
+  const closeCurrentSession = useCallback(
+    async (input: { name: string; notes: string }) => {
+      if (!props.spl) throw new Error("Not connected.");
+      if (!sessionId) throw new Error("Missing session id.");
+
+      const savedName = currentSessionMeta.name?.trim() ?? "";
+      const savedNotes = currentSessionMeta.notes ?? "";
+      const payload: { name?: string; notes?: string } = {};
+      if (input.name !== savedName) payload.name = input.name;
+      if (input.notes !== savedNotes) payload.notes = input.notes;
+      if (Object.keys(payload).length > 0) {
+        await props.spl.reading.sessions.updateDetails(sessionId, payload);
+      }
+      await props.spl.reading.sessions.close(sessionId);
+      setCurrentSessionMeta((prev) => ({ ...prev, name: input.name || null, notes: input.notes || null }));
+    },
+    [currentSessionMeta.name, currentSessionMeta.notes, props.spl, sessionId],
   );
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
@@ -431,6 +451,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       enablePreviousSession: previousLayers.togglePreviousSession,
       currentSessionMeta,
       updateCurrentSessionMeta,
+      closeCurrentSession,
     },
   });
 }

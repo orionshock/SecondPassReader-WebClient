@@ -443,6 +443,12 @@
   gap: 10px;
 }
 
+.spMarginaliaMenuSection {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
 .spMarginaliaMenuSectionTitle {
   font-size: 12px;
 }
@@ -982,6 +988,37 @@
   background: var(--sp-reader-control-bg);
   border-color: var(--sp-reader-border);
   color: var(--sp-reader-text);
+}
+
+.spReaderActivity .closeSessionDialog {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.spReaderActivity .closeSessionDialog .muted,
+.spReaderActivity .closeSessionDialog .fieldLabel {
+  color: var(--color-text-muted);
+}
+
+.spReaderActivity .closeSessionDialog .input,
+.spReaderActivity .closeSessionDialog input[type="text"],
+.spReaderActivity .closeSessionDialog textarea {
+  background: var(--color-input-bg);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.spReaderActivity .closeSessionDialog .button {
+  background: var(--sp-button-bg);
+  border-color: var(--color-border);
+  color: var(--sp-button-text);
+}
+
+.spReaderActivity .closeSessionDialog .buttonPrimary {
+  background: var(--sp-primary-bg);
+  border-color: var(--sp-primary-border);
+  color: var(--sp-primary-text);
 }
 
 .spReaderActivity .spReaderViewportRegion {
