@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import type { LibraryBook } from "@secondpass/client";
+import { formatSeriesIndex } from "../library/seriesUtils";
 
 export type CloseSessionAfterAction = "detail" | "sessions";
 
@@ -11,13 +13,17 @@ export type CloseSessionInput = {
 export function CloseSessionDialog({
   initialName,
   initialNotes,
+  nextBook,
   onCancel,
   onSaveAndClose,
+  onStartNextBook,
 }: {
   initialName: string;
   initialNotes: string;
+  nextBook?: LibraryBook | null;
   onCancel: () => void;
   onSaveAndClose: (input: CloseSessionInput) => Promise<void>;
+  onStartNextBook?: (book: LibraryBook) => void;
 }) {
   const [name, setName] = useState(initialName);
   const [notes, setNotes] = useState(initialNotes);
@@ -28,6 +34,7 @@ export function CloseSessionDialog({
 
   const trimmedName = name.trim();
   const unnamed = trimmedName.length === 0;
+  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -123,6 +130,25 @@ export function CloseSessionDialog({
             </label>
             {/* TODO: Add "Start new session from beginning" when the app has a direct reader workflow for it. */}
           </fieldset>
+
+          {nextBook && onStartNextBook ? (
+            <div className="closeSessionNextBook">
+              <div className="closeSessionNextBookEyebrow">Next in series</div>
+              <div className="closeSessionNextBookTitle">{nextBook.title}</div>
+              {nextBook.subtitle ? <div className="muted closeSessionNextBookSubtitle">{nextBook.subtitle}</div> : null}
+              {nextBookSeriesIndex ? (
+                <div className="muted closeSessionNextBookMeta">Series index {nextBookSeriesIndex}</div>
+              ) : null}
+              <button
+                type="button"
+                className="button buttonCompact closeSessionNextBookButton"
+                onClick={() => onStartNextBook(nextBook)}
+                disabled={busy}
+              >
+                Start next book
+              </button>
+            </div>
+          ) : null}
 
           {error ? <p className="errorText">{error}</p> : null}
         </div>

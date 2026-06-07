@@ -321,6 +321,37 @@
   accent-color: var(--color-primary);
 }
 
+.closeSessionNextBook {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--sp-primary-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-primary-bg);
+  color: var(--color-text);
+}
+
+.closeSessionNextBookEyebrow {
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.closeSessionNextBookTitle {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.closeSessionNextBookSubtitle,
+.closeSessionNextBookMeta {
+  font-size: 12px;
+}
+
+.closeSessionNextBookButton {
+  justify-self: start;
+  margin-top: 4px;
+}
+
 .closeSessionActions {
   display: flex;
   justify-content: flex-end;
