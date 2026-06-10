@@ -5,6 +5,7 @@ import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
+import { MaterialIcon } from "../../components/MaterialIcon";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 
 function shelfOwnerLabel(shelf: Shelf): string {
@@ -38,6 +39,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
   const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
   const [editingShelfId, setEditingShelfId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
+  const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -69,6 +71,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     setBusy(false);
     setCreateOpen(false);
     setEditingShelfId(null);
+    setMenuShelfId(null);
     setMutationError(null);
     if (!canLoad) return;
     void load();
@@ -97,6 +100,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
       });
       setCreateOpen(false);
       setCreateDraft(shelfToFormValues());
+      setMenuShelfId(null);
       await load();
     } catch (e) {
       setMutationError(e instanceof Error ? e.message : "Failed to create shelf.");
@@ -119,6 +123,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
         visibility: editDraft.visibility,
       });
       setEditingShelfId(null);
+      setMenuShelfId(null);
       await load();
     } catch (e) {
       setMutationError(e instanceof Error ? e.message : "Failed to update shelf.");
@@ -136,6 +141,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
       const spl = createSplClientFromProfile(profile);
       await spl.shelves.remove(shelf.id);
       if (editingShelfId === shelf.id) setEditingShelfId(null);
+      setMenuShelfId(null);
       await load();
     } catch (e) {
       setMutationError(e instanceof Error ? e.message : "Failed to delete shelf.");
@@ -145,70 +151,76 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
   }, [editingShelfId, load, profile]);
 
   const renderShelf = useCallback((shelf: Shelf) => {
-    const isEditing = editingShelfId === shelf.id;
     const canEdit = canEditPersonalShelf(shelf);
+    const menuOpen = menuShelfId === shelf.id;
     return (
       <div key={shelf.id} className="shelfCard">
-        {isEditing ? (
-          <ShelfForm
-            values={editDraft}
-            onChange={setEditDraft}
-            onSubmit={() => void handleUpdate()}
-            onCancel={() => {
-              setEditingShelfId(null);
-              setMutationError(null);
-            }}
-            submitLabel="Save shelf"
-            busy={mutationBusy}
-          />
-        ) : (
-          <>
-            <div className="shelfCardMain">
-              <div className="shelfCardTitle">{shelf.name}</div>
-              {shelf.description ? <div className="muted">{shelf.description}</div> : null}
-              <div className="muted">
-                <InlineMeta items={[`${(shelf.item_count ?? 0).toString()} items`, shelfOwnerLabel(shelf)]} />
-              </div>
-            </div>
-            <div className="shelfCardActions">
+        <div className="shelfCardMain">
+          <div className="shelfCardTitle">{shelf.name}</div>
+          <div className="muted">
+            <InlineMeta items={[`${(shelf.item_count ?? 0).toString()} items`, shelfOwnerLabel(shelf)]} />
+          </div>
+        </div>
+        <div className="shelfCardActions">
+          <button
+            type="button"
+            className="button buttonCompact"
+            onClick={() => navigateTo({ kind: "shelf", shelfId: shelf.id })}
+          >
+            Open
+          </button>
+          {canEdit ? (
+            <div className="shelfOverflow">
               <button
                 type="button"
-                className="button buttonCompact"
-                onClick={() => navigateTo({ kind: "shelf", shelfId: shelf.id })}
+                className="button buttonCompact shelfIconButton"
+                onClick={() => setMenuShelfId((current) => (current === shelf.id ? null : shelf.id))}
+                disabled={mutationBusy}
+                aria-label={`More actions for ${shelf.name}`}
+                aria-expanded={menuOpen}
+                title="More actions"
               >
-                Open
+                <MaterialIcon name="more_vert" />
               </button>
-              {canEdit ? (
-                <>
+              {menuOpen ? (
+                <div className="shelfOverflowMenu" role="menu">
                   <button
                     type="button"
-                    className="button buttonCompact"
+                    className="shelfOverflowItem"
                     onClick={() => {
                       setEditingShelfId(shelf.id);
                       setEditDraft(shelfToFormValues(shelf));
                       setCreateOpen(false);
+                      setMenuShelfId(null);
                       setMutationError(null);
                     }}
                     disabled={mutationBusy}
+                    role="menuitem"
                   >
+                    <MaterialIcon name="edit" />
                     Edit
                   </button>
                   <button
                     type="button"
-                    className="button buttonDanger buttonCompact"
+                    className="shelfOverflowItem shelfOverflowItemDanger"
                     onClick={() => void handleDelete(shelf)}
                     disabled={mutationBusy}
+                    role="menuitem"
                   >
+                    <MaterialIcon name="delete" />
                     Delete
                   </button>
-                </>
+                </div>
               ) : null}
             </div>
-          </>
-        )}
+          ) : null}
+        </div>
       </div>
     );
-  }, [editDraft, editingShelfId, handleDelete, handleUpdate, mutationBusy]);
+  }, [handleDelete, menuShelfId, mutationBusy]);
+
+  const formOpen = createOpen || editingShelfId !== null;
+  const editingShelf = editingShelfId ? (data ?? []).find((s) => s.id === editingShelfId) ?? null : null;
 
   return (
     <section className="panel shelvesSection">
@@ -222,9 +234,10 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
               setCreateOpen(true);
               setCreateDraft(shelfToFormValues());
               setEditingShelfId(null);
+              setMenuShelfId(null);
               setMutationError(null);
             }}
-            disabled={busy || mutationBusy || createOpen}
+            disabled={busy || mutationBusy || formOpen}
           >
             Create shelf
           </button>
@@ -243,19 +256,53 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
       ) : null}
       {mutationError ? <div className="errorText">{mutationError}</div> : null}
 
-      {createOpen ? (
-        <div className="shelfEditor">
-          <ShelfForm
-            values={createDraft}
-            onChange={setCreateDraft}
-            onSubmit={() => void handleCreate()}
-            onCancel={() => {
+      {formOpen ? (
+        <div
+          className="modalOverlay shelfModalOverlay"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !mutationBusy) {
               setCreateOpen(false);
+              setEditingShelfId(null);
               setMutationError(null);
-            }}
-            submitLabel="Create shelf"
-            busy={mutationBusy}
-          />
+            }
+          }}
+        >
+          <section className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-form-title">
+            <div className="modalHeaderRow">
+              <div className="modalTitle" id="shelf-form-title">
+                {createOpen ? "Create shelf" : `Edit ${editingShelf?.name ?? "shelf"}`}
+              </div>
+              <button
+                type="button"
+                className="button buttonCompact shelfIconButton"
+                onClick={() => {
+                  setCreateOpen(false);
+                  setEditingShelfId(null);
+                  setMutationError(null);
+                }}
+                disabled={mutationBusy}
+                aria-label="Close"
+                title="Close"
+              >
+                <MaterialIcon name="close" />
+              </button>
+            </div>
+            <div className="modalBody">
+              <ShelfForm
+                values={createOpen ? createDraft : editDraft}
+                onChange={createOpen ? setCreateDraft : setEditDraft}
+                onSubmit={() => void (createOpen ? handleCreate() : handleUpdate())}
+                onCancel={() => {
+                  setCreateOpen(false);
+                  setEditingShelfId(null);
+                  setMutationError(null);
+                }}
+                submitLabel={createOpen ? "Create shelf" : "Save shelf"}
+                busy={mutationBusy}
+              />
+            </div>
+          </section>
         </div>
       ) : null}
 

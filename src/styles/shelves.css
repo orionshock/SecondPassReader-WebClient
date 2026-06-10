@@ -41,12 +41,75 @@
   justify-content: flex-end;
 }
 
-.shelfEditor {
-  margin: 10px 0 12px;
+.shelfIconButton {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.shelfIconButton .material-symbols-outlined {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.shelfOverflow {
+  position: relative;
+}
+
+.shelfOverflowMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 12;
+  min-width: 132px;
   border: 1px solid var(--sp-border);
-  border-radius: 12px;
-  padding: 12px;
-  background: var(--color-surface-raised);
+  border-radius: 10px;
+  padding: 4px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  display: grid;
+  gap: 2px;
+}
+
+.shelfOverflowItem {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.shelfOverflowItem:hover,
+.shelfOverflowItem:focus-visible {
+  background: var(--color-hover-bg);
+  outline: none;
+}
+
+.shelfOverflowItem:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.shelfOverflowItem .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.shelfOverflowItemDanger {
+  color: var(--color-danger);
+}
+
+.shelfModalPanel {
+  width: min(520px, calc(100vw - 36px));
 }
 
 .shelfEditForm {
@@ -60,6 +123,35 @@
 
 .shelfDetail {
   min-width: 0;
+}
+
+.shelfDetailHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.shelfDetailHeaderActions .button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.shelfDetailHeaderActions .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.shelfEditingBanner {
+  margin-top: 10px;
+  border: 1px solid var(--sp-primary-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--color-primary-bg);
+  color: var(--color-text);
+  font-size: 13px;
 }
 
 .shelfBookList {
@@ -109,6 +201,17 @@
   flex: 0 0 auto;
 }
 
+.shelfItemEditControls {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding-right: 2px;
+}
+
+.shelfItemEditControls .shelfIconButton:last-child {
+  color: var(--color-danger);
+}
+
 @media (max-width: 720px) {
   .shelfCard,
   .shelfBookCard {
@@ -122,5 +225,10 @@
   .shelfCardActions,
   .shelfBookActions {
     justify-content: flex-start;
+  }
+
+  .shelfOverflowMenu {
+    right: auto;
+    left: 0;
   }
 }
