@@ -162,6 +162,22 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     }
   }, [loadFirst, profile, shelf, shelfId]);
 
+  const handleMoveItem = useCallback(async (item: ShelfItem, move: "up" | "down") => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!canEditPersonalShelf(shelf)) return;
+    setMutationBusyId(item.id);
+    setMutationError(null);
+    try {
+      const spl = createSplClientFromProfile(profile);
+      await spl.shelves.updateItem(shelfId, item.id, { move });
+      await loadFirst();
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : "Failed to move shelf item.");
+    } finally {
+      setMutationBusyId(null);
+    }
+  }, [loadFirst, profile, shelf, shelfId]);
+
   const handleRemoveItem = useCallback(async (item: ShelfItem) => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
     if (!canEditPersonalShelf(shelf)) return;
@@ -267,6 +283,26 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
                     </div>
 
                     <div className="shelfEditItemActions">
+                      <button
+                        type="button"
+                        className="button buttonCompact shelfIconButton"
+                        onClick={() => void handleMoveItem(it, "up")}
+                        disabled={itemBusy || index === 0}
+                        aria-label="Move up"
+                        title="Move up"
+                      >
+                        <MaterialIcon name="keyboard_arrow_up" />
+                      </button>
+                      <button
+                        type="button"
+                        className="button buttonCompact shelfIconButton"
+                        onClick={() => void handleMoveItem(it, "down")}
+                        disabled={itemBusy || index === items.length - 1}
+                        aria-label="Move down"
+                        title="Move down"
+                      >
+                        <MaterialIcon name="keyboard_arrow_down" />
+                      </button>
                       <label className="shelfMoveSelectLabel">
                         <span className="fieldLabel">Move to index</span>
                         <select
@@ -289,11 +325,13 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
                       </label>
                       <button
                         type="button"
-                        className="button buttonCompact"
+                        className="button buttonCompact shelfIconButton shelfRemoveIconButton"
                         onClick={() => void handleRemoveItem(it)}
                         disabled={itemBusy}
+                        aria-label="Remove from shelf"
+                        title="Remove from shelf"
                       >
-                        Remove
+                        <MaterialIcon name="delete" />
                       </button>
                     </div>
                   </div>
