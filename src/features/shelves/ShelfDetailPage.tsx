@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
-import { InlineMeta } from "../../components/MetaSeparator";
+import { ShelfMetaLine } from "./shelfMeta";
 
 function formatAuthors(item: ShelfItem): string {
   const authors = item.book.authors ?? [];
@@ -105,15 +105,6 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     }
   }, [loadMoreBusy, nextUrl, parseNextPage, profile, shelfId]);
 
-  const headerMeta = useMemo(() => {
-    if (!shelf) return [];
-    const parts: string[] = [];
-    if (shelf.owner_type === "group" && shelf.owner_group?.name) parts.push(`Group: ${shelf.owner_group.name}`);
-    if (shelf.owner_type === "user") parts.push((shelf.visibility ?? "private").toString());
-    if (typeof shelf.item_count === "number") parts.push(`${shelf.item_count} items`);
-    return parts.filter(Boolean);
-  }, [shelf]);
-
   const canEditShelf = canEditPersonalShelf(shelf);
 
   return (
@@ -143,7 +134,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
       {error ? <div className="errorText">{error}</div> : null}
 
       {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
-      {headerMeta.length ? <div className="muted"><InlineMeta items={headerMeta} /></div> : null}
+      {shelf ? <div className="muted"><ShelfMetaLine shelf={shelf} /></div> : null}
 
       <div className="shelfBookList">
         {items.map((it) => {

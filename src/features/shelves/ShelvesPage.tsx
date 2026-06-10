@@ -4,19 +4,9 @@ import { navigateTo } from "../../app/navigation";
 import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
-import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
-
-function shelfOwnerLabel(shelf: Shelf): string {
-  if (shelf.owner_type === "group") {
-    const name = shelf.owner_group?.name?.trim();
-    return name ? `Group: ${name}` : "Group shelf";
-  }
-  const visibility = (shelf.visibility ?? "").toString();
-  if (visibility === "listed") return "Listed";
-  return "Private";
-}
+import { ShelfMetaLine } from "./shelfMeta";
 
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
@@ -131,7 +121,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
         <div className="shelfCardMain">
           <div className="shelfCardTitle">{shelf.name}</div>
           <div className="muted">
-            <InlineMeta items={[`${(shelf.item_count ?? 0).toString()} items`, shelfOwnerLabel(shelf)]} />
+            <ShelfMetaLine shelf={shelf} />
           </div>
         </div>
         <div className="shelfCardActions">

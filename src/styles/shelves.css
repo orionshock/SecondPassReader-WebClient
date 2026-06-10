@@ -55,6 +55,45 @@
   line-height: 1;
 }
 
+.shelfMetaLine {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.shelfOwnerInline {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  color: var(--color-text);
+}
+
+.shelfOwnerInline .material-symbols-outlined {
+  font-size: 17px;
+  line-height: 1;
+  color: var(--sp-muted);
+}
+
+.shelfOwnerChip {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.shelfOwnerChip .material-symbols-outlined {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--sp-muted);
+}
+
 .shelfOverflow {
   position: relative;
 }
@@ -155,6 +194,12 @@
   justify-items: start;
 }
 
+.shelfEditHint {
+  margin-top: 12px;
+  color: var(--sp-muted);
+  font-size: 13px;
+}
+
 .shelfBookList {
   margin-top: 12px;
   display: grid;
@@ -215,8 +260,9 @@
 }
 
 .shelfMoveSelectLabel {
-  display: grid;
+  display: inline-flex;
   gap: 4px;
+  align-items: center;
 }
 
 .shelfMoveSelect {

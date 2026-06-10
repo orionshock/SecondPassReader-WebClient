@@ -3,11 +3,11 @@ import { ApiError } from "@secondpass/client";
 import type { Shelf, ShelfItem } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
+import { ShelfMetaLine } from "./shelfMeta";
 
 function formatAuthors(item: ShelfItem): string {
   const authors = item.book.authors ?? [];
@@ -198,14 +198,6 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
   const canEdit = canEditPersonalShelf(shelf);
   const itemCount = typeof shelf?.item_count === "number" ? Math.max(0, Math.floor(shelf.item_count)) : items.length;
   const positionOptions = useMemo(() => Array.from({ length: itemCount }, (_unused, index) => index), [itemCount]);
-  const headerMeta = useMemo(() => {
-    if (!shelf) return [];
-    return [
-      shelf.visibility ? shelf.visibility.toString() : "private",
-      typeof shelf.item_count === "number" ? `${shelf.item_count} items` : null,
-    ];
-  }, [shelf]);
-
   return (
     <section className="panel shelfDetail shelfEditPage">
       <div className="panelHeaderRow">
@@ -232,7 +224,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
         <>
           <div className="shelfEditSummary">
             <div className="muted">
-              <InlineMeta items={headerMeta} />
+              <ShelfMetaLine shelf={shelf} />
             </div>
             {shelf.description ? <div className="muted">{shelf.description}</div> : null}
             {canEdit ? (
@@ -253,15 +245,17 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
           </div>
 
           {canEdit ? (
-            <div className="shelfBookList">
-              {items.map((it, index) => {
-                const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
-                const authors = formatAuthors(it);
-                const series = it.book.series?.name && it.book.series ? it.book.series.name : null;
-                const itemBusy = mutationBusyId === it.id;
-                const currentPosition = typeof it.position === "number" ? it.position : index;
+            <>
+              <div className="shelfEditHint">Use the arrow buttons to nudge books, or choose an index to move directly.</div>
+              <div className="shelfBookList">
+                {items.map((it, index) => {
+                  const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
+                  const authors = formatAuthors(it);
+                  const series = it.book.series?.name && it.book.series ? it.book.series.name : null;
+                  const itemBusy = mutationBusyId === it.id;
+                  const currentPosition = typeof it.position === "number" ? it.position : index;
 
-                return (
+                  return (
                   <div key={it.id} className="shelfBookCard shelfEditBookCard">
                     <div className="shelfBookCover">
                       {coverSrc ? (
@@ -304,7 +298,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
                         <MaterialIcon name="keyboard_arrow_down" />
                       </button>
                       <label className="shelfMoveSelectLabel">
-                        <span className="fieldLabel">Move to index</span>
+                        <span className="fieldLabel">Index</span>
                         <select
                           className="input inputCompact shelfMoveSelect"
                           value={String(currentPosition)}
@@ -335,9 +329,10 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
                       </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </>
           ) : null}
 
           {nextUrl && canEdit ? (
@@ -399,3 +394,4 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     </section>
   );
 }
+
