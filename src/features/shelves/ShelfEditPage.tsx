@@ -5,14 +5,10 @@ import { navigateTo } from "../../app/navigation";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { createSplClientFromProfile } from "../../app/createSplClient";
-import { resolveCoverUrl } from "../library/coverUtils";
-import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
-import { ShelfMetaLine } from "./shelfMeta";
-
-function formatAuthors(item: ShelfItem): string {
-  const authors = item.book.authors ?? [];
-  return authors.map((a) => a.name).filter(Boolean).join(", ");
-}
+import type { ShelfFormValues } from "./ShelfForm";
+import { ShelfEditInfoModal } from "./ShelfEditInfoModal";
+import { ShelfEditInfoPanel } from "./ShelfEditInfoPanel";
+import { ShelfEditItemsList } from "./ShelfEditItemsList";
 
 function canEditPersonalShelf(shelf: Shelf | null): boolean {
   return shelf?.owner_type === "user" && shelf.can_edit === true;
@@ -222,117 +218,27 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
 
       {shelf ? (
         <>
-          <div className="shelfEditSummary">
-            <div className="muted">
-              <ShelfMetaLine shelf={shelf} />
-            </div>
-            {shelf.description ? <div className="muted">{shelf.description}</div> : null}
-            {canEdit ? (
-              <button
-                type="button"
-                className="button buttonCompact"
-                onClick={() => {
-                  setInfoDraft(shelfToFormValues(shelf));
-                  setInfoOpen(true);
-                  setMutationError(null);
-                }}
-              >
-                Change shelf info
-              </button>
-            ) : (
-              <div className="muted">This shelf is read-only.</div>
-            )}
-          </div>
+          <ShelfEditInfoPanel
+            shelf={shelf}
+            canEdit={canEdit}
+            onChangeInfo={() => {
+              setInfoDraft(shelfToFormValues(shelf));
+              setInfoOpen(true);
+              setMutationError(null);
+            }}
+          />
 
           {canEdit ? (
-            <>
-              <div className="shelfEditHint">Use the arrow buttons to nudge books, or choose an index to move directly.</div>
-              <div className="shelfBookList">
-                {items.map((it, index) => {
-                  const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
-                  const authors = formatAuthors(it);
-                  const series = it.book.series?.name && it.book.series ? it.book.series.name : null;
-                  const itemBusy = mutationBusyId === it.id;
-                  const currentPosition = typeof it.position === "number" ? it.position : index;
-
-                  return (
-                  <div key={it.id} className="shelfBookCard shelfEditBookCard">
-                    <div className="shelfBookCover">
-                      {coverSrc ? (
-                        <img
-                          className="shelfBookCoverImg"
-                          src={coverSrc}
-                          alt={`${it.book.title} cover`}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="bookCoverPlaceholderText">No cover</div>
-                      )}
-                    </div>
-
-                    <div className="shelfBookMain">
-                      <div className="bookTitle">{it.book.title}</div>
-                      {authors ? <div className="bookLine">{authors}</div> : null}
-                      {series ? <div className="bookLine muted">{series}</div> : null}
-                    </div>
-
-                    <div className="shelfEditItemActions">
-                      <button
-                        type="button"
-                        className="button buttonCompact shelfIconButton"
-                        onClick={() => void handleMoveItem(it, "up")}
-                        disabled={itemBusy || index === 0}
-                        aria-label="Move up"
-                        title="Move up"
-                      >
-                        <MaterialIcon name="keyboard_arrow_up" />
-                      </button>
-                      <button
-                        type="button"
-                        className="button buttonCompact shelfIconButton"
-                        onClick={() => void handleMoveItem(it, "down")}
-                        disabled={itemBusy || index === items.length - 1}
-                        aria-label="Move down"
-                        title="Move down"
-                      >
-                        <MaterialIcon name="keyboard_arrow_down" />
-                      </button>
-                      <label className="shelfMoveSelectLabel">
-                        <span className="fieldLabel">Index</span>
-                        <select
-                          className="input inputCompact shelfMoveSelect"
-                          value={String(currentPosition)}
-                          onChange={(e) => {
-                            const next = Number(e.target.value);
-                            if (Number.isInteger(next) && next >= 0 && next < itemCount && next !== currentPosition) {
-                              void handleMoveToPosition(it, next);
-                            }
-                          }}
-                          disabled={itemBusy || itemCount <= 1}
-                        >
-                          {positionOptions.map((position) => (
-                            <option key={position} value={position}>
-                              {position}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <button
-                        type="button"
-                        className="button buttonCompact shelfIconButton shelfRemoveIconButton"
-                        onClick={() => void handleRemoveItem(it)}
-                        disabled={itemBusy}
-                        aria-label="Remove from shelf"
-                        title="Remove from shelf"
-                      >
-                        <MaterialIcon name="delete" />
-                      </button>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            </>
+            <ShelfEditItemsList
+              items={items}
+              profile={profile}
+              itemCount={itemCount}
+              positionOptions={positionOptions}
+              mutationBusyId={mutationBusyId}
+              onMove={(item, move) => void handleMoveItem(item, move)}
+              onMoveToPosition={(item, position) => void handleMoveToPosition(item, position)}
+              onRemove={(item) => void handleRemoveItem(item)}
+            />
           ) : null}
 
           {nextUrl && canEdit ? (
@@ -346,50 +252,16 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
       ) : null}
 
       {infoOpen && canEdit ? (
-        <div
-          className="modalOverlay shelfModalOverlay"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !infoBusy) {
-              setInfoOpen(false);
-              setMutationError(null);
-            }
+        <ShelfEditInfoModal
+          values={infoDraft}
+          busy={infoBusy}
+          onChange={setInfoDraft}
+          onSave={() => void handleSaveInfo()}
+          onCancel={() => {
+            setInfoOpen(false);
+            setMutationError(null);
           }}
-        >
-          <section className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-info-title">
-            <div className="modalHeaderRow">
-              <div className="modalTitle" id="shelf-info-title">
-                Change shelf info
-              </div>
-              <button
-                type="button"
-                className="button buttonCompact shelfIconButton"
-                onClick={() => {
-                  setInfoOpen(false);
-                  setMutationError(null);
-                }}
-                disabled={infoBusy}
-                aria-label="Close"
-                title="Close"
-              >
-                <MaterialIcon name="close" />
-              </button>
-            </div>
-            <div className="modalBody">
-              <ShelfForm
-                values={infoDraft}
-                onChange={setInfoDraft}
-                onSubmit={() => void handleSaveInfo()}
-                onCancel={() => {
-                  setInfoOpen(false);
-                  setMutationError(null);
-                }}
-                submitLabel="Save shelf"
-                busy={infoBusy}
-              />
-            </div>
-          </section>
-        </div>
+        />
       ) : null}
     </section>
   );
