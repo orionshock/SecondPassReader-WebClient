@@ -32,4 +32,13 @@ export type {
   ReadingSessionSummary,
 } from "./schemas/readingSession";
 
-export type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf, ShelfItem } from "./schemas/shelves";
+export type {
+  AddShelfItemInput,
+  CreateShelfInput,
+  PaginatedShelfItemResponse,
+  PaginatedShelfResponse,
+  Shelf,
+  ShelfItem,
+  UpdateShelfInput,
+  UpdateShelfItemInput,
+} from "./schemas/shelves";

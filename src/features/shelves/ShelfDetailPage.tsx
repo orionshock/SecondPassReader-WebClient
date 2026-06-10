@@ -12,6 +12,10 @@ function formatAuthors(item: ShelfItem): string {
   return authors.map((a) => a.name).filter(Boolean).join(", ");
 }
 
+function canEditPersonalShelf(shelf: Shelf | null): boolean {
+  return shelf?.owner_type === "user" && shelf.can_edit === true;
+}
+
 export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfile | null; shelfId: string }) {
   const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
   const [busy, setBusy] = useState(false);
@@ -20,11 +24,14 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
   const [items, setItems] = useState<ShelfItem[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
+  const [itemBusyId, setItemBusyId] = useState<string | null>(null);
+  const [itemError, setItemError] = useState<string | null>(null);
 
   const loadFirst = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
     setBusy(true);
     setError(null);
+    setItemError(null);
     try {
       const spl = createSplClientFromProfile(profile);
       const [s, page] = await Promise.all([
@@ -58,7 +65,9 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     setItems([]);
     setNextUrl(null);
     setError(null);
+    setItemError(null);
     setBusy(false);
+    setItemBusyId(null);
     if (!canLoad) return;
     void loadFirst();
   }, [canLoad, loadFirst]);
@@ -110,6 +119,39 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     return parts.filter(Boolean);
   }, [shelf]);
 
+  const handleMoveItem = useCallback(async (item: ShelfItem, move: "up" | "down") => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!canEditPersonalShelf(shelf)) return;
+    setItemBusyId(item.id);
+    setItemError(null);
+    try {
+      const spl = createSplClientFromProfile(profile);
+      await spl.shelves.updateItem(shelfId, item.id, { move });
+      await loadFirst();
+    } catch (e) {
+      setItemError(e instanceof Error ? e.message : "Failed to update shelf item.");
+    } finally {
+      setItemBusyId(null);
+    }
+  }, [loadFirst, profile, shelf, shelfId]);
+
+  const handleRemoveItem = useCallback(async (item: ShelfItem) => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!canEditPersonalShelf(shelf)) return;
+    if (!window.confirm("Remove this book from the shelf? The book itself will not be deleted.")) return;
+    setItemBusyId(item.id);
+    setItemError(null);
+    try {
+      const spl = createSplClientFromProfile(profile);
+      await spl.shelves.removeItem(shelfId, item.id);
+      await loadFirst();
+    } catch (e) {
+      setItemError(e instanceof Error ? e.message : "Failed to remove shelf item.");
+    } finally {
+      setItemBusyId(null);
+    }
+  }, [loadFirst, profile, shelf, shelfId]);
+
   return (
     <section className="panel shelfDetail">
       <div className="panelHeaderRow">
@@ -124,16 +166,18 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
+      {itemError ? <div className="errorText">{itemError}</div> : null}
 
       {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
       {headerMeta.length ? <div className="muted"><InlineMeta items={headerMeta} /></div> : null}
 
       <div className="shelfBookList">
-        {items.map((it) => {
+        {items.map((it, index) => {
           const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
           const authors = formatAuthors(it);
           const series =
             it.book.series?.name && it.book.series ? it.book.series.name : null;
+          const itemBusy = itemBusyId === it.id;
 
           return (
             <div key={it.id} className="shelfBookCard">
@@ -158,6 +202,34 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
               </div>
 
               <div className="shelfBookActions">
+                {canEditPersonalShelf(shelf) ? (
+                  <>
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => void handleMoveItem(it, "up")}
+                      disabled={itemBusy || index === 0}
+                    >
+                      Move up
+                    </button>
+                    <button
+                      type="button"
+                      className="button buttonCompact"
+                      onClick={() => void handleMoveItem(it, "down")}
+                      disabled={itemBusy || index === items.length - 1}
+                    >
+                      Move down
+                    </button>
+                    <button
+                      type="button"
+                      className="button buttonDanger buttonCompact"
+                      onClick={() => void handleRemoveItem(it)}
+                      disabled={itemBusy}
+                    >
+                      Remove
+                    </button>
+                  </>
+                ) : null}
                 <button
                   type="button"
                   className="button buttonCompact"

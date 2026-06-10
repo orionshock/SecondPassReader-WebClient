@@ -1,4 +1,13 @@
-import type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf } from "./schemas/shelves";
+import type {
+  AddShelfItemInput,
+  CreateShelfInput,
+  PaginatedShelfItemResponse,
+  PaginatedShelfResponse,
+  Shelf,
+  ShelfItem,
+  UpdateShelfInput,
+  UpdateShelfItemInput,
+} from "./schemas/shelves";
 import type { AuthenticatedClientContext } from "./clientContext";
 import { authErrorMessages, requestJson, resolveUrl } from "./apiHttp";
 
@@ -33,6 +42,59 @@ export async function getShelf(ctx: AuthenticatedClientContext, input: { shelfId
   });
 }
 
+export async function createShelf(ctx: AuthenticatedClientContext, input: CreateShelfInput): Promise<Shelf> {
+  const url = resolveUrl(ctx.apiBaseUrl, "/shelves/");
+  return requestJson<Shelf>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      body: input,
+      errorMessages: authErrorMessages({ forbidden: SHELVES_FORBIDDEN_403 }),
+    },
+  });
+}
+
+export async function updateShelf(
+  ctx: AuthenticatedClientContext,
+  input: { shelfId: string; update: UpdateShelfInput },
+): Promise<Shelf> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
+  return requestJson<Shelf>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "PATCH",
+      body: input.update,
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function deleteShelf(ctx: AuthenticatedClientContext, input: { shelfId: string }): Promise<void> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
+  return requestJson<void>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "DELETE",
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
 export async function listShelfItems(
   ctx: AuthenticatedClientContext,
   input: { shelfId: string; page?: number },
@@ -49,6 +111,74 @@ export async function listShelfItems(
       errorMessages: authErrorMessages({
         forbidden: SHELVES_FORBIDDEN_403,
         notFound: "Shelf not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function addShelfItem(
+  ctx: AuthenticatedClientContext,
+  input: { shelfId: string; item: AddShelfItemInput },
+): Promise<ShelfItem> {
+  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/items/`);
+  return requestJson<ShelfItem>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      body: input.item,
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function updateShelfItem(
+  ctx: AuthenticatedClientContext,
+  input: { shelfId: string; itemId: string; update: UpdateShelfItemInput },
+): Promise<ShelfItem> {
+  const url = resolveUrl(
+    ctx.apiBaseUrl,
+    `/shelves/${encodeURIComponent(input.shelfId)}/items/${encodeURIComponent(input.itemId)}/`,
+  );
+  return requestJson<ShelfItem>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "PATCH",
+      body: input.update,
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf item not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function deleteShelfItem(
+  ctx: AuthenticatedClientContext,
+  input: { shelfId: string; itemId: string },
+): Promise<void> {
+  const url = resolveUrl(
+    ctx.apiBaseUrl,
+    `/shelves/${encodeURIComponent(input.shelfId)}/items/${encodeURIComponent(input.itemId)}/`,
+  );
+  return requestJson<void>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "DELETE",
+      errorMessages: authErrorMessages({
+        forbidden: SHELVES_FORBIDDEN_403,
+        notFound: "Shelf item not found or not accessible (404).",
       }),
     },
   });

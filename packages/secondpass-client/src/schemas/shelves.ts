@@ -58,3 +58,23 @@ export type ShelfItem = {
 export type PaginatedShelfResponse = PaginatedResponse<Shelf>;
 export type PaginatedShelfItemResponse = PaginatedResponse<ShelfItem>;
 
+export type CreateShelfInput = {
+  name: string;
+  description?: string;
+  owner_type: "user";
+  visibility: "private" | "listed";
+};
+
+export type UpdateShelfInput = {
+  name?: string;
+  description?: string;
+  visibility?: "private" | "listed";
+};
+
+export type AddShelfItemInput = {
+  book: string;
+};
+
+export type UpdateShelfItemInput =
+  | { move: "up" | "down"; position?: never }
+  | { position: number; move?: never };

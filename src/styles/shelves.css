@@ -13,6 +13,7 @@
 
 .shelfCard {
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: 4px;
   text-align: left;
   border: 1px solid var(--sp-border);
@@ -20,11 +21,41 @@
   padding: 10px 12px;
   background: var(--color-surface-raised);
   color: var(--color-text);
-  cursor: pointer;
 }
 
 .shelfCardTitle {
   font-weight: 700;
+}
+
+.shelfCardMain {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.shelfCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: start;
+  justify-content: flex-end;
+}
+
+.shelfEditor {
+  margin: 10px 0 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--color-surface-raised);
+}
+
+.shelfEditForm {
+  grid-column: 1 / -1;
+}
+
+.shelfEditDescription {
+  min-height: 84px;
+  resize: vertical;
 }
 
 .shelfDetail {
@@ -71,8 +102,25 @@
 
 .shelfBookActions {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .shelfCard,
+  .shelfBookCard {
+    grid-template-columns: 1fr;
+  }
+
+  .shelfBookCover {
+    display: none;
+  }
+
+  .shelfCardActions,
+  .shelfBookActions {
+    justify-content: flex-start;
+  }
 }

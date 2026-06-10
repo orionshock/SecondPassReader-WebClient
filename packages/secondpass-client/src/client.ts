@@ -10,7 +10,16 @@ import type {
   LibrarySeries,
   PaginatedResponse,
 } from "./schemas/library";
-import type { PaginatedShelfItemResponse, PaginatedShelfResponse, Shelf } from "./schemas/shelves";
+import type {
+  AddShelfItemInput,
+  CreateShelfInput,
+  PaginatedShelfItemResponse,
+  PaginatedShelfResponse,
+  Shelf,
+  ShelfItem,
+  UpdateShelfInput,
+  UpdateShelfItemInput,
+} from "./schemas/shelves";
 import type {
   ReadingAnnotation,
   ReadingAnnotationPage,
@@ -55,7 +64,17 @@ export type {
   SaveReadingProgressInput,
   UpdateNoteInput,
 } from "./readingApi";
-import { getShelf, listShelfItems, listShelves } from "./shelvesApi";
+import {
+  addShelfItem,
+  createShelf,
+  deleteShelf,
+  deleteShelfItem,
+  getShelf,
+  listShelfItems,
+  listShelves,
+  updateShelf,
+  updateShelfItem,
+} from "./shelvesApi";
 import { createClientContext, requireAuth } from "./clientContext";
 
 export type SecondPassClientConfig = {
@@ -121,8 +140,14 @@ export type SecondPassClient = {
 
   shelves: {
     list(params?: { page?: number }): Promise<PaginatedShelfResponse>;
+    create(input: CreateShelfInput): Promise<Shelf>;
     get(shelfId: string): Promise<Shelf>;
+    update(shelfId: string, input: UpdateShelfInput): Promise<Shelf>;
+    remove(shelfId: string): Promise<void>;
     items(shelfId: string, params?: { page?: number }): Promise<PaginatedShelfItemResponse>;
+    addItem(shelfId: string, input: AddShelfItemInput): Promise<ShelfItem>;
+    updateItem(shelfId: string, itemId: string, input: UpdateShelfItemInput): Promise<ShelfItem>;
+    removeItem(shelfId: string, itemId: string): Promise<void>;
   };
 
   reading: {
@@ -256,13 +281,37 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         const auth = requireAuth(ctx);
         return listShelves(auth);
       },
+      create: (input) => {
+        const auth = requireAuth(ctx);
+        return createShelf(auth, input);
+      },
       get: (shelfId) => {
         const auth = requireAuth(ctx);
         return getShelf(auth, { shelfId });
       },
+      update: (shelfId, input) => {
+        const auth = requireAuth(ctx);
+        return updateShelf(auth, { shelfId, update: input });
+      },
+      remove: (shelfId) => {
+        const auth = requireAuth(ctx);
+        return deleteShelf(auth, { shelfId });
+      },
       items: (shelfId, params) => {
         const auth = requireAuth(ctx);
         return listShelfItems(auth, { shelfId, page: params?.page });
+      },
+      addItem: (shelfId, input) => {
+        const auth = requireAuth(ctx);
+        return addShelfItem(auth, { shelfId, item: input });
+      },
+      updateItem: (shelfId, itemId, input) => {
+        const auth = requireAuth(ctx);
+        return updateShelfItem(auth, { shelfId, itemId, update: input });
+      },
+      removeItem: (shelfId, itemId) => {
+        const auth = requireAuth(ctx);
+        return deleteShelfItem(auth, { shelfId, itemId });
       },
     },
 

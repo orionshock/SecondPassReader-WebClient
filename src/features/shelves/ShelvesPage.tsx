@@ -5,6 +5,7 @@ import type { Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
+import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 
 function shelfOwnerLabel(shelf: Shelf): string {
   if (shelf.owner_type === "group") {
@@ -16,11 +17,29 @@ function shelfOwnerLabel(shelf: Shelf): string {
   return "Private";
 }
 
+function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
+  return {
+    name: shelf?.name ?? "",
+    description: shelf?.description ?? "",
+    visibility: shelf?.visibility === "listed" ? "listed" : "private",
+  };
+}
+
+function canEditPersonalShelf(shelf: Shelf): boolean {
+  return shelf.owner_type === "user" && shelf.can_edit === true;
+}
+
 export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) {
   const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Shelf[] | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
+  const [editingShelfId, setEditingShelfId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
@@ -48,6 +67,9 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     setData(null);
     setError(null);
     setBusy(false);
+    setCreateOpen(false);
+    setEditingShelfId(null);
+    setMutationError(null);
     if (!canLoad) return;
     void load();
   }, [canLoad, load]);
@@ -59,9 +81,155 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     return { personal, group };
   }, [data]);
 
+  const handleCreate = useCallback(async () => {
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    const name = createDraft.name.trim();
+    if (!name) return;
+    setMutationBusy(true);
+    setMutationError(null);
+    try {
+      const spl = createSplClientFromProfile(profile);
+      await spl.shelves.create({
+        name,
+        description: createDraft.description.trim(),
+        owner_type: "user",
+        visibility: createDraft.visibility,
+      });
+      setCreateOpen(false);
+      setCreateDraft(shelfToFormValues());
+      await load();
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : "Failed to create shelf.");
+    } finally {
+      setMutationBusy(false);
+    }
+  }, [createDraft, load, profile]);
+
+  const handleUpdate = useCallback(async () => {
+    if (!profile?.apiBaseUrl || !profile.accessToken || !editingShelfId) return;
+    const name = editDraft.name.trim();
+    if (!name) return;
+    setMutationBusy(true);
+    setMutationError(null);
+    try {
+      const spl = createSplClientFromProfile(profile);
+      await spl.shelves.update(editingShelfId, {
+        name,
+        description: editDraft.description.trim(),
+        visibility: editDraft.visibility,
+      });
+      setEditingShelfId(null);
+      await load();
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : "Failed to update shelf.");
+    } finally {
+      setMutationBusy(false);
+    }
+  }, [editDraft, editingShelfId, load, profile]);
+
+  const handleDelete = useCallback(async (shelf: Shelf) => {
+    if (!profile?.apiBaseUrl || !profile.accessToken || !canEditPersonalShelf(shelf)) return;
+    if (!window.confirm("Delete this shelf? Books and files will not be deleted.")) return;
+    setMutationBusy(true);
+    setMutationError(null);
+    try {
+      const spl = createSplClientFromProfile(profile);
+      await spl.shelves.remove(shelf.id);
+      if (editingShelfId === shelf.id) setEditingShelfId(null);
+      await load();
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : "Failed to delete shelf.");
+    } finally {
+      setMutationBusy(false);
+    }
+  }, [editingShelfId, load, profile]);
+
+  const renderShelf = useCallback((shelf: Shelf) => {
+    const isEditing = editingShelfId === shelf.id;
+    const canEdit = canEditPersonalShelf(shelf);
+    return (
+      <div key={shelf.id} className="shelfCard">
+        {isEditing ? (
+          <ShelfForm
+            values={editDraft}
+            onChange={setEditDraft}
+            onSubmit={() => void handleUpdate()}
+            onCancel={() => {
+              setEditingShelfId(null);
+              setMutationError(null);
+            }}
+            submitLabel="Save shelf"
+            busy={mutationBusy}
+          />
+        ) : (
+          <>
+            <div className="shelfCardMain">
+              <div className="shelfCardTitle">{shelf.name}</div>
+              {shelf.description ? <div className="muted">{shelf.description}</div> : null}
+              <div className="muted">
+                <InlineMeta items={[`${(shelf.item_count ?? 0).toString()} items`, shelfOwnerLabel(shelf)]} />
+              </div>
+            </div>
+            <div className="shelfCardActions">
+              <button
+                type="button"
+                className="button buttonCompact"
+                onClick={() => navigateTo({ kind: "shelf", shelfId: shelf.id })}
+              >
+                Open
+              </button>
+              {canEdit ? (
+                <>
+                  <button
+                    type="button"
+                    className="button buttonCompact"
+                    onClick={() => {
+                      setEditingShelfId(shelf.id);
+                      setEditDraft(shelfToFormValues(shelf));
+                      setCreateOpen(false);
+                      setMutationError(null);
+                    }}
+                    disabled={mutationBusy}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="button buttonDanger buttonCompact"
+                    onClick={() => void handleDelete(shelf)}
+                    disabled={mutationBusy}
+                  >
+                    Delete
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }, [editDraft, editingShelfId, handleDelete, handleUpdate, mutationBusy]);
+
   return (
     <section className="panel shelvesSection">
-      <h2 className="panelTitle">Shelves</h2>
+      <div className="panelHeaderRow">
+        <h2 className="panelTitle">Shelves</h2>
+        {canLoad ? (
+          <button
+            type="button"
+            className="button buttonPrimary buttonCompact"
+            onClick={() => {
+              setCreateOpen(true);
+              setCreateDraft(shelfToFormValues());
+              setEditingShelfId(null);
+              setMutationError(null);
+            }}
+            disabled={busy || mutationBusy || createOpen}
+          >
+            Create shelf
+          </button>
+        ) : null}
+      </div>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
@@ -71,6 +239,23 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
           <button type="button" className="button buttonCompact" onClick={() => void load()} disabled={!canLoad || busy}>
             Retry
           </button>
+        </div>
+      ) : null}
+      {mutationError ? <div className="errorText">{mutationError}</div> : null}
+
+      {createOpen ? (
+        <div className="shelfEditor">
+          <ShelfForm
+            values={createDraft}
+            onChange={setCreateDraft}
+            onSubmit={() => void handleCreate()}
+            onCancel={() => {
+              setCreateOpen(false);
+              setMutationError(null);
+            }}
+            submitLabel="Create shelf"
+            busy={mutationBusy}
+          />
         </div>
       ) : null}
 
@@ -83,20 +268,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
               Personal shelves
             </h3>
             {personal.length === 0 ? <div className="muted">No personal shelves.</div> : null}
-            {personal.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className="shelfCard"
-                onClick={() => navigateTo({ kind: "shelf", shelfId: s.id })}
-              >
-                <div className="shelfCardTitle">{s.name}</div>
-                {s.description ? <div className="muted">{s.description}</div> : null}
-                <div className="muted">
-                  <InlineMeta items={[`${(s.item_count ?? 0).toString()} items`, shelfOwnerLabel(s), s.can_edit ? "can edit" : null]} />
-                </div>
-              </button>
-            ))}
+            {personal.map(renderShelf)}
           </div>
 
           <div>
@@ -104,20 +276,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
               Group shelves
             </h3>
             {group.length === 0 ? <div className="muted">No group shelves.</div> : null}
-            {group.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className="shelfCard"
-                onClick={() => navigateTo({ kind: "shelf", shelfId: s.id })}
-              >
-                <div className="shelfCardTitle">{s.name}</div>
-                {s.description ? <div className="muted">{s.description}</div> : null}
-                <div className="muted">
-                  <InlineMeta items={[`${(s.item_count ?? 0).toString()} items`, shelfOwnerLabel(s), s.can_edit ? "can edit" : null]} />
-                </div>
-              </button>
-            ))}
+            {group.map(renderShelf)}
           </div>
         </div>
       ) : null}
