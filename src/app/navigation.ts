@@ -15,6 +15,7 @@ export type AppRoute =
   | { kind: "session"; sessionId: string }
   | { kind: "shelves" }
   | { kind: "shelf"; shelfId: string; bookId?: string }
+  | { kind: "shelfEdit"; shelfId: string }
   | { kind: "settings" }
   | { kind: "reader"; bookId: string }
   | { kind: "unknown"; raw: string };
@@ -63,6 +64,8 @@ export function routeToHash(route: AppRoute): string {
       return "#/shelves";
     case "shelf":
       return `#/shelves/${encodeURIComponent(route.shelfId)}${buildQuery({ book: route.bookId })}`;
+    case "shelfEdit":
+      return `#/shelves/${encodeURIComponent(route.shelfId)}/edit`;
     case "settings":
       return "#/settings";
     case "reader":
@@ -135,6 +138,14 @@ export function parseCurrentRoute(): AppRoute | null {
   }
   if (head === "shelves") {
     if (typeof parts[1] === "string" && parts[1]) {
+      const shelfId = (() => {
+        try {
+          return decodeURIComponent(parts[1]);
+        } catch {
+          return parts[1];
+        }
+      })();
+      if (parts[2] === "edit") return { kind: "shelfEdit", shelfId };
       try {
         return bookId ? { kind: "shelf", shelfId: decodeURIComponent(parts[1]), bookId } : { kind: "shelf", shelfId: decodeURIComponent(parts[1]) };
       } catch {

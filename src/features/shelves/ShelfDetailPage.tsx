@@ -6,7 +6,6 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
-import { MaterialIcon } from "../../components/MaterialIcon";
 
 function formatAuthors(item: ShelfItem): string {
   const authors = item.book.authors ?? [];
@@ -25,15 +24,11 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
   const [items, setItems] = useState<ShelfItem[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
-  const [itemBusyId, setItemBusyId] = useState<string | null>(null);
-  const [itemError, setItemError] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
 
   const loadFirst = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
     setBusy(true);
     setError(null);
-    setItemError(null);
     try {
       const spl = createSplClientFromProfile(profile);
       const [s, page] = await Promise.all([
@@ -67,10 +62,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     setItems([]);
     setNextUrl(null);
     setError(null);
-    setItemError(null);
     setBusy(false);
-    setItemBusyId(null);
-    setEditMode(false);
     if (!canLoad) return;
     void loadFirst();
   }, [canLoad, loadFirst]);
@@ -124,61 +116,20 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
 
   const canEditShelf = canEditPersonalShelf(shelf);
 
-  useEffect(() => {
-    if (!canEditShelf) setEditMode(false);
-  }, [canEditShelf]);
-
-  const handleMoveItem = useCallback(async (item: ShelfItem, move: "up" | "down") => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!canEditPersonalShelf(shelf)) return;
-    setItemBusyId(item.id);
-    setItemError(null);
-    try {
-      const spl = createSplClientFromProfile(profile);
-      await spl.shelves.updateItem(shelfId, item.id, { move });
-      await loadFirst();
-    } catch (e) {
-      setItemError(e instanceof Error ? e.message : "Failed to update shelf item.");
-    } finally {
-      setItemBusyId(null);
-    }
-  }, [loadFirst, profile, shelf, shelfId]);
-
-  const handleRemoveItem = useCallback(async (item: ShelfItem) => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!canEditPersonalShelf(shelf)) return;
-    if (!window.confirm("Remove this book from the shelf? The book itself will not be deleted.")) return;
-    setItemBusyId(item.id);
-    setItemError(null);
-    try {
-      const spl = createSplClientFromProfile(profile);
-      await spl.shelves.removeItem(shelfId, item.id);
-      await loadFirst();
-    } catch (e) {
-      setItemError(e instanceof Error ? e.message : "Failed to remove shelf item.");
-    } finally {
-      setItemBusyId(null);
-    }
-  }, [loadFirst, profile, shelf, shelfId]);
-
   return (
     <section className="panel shelfDetail">
       <div className="panelHeaderRow">
         <h2 className="panelTitle" style={{ margin: 0 }}>
-          {editMode && shelf?.name ? `Editing ${shelf.name}` : shelf?.name ?? "Shelf"}
+          {shelf?.name ?? "Shelf"}
         </h2>
         <div className="shelfDetailHeaderActions">
           {canEditShelf ? (
             <button
               type="button"
-              className={editMode ? "button buttonPrimary buttonCompact" : "button buttonCompact"}
-              onClick={() => {
-                setEditMode((current) => !current);
-                setItemError(null);
-              }}
+              className="button buttonCompact"
+              onClick={() => navigateTo({ kind: "shelfEdit", shelfId })}
             >
-              <MaterialIcon name={editMode ? "done" : "edit"} />
-              {editMode ? "Done" : "Edit shelf"}
+              Edit shelf
             </button>
           ) : null}
           <button type="button" className="button buttonCompact" onClick={() => navigateTo({ kind: "shelves" })}>
@@ -190,23 +141,16 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
-      {itemError ? <div className="errorText">{itemError}</div> : null}
 
       {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
       {headerMeta.length ? <div className="muted"><InlineMeta items={headerMeta} /></div> : null}
-      {editMode ? (
-        <div className="shelfEditingBanner">
-          Shelf editing is on. Reorder or remove books from this shelf.
-        </div>
-      ) : null}
 
       <div className="shelfBookList">
-        {items.map((it, index) => {
+        {items.map((it) => {
           const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
           const authors = formatAuthors(it);
           const series =
             it.book.series?.name && it.book.series ? it.book.series.name : null;
-          const itemBusy = itemBusyId === it.id;
 
           return (
             <div key={it.id} className="shelfBookCard">
@@ -231,40 +175,6 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
               </div>
 
               <div className="shelfBookActions">
-                {canEditShelf && editMode ? (
-                  <div className="shelfItemEditControls">
-                    <button
-                      type="button"
-                      className="button buttonCompact shelfIconButton"
-                      onClick={() => void handleMoveItem(it, "up")}
-                      disabled={itemBusy || index === 0}
-                      aria-label={`Move ${it.book.title} up`}
-                      title="Move up"
-                    >
-                      <MaterialIcon name="keyboard_arrow_up" />
-                    </button>
-                    <button
-                      type="button"
-                      className="button buttonCompact shelfIconButton"
-                      onClick={() => void handleMoveItem(it, "down")}
-                      disabled={itemBusy || index === items.length - 1}
-                      aria-label={`Move ${it.book.title} down`}
-                      title="Move down"
-                    >
-                      <MaterialIcon name="keyboard_arrow_down" />
-                    </button>
-                    <button
-                      type="button"
-                      className="button buttonCompact shelfIconButton"
-                      onClick={() => void handleRemoveItem(it)}
-                      disabled={itemBusy}
-                      aria-label={`Remove ${it.book.title} from shelf`}
-                      title="Remove"
-                    >
-                      <MaterialIcon name="delete" />
-                    </button>
-                  </div>
-                ) : null}
                 <button
                   type="button"
                   className="button buttonCompact"

@@ -20,6 +20,7 @@ import { openBookForReader } from "../features/library/openBookForReader";
 import { ApiError } from "@secondpass/client";
 import { ShelvesPage } from "../features/shelves/ShelvesPage";
 import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
+import { ShelfEditPage } from "../features/shelves/ShelfEditPage";
 import { BookDetailModal } from "../features/library/BookDetailModal";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
@@ -196,6 +197,9 @@ export default function App() {
         return;
       case "shelf":
         document.title = `${base} - Shelves`;
+        return;
+      case "shelfEdit":
+        document.title = `${base} - Edit Shelf`;
         return;
       case "sessions":
         document.title = `${base} - Session Management`;
@@ -467,6 +471,10 @@ export default function App() {
               ) : route?.kind === "shelf" ? (
                 <div className="libraryScreen">
                   <ShelfDetailPage profile={selectedProfile} shelfId={route.shelfId} />
+                </div>
+              ) : route?.kind === "shelfEdit" ? (
+                <div className="libraryScreen">
+                  <ShelfEditPage profile={selectedProfile} shelfId={route.shelfId} />
                 </div>
               ) : route?.kind === "sessions" ? (
                 <div className="libraryScreen">

@@ -37,8 +37,6 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
   const [data, setData] = useState<Shelf[] | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
-  const [editingShelfId, setEditingShelfId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
   const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -70,7 +68,6 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     setError(null);
     setBusy(false);
     setCreateOpen(false);
-    setEditingShelfId(null);
     setMenuShelfId(null);
     setMutationError(null);
     if (!canLoad) return;
@@ -109,29 +106,6 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     }
   }, [createDraft, load, profile]);
 
-  const handleUpdate = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken || !editingShelfId) return;
-    const name = editDraft.name.trim();
-    if (!name) return;
-    setMutationBusy(true);
-    setMutationError(null);
-    try {
-      const spl = createSplClientFromProfile(profile);
-      await spl.shelves.update(editingShelfId, {
-        name,
-        description: editDraft.description.trim(),
-        visibility: editDraft.visibility,
-      });
-      setEditingShelfId(null);
-      setMenuShelfId(null);
-      await load();
-    } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to update shelf.");
-    } finally {
-      setMutationBusy(false);
-    }
-  }, [editDraft, editingShelfId, load, profile]);
-
   const handleDelete = useCallback(async (shelf: Shelf) => {
     if (!profile?.apiBaseUrl || !profile.accessToken || !canEditPersonalShelf(shelf)) return;
     if (!window.confirm("Delete this shelf? Books and files will not be deleted.")) return;
@@ -140,7 +114,6 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     try {
       const spl = createSplClientFromProfile(profile);
       await spl.shelves.remove(shelf.id);
-      if (editingShelfId === shelf.id) setEditingShelfId(null);
       setMenuShelfId(null);
       await load();
     } catch (e) {
@@ -148,7 +121,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     } finally {
       setMutationBusy(false);
     }
-  }, [editingShelfId, load, profile]);
+  }, [load, profile]);
 
   const renderShelf = useCallback((shelf: Shelf) => {
     const canEdit = canEditPersonalShelf(shelf);
@@ -188,11 +161,8 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
                     type="button"
                     className="shelfOverflowItem"
                     onClick={() => {
-                      setEditingShelfId(shelf.id);
-                      setEditDraft(shelfToFormValues(shelf));
-                      setCreateOpen(false);
                       setMenuShelfId(null);
-                      setMutationError(null);
+                      navigateTo({ kind: "shelfEdit", shelfId: shelf.id });
                     }}
                     disabled={mutationBusy}
                     role="menuitem"
@@ -219,8 +189,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     );
   }, [handleDelete, menuShelfId, mutationBusy]);
 
-  const formOpen = createOpen || editingShelfId !== null;
-  const editingShelf = editingShelfId ? (data ?? []).find((s) => s.id === editingShelfId) ?? null : null;
+  const formOpen = createOpen;
 
   return (
     <section className="panel shelvesSection">
@@ -233,7 +202,6 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
             onClick={() => {
               setCreateOpen(true);
               setCreateDraft(shelfToFormValues());
-              setEditingShelfId(null);
               setMenuShelfId(null);
               setMutationError(null);
             }}
@@ -263,7 +231,6 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !mutationBusy) {
               setCreateOpen(false);
-              setEditingShelfId(null);
               setMutationError(null);
             }
           }}
@@ -271,14 +238,13 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
           <section className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-form-title">
             <div className="modalHeaderRow">
               <div className="modalTitle" id="shelf-form-title">
-                {createOpen ? "Create shelf" : `Edit ${editingShelf?.name ?? "shelf"}`}
+                Create shelf
               </div>
               <button
                 type="button"
                 className="button buttonCompact shelfIconButton"
                 onClick={() => {
                   setCreateOpen(false);
-                  setEditingShelfId(null);
                   setMutationError(null);
                 }}
                 disabled={mutationBusy}
@@ -290,15 +256,14 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
             </div>
             <div className="modalBody">
               <ShelfForm
-                values={createOpen ? createDraft : editDraft}
-                onChange={createOpen ? setCreateDraft : setEditDraft}
-                onSubmit={() => void (createOpen ? handleCreate() : handleUpdate())}
+                values={createDraft}
+                onChange={setCreateDraft}
+                onSubmit={() => void handleCreate()}
                 onCancel={() => {
                   setCreateOpen(false);
-                  setEditingShelfId(null);
                   setMutationError(null);
                 }}
-                submitLabel={createOpen ? "Create shelf" : "Save shelf"}
+                submitLabel="Create shelf"
                 busy={mutationBusy}
               />
             </div>
