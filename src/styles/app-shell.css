@@ -49,10 +49,22 @@
   color: var(--sp-text);
   cursor: pointer;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
 }
 
 .appBrandButton:hover {
   text-decoration: underline;
+}
+
+.appBrandIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: 0 0 auto;
 }
 
 .appBrandButton:focus-visible {

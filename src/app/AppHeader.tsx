@@ -81,7 +81,8 @@ export function AppHeader({
           aria-label="Go to Home"
           title="Home"
         >
-          Second Pass Reader
+          <img className="appBrandIcon" src="/favicon.png" alt="" aria-hidden="true" />
+          <span>Second Pass Reader</span>
         </button>
         {pageLabel ? (
           <button
