@@ -19,7 +19,7 @@ type State =
 
 function pickVerifiedUser(me: MePayload): ConnectionProfile["verifiedUser"] {
   return {
-    id: me.id,
+    profileId: me.profile_id,
     username: me.username,
     displayName: me.display_name,
     firstName: me.first_name,

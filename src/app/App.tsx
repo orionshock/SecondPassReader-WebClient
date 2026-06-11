@@ -92,7 +92,7 @@ export default function App() {
       const lastName = typeof (me as any)?.last_name === "string" ? ((me as any).last_name as string) : undefined;
 
       const nextVerifiedUser = {
-        id: me.id,
+        profileId: me.profile_id,
         username: me.username,
         displayName: me.display_name,
         firstName,
@@ -103,6 +103,7 @@ export default function App() {
       const prev = selectedProfile.verifiedUser;
       const changed =
         !prev ||
+        prev.profileId !== nextVerifiedUser.profileId ||
         prev.username !== nextVerifiedUser.username ||
         prev.displayName !== nextVerifiedUser.displayName ||
         prev.firstName !== nextVerifiedUser.firstName ||

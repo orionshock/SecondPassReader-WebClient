@@ -48,6 +48,7 @@ export type ClientApiPollResponse =
 
 export type MePayload = {
   id?: string | number;
+  profile_id?: string;
   username: string;
   display_name?: string;
   first_name?: string;

@@ -5,7 +5,7 @@ export type ShelfOwnerType = "user" | "group" | string;
 export type ShelfVisibility = "private" | "listed" | string;
 
 export type ShelfOwnerUserSummary = {
-  id: string | number;
+  profile_id: string;
   username?: string | null;
   first_name?: string | null;
   last_name?: string | null;

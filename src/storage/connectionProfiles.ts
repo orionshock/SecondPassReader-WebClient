@@ -12,7 +12,7 @@ export type ConnectionProfile = {
   linkedAt?: string;
   verifiedAt?: string;
   verifiedUser?: {
-    id?: string | number;
+    profileId?: string;
     username: string;
     displayName?: string;
     firstName?: string;

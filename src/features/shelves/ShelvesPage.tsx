@@ -16,8 +16,8 @@ function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   };
 }
 
-function shelfOwnerUserId(shelf: Shelf): string | null {
-  return shelf.owner_type === "user" && shelf.owner_user?.id !== undefined ? String(shelf.owner_user.id) : null;
+function shelfOwnerProfileId(shelf: Shelf): string | null {
+  return shelf.owner_type === "user" && shelf.owner_user?.profile_id ? shelf.owner_user.profile_id : null;
 }
 
 export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) {
@@ -64,18 +64,18 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     void load();
   }, [canLoad, load]);
 
-  const currentUserId = profile?.verifiedUser?.id !== undefined ? String(profile.verifiedUser.id) : null;
+  const currentProfileId = profile?.verifiedUser?.profileId ?? null;
 
   const { myShelves, sharedShelves } = useMemo(() => {
     const shelves = data ?? [];
-    const myShelves = currentUserId
-      ? shelves.filter((s) => shelfOwnerUserId(s) === currentUserId)
+    const myShelves = currentProfileId
+      ? shelves.filter((s) => shelfOwnerProfileId(s) === currentProfileId)
       : [];
-    const sharedShelves = currentUserId
-      ? shelves.filter((s) => shelfOwnerUserId(s) !== currentUserId)
+    const sharedShelves = currentProfileId
+      ? shelves.filter((s) => shelfOwnerProfileId(s) !== currentProfileId)
       : shelves;
     return { myShelves, sharedShelves };
-  }, [currentUserId, data]);
+  }, [currentProfileId, data]);
 
   const handleCreate = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;

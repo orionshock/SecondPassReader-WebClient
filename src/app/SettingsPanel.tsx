@@ -66,7 +66,7 @@ export function SettingsPanel({
         verifiedAt: now,
         lastUsedAt: now,
         verifiedUser: {
-          id: me.id,
+          profileId: me.profile_id,
           username: me.username,
           displayName: me.display_name,
           firstName: me.first_name,
