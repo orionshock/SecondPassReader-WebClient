@@ -10,13 +10,19 @@ export function formatShelfVisibility(visibility: Shelf["visibility"]): string {
   return visibility === "listed" ? "Public" : "Private";
 }
 
-function userOwnerName(shelf: Shelf): string {
-  return (
-    asString(shelf.owner_user?.username) ??
-    asString((shelf.owner_user as any)?.display_name) ??
-    asString((shelf.owner_user as any)?.name) ??
-    "Unknown user"
-  );
+export function canEditShelf(shelf: Shelf | null | undefined): boolean {
+  return shelf?.can_edit === true;
+}
+
+export function formatUserDisplayName(user: Shelf["owner_user"]): string {
+  const first = asString(user?.first_name) ?? "";
+  const last = asString(user?.last_name) ?? "";
+  return [first, last].filter(Boolean).join(" ");
+}
+
+export function formatUserHandle(user: Shelf["owner_user"]): string {
+  const username = asString(user?.username);
+  return username ? `<@${username}>` : "";
 }
 
 function groupOwnerName(shelf: Shelf): string {
@@ -27,14 +33,26 @@ function groupOwnerName(shelf: Shelf): string {
   );
 }
 
+export function formatShelfOwnerParts(shelf: Shelf): { kind: "user"; displayName: string; handle: string } | { kind: "group"; name: string } {
+  if (shelf.owner_type === "group") {
+    return { kind: "group", name: groupOwnerName(shelf) };
+  }
+  return {
+    kind: "user",
+    displayName: formatUserDisplayName(shelf.owner_user),
+    handle: formatUserHandle(shelf.owner_user) || "Unknown user",
+  };
+}
+
 export function ShelfMetaLine({ shelf }: { shelf: Shelf }) {
   const secondary = [formatShelfVisibility(shelf.visibility), `${(shelf.item_count ?? 0).toString()} items`];
+  const ownerParts = formatShelfOwnerParts(shelf);
 
-  if (shelf.owner_type === "group") {
+  if (ownerParts.kind === "group") {
     const owner = (
-      <span className="shelfOwnerChip">
+      <span className="shelfOwnerChip shelfOwnerGroupChip">
         <MaterialIcon name="groups" />
-        {groupOwnerName(shelf)}
+        <span className="shelfOwnerGroupName">{ownerParts.name}</span>
       </span>
     );
     return (
@@ -47,7 +65,8 @@ export function ShelfMetaLine({ shelf }: { shelf: Shelf }) {
   const owner = (
     <span className="shelfOwnerInline">
       <MaterialIcon name="person" />
-      {userOwnerName(shelf)}
+      {ownerParts.displayName ? <span>{ownerParts.displayName}</span> : null}
+      <span className="shelfOwnerHandle">{ownerParts.handle}</span>
     </span>
   );
   return (

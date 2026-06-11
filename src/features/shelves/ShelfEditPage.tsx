@@ -9,10 +9,7 @@ import type { ShelfFormValues } from "./ShelfForm";
 import { ShelfEditInfoModal } from "./ShelfEditInfoModal";
 import { ShelfEditInfoPanel } from "./ShelfEditInfoPanel";
 import { ShelfEditItemsList } from "./ShelfEditItemsList";
-
-function canEditPersonalShelf(shelf: Shelf | null): boolean {
-  return shelf?.owner_type === "user" && shelf.can_edit === true;
-}
+import { canEditShelf } from "./shelfMeta";
 
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
@@ -56,15 +53,18 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     setMutationError(null);
     try {
       const spl = createSplClientFromProfile(profile);
-      const [s, page] = await Promise.all([
-        spl.shelves.get(shelfId),
-        spl.shelves.items(shelfId, { page: 1 }),
-      ]);
+      const s = await spl.shelves.get(shelfId);
       setShelf(s);
       setInfoDraft(shelfToFormValues(s));
-      const results = page.results ?? [];
-      setItems(results.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)));
-      setNextUrl(page.next ?? null);
+      if (canEditShelf(s)) {
+        const page = await spl.shelves.items(shelfId, { page: 1 });
+        const results = page.results ?? [];
+        setItems(results.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)));
+        setNextUrl(page.next ?? null);
+      } else {
+        setItems([]);
+        setNextUrl(null);
+      }
     } catch (e) {
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
@@ -121,7 +121,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
 
   const handleSaveInfo = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!canEditPersonalShelf(shelf)) return;
+    if (!canEditShelf(shelf)) return;
     const name = infoDraft.name.trim();
     if (!name) return;
     setInfoBusy(true);
@@ -144,7 +144,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
 
   const handleMoveToPosition = useCallback(async (item: ShelfItem, position: number) => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!canEditPersonalShelf(shelf)) return;
+    if (!canEditShelf(shelf)) return;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
@@ -160,7 +160,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
 
   const handleMoveItem = useCallback(async (item: ShelfItem, move: "up" | "down") => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!canEditPersonalShelf(shelf)) return;
+    if (!canEditShelf(shelf)) return;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
@@ -176,7 +176,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
 
   const handleRemoveItem = useCallback(async (item: ShelfItem) => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
-    if (!canEditPersonalShelf(shelf)) return;
+    if (!canEditShelf(shelf)) return;
     if (!window.confirm("Remove this book from the shelf? The book itself will not be deleted.")) return;
     setMutationBusyId(item.id);
     setMutationError(null);
@@ -191,7 +191,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     }
   }, [loadFirst, profile, shelf, shelfId]);
 
-  const canEdit = canEditPersonalShelf(shelf);
+  const canEdit = canEditShelf(shelf);
   const itemCount = typeof shelf?.item_count === "number" ? Math.max(0, Math.floor(shelf.item_count)) : items.length;
   const positionOptions = useMemo(() => Array.from({ length: itemCount }, (_unused, index) => index), [itemCount]);
   return (
@@ -218,6 +218,12 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
 
       {shelf ? (
         <>
+          {!canEdit ? (
+            <div className="shelfReadOnlyNotice">
+              You can view this shelf, but this device token does not have permission to edit it.
+            </div>
+          ) : null}
+
           <ShelfEditInfoPanel
             shelf={shelf}
             canEdit={canEdit}

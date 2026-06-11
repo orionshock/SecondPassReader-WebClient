@@ -6,7 +6,7 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
-import { ShelfMetaLine } from "./shelfMeta";
+import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
 
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
@@ -16,8 +16,8 @@ function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   };
 }
 
-function canEditPersonalShelf(shelf: Shelf): boolean {
-  return shelf.owner_type === "user" && shelf.can_edit === true;
+function shelfOwnerUserId(shelf: Shelf): string | null {
+  return shelf.owner_type === "user" && shelf.owner_user?.id !== undefined ? String(shelf.owner_user.id) : null;
 }
 
 export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) {
@@ -64,12 +64,18 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
     void load();
   }, [canLoad, load]);
 
-  const { personal, group } = useMemo(() => {
+  const currentUserId = profile?.verifiedUser?.id !== undefined ? String(profile.verifiedUser.id) : null;
+
+  const { myShelves, sharedShelves } = useMemo(() => {
     const shelves = data ?? [];
-    const personal = shelves.filter((s) => s.owner_type === "user");
-    const group = shelves.filter((s) => s.owner_type === "group");
-    return { personal, group };
-  }, [data]);
+    const myShelves = currentUserId
+      ? shelves.filter((s) => shelfOwnerUserId(s) === currentUserId)
+      : [];
+    const sharedShelves = currentUserId
+      ? shelves.filter((s) => shelfOwnerUserId(s) !== currentUserId)
+      : shelves;
+    return { myShelves, sharedShelves };
+  }, [currentUserId, data]);
 
   const handleCreate = useCallback(async () => {
     if (!profile?.apiBaseUrl || !profile.accessToken) return;
@@ -97,7 +103,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
   }, [createDraft, load, profile]);
 
   const handleDelete = useCallback(async (shelf: Shelf) => {
-    if (!profile?.apiBaseUrl || !profile.accessToken || !canEditPersonalShelf(shelf)) return;
+    if (!profile?.apiBaseUrl || !profile.accessToken || !canEditShelf(shelf)) return;
     if (!window.confirm("Delete this shelf? Books and files will not be deleted.")) return;
     setMutationBusy(true);
     setMutationError(null);
@@ -114,7 +120,7 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
   }, [load, profile]);
 
   const renderShelf = useCallback((shelf: Shelf) => {
-    const canEdit = canEditPersonalShelf(shelf);
+    const canEdit = canEditShelf(shelf);
     const menuOpen = menuShelfId === shelf.id;
     return (
       <div key={shelf.id} className="shelfCard">
@@ -267,18 +273,18 @@ export function ShelvesPage({ profile }: { profile: ConnectionProfile | null }) 
         <div className="shelfList">
           <div>
             <h3 className="panelTitle" style={{ margin: "6px 0 8px" }}>
-              Personal shelves
+              My shelves
             </h3>
-            {personal.length === 0 ? <div className="muted">No personal shelves.</div> : null}
-            {personal.map(renderShelf)}
+            {myShelves.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
+            {myShelves.map(renderShelf)}
           </div>
 
           <div>
             <h3 className="panelTitle" style={{ margin: "6px 0 8px" }}>
-              Group shelves
+              Shared shelves
             </h3>
-            {group.length === 0 ? <div className="muted">No group shelves.</div> : null}
-            {group.map(renderShelf)}
+            {sharedShelves.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
+            {sharedShelves.map(renderShelf)}
           </div>
         </div>
       ) : null}

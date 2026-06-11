@@ -5,15 +5,11 @@ import type { Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
-import { ShelfMetaLine } from "./shelfMeta";
+import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
 
 function formatAuthors(item: ShelfItem): string {
   const authors = item.book.authors ?? [];
   return authors.map((a) => a.name).filter(Boolean).join(", ");
-}
-
-function canEditPersonalShelf(shelf: Shelf | null): boolean {
-  return shelf?.owner_type === "user" && shelf.can_edit === true;
 }
 
 export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfile | null; shelfId: string }) {
@@ -105,7 +101,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     }
   }, [loadMoreBusy, nextUrl, parseNextPage, profile, shelfId]);
 
-  const canEditShelf = canEditPersonalShelf(shelf);
+  const canEditCurrentShelf = canEditShelf(shelf);
 
   return (
     <section className="panel shelfDetail">
@@ -114,7 +110,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
           {shelf?.name ?? "Shelf"}
         </h2>
         <div className="shelfDetailHeaderActions">
-          {canEditShelf ? (
+          {canEditCurrentShelf ? (
             <button
               type="button"
               className="button buttonCompact"

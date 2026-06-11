@@ -75,6 +75,11 @@
   color: var(--sp-muted);
 }
 
+.shelfOwnerHandle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: var(--color-text);
+}
+
 .shelfOwnerChip {
   display: inline-flex;
   gap: 0.3rem;
@@ -92,6 +97,14 @@
   font-size: 16px;
   line-height: 1;
   color: var(--sp-muted);
+}
+
+.shelfOwnerGroupChip {
+  background: var(--color-surface);
+}
+
+.shelfOwnerGroupName {
+  font-weight: 600;
 }
 
 .shelfOverflow {
@@ -198,6 +211,15 @@
   margin-top: 12px;
   color: var(--sp-muted);
   font-size: 13px;
+}
+
+.shelfReadOnlyNotice {
+  margin-top: 10px;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface-muted);
+  color: var(--sp-muted);
 }
 
 .shelfBookList {

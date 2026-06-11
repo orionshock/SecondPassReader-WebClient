@@ -7,6 +7,8 @@ export type ShelfVisibility = "private" | "listed" | string;
 export type ShelfOwnerUserSummary = {
   id: string | number;
   username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   [k: string]: unknown;
 };
 
