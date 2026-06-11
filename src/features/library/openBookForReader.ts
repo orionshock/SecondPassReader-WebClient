@@ -1,6 +1,6 @@
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import type { LibraryBook } from "@secondpass/client";
-import type { OpenedBook } from "../reader";
+import type { OpenedBook } from "../reader/types";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 
 export async function openBookForReader(input: {

@@ -1,9 +1,12 @@
 import "./App.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ClientApiLinking, ClientApiVerification, ConnectServerScreen } from "../features/connection";
+import { ClientApiLinking } from "../features/connection/ClientApiLinking";
+import { ClientApiVerification } from "../features/connection/ClientApiVerification";
+import { ConnectServerScreen } from "../features/connection/ConnectServerScreen";
 import { LibraryLandingPage } from "../features/library/LibraryLandingPage";
 import { HomePage } from "../features/home/HomePage";
-import { ReadingActivity, type OpenedBook } from "../features/reader";
+import { ReadingActivity } from "../features/reader/ReadingActivity";
+import type { OpenedBook } from "../features/reader/types";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { AppRoute } from "./navigation";
 import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
