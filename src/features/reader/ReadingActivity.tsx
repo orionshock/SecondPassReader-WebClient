@@ -15,6 +15,7 @@ import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
 import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../sessions/CloseSessionDialog";
 import { navigateTo } from "../../app/navigation";
 import { findNextSeriesBook, normalizeSeriesIndex } from "../library/seriesUtils";
+import { buildReturnLabel, saveReaderReturnTarget } from "./readerReturnTarget";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
 type ReaderActivityRenderState = Parameters<ReadingSessionOrchestratorProps["children"]>[0];
@@ -111,12 +112,15 @@ function ReaderActivityContent({
   const seriesId = openedBook.book.series?.id;
   const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series_index);
   const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
+  const returnTarget = openedBook.returnTarget;
+  const returnLabel = buildReturnLabel(returnTarget);
+  const showHomeAction = returnTarget.kind !== "home";
   const canLookupNextBook = seriesId != null && currentSeriesIndex != null;
   const headerEndLabel = nextSeriesBook ? "Next book…" : "End options…";
   const closeAfterOptions: CloseSessionAfterOption[] = [
     ...(nextSeriesBook ? [{ action: "nextBook" as const, label: "Start next book" }] : []),
     { action: "restartBook", label: "Start this book again" },
-    { action: "home", label: "Go Home" },
+    { action: "home", label: returnLabel },
     { action: "detail", label: "View closed session" },
     { action: "sessions", label: "Go to sessions" },
   ];
@@ -162,12 +166,14 @@ function ReaderActivityContent({
     await annotations.closeCurrentSession({ name: input.name, notes: input.notes });
     setCloseDialogOpen(false);
     if (input.afterAction === "nextBook" && nextSeriesBook) {
+      saveReaderReturnTarget(nextSeriesBook.id, returnTarget);
       navigateTo({ kind: "reader", bookId: String(nextSeriesBook.id) });
     } else if (input.afterAction === "restartBook") {
+      saveReaderReturnTarget(openedBook.book.id, returnTarget);
       navigateTo({ kind: "reader", bookId: String(openedBook.book.id) }, { replace: true });
       window.location.reload();
     } else if (input.afterAction === "home") {
-      onBackToLibrary();
+      window.location.hash = returnTarget.route;
     } else if (input.afterAction === "sessions") {
       navigateTo({ kind: "sessions" });
     } else {
@@ -178,6 +184,7 @@ function ReaderActivityContent({
   const startNextBook = (book: LibraryBook) => {
     setEndBookDialogOpen(false);
     setCloseDialogOpen(false);
+    saveReaderReturnTarget(book.id, returnTarget);
     navigateTo({ kind: "reader", bookId: String(book.id) });
   };
 
@@ -243,13 +250,27 @@ function ReaderActivityContent({
             <button
               type="button"
               className="button buttonCompact spIconButton"
-              onClick={onBackToLibrary}
-              aria-label="Home"
-              title="Home"
+              onClick={() => {
+                window.location.hash = returnTarget.route;
+              }}
+              aria-label={returnLabel}
+              title={returnLabel}
             >
-              <MaterialIcon name="home" />
-              <span className="spIconButtonLabel">Home</span>
+              <MaterialIcon name="arrow_back" />
+              <span className="spIconButtonLabel">{returnLabel}</span>
             </button>
+            {showHomeAction ? (
+              <button
+                type="button"
+                className="button buttonCompact spIconButton"
+                onClick={onBackToLibrary}
+                aria-label="Home"
+                title="Home"
+              >
+                <MaterialIcon name="home" />
+                <span className="spIconButtonLabel">Home</span>
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -297,7 +318,10 @@ function ReaderActivityContent({
           onStartNextBook={startNextBook}
           onFinishSession={finishCurrentSession}
           onKeepReading={() => setEndBookDialogOpen(false)}
-          onGoToLibrary={nextSeriesBook ? undefined : onBackToLibrary}
+          onGoToLibrary={nextSeriesBook ? undefined : () => {
+            window.location.hash = returnTarget.route;
+          }}
+          returnLabel={returnLabel}
         />
       ) : null}
     </>

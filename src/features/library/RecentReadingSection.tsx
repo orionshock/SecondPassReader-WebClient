@@ -3,6 +3,7 @@ import type { ReadingRecentSessionsResponse, SecondPassClient } from "@secondpas
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "./coverUtils";
+import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 
 function formatLastActivity(isoUtc: string): string {
   try {
@@ -54,6 +55,7 @@ export function RecentReadingSection({
     const bookKey = String(bookId);
     setError(null);
     try {
+      saveReaderReturnTarget(bookKey, { kind: "home", label: "Home", route: "#/home" });
       navigateTo({ kind: "reader", bookId: bookKey });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to resume book.");

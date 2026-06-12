@@ -8,6 +8,7 @@ import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
 import { CloseSessionDialog, type CloseSessionInput } from "./CloseSessionDialog";
+import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -310,7 +311,21 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
               </div>
             </div>
             <div className="sessionHeaderActions">
-              <button type="button" className="button buttonPrimary" onClick={() => navigateTo({ kind: "reader", bookId: String(session.book?.id ?? "") })} disabled={!canOpenReader}>
+              <button
+                type="button"
+                className="button buttonPrimary"
+                onClick={() => {
+                  const bookId = String(session.book?.id ?? "");
+                  saveReaderReturnTarget(bookId, {
+                    kind: "sessions",
+                    label: session.name?.trim() ? session.name.trim() : "Session detail",
+                    route: `#/sessions/${encodeURIComponent(sessionId)}`,
+                    sessionId,
+                  });
+                  navigateTo({ kind: "reader", bookId });
+                }}
+                disabled={!canOpenReader}
+              >
                 Open reader
               </button>
               {isActive ? (

@@ -2,9 +2,10 @@
 import { ApiError } from "@secondpass/client";
 import type { ReadingSessionBookSummary, ReadingSessionsListResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo, routeToHash } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
+import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 
 function formatBookAuthors(book?: ReadingSessionBookSummary | null): string {
   const authors = book?.authors ?? [];
@@ -173,7 +174,15 @@ export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProf
                 <button
                   type="button"
                   className="button buttonPrimary buttonCompact"
-                  onClick={() => navigateTo({ kind: "reader", bookId: String(contextBook.id) })}
+                  onClick={() => {
+                    saveReaderReturnTarget(contextBook.id, {
+                      kind: "sessions",
+                      label: "Reading sessions",
+                      route: routeToHash({ kind: "sessions", bookId: bookFilter ?? undefined }),
+                      bookId: String(contextBook.id),
+                    });
+                    navigateTo({ kind: "reader", bookId: String(contextBook.id) });
+                  }}
                 >
                   Open reader
                 </button>

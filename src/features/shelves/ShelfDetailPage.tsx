@@ -5,6 +5,7 @@ import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
+import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 
 function formatAuthors(item: ShelfItem): string {
   const authors = item.book.authors ?? [];
@@ -169,7 +170,15 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
                 <button
                   type="button"
                   className="button buttonPrimary buttonCompact"
-                  onClick={() => navigateTo({ kind: "reader", bookId: String(it.book.id) })}
+                  onClick={() => {
+                    saveReaderReturnTarget(it.book.id, {
+                      kind: "shelf",
+                      label: shelf?.name ?? "Shelf",
+                      route: `#/shelves/${encodeURIComponent(shelfId)}`,
+                      shelfId,
+                    });
+                    navigateTo({ kind: "reader", bookId: String(it.book.id) });
+                  }}
                 >
                   Read
                 </button>

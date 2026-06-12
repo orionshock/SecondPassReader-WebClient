@@ -12,6 +12,7 @@ export function EndOfBookDialog({
   onFinishSession,
   onKeepReading,
   onGoToLibrary,
+  returnLabel,
 }: {
   nextBook: LibraryBook | null;
   nextBookStatus: "idle" | "loading" | "ready" | "error";
@@ -21,6 +22,7 @@ export function EndOfBookDialog({
   onFinishSession: () => void;
   onKeepReading: () => void;
   onGoToLibrary?: () => void;
+  returnLabel?: string;
 }) {
   const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
   const coverSrc = getBookCoverUrl(nextBook, coverBase);
@@ -83,7 +85,7 @@ export function EndOfBookDialog({
           </button>
           {onGoToLibrary ? (
             <button type="button" className="button" onClick={onGoToLibrary}>
-              Go to library
+              {returnLabel ?? "Go to library"}
             </button>
           ) : null}
           <button type="button" className="button endBookFinishButton" onClick={onFinishSession}>

@@ -9,7 +9,7 @@ import { ReadingActivity } from "../features/reader/ReadingActivity";
 import type { OpenedBook } from "../features/reader/types";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { AppRoute } from "./navigation";
-import { navigateTo, parseCurrentRoute, withBookModal, withoutBookModal } from "./navigation";
+import { navigateTo, parseCurrentRoute, routeToHash, withBookModal, withoutBookModal } from "./navigation";
 import {
   clearActiveConnection,
   getActiveConnection,
@@ -29,6 +29,8 @@ import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
 import type { SecondPassClient } from "@secondpass/client";
+import { saveReaderReturnTarget } from "../features/reader/readerReturnTarget";
+import type { ReaderReturnTarget } from "../features/reader/types";
 
 export default function App() {
   const DEBUG_NAV = import.meta.env.DEV;
@@ -339,6 +341,48 @@ export default function App() {
     openingBookRef.current = null;
   }
 
+  function getReaderReturnTargetForRoute(currentRoute: AppRoute | null): ReaderReturnTarget {
+    if (!currentRoute) return { kind: "home", label: "Home", route: "#/home" };
+    if (currentRoute.kind === "library") {
+      return {
+        kind: currentRoute.browse === "series" && currentRoute.seriesId ? "series" : "library",
+        label: currentRoute.browse === "series" && currentRoute.seriesId ? "Series" : "Library",
+        route: routeToHash(withoutBookModal(currentRoute)),
+        seriesId: currentRoute.browse === "series" ? currentRoute.seriesId : undefined,
+      };
+    }
+    if (currentRoute.kind === "shelf") {
+      return {
+        kind: "shelf",
+        label: "Shelf",
+        route: routeToHash(withoutBookModal(currentRoute)),
+        shelfId: currentRoute.shelfId,
+      };
+    }
+    if (currentRoute.kind === "sessions") {
+      return {
+        kind: "sessions",
+        label: "Reading sessions",
+        route: routeToHash(currentRoute),
+      };
+    }
+    if (currentRoute.kind === "session") {
+      return {
+        kind: "sessions",
+        label: "Session detail",
+        route: routeToHash(currentRoute),
+        sessionId: currentRoute.sessionId,
+      };
+    }
+    return { kind: "home", label: "Home", route: "#/home" };
+  }
+
+  function openReaderWithReturnTarget(bookId: string | number, returnTarget: ReaderReturnTarget) {
+    const id = String(bookId);
+    saveReaderReturnTarget(id, returnTarget);
+    navigateTo({ kind: "reader", bookId: id });
+  }
+
   function handleForgetServer() {
     clearActiveConnection();
     handleCloseReader();
@@ -550,7 +594,7 @@ export default function App() {
                 navigateTo(withoutBookModal(route), { replace: true });
               }}
               onOpenReader={(book) => {
-                navigateTo({ kind: "reader", bookId: String(book.id) });
+                openReaderWithReturnTarget(book.id, getReaderReturnTargetForRoute(route));
               }}
               onViewSessions={(book) => {
                 navigateTo({ kind: "sessions", bookId: String(book.id) });
