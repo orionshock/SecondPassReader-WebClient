@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
-import type { Shelf } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { createSplClientFromProfile } from "../../app/createSplClient";
+import type { SecondPassClient, Shelf } from "@secondpass/client";
 
-export function ShelvesPreviewSection({ profile }: { profile: ConnectionProfile | null }) {
-  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+export function ShelvesPreviewSection({ spl }: { spl: SecondPassClient | null }) {
+  const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shelves, setShelves] = useState<Shelf[] | null>(null);
 
   const load = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     setBusy(true);
     setError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const r = await spl.shelves.list();
       setShelves(r.results ?? []);
     } catch (e) {
@@ -31,7 +28,7 @@ export function ShelvesPreviewSection({ profile }: { profile: ConnectionProfile 
     } finally {
       setBusy(false);
     }
-  }, [profile]);
+  }, [spl]);
 
   useEffect(() => {
     setShelves(null);

@@ -1,10 +1,9 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { ReadingAnnotationPage, ReadingSessionSummary } from "@secondpass/client";
+import type { ReadingAnnotationPage, ReadingSessionSummary, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
@@ -84,8 +83,8 @@ function getAnnotationTexts(annotation: unknown): { quote: string | null; note: 
   return { quote: textBodies[0]?.value ?? null, note: null };
 }
 
-export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionProfile | null; sessionId: string }) {
-  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
+  const canLoad = Boolean(spl);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,11 +105,10 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
   const [annoLoadingMore, setAnnoLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     setBusy(true);
     setError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const s = await spl.reading.sessions.get(sessionId);
       setSession(s);
       setDraftName(typeof s.name === "string" ? s.name : "");
@@ -131,15 +129,14 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     } finally {
       setBusy(false);
     }
-  }, [profile, sessionId]);
+  }, [sessionId, spl]);
 
   const loadAnnotations = useCallback(
     async (page = 1) => {
-      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      if (!spl) return;
       setAnnoBusy(true);
       setAnnoError(null);
       try {
-        const spl = createSplClientFromProfile(profile);
         const p = await spl.reading.annotations.list({ sessionId, page });
         setAnnoPage(p);
       } catch (e) {
@@ -150,7 +147,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
         setAnnoBusy(false);
       }
     },
-    [profile, sessionId],
+    [sessionId, spl],
   );
 
   useEffect(() => {
@@ -178,13 +175,12 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     : "Marginalia";
 
   const handleSaveName = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!session) return;
     if (!isActive) return;
     setSaveBusy(true);
     setSaveError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       await spl.reading.sessions.updateDetails(sessionId, { name: draftName });
       const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
@@ -194,16 +190,15 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     } finally {
       setSaveBusy(false);
     }
-  }, [draftName, isActive, profile, session, sessionId]);
+  }, [draftName, isActive, session, sessionId, spl]);
 
   const handleSaveNotes = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!session) return;
     if (!isActive) return;
     setSaveBusy(true);
     setSaveError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       await spl.reading.sessions.updateDetails(sessionId, { notes: draftNotes });
       const refreshed = await spl.reading.sessions.get(sessionId);
       setSession(refreshed);
@@ -213,15 +208,14 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     } finally {
       setSaveBusy(false);
     }
-  }, [draftNotes, isActive, profile, session, sessionId]);
+  }, [draftNotes, isActive, session, sessionId, spl]);
 
   const handleSaveAndClose = useCallback(async (input: CloseSessionInput) => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!sessionId) return;
     if (!session) return;
 
     try {
-      const spl = createSplClientFromProfile(profile);
       const savedName = typeof session.name === "string" ? session.name.trim() : "";
       const savedNotes = typeof session.notes === "string" ? session.notes : "";
       const payload: { name?: string; notes?: string } = {};
@@ -242,7 +236,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     } catch (e) {
       throw e instanceof Error ? e : new Error("Failed to close session.");
     }
-  }, [profile, session, sessionId]);
+  }, [session, sessionId, spl]);
 
   const handleLoadMoreAnnotations = useCallback(async () => {
     if (annoLoadingMore) return;
@@ -264,7 +258,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     setAnnoLoadingMore(true);
     setAnnoError(null);
     try {
-      const spl = createSplClientFromProfile(profile!);
+      if (!spl) return;
       const p = await spl.reading.annotations.list({ sessionId, page: nextPage });
       setAnnoPage((prev) => {
         if (!prev) return p;
@@ -275,7 +269,7 @@ export function SessionDetailPage({ profile, sessionId }: { profile: ConnectionP
     } finally {
       setAnnoLoadingMore(false);
     }
-  }, [annoLoadingMore, annoPage, profile, sessionId]);
+  }, [annoLoadingMore, annoPage, sessionId, spl]);
 
   const bookLine = useMemo(() => {
     const authors = (session?.book?.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");

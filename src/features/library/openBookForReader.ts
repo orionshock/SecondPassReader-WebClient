@@ -1,18 +1,11 @@
-import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import type { LibraryBook } from "@secondpass/client";
+import type { LibraryBook, SecondPassClient } from "@secondpass/client";
 import type { OpenedBook } from "../reader/types";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 
 export async function openBookForReader(input: {
-  profile: ConnectionProfile;
+  spl: SecondPassClient;
   book: LibraryBook;
 }): Promise<OpenedBook> {
-  const { profile, book } = input;
-
-  if (!profile.apiBaseUrl) throw new Error("Profile is missing apiBaseUrl. Run discovery again.");
-  if (!profile.accessToken) throw new Error("Profile is not linked.");
-
-  const spl = createSplClientFromProfile(profile);
+  const { spl, book } = input;
 
   const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;

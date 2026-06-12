@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
-import type { Shelf, ShelfItem } from "@secondpass/client";
+import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { resolveCoverUrl } from "../library/coverUtils";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
 
 function formatAuthors(item: ShelfItem): string {
@@ -12,8 +11,8 @@ function formatAuthors(item: ShelfItem): string {
   return authors.map((a) => a.name).filter(Boolean).join(", ");
 }
 
-export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfile | null; shelfId: string }) {
-  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+export function ShelfDetailPage({ profile, spl, shelfId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; shelfId: string }) {
+  const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shelf, setShelf] = useState<Shelf | null>(null);
@@ -22,11 +21,10 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
 
   const loadFirst = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     setBusy(true);
     setError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const [s, page] = await Promise.all([
         spl.shelves.get(shelfId),
         spl.shelves.items(shelfId, { page: 1 }),
@@ -51,7 +49,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     } finally {
       setBusy(false);
     }
-  }, [profile, shelfId]);
+  }, [shelfId, spl]);
 
   useEffect(() => {
     setShelf(null);
@@ -77,7 +75,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!nextUrl) return;
     const nextPage = parseNextPage(nextUrl);
     if (!nextPage) return;
@@ -86,7 +84,6 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     setLoadMoreBusy(true);
     setError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const page = await spl.shelves.items(shelfId, { page: nextPage });
       const results = page.results ?? [];
       setItems((prev) => {
@@ -99,7 +96,7 @@ export function ShelfDetailPage({ profile, shelfId }: { profile: ConnectionProfi
     } finally {
       setLoadMoreBusy(false);
     }
-  }, [loadMoreBusy, nextUrl, parseNextPage, profile, shelfId]);
+  }, [loadMoreBusy, nextUrl, parseNextPage, shelfId, spl]);
 
   const canEditCurrentShelf = canEditShelf(shelf);
 

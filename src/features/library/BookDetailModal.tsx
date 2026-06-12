@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryBook, ReadingBookActivitySummaryRow } from "@secondpass/client";
+import type { LibraryBook, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailPanel } from "./BookDetailPanel";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 
 export function BookDetailModal({
   profile,
+  spl,
   bookId,
   initialBook,
   onClose,
@@ -16,6 +16,7 @@ export function BookDetailModal({
   downloadState,
 }: {
   profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
   bookId: string;
   initialBook: LibraryBook | null;
   onClose: () => void;
@@ -56,11 +57,10 @@ export function BookDetailModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  const canFetch = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+  const canFetch = Boolean(spl);
 
   useEffect(() => {
-    if (!canFetch) return;
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!canFetch || !spl) return;
 
     fetchSeqRef.current += 1;
     const seq = fetchSeqRef.current;
@@ -69,7 +69,6 @@ export function BookDetailModal({
     setError(null);
     void (async () => {
       try {
-        const spl = createSplClientFromProfile(profile);
         const full = await spl.library.books.get(bookId);
         if (seq !== fetchSeqRef.current) return;
         setBook(full);
@@ -112,11 +111,10 @@ export function BookDetailModal({
         setBusy(false);
       }
     })();
-  }, [bookId, canFetch, profile]);
+  }, [bookId, canFetch, spl]);
 
   useEffect(() => {
-    if (!canFetch) return;
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!canFetch || !spl) return;
 
     let cancelled = false;
     setActivitySummary(null);
@@ -124,7 +122,6 @@ export function BookDetailModal({
 
     void (async () => {
       try {
-        const spl = createSplClientFromProfile(profile);
         const summary = await spl.reading.books.activitySummary({ books: [bookId] });
         if (cancelled) return;
         setActivitySummary(summary.results[0] ?? null);
@@ -138,7 +135,7 @@ export function BookDetailModal({
     return () => {
       cancelled = true;
     };
-  }, [bookId, canFetch, profile]);
+  }, [bookId, canFetch, spl]);
 
   const headerTitle = useMemo(() => (book?.title ? book.title : `Book ${bookId}`), [book?.title, bookId]);
 

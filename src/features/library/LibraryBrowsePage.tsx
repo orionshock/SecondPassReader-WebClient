@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "@secondpass/client";
+import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookGrid } from "./display/BookGrid";
 import { BookList } from "./display/BookList";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 
@@ -13,6 +12,7 @@ type BrowseMode = "books" | "series" | "authors";
 
 type Props = {
   profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
   route: {
     q?: string;
     browse?: BrowseMode;
@@ -32,6 +32,7 @@ type Props = {
 
 export function LibraryBrowsePage({
   profile,
+  spl,
   route,
   selectedBookId,
   onViewBook,
@@ -43,7 +44,7 @@ export function LibraryBrowsePage({
   onShowAuthorBooks,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
-  const apiReady = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+  const apiReady = Boolean(spl);
 
   const qFromRoute = (route.q ?? "").trim();
   const browseFromRoute = route.browse ?? "books";
@@ -99,12 +100,11 @@ export function LibraryBrowsePage({
       authorId?: string;
       ordering: "title" | "series_index";
     }) => {
-      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      if (!spl) return;
 
       setBooksBusy(true);
       setBooksError(null);
       try {
-        const spl = createSplClientFromProfile(profile);
         const result = await spl.library.books.list({
           q: input.q?.trim() ? input.q.trim() : undefined,
           series: input.seriesId,
@@ -128,16 +128,15 @@ export function LibraryBrowsePage({
         setBooksBusy(false);
       }
     },
-    [pageSize, profile],
+    [pageSize, spl],
   );
 
   const loadSeries = useCallback(
     async (page: number) => {
-      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      if (!spl) return;
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const spl = createSplClientFromProfile(profile);
         const r = await spl.library.series.list({ page });
         setSeriesData(r);
         setSeriesPage(page);
@@ -148,16 +147,15 @@ export function LibraryBrowsePage({
         setSeriesBusy(false);
       }
     },
-    [profile],
+    [spl],
   );
 
   const loadAuthors = useCallback(
     async (page: number) => {
-      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      if (!spl) return;
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const spl = createSplClientFromProfile(profile);
         const r = await spl.library.authors.list({ page });
         setAuthorsData(r);
         setAuthorsPage(page);
@@ -168,7 +166,7 @@ export function LibraryBrowsePage({
         setAuthorsBusy(false);
       }
     },
-    [profile],
+    [spl],
   );
 
   useEffect(() => {
@@ -180,7 +178,7 @@ export function LibraryBrowsePage({
 
   useEffect(() => {
     if (status !== "verified") return;
-    if (!apiReady) return;
+    if (!apiReady || !spl) return;
 
     // Global search wins over browse.
     if (qFromRoute) {
@@ -210,7 +208,7 @@ export function LibraryBrowsePage({
 
   useEffect(() => {
     if (status !== "verified") return;
-    if (!apiReady) return;
+    if (!apiReady || !spl) return;
     if (qFromRoute) {
       setSelectedSeries(null);
       setSelectedAuthor(null);
@@ -220,7 +218,6 @@ export function LibraryBrowsePage({
     if (browseMode === "series" && route.seriesId) {
       void (async () => {
         try {
-          const spl = createSplClientFromProfile(profile!);
           const s = await spl.library.series.get(route.seriesId!);
           setSelectedSeries(s);
         } catch {
@@ -234,7 +231,6 @@ export function LibraryBrowsePage({
     if (browseMode === "authors" && route.authorId) {
       void (async () => {
         try {
-          const spl = createSplClientFromProfile(profile!);
           const a = await spl.library.authors.get(route.authorId!);
           setSelectedAuthor(a);
         } catch {
@@ -245,7 +241,7 @@ export function LibraryBrowsePage({
       setSelectedAuthor(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, browseMode, route.seriesId, route.authorId, qFromRoute]);
+  }, [status, apiReady, browseMode, route.seriesId, route.authorId, qFromRoute, spl]);
 
   const handleCommitSearch = useCallback(() => {
     const next = qDraft.trim();

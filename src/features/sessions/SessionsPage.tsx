@@ -1,10 +1,9 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { ReadingSessionBookSummary, ReadingSessionsListResponse } from "@secondpass/client";
+import type { ReadingSessionBookSummary, ReadingSessionsListResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
 
 function formatBookAuthors(book?: ReadingSessionBookSummary | null): string {
@@ -53,8 +52,8 @@ function formatAnnotationCount(n?: number | null): string | null {
 
 type Filter = "all" | "active" | "closed";
 
-export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile | null; bookId?: string | null }) {
-  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; bookId?: string | null }) {
+  const canLoad = Boolean(spl);
   const bookFilter = typeof bookId === "string" && bookId.trim() ? bookId.trim() : null;
   const [filter, setFilter] = useState<Filter>("all");
   const [pageSize, setPageSize] = useState(20);
@@ -66,11 +65,10 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
 
   const load = useCallback(
     async (targetPage: number) => {
-      if (!profile?.apiBaseUrl || !profile.accessToken) return;
+      if (!spl) return;
       setBusy(true);
       setError(null);
       try {
-        const spl = createSplClientFromProfile(profile);
         const r = await spl.reading.sessions.list({
           page: targetPage,
           pageSize,
@@ -96,7 +94,7 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
         setBusy(false);
       }
     },
-    [bookFilter, filter, pageSize, profile],
+    [bookFilter, filter, pageSize, spl],
   );
 
   useEffect(() => {

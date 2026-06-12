@@ -1,6 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from "react";
-import { createSplClientFromProfile } from "../../app/createSplClient";
-import type { ReadingRecentSessionsResponse } from "@secondpass/client";
+import type { ReadingRecentSessionsResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "./coverUtils";
@@ -16,22 +15,23 @@ function formatLastActivity(isoUtc: string): string {
 
 export function RecentReadingSection({
   profile,
+  spl,
 }: {
   profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ReadingRecentSessionsResponse | null>(null);
   const [brokenCoverIds, setBrokenCoverIds] = useState<Record<string, true>>({});
 
-  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+  const canLoad = Boolean(spl);
 
   const loadRecent = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     setBusy(true);
     setError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const r = await spl.reading.sessions.recent({ limit: 10 });
       setData(r);
     } catch (e) {
@@ -40,7 +40,7 @@ export function RecentReadingSection({
     } finally {
       setBusy(false);
     }
-  }, [profile]);
+  }, [spl]);
 
   useEffect(() => {
     setData(null);

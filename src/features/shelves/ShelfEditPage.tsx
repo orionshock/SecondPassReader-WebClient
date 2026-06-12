@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { Shelf, ShelfItem } from "@secondpass/client";
+import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
-import { createSplClientFromProfile } from "../../app/createSplClient";
 import type { ShelfFormValues } from "./ShelfForm";
 import { ShelfEditInfoModal } from "./ShelfEditInfoModal";
 import { ShelfEditInfoPanel } from "./ShelfEditInfoPanel";
@@ -32,8 +31,8 @@ function parseNextPage(url: string | null): number | null {
   }
 }
 
-export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile | null; shelfId: string }) {
-  const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; shelfId: string }) {
+  const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shelf, setShelf] = useState<Shelf | null>(null);
@@ -47,12 +46,11 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
   const [infoBusy, setInfoBusy] = useState(false);
 
   const loadFirst = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     setBusy(true);
     setError(null);
     setMutationError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const s = await spl.shelves.get(shelfId);
       setShelf(s);
       setInfoDraft(shelfToFormValues(s));
@@ -81,7 +79,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     } finally {
       setBusy(false);
     }
-  }, [profile, shelfId]);
+  }, [shelfId, spl]);
 
   useEffect(() => {
     setShelf(null);
@@ -97,14 +95,13 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
   }, [canLoad, loadFirst]);
 
   const loadMore = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     const nextPage = parseNextPage(nextUrl);
     if (!nextPage || loadMoreBusy) return;
 
     setLoadMoreBusy(true);
     setMutationError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       const page = await spl.shelves.items(shelfId, { page: nextPage });
       const results = page.results ?? [];
       setItems((prev) => {
@@ -117,17 +114,16 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     } finally {
       setLoadMoreBusy(false);
     }
-  }, [loadMoreBusy, nextUrl, profile, shelfId]);
+  }, [loadMoreBusy, nextUrl, shelfId, spl]);
 
   const handleSaveInfo = useCallback(async () => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!canEditShelf(shelf)) return;
     const name = infoDraft.name.trim();
     if (!name) return;
     setInfoBusy(true);
     setMutationError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       await spl.shelves.update(shelfId, {
         name,
         description: infoDraft.description.trim(),
@@ -140,15 +136,14 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     } finally {
       setInfoBusy(false);
     }
-  }, [infoDraft, loadFirst, profile, shelf, shelfId]);
+  }, [infoDraft, loadFirst, shelf, shelfId, spl]);
 
   const handleMoveToPosition = useCallback(async (item: ShelfItem, position: number) => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!canEditShelf(shelf)) return;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       await spl.shelves.updateItem(shelfId, item.id, { position });
       await loadFirst();
     } catch (e) {
@@ -156,15 +151,14 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     } finally {
       setMutationBusyId(null);
     }
-  }, [loadFirst, profile, shelf, shelfId]);
+  }, [loadFirst, shelf, shelfId, spl]);
 
   const handleMoveItem = useCallback(async (item: ShelfItem, move: "up" | "down") => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!canEditShelf(shelf)) return;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       await spl.shelves.updateItem(shelfId, item.id, { move });
       await loadFirst();
     } catch (e) {
@@ -172,16 +166,15 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     } finally {
       setMutationBusyId(null);
     }
-  }, [loadFirst, profile, shelf, shelfId]);
+  }, [loadFirst, shelf, shelfId, spl]);
 
   const handleRemoveItem = useCallback(async (item: ShelfItem) => {
-    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+    if (!spl) return;
     if (!canEditShelf(shelf)) return;
     if (!window.confirm("Remove this book from the shelf? The book itself will not be deleted.")) return;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
-      const spl = createSplClientFromProfile(profile);
       await spl.shelves.removeItem(shelfId, item.id);
       await loadFirst();
     } catch (e) {
@@ -189,7 +182,7 @@ export function ShelfEditPage({ profile, shelfId }: { profile: ConnectionProfile
     } finally {
       setMutationBusyId(null);
     }
-  }, [loadFirst, profile, shelf, shelfId]);
+  }, [loadFirst, shelf, shelfId, spl]);
 
   const canEdit = canEditShelf(shelf);
   const itemCount = typeof shelf?.item_count === "number" ? Math.max(0, Math.floor(shelf.item_count)) : items.length;

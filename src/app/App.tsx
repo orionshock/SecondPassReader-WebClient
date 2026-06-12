@@ -79,7 +79,7 @@ export default function App() {
     // Keep verified user display fresh on page load and periodic focus changes.
     if (workflowStep !== "library_home") return;
     if (!selectedProfile?.id) return;
-    if (!selectedProfile.apiBaseUrl || !selectedProfile.accessToken) return;
+    if (!selectedProfile.apiBaseUrl || !selectedProfile.accessToken || !splClient) return;
 
     const profileId = selectedProfile.id;
     const now = Date.now();
@@ -88,8 +88,7 @@ export default function App() {
     lastMeCheckRef.current[profileId] = now;
 
     try {
-      const spl = createSplClientFromProfile(selectedProfile);
-      const me = await spl.account.getCurrent();
+      const me = await splClient.account.getCurrent();
 
       const firstName = typeof (me as any)?.first_name === "string" ? ((me as any).first_name as string) : undefined;
       const lastName = typeof (me as any)?.last_name === "string" ? ((me as any).last_name as string) : undefined;
@@ -124,7 +123,7 @@ export default function App() {
     } catch {
       // ignore: keep existing verified identity if refresh fails
     }
-  }, [selectedProfile, workflowStep]);
+  }, [selectedProfile, splClient, workflowStep]);
 
   useEffect(() => {
     void checkMe();
@@ -243,7 +242,7 @@ export default function App() {
     // Reader route restore/open: on reload (or direct navigation) open the requested book.
     if (workflowStep !== "library_home") return;
     if (!route || route.kind !== "reader") return;
-    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return;
+    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken || !splClient) return;
 
     const requestedBookId = route.bookId;
     if (openedBook?.book?.id === requestedBookId) return;
@@ -259,8 +258,6 @@ export default function App() {
     void (async () => {
       const seq = navSeqRef.current;
       try {
-        const spl = createSplClientFromProfile(selectedProfile);
-
         const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
           let timeoutId: ReturnType<typeof setTimeout> | undefined;
           const timeoutPromise = new Promise<T>((_resolve, reject) => {
@@ -274,13 +271,13 @@ export default function App() {
         };
 
         const book = await withTimeout(
-          spl.library.books.get(requestedBookId),
+          splClient.library.books.get(requestedBookId),
           30_000,
           "Loading book details",
         );
         if (cancelled) return;
         if (seq !== navSeqRef.current) return;
-        const opened = await openBookForReader({ profile: selectedProfile, book });
+        const opened = await openBookForReader({ spl: splClient, book });
         if (cancelled) return;
         if (seq !== navSeqRef.current) return;
         handleBookOpened(opened);
@@ -313,6 +310,7 @@ export default function App() {
     selectedProfile,
     workflowStep,
     readerRestoreAttempt,
+    splClient,
   ]);
 
   function refreshProfiles() {
@@ -470,28 +468,29 @@ export default function App() {
                 </section>
               ) : route?.kind === "shelves" ? (
                 <div className="libraryScreen">
-                  <ShelvesPage profile={selectedProfile} />
+                  <ShelvesPage profile={selectedProfile} spl={splClient} />
                 </div>
               ) : route?.kind === "shelf" ? (
                 <div className="libraryScreen">
-                  <ShelfDetailPage profile={selectedProfile} shelfId={route.shelfId} />
+                  <ShelfDetailPage profile={selectedProfile} spl={splClient} shelfId={route.shelfId} />
                 </div>
               ) : route?.kind === "shelfEdit" ? (
                 <div className="libraryScreen">
-                  <ShelfEditPage profile={selectedProfile} shelfId={route.shelfId} />
+                  <ShelfEditPage profile={selectedProfile} spl={splClient} shelfId={route.shelfId} />
                 </div>
               ) : route?.kind === "sessions" ? (
                 <div className="libraryScreen">
-                  <SessionsPage profile={selectedProfile} bookId={route.bookId ?? null} />
+                  <SessionsPage profile={selectedProfile} spl={splClient} bookId={route.bookId ?? null} />
                 </div>
               ) : route?.kind === "session" ? (
                 <div className="libraryScreen">
-                  <SessionDetailPage profile={selectedProfile} sessionId={route.sessionId} />
+                  <SessionDetailPage profile={selectedProfile} spl={splClient} sessionId={route.sessionId} />
                 </div>
               ) : route?.kind === "library" ? (
                 <div className="libraryScreen">
                   <LibraryBrowsePage
                     profile={selectedProfile}
+                    spl={splClient}
                     route={{
                       q: route.q,
                       browse: route.browse,
@@ -527,7 +526,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="libraryScreen">
-                  <HomePage profile={selectedProfile} />
+                  <HomePage profile={selectedProfile} spl={splClient} />
                 </div>
               )
             ) : null}
@@ -543,6 +542,7 @@ export default function App() {
           return (
             <BookDetailModal
               profile={selectedProfile}
+              spl={splClient}
               bookId={modalBookId}
               initialBook={null}
               onClose={() => {

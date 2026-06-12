@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { RecentReadingSection } from "../library/RecentReadingSection";
@@ -7,8 +8,10 @@ import { ShelvesPreviewSection } from "./ShelvesPreviewSection";
 
 export function HomePage({
   profile,
+  spl,
 }: {
   profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
 }) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const [homeSearch, setHomeSearch] = useState("");
@@ -52,9 +55,9 @@ export function HomePage({
             </form>
           </div>
 
-          <RecentReadingSection profile={profile} />
+          <RecentReadingSection profile={profile} spl={spl} />
 
-          <ShelvesPreviewSection profile={profile} />
+          <ShelvesPreviewSection spl={spl} />
         </>
       ) : null}
     </section>
