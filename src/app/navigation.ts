@@ -9,6 +9,7 @@ export type AppRoute =
       browse?: "books" | "series" | "authors";
       seriesId?: string;
       authorId?: string;
+      view?: "list" | "grid";
       bookId?: string;
     }
   | { kind: "sessions"; bookId?: string }
@@ -54,6 +55,7 @@ export function routeToHash(route: AppRoute): string {
         browse: !route.q && route.browse && route.browse !== "books" ? route.browse : undefined,
         series: !route.q && route.browse === "series" ? route.seriesId : undefined,
         author: !route.q && route.browse === "authors" ? route.authorId : undefined,
+        view: route.view,
         book: route.bookId,
       })}`;
     case "sessions":
@@ -96,13 +98,15 @@ export function parseCurrentRoute(): AppRoute | null {
     const q = queryParams.get("q")?.trim() ?? "";
     const browseRaw = queryParams.get("browse")?.trim() ?? "";
     const browse = browseRaw === "series" || browseRaw === "authors" || browseRaw === "books" ? browseRaw : "";
+    const viewRaw = queryParams.get("view")?.trim() ?? "";
+    const view = viewRaw === "list" || viewRaw === "grid" ? viewRaw : undefined;
     const seriesId = queryParams.get("series")?.trim() ?? "";
     const authorId = queryParams.get("author")?.trim() ?? "";
     // Old route format `#/library/<bookId>` is intentionally not supported anymore.
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
 
     if (q) {
-      return bookId ? { kind: "library", q, bookId } : { kind: "library", q };
+      return bookId ? { kind: "library", q, view, bookId } : { kind: "library", q, view };
     }
 
     const effectiveBrowse: "books" | "series" | "authors" =
@@ -113,6 +117,7 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "series",
         seriesId: seriesId || undefined,
+        view,
         bookId: bookId || undefined,
       };
     }
@@ -121,10 +126,11 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "authors",
         authorId: authorId || undefined,
+        view,
         bookId: bookId || undefined,
       };
     }
-    return bookId ? { kind: "library", browse: "books", bookId } : { kind: "library", browse: "books" };
+    return bookId ? { kind: "library", browse: "books", view, bookId } : { kind: "library", browse: "books", view };
   }
   if (head === "sessions") {
     if (typeof parts[1] === "string" && parts[1]) {

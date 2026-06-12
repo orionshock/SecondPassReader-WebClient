@@ -497,6 +497,7 @@ export default function App() {
                       browse: route.browse,
                       seriesId: route.seriesId,
                       authorId: route.authorId,
+                      view: route.view,
                     }}
                     selectedBookId={route.bookId ?? null}
                     onViewBook={(bookId) => {

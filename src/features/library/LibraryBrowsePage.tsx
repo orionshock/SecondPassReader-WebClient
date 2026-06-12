@@ -7,9 +7,9 @@ import { BookGrid } from "./display/BookGrid";
 import { BookList } from "./display/BookList";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
+import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 
 type BrowseMode = "books" | "series" | "authors";
-type BookViewMode = "list" | "grid";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -18,6 +18,7 @@ type Props = {
     browse?: BrowseMode;
     seriesId?: string;
     authorId?: string;
+    view?: LibraryBooksView;
   };
   selectedBookId?: string | null;
   onViewBook?: (bookId: string) => void;
@@ -54,7 +55,7 @@ export function LibraryBrowsePage({
 
   const [qDraft, setQDraft] = useState(qFromRoute);
   const [pageSize, setPageSize] = useState(20);
-  const [bookViewMode, setBookViewMode] = useState<BookViewMode>("list");
+  const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
 
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksError, setBooksError] = useState<string | null>(null);
@@ -76,6 +77,19 @@ export function LibraryBrowsePage({
   useEffect(() => {
     setQDraft(qFromRoute);
   }, [qFromRoute]);
+
+  useEffect(() => {
+    const viewFromRoute = normalizeLibraryBooksView(route.view);
+    if (viewFromRoute) {
+      setBookViewMode(viewFromRoute);
+      saveLibraryBooksView(viewFromRoute);
+    }
+  }, [route.view]);
+
+  const handleBookViewChange = useCallback((view: LibraryBooksView) => {
+    setBookViewMode(view);
+    saveLibraryBooksView(view);
+  }, []);
 
   const loadBooks = useCallback(
     async (input: {
@@ -324,14 +338,14 @@ export function LibraryBrowsePage({
                 <button
                   type="button"
                   className={`libraryViewToggleButton ${bookViewMode === "list" ? "libraryViewToggleButtonActive" : ""}`}
-                  onClick={() => setBookViewMode("list")}
+                  onClick={() => handleBookViewChange("list")}
                 >
                   List
                 </button>
                 <button
                   type="button"
                   className={`libraryViewToggleButton ${bookViewMode === "grid" ? "libraryViewToggleButtonActive" : ""}`}
-                  onClick={() => setBookViewMode("grid")}
+                  onClick={() => handleBookViewChange("grid")}
                 >
                   Grid
                 </button>
