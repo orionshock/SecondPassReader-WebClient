@@ -101,20 +101,30 @@ export function BookDetailPanel({
       </div>
 
       {descriptionText ? (
-        <button
-          type="button"
-          className={`bookDetailSummary ${descriptionExpanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
-          onClick={() => setDescriptionExpanded((v) => !v)}
-          title={descriptionExpanded ? "Click to collapse" : "Click to expand"}
-          aria-label={descriptionExpanded ? "Collapse summary" : "Expand summary"}
-        >
-          {descriptionText}
-        </button>
+        <div className="bookDetailSummaryBlock">
+          <div
+            className={`bookDetailSummary ${descriptionExpanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
+            id="book-detail-summary"
+          >
+            {descriptionText}
+          </div>
+          <button
+            type="button"
+            className="bookDetailSummaryToggle"
+            onClick={() => setDescriptionExpanded((v) => !v)}
+            aria-expanded={descriptionExpanded}
+            aria-controls="book-detail-summary"
+          >
+            {descriptionExpanded ? "Show less" : "Show more"}
+          </button>
+        </div>
       ) : (
-        <div className="bookDetailSummary">
-          <span className="muted">
-            <em>No Summary Provided</em>
-          </span>
+        <div className="bookDetailSummaryBlock">
+          <div className="bookDetailSummary">
+            <span className="muted">
+              <em>No Summary Provided</em>
+            </span>
+          </div>
         </div>
       )}
 
