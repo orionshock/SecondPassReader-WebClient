@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { LibraryBook } from "@secondpass/client";
+import type { LibraryBook, ReadingBookActivitySummaryRow } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 import { InlineMeta } from "../../components/MetaSeparator";
@@ -20,6 +20,8 @@ export function BookDetailPanel({
   launchMessage,
   onOpenReader,
   onViewSessions,
+  activitySummary,
+  activitySummaryFailed,
   downloadState,
 }: {
   book: LibraryBook;
@@ -27,6 +29,8 @@ export function BookDetailPanel({
   launchMessage: string | null;
   onOpenReader: (book: LibraryBook) => void;
   onViewSessions: (book: LibraryBook) => void;
+  activitySummary?: ReadingBookActivitySummaryRow | null;
+  activitySummaryFailed?: boolean;
   downloadState:
     | { phase: "idle" }
     | { phase: "opening_session" }
@@ -41,6 +45,10 @@ export function BookDetailPanel({
 
   const busy =
     downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
+  const sessionCount = typeof activitySummary?.session_count === "number" && Number.isFinite(activitySummary.session_count)
+    ? Math.max(0, Math.floor(activitySummary.session_count))
+    : null;
+  const sessionsUnavailable = !activitySummaryFailed && sessionCount === 0;
 
   const [coverBroken, setCoverBroken] = useState(false);
   const coverSrc = useMemo(
@@ -94,8 +102,9 @@ export function BookDetailPanel({
             type="button"
             className="button buttonPrimary bookDetailActionButton"
             onClick={() => onViewSessions(book)}
-            title="View reading sessions for this book"
-            aria-label="View reading sessions for this book"
+            disabled={sessionsUnavailable}
+            title={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
+            aria-label={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
           >
             Reading sessions
           </button>

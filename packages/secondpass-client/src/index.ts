@@ -25,10 +25,14 @@ export type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } fro
 export type {
   ReadingAnnotation,
   ReadingAnnotationPage,
+  ReadingBookActivitySummaryResponse,
+  ReadingBookActivitySummaryRow,
   ReadingOpenResponse,
   ReadingProgress,
   ReadingRecentSessionsResponse,
+  ReadingSessionsListResponse,
   ReadingSession,
+  ReadingSessionBookSummary,
   ReadingSessionSummary,
 } from "./schemas/readingSession";
 

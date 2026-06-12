@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryBook } from "@secondpass/client";
+import type { LibraryBook, ReadingBookActivitySummaryRow } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailPanel } from "./BookDetailPanel";
 import { createSplClientFromProfile } from "../../app/createSplClient";
@@ -32,6 +32,8 @@ export function BookDetailModal({
 }) {
   const DEBUG_BOOK_DETAIL = import.meta.env.DEV;
   const [book, setBook] = useState<LibraryBook | null>(initialBook);
+  const [activitySummary, setActivitySummary] = useState<ReadingBookActivitySummaryRow | null>(null);
+  const [activitySummaryFailed, setActivitySummaryFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchSeqRef = useRef(0);
@@ -39,6 +41,8 @@ export function BookDetailModal({
 
   useEffect(() => {
     setBook(initialBook ?? null);
+    setActivitySummary(null);
+    setActivitySummaryFailed(false);
     setError(null);
   }, [bookId, initialBook]);
 
@@ -110,6 +114,32 @@ export function BookDetailModal({
     })();
   }, [bookId, canFetch, profile]);
 
+  useEffect(() => {
+    if (!canFetch) return;
+    if (!profile?.apiBaseUrl || !profile.accessToken) return;
+
+    let cancelled = false;
+    setActivitySummary(null);
+    setActivitySummaryFailed(false);
+
+    void (async () => {
+      try {
+        const spl = createSplClientFromProfile(profile);
+        const summary = await spl.reading.books.activitySummary({ books: [bookId] });
+        if (cancelled) return;
+        setActivitySummary(summary.results[0] ?? null);
+      } catch {
+        if (cancelled) return;
+        setActivitySummaryFailed(true);
+        setActivitySummary(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId, canFetch, profile]);
+
   const headerTitle = useMemo(() => (book?.title ? book.title : `Book ${bookId}`), [book?.title, bookId]);
 
   return (
@@ -145,6 +175,8 @@ export function BookDetailModal({
               launchMessage={launchMessage}
               onOpenReader={onOpenReader}
               onViewSessions={onViewSessions}
+              activitySummary={activitySummary}
+              activitySummaryFailed={activitySummaryFailed}
               downloadState={downloadState}
             />
           ) : null}

@@ -33,6 +33,13 @@ export type ReadingSessionBookSummary = {
   [k: string]: unknown;
 };
 
+export type ReadingSessionsListResponse = PaginatedResponse<ReadingSessionSummary> & {
+  context?: {
+    book?: ReadingSessionBookSummary | null;
+    [k: string]: unknown;
+  };
+};
+
 export type ReadingSessionSummary = {
   id: string;
   name?: string | null;
@@ -177,4 +184,19 @@ export type ReadingAnnotationCreatePayload = {
 export type ReadingAnnotationUpdatePayload = {
   profile_version?: string;
   body?: ReadingAnnotationCreatePayload["body"];
+};
+
+export type ReadingBookActivitySummaryRow = {
+  book: string | number | ReadingSessionBookSummary;
+  session_count: number;
+  active_session_count: number;
+  active_session_id?: string | null;
+  latest_session_id?: string | null;
+  latest_session_updated_at?: string | null;
+  [k: string]: unknown;
+};
+
+export type ReadingBookActivitySummaryResponse = {
+  results: ReadingBookActivitySummaryRow[];
+  [k: string]: unknown;
 };

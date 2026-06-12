@@ -24,8 +24,10 @@ import type {
   ReadingAnnotation,
   ReadingAnnotationPage,
   ReadingOpenResponse,
+  ReadingBookActivitySummaryResponse,
   ReadingProgress,
   ReadingRecentSessionsResponse,
+  ReadingSessionsListResponse,
   ReadingSession,
   ReadingSessionSummary,
 } from "./schemas/readingSession";
@@ -37,6 +39,7 @@ import {
   createBookmarkAnnotation,
   createHighlightAnnotation,
   deleteReadingAnnotation,
+  getReadingBookActivitySummary,
   getReadingSession,
   listReadingAnnotations,
   listReadingSessions,
@@ -153,6 +156,10 @@ export type SecondPassClient = {
   reading: {
     openForReading(book: LibraryBook | string | number): Promise<{ open: ReadingOpenResponse; blob: Blob }>;
 
+    books: {
+      activitySummary(input: { books: Array<string | number> }): Promise<ReadingBookActivitySummaryResponse>;
+    };
+
     sessions: {
       open(bookId: string | number): Promise<ReadingOpenResponse>;
       startOver(bookId: string | number): Promise<ReadingOpenResponse>;
@@ -163,7 +170,7 @@ export type SecondPassClient = {
         bookId?: string | number;
         status?: "active" | "completed" | "archived" | string;
         isActive?: boolean;
-      }): Promise<PaginatedResponse<ReadingSessionSummary>>;
+      }): Promise<ReadingSessionsListResponse>;
       get(sessionId: string): Promise<ReadingSessionSummary>;
       updateDetails(sessionId: string, input: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;
       close(sessionId: string): Promise<ReadingSession>;
@@ -325,6 +332,13 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         const open = await openReadingSession(auth, { bookId: resolved.id });
         const blob = await downloadBookBlob(resolved);
         return { open, blob };
+      },
+
+      books: {
+        activitySummary: (input) => {
+          const auth = requireAuth(ctx);
+          return getReadingBookActivitySummary(auth, input);
+        },
       },
 
       sessions: {

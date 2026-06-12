@@ -1,20 +1,20 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { PaginatedResponse, ReadingSessionSummary } from "@secondpass/client";
+import type { ReadingSessionBookSummary, ReadingSessionsListResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
 
-function formatAuthors(session: ReadingSessionSummary): string {
-  const authors = session.book?.authors ?? [];
+function formatBookAuthors(book?: ReadingSessionBookSummary | null): string {
+  const authors = book?.authors ?? [];
   return (authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
 }
 
-function formatSeries(session: ReadingSessionSummary): string | null {
-  const seriesName = session.book?.series?.name ?? null;
-  const idx = session.book?.series_index;
+function formatBookSeries(book?: ReadingSessionBookSummary | null): string | null {
+  const seriesName = book?.series?.name ?? null;
+  const idx = book?.series_index;
   if (!seriesName) return null;
   if (idx === null || idx === undefined || idx === "") return seriesName;
   return `${seriesName} #${idx}`;
@@ -62,7 +62,7 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<PaginatedResponse<ReadingSessionSummary> | null>(null);
+  const [data, setData] = useState<ReadingSessionsListResponse | null>(null);
 
   const load = useCallback(
     async (targetPage: number) => {
@@ -83,9 +83,13 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
         const message =
           e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
             ? "Could not load sessions. Your device token may be revoked or not allowed to access reading data."
-            : e instanceof Error
-              ? e.message
-              : "Failed to load sessions.";
+            : e instanceof ApiError && e.status === 400
+              ? "That book filter is not valid."
+              : e instanceof ApiError && e.status === 404
+                ? "That book could not be found or is not accessible."
+                : e instanceof Error
+                  ? e.message
+                  : "Failed to load sessions.";
         setError(message);
         setData(null);
       } finally {
@@ -103,6 +107,11 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
     if (!canLoad) return;
     void load(1);
   }, [bookFilter, canLoad, filter, load, pageSize]);
+
+  const contextBook = data?.context?.book ?? null;
+  const contextBookAuthors = formatBookAuthors(contextBook);
+  const contextBookSeries = formatBookSeries(contextBook);
+  const sessions = data?.results ?? [];
 
   return (
     <section className="panel sessionsPage">
@@ -132,9 +141,14 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
         </label>
       </div>
 
-      {bookFilter ? (
-        <div className="sessionsScope muted">
-          Showing reading sessions for book <span className="mono">{bookFilter}</span>.
+      {bookFilter && contextBook ? (
+        <div className="sessionsScope">
+          <div className="sessionsScopeTitle">Reading sessions for {contextBook.title}</div>
+          {contextBookAuthors || contextBookSeries ? (
+            <div className="sessionsScopeMeta muted">
+              <InlineMeta items={[contextBookAuthors || null, contextBookSeries]} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -154,63 +168,78 @@ export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile |
             </div>
           </div>
 
-          <div className="sessionsList">
-            {(data.results ?? []).map((s) => {
-              const coverSrc = resolveCoverUrl(s.book?.cover_url ?? null, profile);
-              const authors = formatAuthors(s);
-              const series = formatSeries(s);
-              const progress = formatProgress(s.progression);
-              const updated = formatIso(s.updated_at ?? null);
-              const state = normalizeStatus(typeof s.status === "string" ? s.status : null, s.is_active);
-              const statusLine = state;
-              const sessionName = typeof s.name === "string" ? s.name.trim() : "";
-              const annoText = formatAnnotationCount(s.annotation_count);
-              const titleBits = [
-                s.book?.title ? s.book.title : "Book",
-                authors ? `<${authors}>` : null,
-                series ? `[${series}]` : null,
-              ].filter(Boolean);
-
-              return (
+          {sessions.length === 0 ? (
+            <div className="sessionsEmpty">
+              <p className="muted">{bookFilter && contextBook ? `No reading sessions for ${contextBook.title} yet.` : "No sessions yet."}</p>
+              {bookFilter && contextBook ? (
                 <button
-                  key={s.id}
                   type="button"
-                  className="sessionsRow"
-                  onClick={() => navigateTo({ kind: "session", sessionId: s.id })}
-                  aria-label={`Manage session ${s.id}`}
-                  title={`Session ${s.id}`}
+                  className="button buttonPrimary buttonCompact"
+                  onClick={() => navigateTo({ kind: "reader", bookId: String(contextBook.id) })}
                 >
-                  <div className="sessionsCover">
-                    {coverSrc ? (
-                      <img className="sessionsCoverImg" src={coverSrc} alt={`${s.book?.title ?? "Book"} cover`} loading="lazy" />
-                    ) : (
-                      <div className="bookCoverPlaceholderText">No cover</div>
-                    )}
-                  </div>
-
-                  <div className="sessionsMain">
-                    <div className="sessionsTitleLine">
-                      <span className="bookTitle">{titleBits.join(" ")}</span>
-                    </div>
-                    <div className="sessionsMeta muted">
-                      {sessionName ? <span className="mono">{sessionName}</span> : null}
-                      {sessionName ? <MetaSeparator /> : null}
-                      <span className="sessionsId">{s.id}</span>
-                    </div>
-                    <div className="sessionsMeta muted">
-                      {statusLine ? <span>{statusLine}</span> : null}
-                      {statusLine && progress ? <MetaSeparator /> : null}
-                      {progress ? <span>{progress}</span> : null}
-                      {(statusLine || progress) && annoText ? <MetaSeparator /> : null}
-                      {annoText ? <span>{annoText}</span> : null}
-                      {(statusLine || progress || annoText) && updated ? <MetaSeparator /> : null}
-                      {updated ? <span>{updated}</span> : null}
-                    </div>
-                  </div>
+                  Open reader
                 </button>
-              );
-            })}
-          </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="sessionsList">
+              {sessions.map((s) => {
+                const coverSrc = resolveCoverUrl(s.book?.cover_url ?? null, profile);
+                const authors = formatBookAuthors(s.book);
+                const series = formatBookSeries(s.book);
+                const progress = formatProgress(s.progression);
+                const updated = formatIso(s.updated_at ?? null);
+                const state = normalizeStatus(typeof s.status === "string" ? s.status : null, s.is_active);
+                const statusLine = state;
+                const sessionName = typeof s.name === "string" ? s.name.trim() : "";
+                const annoText = formatAnnotationCount(s.annotation_count);
+                const titleBits = [
+                  s.book?.title ? s.book.title : "Book",
+                  authors ? `<${authors}>` : null,
+                  series ? `[${series}]` : null,
+                ].filter(Boolean);
+
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className="sessionsRow"
+                    onClick={() => navigateTo({ kind: "session", sessionId: s.id })}
+                    aria-label={`Manage session ${s.id}`}
+                    title={`Session ${s.id}`}
+                  >
+                    <div className="sessionsCover">
+                      {coverSrc ? (
+                        <img className="sessionsCoverImg" src={coverSrc} alt={`${s.book?.title ?? "Book"} cover`} loading="lazy" />
+                      ) : (
+                        <div className="bookCoverPlaceholderText">No cover</div>
+                      )}
+                    </div>
+
+                    <div className="sessionsMain">
+                      <div className="sessionsTitleLine">
+                        <span className="bookTitle">{titleBits.join(" ")}</span>
+                      </div>
+                      <div className="sessionsMeta muted">
+                        {sessionName ? <span className="mono">{sessionName}</span> : null}
+                        {sessionName ? <MetaSeparator /> : null}
+                        <span className="sessionsId">{s.id}</span>
+                      </div>
+                      <div className="sessionsMeta muted">
+                        {statusLine ? <span>{statusLine}</span> : null}
+                        {statusLine && progress ? <MetaSeparator /> : null}
+                        {progress ? <span>{progress}</span> : null}
+                        {(statusLine || progress) && annoText ? <MetaSeparator /> : null}
+                        {annoText ? <span>{annoText}</span> : null}
+                        {(statusLine || progress || annoText) && updated ? <MetaSeparator /> : null}
+                        {updated ? <span>{updated}</span> : null}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div className="libraryMetaRow libraryMetaRowBottom">
             <div className="muted">

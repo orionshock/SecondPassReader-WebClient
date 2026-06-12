@@ -6,11 +6,12 @@ import type {
   ReadingOpenResponse,
   ReadingProgress,
   ReadingProgressUpdatePayload,
+  ReadingBookActivitySummaryResponse,
   ReadingRecentSessionsResponse,
+  ReadingSessionsListResponse,
   ReadingSessionSummary,
   ReadingSession,
 } from "./schemas/readingSession";
-import type { PaginatedResponse } from "./schemas/library";
 import type { AuthenticatedClientContext } from "./clientContext";
 import { authErrorMessages, requestJson, resolveUrl } from "./apiHttp";
 
@@ -411,7 +412,7 @@ export async function listReadingSessions(input: {
   bookId?: string | number;
   status?: "active" | "completed" | "archived" | string;
   isActive?: boolean;
-}): Promise<PaginatedResponse<ReadingSessionSummary>> {
+}): Promise<ReadingSessionsListResponse> {
   const url = new URL(resolveUrl(input.ctx.apiBaseUrl, "/reading/sessions/"));
   if (input.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input.pageSize !== undefined) url.searchParams.set("page_size", String(input.pageSize));
@@ -419,13 +420,35 @@ export async function listReadingSessions(input: {
   if (input.status) url.searchParams.set("status", String(input.status));
   if (input.isActive !== undefined) url.searchParams.set("is_active", input.isActive ? "true" : "false");
 
-  return requestJson<PaginatedResponse<ReadingSessionSummary>>({
+  return requestJson<ReadingSessionsListResponse>({
     apiBaseUrl: input.ctx.apiBaseUrl,
     accessToken: input.ctx.accessToken,
     tokenType: input.ctx.tokenType,
     endpointOrUrl: url.toString(),
     options: {
       errorMessages: authErrorMessages({ forbidden: READING_SESSIONS_FORBIDDEN_403 }),
+    },
+  });
+}
+
+export async function getReadingBookActivitySummary(
+  ctx: AuthenticatedClientContext,
+  input: { books: Array<string | number> },
+): Promise<ReadingBookActivitySummaryResponse> {
+  const url = resolveUrl(ctx.apiBaseUrl, "/reading/books/activity-summary/");
+
+  return requestJson<ReadingBookActivitySummaryResponse>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url,
+    options: {
+      method: "POST",
+      body: { books: input.books.map((book) => String(book)) },
+      errorMessages: authErrorMessages({
+        forbidden: READING_SESSIONS_FORBIDDEN_403,
+        notFound: "Reading book activity summary endpoint not found (404).",
+      }),
     },
   });
 }

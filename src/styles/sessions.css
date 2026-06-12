@@ -10,7 +10,16 @@
 }
 
 .sessionsScope {
-  margin-top: 8px;
+  margin-top: 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.sessionsScopeTitle {
+  font-weight: 700;
+}
+
+.sessionsScopeMeta {
   font-size: 13px;
 }
 
@@ -40,6 +49,13 @@
   margin-top: 12px;
   display: grid;
   gap: 8px;
+}
+
+.sessionsEmpty {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
 }
 
 .sessionsRow {
