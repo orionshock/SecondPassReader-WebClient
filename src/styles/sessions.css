@@ -9,6 +9,11 @@
   margin-top: 8px;
 }
 
+.sessionsScope {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 .sessionsFilters {
   display: flex;
   gap: 8px;

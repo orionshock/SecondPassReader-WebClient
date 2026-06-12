@@ -19,12 +19,14 @@ export function BookDetailPanel({
   serverBaseUrl,
   launchMessage,
   onOpenReader,
+  onViewSessions,
   downloadState,
 }: {
   book: LibraryBook;
   serverBaseUrl?: string;
   launchMessage: string | null;
   onOpenReader: (book: LibraryBook) => void;
+  onViewSessions: (book: LibraryBook) => void;
   downloadState:
     | { phase: "idle" }
     | { phase: "opening_session" }
@@ -91,11 +93,11 @@ export function BookDetailPanel({
           <button
             type="button"
             className="button buttonPrimary bookDetailActionButton"
-            disabled
-            title="Session management is not implemented in this client yet."
-            aria-label="Session management (not implemented)"
+            onClick={() => onViewSessions(book)}
+            title="View reading sessions for this book"
+            aria-label="View reading sessions for this book"
           >
-            Session Management
+            Reading sessions
           </button>
         </div>
       </div>

@@ -482,7 +482,7 @@ export default function App() {
                 </div>
               ) : route?.kind === "sessions" ? (
                 <div className="libraryScreen">
-                  <SessionsPage profile={selectedProfile} />
+                  <SessionsPage profile={selectedProfile} bookId={route.bookId ?? null} />
                 </div>
               ) : route?.kind === "session" ? (
                 <div className="libraryScreen">
@@ -550,6 +550,9 @@ export default function App() {
               }}
               onOpenReader={(book) => {
                 navigateTo({ kind: "reader", bookId: String(book.id) });
+              }}
+              onViewSessions={(book) => {
+                navigateTo({ kind: "sessions", bookId: String(book.id) });
               }}
               launchMessage={null}
               downloadState={{ phase: "idle" }}

@@ -11,6 +11,7 @@ export function BookDetailModal({
   initialBook,
   onClose,
   onOpenReader,
+  onViewSessions,
   launchMessage,
   downloadState,
 }: {
@@ -19,6 +20,7 @@ export function BookDetailModal({
   initialBook: LibraryBook | null;
   onClose: () => void;
   onOpenReader: (book: LibraryBook) => void;
+  onViewSessions: (book: LibraryBook) => void;
   launchMessage: string | null;
   downloadState:
     | { phase: "idle" }
@@ -142,6 +144,7 @@ export function BookDetailModal({
               serverBaseUrl={profile?.serverBaseUrl}
               launchMessage={launchMessage}
               onOpenReader={onOpenReader}
+              onViewSessions={onViewSessions}
               downloadState={downloadState}
             />
           ) : null}

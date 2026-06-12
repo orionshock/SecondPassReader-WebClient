@@ -11,7 +11,7 @@ export type AppRoute =
       authorId?: string;
       bookId?: string;
     }
-  | { kind: "sessions" }
+  | { kind: "sessions"; bookId?: string }
   | { kind: "session"; sessionId: string }
   | { kind: "shelves" }
   | { kind: "shelf"; shelfId: string; bookId?: string }
@@ -57,7 +57,7 @@ export function routeToHash(route: AppRoute): string {
         book: route.bookId,
       })}`;
     case "sessions":
-      return "#/sessions";
+      return `#/sessions${buildQuery({ book: route.bookId })}`;
     case "session":
       return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
@@ -134,7 +134,7 @@ export function parseCurrentRoute(): AppRoute | null {
         return { kind: "session", sessionId: parts[1] };
       }
     }
-    return { kind: "sessions" };
+    return bookId ? { kind: "sessions", bookId } : { kind: "sessions" };
   }
   if (head === "shelves") {
     if (typeof parts[1] === "string" && parts[1]) {

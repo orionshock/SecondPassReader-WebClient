@@ -53,8 +53,9 @@ function formatAnnotationCount(n?: number | null): string | null {
 
 type Filter = "all" | "active" | "closed";
 
-export function SessionsPage({ profile }: { profile: ConnectionProfile | null }) {
+export function SessionsPage({ profile, bookId }: { profile: ConnectionProfile | null; bookId?: string | null }) {
   const canLoad = Boolean(profile?.apiBaseUrl && profile?.accessToken);
+  const bookFilter = typeof bookId === "string" && bookId.trim() ? bookId.trim() : null;
   const [filter, setFilter] = useState<Filter>("all");
   const [pageSize, setPageSize] = useState(20);
 
@@ -73,6 +74,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
         const r = await spl.reading.sessions.list({
           page: targetPage,
           pageSize,
+          bookId: bookFilter ?? undefined,
           isActive: filter === "active" ? true : filter === "closed" ? false : undefined,
         });
         setData(r);
@@ -90,7 +92,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
         setBusy(false);
       }
     },
-    [filter, pageSize, profile],
+    [bookFilter, filter, pageSize, profile],
   );
 
   useEffect(() => {
@@ -100,7 +102,7 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
     setPage(1);
     if (!canLoad) return;
     void load(1);
-  }, [canLoad, filter, load, pageSize]);
+  }, [bookFilter, canLoad, filter, load, pageSize]);
 
   return (
     <section className="panel sessionsPage">
@@ -129,6 +131,12 @@ export function SessionsPage({ profile }: { profile: ConnectionProfile | null })
           </select>
         </label>
       </div>
+
+      {bookFilter ? (
+        <div className="sessionsScope muted">
+          Showing reading sessions for book <span className="mono">{bookFilter}</span>.
+        </div>
+      ) : null}
 
       {data ? (
         <>
