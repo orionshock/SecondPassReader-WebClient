@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking } from "../features/connection/ClientApiLinking";
 import { ClientApiVerification } from "../features/connection/ClientApiVerification";
 import { ConnectServerScreen } from "../features/connection/ConnectServerScreen";
-import { LibraryLandingPage } from "../features/library/LibraryLandingPage";
+import { LibraryBrowsePage } from "../features/library/LibraryBrowsePage";
 import { HomePage } from "../features/home/HomePage";
 import { ReadingActivity } from "../features/reader/ReadingActivity";
 import type { OpenedBook } from "../features/reader/types";
@@ -490,7 +490,7 @@ export default function App() {
                 </div>
               ) : route?.kind === "library" ? (
                 <div className="libraryScreen">
-                  <LibraryLandingPage
+                  <LibraryBrowsePage
                     profile={selectedProfile}
                     route={{
                       q: route.q,

@@ -3,11 +3,13 @@ import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
-import { BookList } from "./BookList";
+import { BookGrid } from "./display/BookGrid";
+import { BookList } from "./display/BookList";
 import { createSplClientFromProfile } from "../../app/createSplClient";
 import { InlineMeta } from "../../components/MetaSeparator";
 
 type BrowseMode = "books" | "series" | "authors";
+type BookViewMode = "list" | "grid";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -27,7 +29,7 @@ type Props = {
   onShowAuthorBooks?: (authorId: string) => void;
 };
 
-export function LibraryLandingPage({
+export function LibraryBrowsePage({
   profile,
   route,
   selectedBookId,
@@ -52,6 +54,7 @@ export function LibraryLandingPage({
 
   const [qDraft, setQDraft] = useState(qFromRoute);
   const [pageSize, setPageSize] = useState(20);
+  const [bookViewMode, setBookViewMode] = useState<BookViewMode>("list");
 
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksError, setBooksError] = useState<string | null>(null);
@@ -292,27 +295,48 @@ export function LibraryLandingPage({
           </div>
 
           <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
-            <button
-              type="button"
-              className={`libraryBrowseTab ${browseMode === "books" ? "libraryBrowseTabActive" : ""}`}
-              onClick={() => onShowBooks?.()}
-            >
-              Books
-            </button>
-            <button
-              type="button"
-              className={`libraryBrowseTab ${browseMode === "series" ? "libraryBrowseTabActive" : ""}`}
-              onClick={() => onShowSeries?.()}
-            >
-              Series
-            </button>
-            <button
-              type="button"
-              className={`libraryBrowseTab ${browseMode === "authors" ? "libraryBrowseTabActive" : ""}`}
-              onClick={() => onShowAuthors?.()}
-            >
-              Authors
-            </button>
+            <div className="libraryBrowseTabGroup">
+              <button
+                type="button"
+                className={`libraryBrowseTab ${browseMode === "books" ? "libraryBrowseTabActive" : ""}`}
+                onClick={() => onShowBooks?.()}
+              >
+                Books
+              </button>
+              <button
+                type="button"
+                className={`libraryBrowseTab ${browseMode === "series" ? "libraryBrowseTabActive" : ""}`}
+                onClick={() => onShowSeries?.()}
+              >
+                Series
+              </button>
+              <button
+                type="button"
+                className={`libraryBrowseTab ${browseMode === "authors" ? "libraryBrowseTabActive" : ""}`}
+                onClick={() => onShowAuthors?.()}
+              >
+                Authors
+              </button>
+            </div>
+
+            {browseMode === "books" ? (
+              <div className="libraryViewToggle" role="group" aria-label="Book display">
+                <button
+                  type="button"
+                  className={`libraryViewToggleButton ${bookViewMode === "list" ? "libraryViewToggleButtonActive" : ""}`}
+                  onClick={() => setBookViewMode("list")}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  className={`libraryViewToggleButton ${bookViewMode === "grid" ? "libraryViewToggleButtonActive" : ""}`}
+                  onClick={() => setBookViewMode("grid")}
+                >
+                  Grid
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {booksError ? <p className="errorText">{booksError}</p> : null}
@@ -395,12 +419,21 @@ export function LibraryLandingPage({
                     </div>
                   </div>
 
-                  <BookList
-                    books={booksData.results}
-                    serverBaseUrl={profile?.serverBaseUrl}
-                    selectedBookId={selectedBookId ? String(selectedBookId) : null}
-                    onViewBook={(b) => onViewBook?.(String(b.id))}
-                  />
+                  {browseMode === "books" && bookViewMode === "grid" ? (
+                    <BookGrid
+                      books={booksData.results}
+                      serverBaseUrl={profile?.serverBaseUrl}
+                      selectedBookId={selectedBookId ? String(selectedBookId) : null}
+                      onViewBook={(b) => onViewBook?.(String(b.id))}
+                    />
+                  ) : (
+                    <BookList
+                      books={booksData.results}
+                      serverBaseUrl={profile?.serverBaseUrl}
+                      selectedBookId={selectedBookId ? String(selectedBookId) : null}
+                      onViewBook={(b) => onViewBook?.(String(b.id))}
+                    />
+                  )}
 
                   <div className="libraryMetaRow libraryMetaRowBottom">
                     <div className="muted">

@@ -1,5 +1,5 @@
 import type { LibraryBook } from "@secondpass/client";
-import { BookCard } from "./BookCard";
+import { BookListRow } from "./BookListRow";
 
 export function BookList({
   books,
@@ -16,7 +16,7 @@ export function BookList({
   return (
     <div className="bookList">
       {books.map((b) => (
-        <BookCard
+        <BookListRow
           key={String(b.id)}
           book={b}
           serverBaseUrl={serverBaseUrl}
