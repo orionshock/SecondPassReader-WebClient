@@ -9,12 +9,14 @@ import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ReadingAnnotation } from "@secondpass/client";
-import { toReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
+import type { ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import type { HighlightViewModel } from "../annotations/viewModels";
-import { getAnnotationColor, getAnnotationDescribingText, toReaderAnnotation } from "../annotations/annotationUtils";
+import { toReaderAnnotation } from "../annotations/annotationUtils";
 import { useSessionAnnotations } from "./useSessionAnnotations";
 import { usePreviousSessionLayers, type PreviousSessionAnnotationGroup } from "./usePreviousSessionLayers";
+import { useCurrentSessionMeta } from "./useCurrentSessionMeta";
+import { buildReaderStatusLine } from "./readerSessionLabels";
+import { useCurrentSessionAnnotationActions } from "./useCurrentSessionAnnotationActions";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -66,73 +68,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
-  const [annotationBusy, setAnnotationBusy] = useState(false);
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
-
-  const [currentSessionMeta, setCurrentSessionMeta] = useState<{
-    name: string | null;
-    notes: string | null;
-    status: "idle" | "loading" | "ready" | "error";
-    error: string | null;
-  }>({ name: null, notes: null, status: "idle", error: null });
-
-  useEffect(() => {
-    if (!props.spl) return;
-    if (!sessionId) return;
-    setCurrentSessionMeta((prev) => ({ ...prev, status: "loading", error: null }));
-    let cancelled = false;
-    void (async () => {
-      try {
-        const s = await props.spl!.reading.sessions.get(sessionId);
-        if (cancelled) return;
-        const name = typeof (s as any).name === "string" ? (s as any).name : null;
-        const notes = typeof (s as any).notes === "string" ? (s as any).notes : null;
-        setCurrentSessionMeta({ name, notes, status: "ready", error: null });
-      } catch (e) {
-        if (cancelled) return;
-        setCurrentSessionMeta((prev) => ({ ...prev, status: "error", error: e instanceof Error ? e.message : "Failed to load session details." }));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [props.spl, sessionId]);
-
-  const updateCurrentSessionMeta = useCallback(
-    async (update: { name: string; notes: string }) => {
-      if (!props.spl) throw new Error("Not connected.");
-      if (!sessionId) throw new Error("Missing session id.");
-      const name = update.name.trim();
-      const notes = update.notes.trim();
-      const updated = await props.spl.reading.sessions.updateDetails(sessionId, {
-        name: name ? name : "",
-        notes: notes ? notes : "",
-      });
-      const nextName = typeof (updated as any).name === "string" ? (updated as any).name : (name ? name : "");
-      const nextNotes = typeof (updated as any).notes === "string" ? (updated as any).notes : (notes ? notes : "");
-      setCurrentSessionMeta({ name: nextName || null, notes: nextNotes || null, status: "ready", error: null });
-    },
-    [props.spl, sessionId],
-  );
-
-  const closeCurrentSession = useCallback(
-    async (input: { name: string; notes: string }) => {
-      if (!props.spl) throw new Error("Not connected.");
-      if (!sessionId) throw new Error("Missing session id.");
-
-      const savedName = currentSessionMeta.name?.trim() ?? "";
-      const savedNotes = currentSessionMeta.notes ?? "";
-      const payload: { name?: string; notes?: string } = {};
-      if (input.name !== savedName) payload.name = input.name;
-      if (input.notes !== savedNotes) payload.notes = input.notes;
-      if (Object.keys(payload).length > 0) {
-        await props.spl.reading.sessions.updateDetails(sessionId, payload);
-      }
-      await props.spl.reading.sessions.close(sessionId);
-      setCurrentSessionMeta((prev) => ({ ...prev, name: input.name || null, notes: input.notes || null }));
-    },
-    [currentSessionMeta.name, currentSessionMeta.notes, props.spl, sessionId],
-  );
+  const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
+    spl: props.spl,
+    sessionId,
+  });
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.readingOpen?.progress;
@@ -235,21 +175,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, nowMs, state.sessionId]);
 
   const statusLine = useMemo(() => {
-    const parts: string[] = [];
-
-    const chapterLabel = state.toc && state.location?.href ? findTocLabelForHref(state.toc, state.location.href) : null;
-    if (chapterLabel) parts.push(chapterLabel);
-
-    if (typeof state.location?.bookProgress === "number" && Number.isFinite(state.location.bookProgress)) {
-      parts.push(`${Math.round(state.location.bookProgress * 100)}%`);
-    }
-
-    if (typeof state.location?.displayedPage === "number" && typeof state.location?.displayedTotal === "number") {
-      parts.push(`p${state.location.displayedPage}/${state.location.displayedTotal}`);
-    }
-
-    return parts;
-  }, [state.location?.bookProgress, state.location?.displayedPage, state.location?.displayedTotal, state.location?.href, state.toc]);
+    return buildReaderStatusLine({ location: state.location, toc: state.toc });
+  }, [state.location, state.toc]);
 
   const visibleHighlightMarks: ReaderHighlightMark[] = useMemo(() => {
     const out: ReaderHighlightMark[] = [...highlightMarks, ...previousLayers.selectedHighlightMarks];
@@ -301,122 +228,22 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     sendCommand({ type: "display", target: initialDisplayTarget });
   }, [initialDisplayTarget, props.openedBook.objectUrl, sendCommand]);
 
-  const removeById = useCallback(
-    async (annotationId: string) => {
-      if (!props.spl) return;
-      if (!annotationId) return;
-      setAnnotationBusy(true);
-      setAnnotationError(null);
-      try {
-        await props.spl.reading.annotations.remove(annotationId);
-        setAnnotationsRaw((prev) => prev.filter((a) => a.id !== annotationId));
-      } catch (e) {
-        setAnnotationError(e instanceof Error ? e.message : "Failed to remove annotation.");
-      } finally {
-        setAnnotationBusy(false);
-      }
-    },
-    [props.spl, setAnnotationError, setAnnotationsRaw],
-  );
-
-  const updateHighlight = useCallback(
-    async (annotationId: string, update: { note: string; color: string }) => {
-      if (!props.spl) throw new Error("Not connected.");
-      if (!annotationId) return;
-      if (!profileVersion) throw new Error("Missing profile version.");
-
-      const raw = annotationsRaw.find((a) => a.id === annotationId) ?? null;
-      if (!raw) throw new Error("Annotation not found.");
-
-      const text = getAnnotationDescribingText(raw) ?? "";
-      if (!text.trim()) throw new Error("Cannot edit highlight without describing text.");
-
-      const nextColor = update.color.trim() || (getAnnotationColor(raw) ?? "").trim() || "yellow";
-
-      const nextNote = update.note.trim();
-
-      setAnnotationBusy(true);
-      setAnnotationError(null);
-      try {
-        const updated = await props.spl.reading.annotations.updateNote(annotationId, {
-          profileVersion,
-          text,
-          color: nextColor,
-          note: nextNote ? nextNote : null,
-        });
-        setAnnotationsRaw((prev) => [...prev.filter((a) => a.id !== annotationId), updated as unknown as ReadingAnnotation]);
-      } catch (e) {
-        setAnnotationError(e instanceof Error ? e.message : "Failed to update highlight.");
-        throw e;
-      } finally {
-        setAnnotationBusy(false);
-      }
-    },
-    [annotationsRaw, profileVersion, props.spl, setAnnotationError, setAnnotationsRaw],
-  );
-
-  const toggleBookmarkAtCurrentLocation = useCallback(async () => {
-    if (!props.spl) return;
-    if (!sessionId) return;
-    if (!profileVersion) return;
-    const cfi = location?.cfi?.trim() ?? "";
-    if (!cfi) return;
-
-    if (currentBookmark) {
-      await removeById(currentBookmark.id);
-      return;
-    }
-
-    setAnnotationBusy(true);
-    setAnnotationError(null);
-    try {
-      const created = await props.spl.reading.annotations.createBookmark({
-        sessionId,
-        profileVersion,
-        cfi,
-      });
-      const b = toReaderBookmark(created as unknown as ReadingAnnotation);
-      if (b) {
-        setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== b.id), created as unknown as ReadingAnnotation]);
-      }
-    } catch (e) {
-      setAnnotationError(e instanceof Error ? e.message : "Failed to create bookmark.");
-    } finally {
-      setAnnotationBusy(false);
-    }
-  }, [currentBookmark, location?.cfi, profileVersion, props.spl, removeById, sessionId, setAnnotationError, setAnnotationsRaw]);
-
-  const createHighlight = useCallback(
-    async (input: { selection: ReaderSelection; color: string; note?: string }) => {
-      if (!props.spl) throw new Error("Not connected.");
-      if (!sessionId) throw new Error("Missing session.");
-      if (!profileVersion) throw new Error("Missing profile version.");
-      const sel = input.selection;
-      if (!sel?.cfiRange || !sel.text) throw new Error("Missing selection.");
-
-      setAnnotationBusy(true);
-      setAnnotationError(null);
-      try {
-        const created = await props.spl.reading.annotations.createHighlight({
-          sessionId,
-          profileVersion,
-          cfiRange: sel.cfiRange,
-          text: sel.text,
-          color: input.color,
-          note: input.note,
-          quotePrefix: sel.quotePrefix,
-          quoteSuffix: sel.quoteSuffix,
-        });
-        setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== created.id), created as unknown as ReadingAnnotation]);
-      } catch (e) {
-        setAnnotationError(e instanceof Error ? e.message : "Failed to create highlight.");
-        throw e;
-      } finally {
-        setAnnotationBusy(false);
-      }
-    },
-    [profileVersion, props.spl, sessionId, setAnnotationError, setAnnotationsRaw],
-  );
+  const {
+    annotationBusy,
+    removeById,
+    updateHighlight,
+    toggleBookmarkAtCurrentLocation,
+    createHighlight,
+  } = useCurrentSessionAnnotationActions({
+    spl: props.spl,
+    sessionId,
+    profileVersion,
+    location,
+    currentBookmark,
+    annotationsRaw,
+    setAnnotationsRaw,
+    setAnnotationError,
+  });
 
   return props.children({
     state,
@@ -468,34 +295,4 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       closeCurrentSession,
     },
   });
-}
-
-function normalizeHrefForCompare(href: string): string {
-  const s = href.trim();
-  const hashIdx = s.indexOf("#");
-  return (hashIdx >= 0 ? s.slice(0, hashIdx) : s).toLowerCase();
-}
-
-function findTocLabelForHref(toc: ReaderTocItem[], href: string): string | null {
-  const target = normalizeHrefForCompare(href);
-  const visit = (items: ReaderTocItem[]): { label: string; score: 2 | 1 } | null => {
-    let best: { label: string; score: 2 | 1 } | null = null;
-    for (const item of items) {
-      if (item.href) {
-        const candidate = normalizeHrefForCompare(item.href);
-        if (candidate === target) return { label: item.label, score: 2 };
-        if (candidate && target && (candidate.endsWith(target) || target.endsWith(candidate))) {
-          if (!best) best = { label: item.label, score: 1 };
-        }
-      }
-      if (item.children && item.children.length > 0) {
-        const found = visit(item.children);
-        if (found?.score === 2) return found;
-        if (!best && found) best = found;
-      }
-    }
-    return best;
-  };
-
-  return visit(toc)?.label ?? null;
 }
