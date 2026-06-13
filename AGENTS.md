@@ -107,6 +107,36 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - When extracting around reader shell/orchestrator code, verify engine init effects do not begin depending on rapidly changing UI state (e.g. staged selection/toolbar state, derived annotation arrays, aggregate hook objects).
 - If a stable callback needs current mutable state, prefer a ref pattern over putting that state into a lifecycle effect dependency list.
 
+## Lifecycle boundaries and callback stability
+
+- Treat lifecycle-heavy components and hooks as sensitive boundaries.
+- Opening/closing ordinary UI chrome such as menus, drawers, modals, popovers, tabs, or tool panels should not accidentally tear down and recreate expensive or stateful systems.
+- Examples of lifecycle-heavy systems include:
+  - EPUB/rendering engines
+  - editors
+  - canvases
+  - media players
+  - websocket/session clients
+  - long-running workers/tasks
+  - embedded third-party widgets
+- Before adding props/callbacks to a lifecycle-heavy component or hook, check whether callback identity changes can affect initialization/cleanup effect dependencies.
+- If a callback needs to stay current but should not participate in lifecycle identity, store it behind a ref and call the latest ref value from a stable callback.
+- Do not include ordinary chrome/UI callbacks in initialization effect dependency lists unless they truly require rebuilding the underlying system.
+- Keep initialization dependencies limited to actual lifecycle identity inputs, such as source/document identity, mount target, connection identity, or settings that genuinely require teardown/reinit.
+- UI state changes should update UI only; they should not remount expensive/stateful systems unless explicitly intended.
+- When reviewing changes around lifecycle-heavy code, explicitly check:
+  - Did this add a new dependency to an initialization effect?
+  - Did this pass a newly-created object/function into lifecycle-sensitive code?
+  - Could opening a menu/drawer/modal recreate the underlying system?
+  - Should this callback be memoized or moved behind a ref?
+  - Is this dependency needed for correctness, or only to satisfy a local hook warning?
+- After changes near lifecycle-heavy code, manually verify that ordinary chrome interactions do not reset, blank, disconnect, or recreate the underlying stateful system.
+
+Rationale:
+- React callback/object identity changes from ordinary UI state can accidentally cascade into hook dependency changes.
+- If those values are dependencies of initialization or cleanup effects, harmless UI interactions can destroy/recreate expensive systems.
+- Stateful systems should be controlled by explicit lifecycle inputs, not incidental UI rerenders.
+
 ## Spec junction (read-only reference)
 
 - `docs/specs/reading-session-annotation-profile` is a **Windows junction** / reference copy of a **server-owned** spec.

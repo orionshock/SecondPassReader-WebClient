@@ -30,9 +30,24 @@ export function useStagedSelectionToolbar(args: {
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(args.highlightMarks ?? []);
   const noteDraftRef = useRef<string>("");
+  const onCommitHighlightRef = useRef<typeof args.onCommitHighlight>(args.onCommitHighlight);
+  const onCommittedRef = useRef<typeof args.onStagedSelectionCommitted>(args.onStagedSelectionCommitted);
+  const onCanceledRef = useRef<typeof args.onStagedSelectionCanceled>(args.onStagedSelectionCanceled);
   useEffect(() => {
     highlightMarksRef.current = args.highlightMarks ?? [];
   }, [args.highlightMarks]);
+
+  useEffect(() => {
+    onCommitHighlightRef.current = args.onCommitHighlight;
+  }, [args.onCommitHighlight]);
+
+  useEffect(() => {
+    onCommittedRef.current = args.onStagedSelectionCommitted;
+  }, [args.onStagedSelectionCommitted]);
+
+  useEffect(() => {
+    onCanceledRef.current = args.onStagedSelectionCanceled;
+  }, [args.onStagedSelectionCanceled]);
 
   useEffect(() => {
     stagedSelectionRef.current = stagedSelection;
@@ -56,9 +71,9 @@ export function useStagedSelectionToolbar(args: {
     setToolbarPos(null);
     args.engineRef.current?.clearSelection();
     if (options?.notifyCancel && source.kind !== "user-selection") {
-      args.onStagedSelectionCanceled?.(source);
+      onCanceledRef.current?.(source);
     }
-  }, [args.engineRef, args.onStagedSelectionCanceled]);
+  }, [args.engineRef]);
 
   const cancelStaged = useCallback(() => {
     clearStaged({ notifyCancel: true });
@@ -162,23 +177,24 @@ export function useStagedSelectionToolbar(args: {
 
   const commitColor = useCallback(
     async (color: string) => {
-      if (!args.onCommitHighlight || !stagedSelectionRef.current) return;
+      const onCommitHighlight = onCommitHighlightRef.current;
+      if (!onCommitHighlight || !stagedSelectionRef.current) return;
       setStagedColor(color);
       const noteTrimmed = noteDraftRef.current.trim();
       try {
-        await args.onCommitHighlight({
+        await onCommitHighlight({
           selection: stagedSelectionRef.current,
           color,
           note: noteTrimmed ? noteTrimmed : undefined,
         });
         const source = stagedSourceRef.current;
         clearStaged();
-        if (source.kind !== "user-selection") args.onStagedSelectionCommitted?.(source);
+        if (source.kind !== "user-selection") onCommittedRef.current?.(source);
       } catch {
         // Keep staged highlight + toolbar open on failure.
       }
     },
-    [args.onCommitHighlight, args.onStagedSelectionCommitted, clearStaged],
+    [clearStaged],
   );
 
   return {
