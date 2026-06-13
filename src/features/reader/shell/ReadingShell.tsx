@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSearchOptions, ReaderSearchResult, ReaderSelection, ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReadingShellEvent } from "./types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
@@ -24,6 +24,7 @@ export type ReadingShellProps = {
   onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
   highlightCommitBusy?: boolean;
   onDescribeCfiReady?: (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => void;
+  onSearchReady?: (fn: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null) => void;
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
   onSettingsReset?: () => void;
@@ -99,6 +100,7 @@ export function ReadingShell(props: ReadingShellProps) {
         engineRef.current = engine;
         setStatus("ready");
         props.onDescribeCfiReady?.((cfi) => engine.describeCfi(cfi));
+        props.onSearchReady?.((query, options) => engine.searchBook(query, options));
 
         // Apply any highlight marks that loaded before the engine became available.
         engine.setHighlightMarks(highlightMarksRef.current);
@@ -141,6 +143,7 @@ export function ReadingShell(props: ReadingShellProps) {
       const engine = engineRef.current;
       engineRef.current = null;
       props.onDescribeCfiReady?.(null);
+      props.onSearchReady?.(null);
       engine?.destroy();
     };
   }, [
@@ -151,6 +154,7 @@ export function ReadingShell(props: ReadingShellProps) {
     props.initialDisplayTarget,
     props.onDescribeCfiReady,
     props.onEvent,
+    props.onSearchReady,
     stagedSelectionRef,
   ]);
 

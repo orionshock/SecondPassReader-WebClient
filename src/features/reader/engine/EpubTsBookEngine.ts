@@ -5,10 +5,11 @@ import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
-import type { ReaderHighlightMark } from "../domain/types";
+import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
 import { createHighlightMarkPainter } from "./highlightMarks";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
+import { searchEpubTsBook } from "./EpubTsBookSearch";
 import {
   getReaderEpubDisplayRules,
   getReaderEpubThemeRules,
@@ -43,6 +44,7 @@ export type EpubTsBookEngine = {
   resizeToMount(): Promise<void>;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
+  searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]>;
   destroy(): void;
 };
 
@@ -74,9 +76,12 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     }
   };
 
+  let readerToc: ReaderTocItem[] = [];
+
   try {
     const nav = await book.loaded.navigation;
     const toc = normalizeTocItems(nav.toc as any);
+    readerToc = toc;
     init.onTocReady?.(toc);
   } catch (err) {
     // TOC should not prevent reading; report as a non-fatal error.
@@ -351,6 +356,10 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       }
 
       return { cfi: trimmed, href, spineIndex, bookProgress };
+    },
+    async searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]> {
+      if (destroyed) throw new Error("Engine is destroyed.");
+      return searchEpubTsBook(book, query, readerToc, options);
     },
     destroy() {
       if (destroyed) return;

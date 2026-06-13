@@ -534,6 +534,116 @@
   background: var(--sp-reader-hover);
 }
 
+.spBookSearchBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: transparent;
+}
+
+.spBookSearchDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(390px, 92vw);
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  background: var(--sp-reader-surface-strong);
+  border-left: 1px solid var(--sp-reader-border);
+  box-shadow: -20px 0 50px var(--sp-reader-shadow);
+  color: var(--sp-reader-text);
+}
+
+.spBookSearchHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spBookSearchTitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.spBookSearchCloseButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.spBookSearchForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spBookSearchInput {
+  width: 100%;
+}
+
+.spBookSearchButton {
+  min-width: 84px;
+}
+
+.spBookSearchMeta {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+  font-size: 13px;
+}
+
+.spBookSearchResults {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.spBookSearchEmpty {
+  padding: 8px 4px;
+  font-size: 13px;
+}
+
+.spBookSearchResult {
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spBookSearchResultButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--sp-reader-text);
+  display: grid;
+  gap: 5px;
+  padding: 10px 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spBookSearchResultButton:hover {
+  background: var(--sp-reader-hover);
+}
+
+.spBookSearchResultLabel {
+  color: var(--sp-reader-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spBookSearchExcerpt {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .spMarginaliaMenuHost {
   position: relative;
   display: inline-flex;

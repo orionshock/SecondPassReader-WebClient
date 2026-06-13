@@ -9,6 +9,7 @@ import type { LibraryBook, SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
+import { BookSearchDrawer } from "./shell/BookSearchDrawer";
 import { EndOfBookDialog } from "./EndOfBookDialog";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
@@ -34,6 +35,7 @@ export function ReadingActivity({
   if (!openedBook) return <p className="muted">No book open.</p>;
 
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);
   const readerDisplaySettings = useReaderDisplaySettings(settings);
@@ -63,6 +65,8 @@ export function ReadingActivity({
             onBackToLibrary={onBackToLibrary}
             marginaliaOpen={marginaliaOpen}
             setMarginaliaOpen={setMarginaliaOpen}
+            searchOpen={searchOpen}
+            setSearchOpen={setSearchOpen}
             closeDialogOpen={closeDialogOpen}
             setCloseDialogOpen={setCloseDialogOpen}
             endBookDialogOpen={endBookDialogOpen}
@@ -81,6 +85,8 @@ function ReaderActivityContent({
   onBackToLibrary,
   marginaliaOpen,
   setMarginaliaOpen,
+  searchOpen,
+  setSearchOpen,
   closeDialogOpen,
   setCloseDialogOpen,
   endBookDialogOpen,
@@ -92,6 +98,8 @@ function ReaderActivityContent({
   onBackToLibrary: () => void;
   marginaliaOpen: boolean;
   setMarginaliaOpen: (open: boolean) => void;
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
   closeDialogOpen: boolean;
   setCloseDialogOpen: (open: boolean) => void;
   endBookDialogOpen: boolean;
@@ -224,6 +232,19 @@ function ReaderActivityContent({
             <button
               type="button"
               className="button buttonCompact spIconButton"
+              onClick={() => setSearchOpen(!searchOpen)}
+              disabled={!readerState.search.ready}
+              aria-label={searchOpen ? "Close book search" : "Search in book"}
+              title={readerState.search.ready ? "Search in book" : "Search is unavailable until the reader is ready."}
+              aria-pressed={searchOpen}
+            >
+              <MaterialIcon name="search" />
+              <span className="spIconButtonLabel">Search</span>
+            </button>
+
+            <button
+              type="button"
+              className="button buttonCompact spIconButton"
               onClick={() => {
                 void annotations.toggleBookmarkAtCurrentLocation();
               }}
@@ -295,6 +316,16 @@ function ReaderActivityContent({
           />
         </div>
       </div>
+
+      <BookSearchDrawer
+        open={searchOpen}
+        ready={readerState.search.ready}
+        searchBook={readerState.search.searchBook}
+        onClose={() => setSearchOpen(false)}
+        onJump={(result) => {
+          readerState.sendCommand({ type: "display", target: { type: "cfi", cfi: result.cfi } });
+        }}
+      />
 
       {closeDialogOpen ? (
         <CloseSessionDialog

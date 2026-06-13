@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
 import type { ReadingShellEvent } from "../shell/types";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSearchOptions, ReaderSearchResult, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
@@ -29,6 +29,10 @@ export type ReadingSessionOrchestratorProps = {
     shell: ReactNode;
     debugPanel: ReactNode | null;
     sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
+    search: {
+      ready: boolean;
+      searchBook: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null;
+    };
     marginalia: {
       listStatus: "idle" | "loading" | "ready" | "error";
       listError: string | null;
@@ -59,6 +63,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [location, setLocation] = useState<ReaderLocation | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
+  const [searchBook, setSearchBook] = useState<((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const [annotationBusy, setAnnotationBusy] = useState(false);
@@ -257,6 +262,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setPendingCommand({ seq: commandSeqRef.current, value: command });
   }, []);
 
+  const handleSearchReady = useCallback((fn: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null) => {
+    setSearchBook(() => fn);
+  }, []);
+
   // Keep this callback referentially stable: `ReadingShell`'s engine init effect depends on `onEvent`.
   // Unstable callbacks here can cause destroy/re-init loops (duplicated network requests, blank viewport).
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
@@ -421,6 +430,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         command={pendingCommand ?? undefined}
         toc={toc}
         onDescribeCfiReady={handleDescribeCfiReady}
+        onSearchReady={handleSearchReady}
         highlightMarks={visibleHighlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}
         highlightCommitBusy={annotationBusy}
@@ -431,6 +441,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     ),
     debugPanel: null,
     sendCommand,
+    search: {
+      ready: Boolean(searchBook),
+      searchBook,
+    },
     marginalia: {
       listStatus: previousLayers.listStatus,
       listError: previousLayers.listError,

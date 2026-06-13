@@ -73,6 +73,21 @@ export type ReaderLocationDescription = {
   bookProgress?: number | null;
 };
 
+export type ReaderSearchResult = {
+  id: string;
+  cfi: string;
+  excerpt: string;
+  sectionIndex?: number;
+  sectionHref?: string;
+  sectionLabel?: string;
+};
+
+export type ReaderSearchOptions = {
+  maxResults?: number;
+  maxSeqEle?: number;
+  signal?: AbortSignal;
+};
+
 export type ReaderLocationTarget =
   | { type: "cfi"; cfi: string }
   | { type: "cfiRange"; cfiRange: string }
