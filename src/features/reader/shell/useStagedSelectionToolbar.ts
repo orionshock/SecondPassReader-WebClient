@@ -83,6 +83,7 @@ export function useStagedSelectionToolbar(args: {
     setNoteDraft("");
     setToolbarPos(null);
     const engine = args.engineRef.current;
+    // Remove temporary renderer marks before returning to durable marks only.
     engine?.setTemporarySearchHighlight(null);
     engine?.setHighlightMarks(highlightMarksRef.current);
     engine?.clearSelection();
@@ -124,6 +125,8 @@ export function useStagedSelectionToolbar(args: {
       const nextNote = options?.note?.trim() ?? "";
       const nextSource = options?.source ?? { kind: "user-selection" };
       const previousSource = stagedSourceRef.current;
+      // Search flash and staged preview both render through epub-ts "highlight".
+      // Clear search first so the staged mark does not collide on CFI+renderer type.
       args.engineRef.current?.setTemporarySearchHighlight(null);
       if (stagedSelectionRef.current && previousSource.kind !== "user-selection" && nextSource.kind === "user-selection") {
         onCanceledRef.current?.(previousSource);

@@ -10,6 +10,11 @@ export type HighlightMarkPainter = {
 export function createHighlightMarkPainter(args: { rendition: Rendition; onError?: (error: unknown) => void }): HighlightMarkPainter {
   const { rendition, onError } = args;
 
+  // epub-ts renderer annotations are keyed internally by CFI range + renderer
+  // annotation type (for this painter, "highlight"), not by our app annotation
+  // id. Do not intentionally keep search, staged, and durable highlights alive
+  // at the same CFI; adding one can replace the renderer store entry for another
+  // without detaching the older visual mark from the current view.
   const paintedHighlightsById = new Map<string, { cfiRange: string; color?: string; colorKey: string }>();
   let temporarySearchCfiRange: string | null = null;
 
@@ -32,6 +37,21 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
   };
 
   const colorKeyOf = (color: string | undefined): string => (typeof color === "string" ? color.trim().toLowerCase() : "");
+
+  const removeRendererHighlight = (cfiRange: string) => {
+    try {
+      rendition.annotations.remove(cfiRange, "highlight");
+    } catch {
+      // ignore
+    }
+  };
+
+  const hasPaintedMarkAtCfi = (cfiRange: string) => {
+    for (const existing of paintedHighlightsById.values()) {
+      if (existing.cfiRange === cfiRange) return true;
+    }
+    return false;
+  };
 
   const repaintPaintedMarksAtCfi = (cfiRange: string) => {
     for (const [id, existing] of paintedHighlightsById) {
@@ -67,11 +87,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
       const nextCfiRanges = new Set(validMarks.map((m) => m.cfiRange.trim()));
 
       if (temporarySearchCfiRange && nextCfiRanges.has(temporarySearchCfiRange)) {
-        try {
-          rendition.annotations.remove(temporarySearchCfiRange, "highlight");
-        } catch {
-          // ignore
-        }
+        removeRendererHighlight(temporarySearchCfiRange);
         temporarySearchCfiRange = null;
       }
 
@@ -81,11 +97,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
       for (const [id, existing] of paintedHighlightsById) {
         if (nextIds.has(id)) continue;
         removedCfiRanges.add(existing.cfiRange);
-        try {
-          rendition.annotations.remove(existing.cfiRange, "highlight");
-        } catch {
-          // ignore
-        }
+        removeRendererHighlight(existing.cfiRange);
         paintedHighlightsById.delete(id);
       }
 
@@ -100,9 +112,9 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
         // If this id moved, remove the old one first (epub-ts keys by cfiRange+type).
         try {
           if (existing?.cfiRange) {
-            rendition.annotations.remove(existing.cfiRange, "highlight");
+            removeRendererHighlight(existing.cfiRange);
           } else if (mustRepaintAfterSharedCfiRemoval) {
-            rendition.annotations.remove(cfiRange, "highlight");
+            removeRendererHighlight(cfiRange);
           }
         } catch {
           // ignore
@@ -126,15 +138,15 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
       const next = typeof cfiRange === "string" && cfiRange.trim() ? cfiRange.trim() : null;
       if (temporarySearchCfiRange === next) return;
       if (temporarySearchCfiRange) {
-        try {
-          rendition.annotations.remove(temporarySearchCfiRange, "highlight");
-        } catch {
-          // ignore
-        }
+        removeRendererHighlight(temporarySearchCfiRange);
         repaintPaintedMarksAtCfi(temporarySearchCfiRange);
       }
       temporarySearchCfiRange = next;
       if (!temporarySearchCfiRange) return;
+      if (hasPaintedMarkAtCfi(temporarySearchCfiRange)) {
+        temporarySearchCfiRange = null;
+        return;
+      }
       try {
         rendition.annotations.highlight(
           temporarySearchCfiRange,
@@ -157,11 +169,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
     },
     clear() {
       if (temporarySearchCfiRange) {
-        try {
-          rendition.annotations.remove(temporarySearchCfiRange, "highlight");
-        } catch {
-          // ignore
-        }
+        removeRendererHighlight(temporarySearchCfiRange);
       }
       temporarySearchCfiRange = null;
       paintedHighlightsById.clear();
