@@ -77,6 +77,7 @@ export type ReaderSearchResult = {
   id: string;
   cfi: string;
   excerpt: string;
+  repairedText?: string;
   quotePrefix?: string;
   quoteSuffix?: string;
   sectionIndex?: number;
@@ -89,6 +90,7 @@ export type ReaderSearchResult = {
 export type ReaderSearchOptions = {
   maxResults?: number;
   maxSeqEle?: number;
+  repairFullText?: string;
   signal?: AbortSignal;
   onProgress?: (results: ReaderSearchResult[]) => void;
 };

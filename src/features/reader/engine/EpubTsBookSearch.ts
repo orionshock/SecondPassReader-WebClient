@@ -2,6 +2,7 @@ import type { Book } from "@likecoin/epub-ts";
 import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import { findTocLabelForHref } from "../session/readerSessionLabels";
+import { repairImportedHighlightRangeInSection } from "./EpubTsImportRangeRepair";
 
 type SectionRequest = (
   url: string,
@@ -39,13 +40,25 @@ export async function searchEpubTsBook(
       const matches = section.search(trimmed, maxSeqEle);
       for (const match of matches) {
         if (!match?.cfi) continue;
-        const quoteContext = buildSearchQuoteContext(section.document, trimmed, match.excerpt);
+        const repaired = options?.repairFullText
+          ? repairImportedHighlightRangeInSection({
+              section,
+              anchorCfi: match.cfi,
+              fragmentText: trimmed,
+              fullText: options.repairFullText,
+              signal: options.signal,
+            })
+          : null;
+        const resultCfi = repaired?.cfiRange ?? match.cfi;
+        const resultText = repaired?.matchedText ?? trimmed;
+        const quoteContext = buildSearchQuoteContext(section.document, resultText, match.excerpt);
         const sectionIndex = typeof section.index === "number" ? section.index : undefined;
         const sectionHref = section.href;
         out.push({
-          id: `${sectionIndex ?? "section"}:${out.length}:${match.cfi}`,
-          cfi: match.cfi,
+          id: `${sectionIndex ?? "section"}:${out.length}:${resultCfi}`,
+          cfi: resultCfi,
           excerpt: improveSearchExcerpt(section.document, match.excerpt, trimmed),
+          repairedText: repaired?.matchedText,
           quotePrefix: quoteContext.prefix,
           quoteSuffix: quoteContext.suffix,
           sectionIndex,

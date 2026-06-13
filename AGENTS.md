@@ -137,6 +137,26 @@ Rationale:
 - If those values are dependencies of initialization or cleanup effects, harmless UI interactions can destroy/recreate expensive systems.
 - Stateful systems should be controlled by explicit lifecycle inputs, not incidental UI rerenders.
 
+## Layer handoff cleanup
+
+- Each layer owns the lifecycle of the temporary state it creates.
+- Before passing control or data to another layer, clean up or resolve that layer's temporary state.
+- Do not hand downstream layers messy intermediate state and expect them to understand where it came from.
+- Origin is upstream context.
+- Lifecycle is local responsibility.
+- Durability is downstream concern.
+
+Examples:
+- Search/import code may create temporary search-match state, but must clear or release it when done.
+- Shell/staged-selection code may create temporary visual range state, but must clear or resolve it before save/cancel handoff.
+- Annotation persistence should receive confirmed annotation intent, not search/import/staging lifecycle details.
+- Annotation workspace should display durable annotations and should not care whether they began as manual selection, search, or import.
+
+For reader highlights specifically:
+- Search flashes, staged previews, and durable annotation marks must not be layered casually.
+- Temporary renderer marks should be removed before creating or restoring durable marks.
+- Cleanup paths must be explicit for cancel, commit, failed commit, skip, clear, and navigation/focus-driven teardown.
+
 ## Spec junction (read-only reference)
 
 - `docs/specs/reading-session-annotation-profile` is a **Windows junction** / reference copy of a **server-owned** spec.

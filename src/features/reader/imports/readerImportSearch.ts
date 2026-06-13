@@ -17,12 +17,19 @@ export async function findImportRowSearchMatch({
   searchBook: ReaderSearchBookHandle;
   signal: AbortSignal;
 }): Promise<ReaderImportSearchMatch | null> {
-  for (const query of buildImportSearchQueries(row.importedText)) {
+  const queries = buildImportSearchQueries(row.importedText);
+  const fullQuery = queries[0] ?? "";
+  for (const query of queries) {
     if (signal.aborted) return null;
-    const results = await searchBook(query, { maxResults: 5, maxSeqEle: 8, signal });
+    const results = await searchBook(query, {
+      maxResults: 5,
+      maxSeqEle: 8,
+      repairFullText: query === fullQuery ? undefined : row.importedText,
+      signal,
+    });
     if (signal.aborted) return null;
     const result = results[0];
-    if (result?.cfi?.trim()) return { result, matchedText: query, query };
+    if (result?.cfi?.trim()) return { result, matchedText: result.repairedText ?? query, query };
   }
   return null;
 }
