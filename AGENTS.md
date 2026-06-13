@@ -114,3 +114,20 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - If the spec needs changes, stop and ask; changes must be made in the server/spec owner project first.
 - Client implementation may reference the spec, but runtime TypeScript types belong in `src/schemas/`.
 - Do not import runtime app code from `docs/` (docs are reference material only).
+
+## Text and character policy
+
+When editing repository files, prefer plain ASCII characters unless the file already clearly requires Unicode or the requested user-facing text specifically needs it.
+
+Use ASCII equivalents by default:
+
+* Use `...` instead of `…`
+* Use `'` and `"` instead of smart quotes
+* Use `-` or `--` instead of en/em dashes
+* Use `(c)`, `(r)`, `->`, `<-`, `=>`, etc. instead of symbol substitutions unless the project already uses the Unicode form
+
+Do not introduce non-ASCII punctuation, invisible characters, non-breaking spaces, or typographic substitutions into source code, JSX, Markdown, JSON, YAML, SQL, shell scripts, or config files unless there is a clear functional or localization requirement.
+
+Before producing a patch, preserve the file’s existing character style. If the surrounding text uses ASCII punctuation, continue using ASCII punctuation. If a non-ASCII character is needed, mention it explicitly in the final summary.
+
+Patch anchors should avoid non-ASCII text when possible. Prefer stable ASCII-only surrounding code, identifiers, class names, props, or structural JSX.
