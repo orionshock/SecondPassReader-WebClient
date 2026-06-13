@@ -2,8 +2,8 @@ import type { ReaderSettings } from "../../../storage/readerSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
-import type { ReadingShellEvent } from "../shell/types";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSearchOptions, ReaderSearchResult, ReaderSelection } from "../domain/types";
+import type { ReaderSearchBookHandle, ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/types";
+import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
@@ -28,10 +28,10 @@ export type ReadingSessionOrchestratorProps = {
     autosaveStatus: { text: string; title?: string } | null;
     shell: ReactNode;
     debugPanel: ReactNode | null;
-    sendCommand: (command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => void;
+    sendCommand: (command: ReadingShellCommandValue) => void;
     search: {
       ready: boolean;
-      searchBook: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null;
+      searchBook: ReaderSearchBookHandle | null;
     };
     marginalia: {
       listStatus: "idle" | "loading" | "ready" | "error";
@@ -62,8 +62,8 @@ export type ReadingSessionOrchestratorProps = {
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
   const [location, setLocation] = useState<ReaderLocation | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
-  const [pendingCommand, setPendingCommand] = useState<{ seq: number; value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" } } | null>(null);
-  const [searchBook, setSearchBook] = useState<((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null>(null);
+  const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
+  const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const [annotationBusy, setAnnotationBusy] = useState(false);
@@ -257,12 +257,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return out;
   }, [highlightMarks, previousLayers.selectedHighlightMarks]);
 
-  const sendCommand = useCallback((command: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" }) => {
+  const sendCommand = useCallback((command: ReadingShellCommandValue) => {
     commandSeqRef.current += 1;
     setPendingCommand({ seq: commandSeqRef.current, value: command });
   }, []);
 
-  const handleSearchReady = useCallback((fn: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null) => {
+  const handleSearchReady = useCallback((fn: ReaderSearchBookHandle | null) => {
     setSearchBook(() => fn);
   }, []);
 

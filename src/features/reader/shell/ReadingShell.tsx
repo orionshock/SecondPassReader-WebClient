@@ -2,9 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSearchOptions, ReaderSearchResult, ReaderSelection, ReaderTocItem } from "../domain/types";
-import type { ReaderLocationDescription } from "../domain/types";
-import type { ReadingShellEvent } from "./types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
+import type {
+  ReaderDescribeCfiHandle,
+  ReaderSearchBookHandle,
+  ReadingShellCommand,
+  ReadingShellCommandValue,
+  ReadingShellEvent,
+} from "./types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
@@ -16,15 +21,12 @@ export type ReadingShellProps = {
   initialDisplayTarget?: ReaderLocationTarget;
   onEvent?: (event: ReadingShellEvent) => void;
   toc?: ReaderTocItem[] | null;
-  command?: {
-    seq: number;
-    value: { type: "display"; target: ReaderLocationTarget } | { type: "next" } | { type: "previous" };
-  };
+  command?: ReadingShellCommand;
   highlightMarks?: ReaderHighlightMark[];
   onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
   highlightCommitBusy?: boolean;
-  onDescribeCfiReady?: (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => void;
-  onSearchReady?: (fn: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null) => void;
+  onDescribeCfiReady?: (fn: ReaderDescribeCfiHandle | null) => void;
+  onSearchReady?: (fn: ReaderSearchBookHandle | null) => void;
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
   onSettingsReset?: () => void;
@@ -34,8 +36,11 @@ export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
   const mountWrapperRef = useRef<HTMLDivElement | null>(null);
   const lastHandledCommandSeqRef = useRef<number | null>(null);
-  const deferredCommandRef = useRef<ReadingShellProps["command"] | null>(null);
+  const deferredCommandRef = useRef<ReadingShellCommand | null>(null);
+  const engineGenerationRef = useRef(0);
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
+  const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
+  const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
   const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
@@ -48,6 +53,14 @@ export function ReadingShell(props: ReadingShellProps) {
   useEffect(() => {
     settingsRef.current = props.settings;
   }, [props.settings]);
+
+  useEffect(() => {
+    onEventRef.current = props.onEvent;
+  }, [props.onEvent]);
+
+  useEffect(() => {
+    initialDisplayTargetRef.current = props.initialDisplayTarget;
+  }, [props.initialDisplayTarget]);
 
   useEffect(() => {
     highlightMarksRef.current = props.highlightMarks ?? [];
@@ -66,12 +79,41 @@ export function ReadingShell(props: ReadingShellProps) {
   });
   const { onSelectionChanged, cancelStaged, stagedSelectionRef } = staged;
 
+  const reportCommandError = useCallback(
+    (err: unknown, fallback: string, generation: number) => {
+      if (engineGenerationRef.current !== generation) return;
+      setStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : fallback);
+      onEventRef.current?.({ type: "displayError", error: err });
+    },
+    [],
+  );
+
+  const runCommandOnEngine = useCallback(
+    async (engine: EpubTsBookEngine, command: ReadingShellCommandValue) => {
+      switch (command.type) {
+        case "display":
+          await engine.display(command.target);
+          return;
+        case "next":
+          await engine.next();
+          return;
+        case "previous":
+          await engine.previous();
+          return;
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!mountEl) return;
 
     let cancelled = false;
     setStatus("loading");
     setErrorMessage(null);
+    engineGenerationRef.current += 1;
+    const generation = engineGenerationRef.current;
 
     void (async () => {
       try {
@@ -84,12 +126,12 @@ export function ReadingShell(props: ReadingShellProps) {
            displaySettings: settingsRef.current,
            onLocationChanged: (location) => {
              if (stagedSelectionRef.current) cancelStaged();
-             props.onEvent?.({ type: "locationChanged", location });
+             onEventRef.current?.({ type: "locationChanged", location });
            },
-          onTocReady: (toc) => props.onEvent?.({ type: "tocReady", toc }),
-          onLocationsReady: () => props.onEvent?.({ type: "locationsReady" }),
+          onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
+          onLocationsReady: () => onEventRef.current?.({ type: "locationsReady" }),
           onSelectionChanged,
-          onError: (err) => props.onEvent?.({ type: "displayError", error: err }),
+          onError: (err) => onEventRef.current?.({ type: "displayError", error: err }),
         });
 
         if (cancelled) {
@@ -99,8 +141,18 @@ export function ReadingShell(props: ReadingShellProps) {
 
         engineRef.current = engine;
         setStatus("ready");
-        props.onDescribeCfiReady?.((cfi) => engine.describeCfi(cfi));
-        props.onSearchReady?.((query, options) => engine.searchBook(query, options));
+        props.onDescribeCfiReady?.((cfi) => {
+          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
+            return Promise.reject(new Error("Reader engine is not ready."));
+          }
+          return engine.describeCfi(cfi);
+        });
+        props.onSearchReady?.((query, options) => {
+          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
+            return Promise.reject(new Error("Reader engine is not ready."));
+          }
+          return engine.searchBook(query, options);
+        });
 
         // Apply any highlight marks that loaded before the engine became available.
         engine.setHighlightMarks(highlightMarksRef.current);
@@ -110,36 +162,30 @@ export function ReadingShell(props: ReadingShellProps) {
           deferredCommandRef.current = null;
           if (cmd) {
             try {
-              if (cmd.value.type === "display") await engine.display(cmd.value.target);
-              else if (cmd.value.type === "next") await engine.next();
-              else await engine.previous();
+              await runCommandOnEngine(engine, cmd.value);
             } catch (err) {
-              setStatus("error");
-              setErrorMessage(err instanceof Error ? err.message : "Command failed.");
-              props.onEvent?.({ type: "displayError", error: err });
+              reportCommandError(err, "Command failed.", generation);
             }
           }
         }
 
-        if (!props.initialDisplayTarget) {
+        if (!initialDisplayTargetRef.current) {
           try {
             await engine.display();
           } catch (err) {
-            setStatus("error");
-            setErrorMessage(err instanceof Error ? err.message : "Display failed.");
-            props.onEvent?.({ type: "displayError", error: err });
+            reportCommandError(err, "Display failed.", generation);
           }
         }
       } catch (err) {
         if (cancelled) return;
-        setStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : "Failed to initialize epub-ts engine.");
-        props.onEvent?.({ type: "displayError", error: err });
+        reportCommandError(err, "Failed to initialize epub-ts engine.", generation);
       }
     })();
 
     return () => {
       cancelled = true;
+      engineGenerationRef.current += 1;
+      deferredCommandRef.current = null;
       const engine = engineRef.current;
       engineRef.current = null;
       props.onDescribeCfiReady?.(null);
@@ -151,10 +197,10 @@ export function ReadingShell(props: ReadingShellProps) {
     mountEl,
     onSelectionChanged,
     props.blob,
-    props.initialDisplayTarget,
     props.onDescribeCfiReady,
-    props.onEvent,
     props.onSearchReady,
+    reportCommandError,
+    runCommandOnEngine,
     stagedSelectionRef,
   ]);
 
@@ -165,45 +211,34 @@ export function ReadingShell(props: ReadingShellProps) {
     lastHandledCommandSeqRef.current = cmd.seq;
 
     void (async () => {
+      const generation = engineGenerationRef.current;
       try {
-        if (!engineRef.current) {
+        const engine = engineRef.current;
+        if (!engine) {
           deferredCommandRef.current = cmd;
           return;
         }
-        switch (cmd.value.type) {
-          case "display":
-            await engineRef.current?.display(cmd.value.target);
-            return;
-          case "next":
-            await engineRef.current?.next();
-            return;
-          case "previous":
-            await engineRef.current?.previous();
-            return;
-        }
+        await runCommandOnEngine(engine, cmd.value);
       } catch (err) {
-        setStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : "Command failed.");
-        props.onEvent?.({ type: "displayError", error: err });
+        reportCommandError(err, "Command failed.", generation);
       }
     })();
-  }, [props.command, props.onEvent]);
+  }, [props.command, reportCommandError, runCommandOnEngine]);
 
   useEffect(() => {
     if (!props.settings) return;
     const engine = engineRef.current;
     if (!engine) return;
+    const generation = engineGenerationRef.current;
 
     void (async () => {
       try {
         await engine.applyDisplaySettings(props.settings!);
       } catch (err) {
-        setStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : "Display settings failed.");
-        props.onEvent?.({ type: "displayError", error: err });
+        reportCommandError(err, "Display settings failed.", generation);
       }
     })();
-  }, [props.onEvent, props.settings]);
+  }, [props.settings, reportCommandError]);
 
   useEffect(() => {
     const readerWidth = props.settings?.readerWidth;
@@ -214,6 +249,7 @@ export function ReadingShell(props: ReadingShellProps) {
     const engine = engineRef.current;
     if (!engine) return;
     let cancelled = false;
+    const generation = engineGenerationRef.current;
 
     void (async () => {
       try {
@@ -222,36 +258,36 @@ export function ReadingShell(props: ReadingShellProps) {
         await engine.resizeToMount();
       } catch (err) {
         if (cancelled) return;
-        setStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : "Reader resize failed.");
-        props.onEvent?.({ type: "displayError", error: err });
+        reportCommandError(err, "Reader resize failed.", generation);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [props.onEvent, props.settings?.readerWidth]);
+  }, [props.settings?.readerWidth, reportCommandError]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
   const goPrev = async () => {
+    const generation = engineGenerationRef.current;
     try {
-      await engineRef.current?.previous();
+      const engine = engineRef.current;
+      if (!engine) return;
+      await runCommandOnEngine(engine, { type: "previous" });
     } catch (err) {
-      setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Previous failed.");
-      props.onEvent?.({ type: "displayError", error: err });
+      reportCommandError(err, "Previous failed.", generation);
     }
   };
 
   const goNext = async () => {
+    const generation = engineGenerationRef.current;
     try {
-      await engineRef.current?.next();
+      const engine = engineRef.current;
+      if (!engine) return;
+      await runCommandOnEngine(engine, { type: "next" });
     } catch (err) {
-      setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Next failed.");
-      props.onEvent?.({ type: "displayError", error: err });
+      reportCommandError(err, "Next failed.", generation);
     }
   };
 
