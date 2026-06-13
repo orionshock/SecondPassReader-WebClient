@@ -11,7 +11,8 @@ import type {
 export type ReadingShellCommandValue =
   | { type: "display"; target: ReaderLocationTarget }
   | { type: "next" }
-  | { type: "previous" };
+  | { type: "previous" }
+  | { type: "resize" };
 
 export type ReadingShellCommand = {
   seq: number;

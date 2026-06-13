@@ -318,9 +318,9 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       const { width, height } = measureMount();
       if (width <= 0 || height <= 0) return;
       const cfi = getCurrentCfi();
-      rendition.resize(width, height, cfi ?? undefined);
-      if (cfi && !destroyed) await rendition.display(cfi);
-      else if (!destroyed) await rendition.reportLocation();
+      if (!cfi) return;
+      rendition.resize(width, height, cfi);
+      if (!destroyed) await rendition.display(cfi);
     },
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;

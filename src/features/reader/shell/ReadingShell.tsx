@@ -122,6 +122,10 @@ export function ReadingShell(props: ReadingShellProps) {
         case "previous":
           await engine.previous();
           return;
+        case "resize":
+          await waitForReaderLayout();
+          await engine.resizeToMount();
+          return;
       }
     },
     [],

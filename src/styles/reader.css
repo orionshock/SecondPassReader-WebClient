@@ -41,7 +41,8 @@
 }
 
 .spReaderActivity > .spReaderChrome,
-.spReaderActivity > .spReaderLayout {
+.spReaderActivity > .spReaderLayout,
+.spReaderActivity > .spReaderContentFrame {
   width: min(100%, var(--sp-reader-viewport-max));
   margin-inline: auto;
 }
@@ -282,6 +283,18 @@
   gap: 12px;
   grid-template-columns: 1fr;
   align-items: start;
+  min-width: 0;
+}
+
+.spReaderContentFrame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.spReaderContentFrame > .spReaderLayout {
   min-width: 0;
 }
 
@@ -718,11 +731,6 @@
   border-bottom: 0;
 }
 
-.spReaderImportBackdrop {
-  z-index: 115;
-  background: transparent;
-}
-
 .spReaderImportDrawer {
   position: fixed;
   top: 0;
@@ -735,6 +743,7 @@
   border-left: 1px solid var(--sp-reader-border);
   box-shadow: -20px 0 50px var(--sp-reader-shadow);
   color: var(--sp-reader-text);
+  z-index: 115;
 }
 
 .spReaderImportDrawerHeader,
@@ -857,6 +866,25 @@
 .spReaderImportDrawerFooter {
   border-top: 1px solid var(--sp-reader-border);
   border-bottom: 0;
+}
+
+@media (min-width: 1024px) {
+  .spReaderActivity > .spReaderContentFrameImportOpen {
+    width: min(100%, calc(var(--sp-reader-viewport-max) + clamp(360px, 28vw, 480px) + 12px));
+    grid-template-columns: minmax(520px, 1fr) min(32vw, 480px);
+  }
+
+  .spReaderContentFrameImportOpen .spReaderImportDrawer {
+    position: sticky;
+    top: 76px;
+    right: auto;
+    width: 100%;
+    height: calc(100vh - 88px);
+    box-shadow: 0 16px 40px var(--sp-reader-shadow);
+    border: 1px solid var(--sp-reader-border);
+    border-radius: 8px;
+    z-index: 1;
+  }
 }
 
 .spMarginaliaMenuHost {

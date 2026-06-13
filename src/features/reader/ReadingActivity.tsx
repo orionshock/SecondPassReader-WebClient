@@ -155,6 +155,8 @@ function ReaderActivityContent({
   const showHomeAction = returnTarget.kind !== "home";
   const canLookupNextBook = seriesId != null && currentSeriesIndex != null;
   const headerEndLabel = nextSeriesBook ? "Next book..." : "End options...";
+  const importDrawerInLayout = Boolean(readerImport.drawerOpen && readerImport.job);
+  const lastImportDrawerLayoutRef = useRef(importDrawerInLayout);
   const closeAfterOptions: CloseSessionAfterOption[] = [
     ...(nextSeriesBook ? [{ action: "nextBook" as const, label: "Start next book" }] : []),
     { action: "restartBook", label: "Start this book again" },
@@ -187,6 +189,20 @@ function ReaderActivityContent({
     if (!initialSearchQuery?.trim()) return;
     setSearchOpen(true);
   }, [initialSearchQuery, setSearchOpen]);
+
+  useEffect(() => {
+    if (lastImportDrawerLayoutRef.current === importDrawerInLayout) return;
+    lastImportDrawerLayoutRef.current = importDrawerInLayout;
+    let cancelled = false;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (!cancelled) readerState.sendCommand({ type: "resize" });
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [importDrawerInLayout, readerState.sendCommand]);
 
   useEffect(() => {
     if (!currentSessionId || !nearEnd || endBookDialogOpen || closeDialogOpen) return;
@@ -354,25 +370,40 @@ function ReaderActivityContent({
         </div>
       </div>
 
-      <div className="spReaderLayout">
-        <div className="spReaderViewportRegion">{shell}</div>
-        <div className="spReaderAnnotationsRegion">
-          <AnnotationWorkspace
-            annotations={annotations.items}
-            status={annotations.status}
-            error={annotations.error}
-            busy={annotations.busy}
-            currentCfi={state.location?.cfi ?? null}
-            previousSessionGroups={annotations.previousSessionGroups}
-            onEnablePreviousSession={annotations.enablePreviousSession}
-            currentSessionMeta={annotations.currentSessionMeta}
-            onUpdateCurrentSessionMeta={annotations.updateCurrentSessionMeta}
-            onRemoveAnnotation={(annotationId) => {
-              void annotations.removeById(annotationId);
-            }}
-            onUpdateHighlight={(annotationId, update) => annotations.updateHighlight(annotationId, update)}
-          />
+      <div className={`spReaderContentFrame${importDrawerInLayout ? " spReaderContentFrameImportOpen" : ""}`}>
+        <div className="spReaderLayout">
+          <div className="spReaderViewportRegion">{shell}</div>
+          <div className="spReaderAnnotationsRegion">
+            <AnnotationWorkspace
+              annotations={annotations.items}
+              status={annotations.status}
+              error={annotations.error}
+              busy={annotations.busy}
+              currentCfi={state.location?.cfi ?? null}
+              previousSessionGroups={annotations.previousSessionGroups}
+              onEnablePreviousSession={annotations.enablePreviousSession}
+              currentSessionMeta={annotations.currentSessionMeta}
+              onUpdateCurrentSessionMeta={annotations.updateCurrentSessionMeta}
+              onRemoveAnnotation={(annotationId) => {
+                void annotations.removeById(annotationId);
+              }}
+              onUpdateHighlight={(annotationId, update) => annotations.updateHighlight(annotationId, update)}
+            />
+          </div>
         </div>
+
+        <ReaderImportDrawer
+          open={readerImport.drawerOpen}
+          job={readerImport.job}
+          counts={readerImport.counts}
+          onClose={() => readerImport.setDrawerOpen(false)}
+          onClear={clearImportJob}
+          onSelectRow={(rowId) => {
+            void activateImportRow(rowId);
+          }}
+          onSkipRow={skipImportRow}
+          onUnskipRow={readerImport.unskipRow}
+        />
       </div>
 
       <BookSearchDrawer
@@ -395,19 +426,6 @@ function ReaderActivityContent({
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onStartImport={readerImport.startGlaspCsvImport}
-      />
-
-      <ReaderImportDrawer
-        open={readerImport.drawerOpen}
-        job={readerImport.job}
-        counts={readerImport.counts}
-        onClose={() => readerImport.setDrawerOpen(false)}
-        onClear={clearImportJob}
-        onSelectRow={(rowId) => {
-          void activateImportRow(rowId);
-        }}
-        onSkipRow={skipImportRow}
-        onUnskipRow={readerImport.unskipRow}
       />
 
       {closeDialogOpen ? (
