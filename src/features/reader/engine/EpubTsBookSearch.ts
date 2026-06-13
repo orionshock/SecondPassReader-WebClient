@@ -1,5 +1,6 @@
 import type { Book } from "@likecoin/epub-ts";
 import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../domain/types";
+import { findTocLabelForHref } from "../session/readerSessionLabels";
 
 type SectionRequest = (
   url: string,
@@ -22,10 +23,12 @@ export async function searchEpubTsBook(
   const maxSeqEle = clampInt(options?.maxSeqEle, 1, 20, 6);
   const out: ReaderSearchResult[] = [];
   const loadSectionResource = createSectionRequest(book);
+  let linearIndex = 0;
 
   for (const section of book.spine.spineItems ?? []) {
     throwIfAborted(options?.signal);
     if (section.linear === false) continue;
+    linearIndex += 1;
 
     const wasLoaded = Boolean(section.document);
     await section.load(loadSectionResource, options?.signal);
@@ -40,10 +43,12 @@ export async function searchEpubTsBook(
         out.push({
           id: `${sectionIndex ?? "section"}:${out.length}:${match.cfi}`,
           cfi: match.cfi,
-          excerpt: normalizeSearchExcerpt(match.excerpt),
+          excerpt: improveSearchExcerpt(section.document, match.excerpt, trimmed),
           sectionIndex,
+          linearIndex,
           sectionHref,
-          sectionLabel: findTocLabelForHref(toc, sectionHref) ?? sectionIndexLabel(sectionIndex),
+          sectionIdref: section.idref,
+          sectionLabel: deriveSectionLabel({ toc, href: sectionHref, section, linearIndex, sectionIndex }),
         });
         if (out.length >= maxResults) return out;
       }
@@ -79,37 +84,63 @@ function normalizeSearchExcerpt(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function sectionIndexLabel(index: number | undefined): string | undefined {
-  return typeof index === "number" ? `Section ${index + 1}` : undefined;
+function improveSearchExcerpt(doc: Document | undefined, excerpt: string, query: string): string {
+  const normalizedExcerpt = normalizeSearchExcerpt(excerpt);
+  if (!doc || normalizedExcerpt.length >= 180) return normalizedExcerpt;
+
+  const bodyText = normalizeSearchExcerpt(doc.body?.textContent ?? doc.documentElement?.textContent ?? "");
+  if (!bodyText) return normalizedExcerpt;
+
+  const lowerBody = bodyText.toLowerCase();
+  const lowerExcerpt = normalizedExcerpt.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const excerptAt = lowerExcerpt ? lowerBody.indexOf(lowerExcerpt) : -1;
+  const queryInExcerptAt = lowerExcerpt.indexOf(lowerQuery);
+  const queryAt =
+    excerptAt >= 0 && queryInExcerptAt >= 0
+      ? excerptAt + queryInExcerptAt
+      : lowerBody.indexOf(lowerQuery);
+  if (queryAt < 0) return normalizedExcerpt;
+
+  const radius = 130;
+  const start = Math.max(0, queryAt - radius);
+  const end = Math.min(bodyText.length, queryAt + query.length + radius);
+  const prefix = start > 0 ? "..." : "";
+  const suffix = end < bodyText.length ? "..." : "";
+  return `${prefix}${bodyText.slice(start, end).trim()}${suffix}`;
 }
 
-function normalizeHrefForCompare(href: string): string {
-  const s = href.trim();
-  const hashIdx = s.indexOf("#");
-  return (hashIdx >= 0 ? s.slice(0, hashIdx) : s).toLowerCase();
+function sectionIndexLabel(index: number | undefined): string {
+  return typeof index === "number" ? `Section ${index + 1}` : "Section";
 }
 
-function findTocLabelForHref(toc: ReaderTocItem[], href: string | undefined): string | undefined {
-  if (!href) return undefined;
-  const target = normalizeHrefForCompare(href);
-  const visit = (items: ReaderTocItem[]): { label: string; score: 2 | 1 } | null => {
-    let best: { label: string; score: 2 | 1 } | null = null;
-    for (const item of items) {
-      if (item.href) {
-        const candidate = normalizeHrefForCompare(item.href);
-        if (candidate === target) return { label: item.label, score: 2 };
-        if (candidate && target && (candidate.endsWith(target) || target.endsWith(candidate))) {
-          if (!best) best = { label: item.label, score: 1 };
-        }
-      }
-      if (item.children?.length) {
-        const found = visit(item.children);
-        if (found?.score === 2) return found;
-        if (!best && found) best = found;
-      }
-    }
-    return best;
-  };
+function deriveSectionLabel(args: {
+  toc: ReaderTocItem[];
+  href: string | undefined;
+  section: { document?: Document; idref?: string };
+  linearIndex: number;
+  sectionIndex: number | undefined;
+}): string {
+  const tocLabel = args.href ? findTocLabelForHref(args.toc, args.href) : null;
+  if (tocLabel) return tocLabel;
 
-  return visit(toc)?.label;
+  const documentLabel = getSectionDocumentLabel(args.section.document);
+  if (documentLabel) return documentLabel;
+
+  if (args.linearIndex > 0) return `Chapter ${args.linearIndex}`;
+  return sectionIndexLabel(args.sectionIndex);
+}
+
+function getSectionDocumentLabel(doc: Document | undefined): string | null {
+  if (!doc) return null;
+  const title = doc.querySelector("title")?.textContent;
+  const titleText = normalizeLabel(title);
+  if (titleText) return titleText;
+  const heading = doc.querySelector("h1, h2, h3, [role='heading']")?.textContent;
+  return normalizeLabel(heading);
+}
+
+function normalizeLabel(value: string | null | undefined): string | null {
+  const text = typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+  return text || null;
 }

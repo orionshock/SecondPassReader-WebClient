@@ -3,6 +3,7 @@ import type { ReaderHighlightMark } from "../domain/types";
 
 export type HighlightMarkPainter = {
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
+  setTemporarySearchHighlight(cfiRange: string | null): void;
   clear(): void;
 };
 
@@ -10,6 +11,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
   const { rendition, onError } = args;
 
   const paintedHighlightsById = new Map<string, { cfiRange: string; colorKey: string }>();
+  let temporarySearchCfiRange: string | null = null;
 
   const toHighlightAttributes = (color: string | undefined): Record<string, string> | undefined => {
     const c = typeof color === "string" ? color.trim() : "";
@@ -77,9 +79,48 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
         paintedHighlightsById.delete(id);
       }
     },
+    setTemporarySearchHighlight(cfiRange: string | null) {
+      const next = typeof cfiRange === "string" && cfiRange.trim() ? cfiRange.trim() : null;
+      if (temporarySearchCfiRange === next) return;
+      if (temporarySearchCfiRange) {
+        try {
+          rendition.annotations.remove(temporarySearchCfiRange, "highlight");
+        } catch {
+          // ignore
+        }
+      }
+      temporarySearchCfiRange = next;
+      if (!temporarySearchCfiRange) return;
+      try {
+        rendition.annotations.highlight(
+          temporarySearchCfiRange,
+          { id: "sp-search-result-highlight" },
+          undefined,
+          "sp-search-result-hl",
+          {
+            fill: "#facc15",
+            "fill-opacity": "0.34",
+            "mix-blend-mode": "multiply",
+            "background-color": "rgba(250, 204, 21, 0.34)",
+            background: "rgba(250, 204, 21, 0.34)",
+            stroke: "#ca8a04",
+            "stroke-opacity": "0.7",
+          },
+        );
+      } catch (err) {
+        onError?.(err);
+      }
+    },
     clear() {
+      if (temporarySearchCfiRange) {
+        try {
+          rendition.annotations.remove(temporarySearchCfiRange, "highlight");
+        } catch {
+          // ignore
+        }
+      }
+      temporarySearchCfiRange = null;
       paintedHighlightsById.clear();
     },
   };
 }
-

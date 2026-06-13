@@ -321,9 +321,12 @@ function ReaderActivityContent({
         open={searchOpen}
         ready={readerState.search.ready}
         searchBook={readerState.search.searchBook}
-        onClose={() => setSearchOpen(false)}
+        onClose={() => {
+          readerState.search.clearTemporaryHighlight();
+          setSearchOpen(false);
+        }}
         onJump={(result) => {
-          readerState.sendCommand({ type: "display", target: { type: "cfi", cfi: result.cfi } });
+          readerState.search.jumpToResult(result.cfi);
         }}
       />
 

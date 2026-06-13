@@ -23,6 +23,7 @@ export type ReadingShellProps = {
   toc?: ReaderTocItem[] | null;
   command?: ReadingShellCommand;
   highlightMarks?: ReaderHighlightMark[];
+  temporarySearchHighlightCfi?: string | null;
   onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
   highlightCommitBusy?: boolean;
   onDescribeCfiReady?: (fn: ReaderDescribeCfiHandle | null) => void;
@@ -65,6 +66,12 @@ export function ReadingShell(props: ReadingShellProps) {
   useEffect(() => {
     highlightMarksRef.current = props.highlightMarks ?? [];
   }, [props.highlightMarks]);
+
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    engine.setTemporarySearchHighlight(props.temporarySearchHighlightCfi ?? null);
+  }, [props.temporarySearchHighlightCfi]);
 
   const mountRef = useCallback((el: HTMLDivElement | null) => {
     setMountEl(el);

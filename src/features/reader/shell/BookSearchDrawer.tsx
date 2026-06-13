@@ -3,6 +3,7 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 import type { ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
 
 type SearchStatus = "idle" | "searching" | "ready" | "error";
+const MAX_SEARCH_RESULTS = 100;
 
 export function BookSearchDrawer({
   open,
@@ -61,7 +62,7 @@ export function BookSearchDrawer({
 
     void (async () => {
       try {
-        const next = await searchBook(trimmed, { maxResults: 100, maxSeqEle: 6, signal: controller.signal });
+        const next = await searchBook(trimmed, { maxResults: MAX_SEARCH_RESULTS, maxSeqEle: 6, signal: controller.signal });
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
         setResults(next);
         setStatus("ready");
@@ -73,7 +74,12 @@ export function BookSearchDrawer({
     })();
   };
 
-  const resultCountText = status === "ready" ? `${results.length} result${results.length === 1 ? "" : "s"}` : null;
+  const resultCountText =
+    status === "ready"
+      ? results.length >= MAX_SEARCH_RESULTS
+        ? `Showing first ${MAX_SEARCH_RESULTS} results`
+        : `${results.length} result${results.length === 1 ? "" : "s"}`
+      : null;
 
   return (
     <div
@@ -137,7 +143,9 @@ export function BookSearchDrawer({
             <article key={result.id} className="spBookSearchResult">
               <button type="button" className="spBookSearchResultButton" onClick={() => onJump(result)}>
                 <span className="spBookSearchResultLabel">{result.sectionLabel ?? "Section"}</span>
-                <span className="spBookSearchExcerpt">{result.excerpt}</span>
+                <span className="spBookSearchExcerpt" title={result.excerpt}>
+                  {renderHighlightedExcerpt(result.excerpt, searchedQuery)}
+                </span>
               </button>
             </article>
           ))}
@@ -145,4 +153,32 @@ export function BookSearchDrawer({
       </aside>
     </div>
   );
+}
+
+function renderHighlightedExcerpt(excerpt: string, query: string) {
+  const q = query.trim();
+  if (!q) return excerpt;
+
+  const lowerExcerpt = excerpt.toLowerCase();
+  const lowerQuery = q.toLowerCase();
+  const parts: Array<string | JSX.Element> = [];
+  let cursor = 0;
+  let matchIndex = lowerExcerpt.indexOf(lowerQuery);
+  let key = 0;
+
+  while (matchIndex >= 0) {
+    if (matchIndex > cursor) parts.push(excerpt.slice(cursor, matchIndex));
+    const end = matchIndex + q.length;
+    parts.push(
+      <mark key={key} className="spBookSearchMatch">
+        {excerpt.slice(matchIndex, end)}
+      </mark>,
+    );
+    key += 1;
+    cursor = end;
+    matchIndex = lowerExcerpt.indexOf(lowerQuery, cursor);
+  }
+
+  if (cursor < excerpt.length) parts.push(excerpt.slice(cursor));
+  return parts.length > 0 ? parts : excerpt;
 }

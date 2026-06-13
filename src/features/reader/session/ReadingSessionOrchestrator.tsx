@@ -34,6 +34,8 @@ export type ReadingSessionOrchestratorProps = {
     search: {
       ready: boolean;
       searchBook: ReaderSearchBookHandle | null;
+      jumpToResult: (cfi: string) => void;
+      clearTemporaryHighlight: () => void;
     };
     marginalia: {
       listStatus: "idle" | "loading" | "ready" | "error";
@@ -66,6 +68,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
+  const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
@@ -189,6 +192,26 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setPendingCommand({ seq: commandSeqRef.current, value: command });
   }, []);
 
+  const jumpToSearchResult = useCallback(
+    (cfi: string) => {
+      const trimmed = cfi.trim();
+      if (!trimmed) return;
+      setTemporarySearchHighlightCfi(trimmed);
+      sendCommand({ type: "display", target: { type: "cfi", cfi: trimmed } });
+    },
+    [sendCommand],
+  );
+
+  const clearSearchResultHighlight = useCallback(() => {
+    setTemporarySearchHighlightCfi(null);
+  }, []);
+
+  useEffect(() => {
+    if (!temporarySearchHighlightCfi) return;
+    const id = window.setTimeout(() => setTemporarySearchHighlightCfi(null), 3500);
+    return () => window.clearTimeout(id);
+  }, [temporarySearchHighlightCfi]);
+
   const handleSearchReady = useCallback((fn: ReaderSearchBookHandle | null) => {
     setSearchBook(() => fn);
   }, []);
@@ -256,6 +279,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onEvent={onShellEvent}
         command={pendingCommand ?? undefined}
         toc={toc}
+        temporarySearchHighlightCfi={temporarySearchHighlightCfi}
         onDescribeCfiReady={handleDescribeCfiReady}
         onSearchReady={handleSearchReady}
         highlightMarks={visibleHighlightMarks}
@@ -271,6 +295,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     search: {
       ready: Boolean(searchBook),
       searchBook,
+      jumpToResult: jumpToSearchResult,
+      clearTemporaryHighlight: clearSearchResultHighlight,
     },
     marginalia: {
       listStatus: previousLayers.listStatus,

@@ -43,6 +43,7 @@ export type EpubTsBookEngine = {
   applyDisplaySettings(settings: ReaderSettings): Promise<void>;
   resizeToMount(): Promise<void>;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
+  setTemporarySearchHighlight(cfiRange: string | null): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]>;
   destroy(): void;
@@ -324,6 +325,10 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;
       highlightMarkPainter.setHighlightMarks(marks);
+    },
+    setTemporarySearchHighlight(cfiRange: string | null) {
+      if (destroyed) return;
+      highlightMarkPainter.setTemporarySearchHighlight(cfiRange);
     },
     async describeCfi(cfi: string): Promise<ReaderLocationDescription> {
       const trimmed = cfi.trim();

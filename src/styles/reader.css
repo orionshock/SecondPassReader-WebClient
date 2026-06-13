@@ -642,6 +642,17 @@
   font-size: 13px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.spBookSearchMatch {
+  border-radius: 3px;
+  background: rgba(250, 204, 21, 0.38);
+  color: inherit;
+  padding: 0 1px;
 }
 
 .spMarginaliaMenuHost {
