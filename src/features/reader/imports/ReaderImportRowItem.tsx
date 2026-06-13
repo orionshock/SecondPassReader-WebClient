@@ -1,4 +1,5 @@
 import type { ReaderImportRow } from "./readerImportTypes";
+import { toAnnotationCssVars } from "../annotations/annotationColors";
 
 export function ReaderImportRowItem({
   row,
@@ -13,16 +14,21 @@ export function ReaderImportRowItem({
   onSkip: () => void;
   onUnskip: () => void;
 }) {
+  const colorVars = toAnnotationCssVars(row.normalizedColor ?? "yellow");
+
   return (
-    <article className={`spReaderImportRow${selected ? " spReaderImportRowSelected" : ""}`}>
+    <article
+      className={`spReaderImportRow${selected ? " spReaderImportRowSelected" : ""}`}
+      style={{ ["--annotation-color" as any]: colorVars.color, ["--annotation-bg" as any]: colorVars.bg }}
+    >
       <button type="button" className="spReaderImportRowMain" onClick={onSelect} aria-current={selected ? "true" : undefined}>
         <span className="spReaderImportRowMeta">
           <span>#{row.index}</span>
           <span className={`spReaderImportStatus spReaderImportStatus-${row.status}`}>{statusLabel(row.status)}</span>
           {row.normalizedColor ? <span className={`spReaderImportColor spReaderImportColor-${row.normalizedColor}`} /> : null}
         </span>
-        <span className="spReaderImportExcerpt">{row.importedText}</span>
-        {row.importedNote ? <span className="spReaderImportNote">{row.importedNote}</span> : null}
+        <span className="spAnnotationQuote spReaderImportQuote">{row.importedText}</span>
+        {row.importedNote ? <span className="spAnnotationNote spReaderImportNote">{row.importedNote}</span> : null}
         {row.importedLocation ? <span className="muted spReaderImportLocation">{row.importedLocation}</span> : null}
       </button>
       <div className="spReaderImportRowActions">

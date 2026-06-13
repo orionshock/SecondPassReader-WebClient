@@ -841,17 +841,20 @@
 .spReaderImportColor-pink { background: #f9a8d4; }
 .spReaderImportColor-purple { background: #c4b5fd; }
 
-.spReaderImportExcerpt {
+.spReaderImportQuote {
+  display: block;
+  width: auto;
+  max-width: 100%;
   font-size: 13px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.spReaderImportNote,
+.spReaderImportNote {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  margin-left: 6px;
+}
+
 .spReaderImportLocation {
   font-size: 12px;
   line-height: 1.3;
