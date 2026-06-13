@@ -1,32 +1,43 @@
+import Papa from "papaparse";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
 import type { ParsedReaderImport, ReaderImportRow } from "./readerImportTypes";
 
 const HIGHLIGHT_TEXT_COLUMNS = ["highlight text", "highlight", "text"];
+type GlaspCsvRecord = Record<string, unknown>;
 
 export function parseGlaspCsv(text: string): ParsedReaderImport {
-  const records = parseCsvRecords(text);
   const warnings: string[] = [];
-  if (records.length === 0) return { rows: [], warnings: ["The CSV file was empty."] };
+  const parsed = Papa.parse<GlaspCsvRecord>(text, {
+    header: true,
+    skipEmptyLines: "greedy",
+    transformHeader: normalizeHeader,
+    transform: (value) => value.trim(),
+  });
+  if (parsed.errors.length > 0) {
+    warnings.push(...parsed.errors.slice(0, 3).map((error) => `CSV parse warning: ${error.message}.`));
+  }
 
-  const headers = records[0].map(normalizeHeader);
-  const textIndex = findColumn(headers, HIGHLIGHT_TEXT_COLUMNS);
-  if (textIndex < 0) throw new Error("Glasp CSV is missing a Highlight Text column.");
+  const fields = parsed.meta.fields ?? [];
+  if (fields.length === 0) return { rows: [], warnings: ["The CSV file was empty."] };
 
-  const noteIndex = findColumn(headers, ["note", "notes"]);
-  const colorIndex = findColumn(headers, ["color", "highlight color"]);
-  const locationIndex = findColumn(headers, ["location", "loc"]);
+  const textColumn = findColumn(fields, HIGHLIGHT_TEXT_COLUMNS);
+  if (!textColumn) throw new Error("Glasp CSV is missing a Highlight Text column.");
+
+  const noteColumn = findColumn(fields, ["note", "notes"]);
+  const colorColumn = findColumn(fields, ["color", "highlight color"]);
+  const locationColumn = findColumn(fields, ["location", "loc"]);
   const rows: ReaderImportRow[] = [];
   let skippedBlankRows = 0;
 
-  records.slice(1).forEach((record, rowOffset) => {
-    const importedText = cell(record, textIndex);
+  parsed.data.forEach((record, rowOffset) => {
+    const importedText = cell(record, textColumn);
     if (!importedText) {
       skippedBlankRows += 1;
       return;
     }
-    const importedColor = cell(record, colorIndex);
-    const importedNote = cell(record, noteIndex);
-    const importedLocation = cell(record, locationIndex);
+    const importedColor = cell(record, colorColumn);
+    const importedNote = cell(record, noteColumn);
+    const importedLocation = cell(record, locationColumn);
     rows.push({
       id: `glasp-row-${rowOffset + 1}`,
       index: rows.length + 1,
@@ -46,53 +57,16 @@ export function parseGlaspCsv(text: string): ParsedReaderImport {
   return { rows, warnings };
 }
 
-function parseCsvRecords(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cellText = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    const next = text[i + 1];
-    if (inQuotes) {
-      if (ch === '"' && next === '"') {
-        cellText += '"';
-        i += 1;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        cellText += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      row.push(cellText.trim());
-      cellText = "";
-    } else if (ch === "\n") {
-      row.push(cellText.trim());
-      rows.push(row);
-      row = [];
-      cellText = "";
-    } else if (ch !== "\r") {
-      cellText += ch;
-    }
-  }
-
-  row.push(cellText.trim());
-  if (row.some((value) => value.length > 0)) rows.push(row);
-  return rows;
-}
-
 function normalizeHeader(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function findColumn(headers: string[], candidates: string[]): number {
-  return headers.findIndex((header) => candidates.includes(header));
+function findColumn(headers: string[], candidates: string[]): string | undefined {
+  return headers.find((header) => candidates.includes(header));
 }
 
-function cell(record: string[], index: number): string {
-  if (index < 0) return "";
-  return (record[index] ?? "").trim();
+function cell(record: GlaspCsvRecord, column: string | undefined): string {
+  if (!column) return "";
+  const value = record[column];
+  return typeof value === "string" ? value.trim() : "";
 }
