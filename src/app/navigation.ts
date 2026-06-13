@@ -18,7 +18,7 @@ export type AppRoute =
   | { kind: "shelf"; shelfId: string; bookId?: string }
   | { kind: "shelfEdit"; shelfId: string }
   | { kind: "settings" }
-  | { kind: "reader"; bookId: string }
+  | { kind: "reader"; bookId: string; search?: string }
   | { kind: "unknown"; raw: string };
 
 function normalizeHash(hash: string): string {
@@ -71,7 +71,7 @@ export function routeToHash(route: AppRoute): string {
     case "settings":
       return "#/settings";
     case "reader":
-      return `#/reader/${encodeURIComponent(route.bookId)}`;
+      return `#/reader/${encodeURIComponent(route.bookId)}${buildQuery({ search: route.search })}`;
     case "unknown":
       return route.raw.startsWith("#") ? route.raw : `#${route.raw}`;
   }
@@ -162,10 +162,12 @@ export function parseCurrentRoute(): AppRoute | null {
   }
   if (head === "settings") return { kind: "settings" };
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {
+    const search = queryParams.get("search")?.trim() ?? "";
     try {
-      return { kind: "reader", bookId: decodeURIComponent(parts[1]) };
+      const decodedBookId = decodeURIComponent(parts[1]);
+      return search ? { kind: "reader", bookId: decodedBookId, search } : { kind: "reader", bookId: decodedBookId };
     } catch {
-      return { kind: "reader", bookId: parts[1] };
+      return search ? { kind: "reader", bookId: parts[1], search } : { kind: "reader", bookId: parts[1] };
     }
   }
 

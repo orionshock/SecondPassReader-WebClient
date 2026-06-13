@@ -326,7 +326,7 @@ export default function App() {
       if (prev) URL.revokeObjectURL(prev.objectUrl);
       return opened;
     });
-    navigateTo({ kind: "reader", bookId: String(opened.book.id) });
+    navigateTo({ kind: "reader", bookId: String(opened.book.id), search: route.search });
   }
 
   function handleCloseReader() {
@@ -508,6 +508,7 @@ export default function App() {
                       handleCloseReader();
                     }}
                     spl={splClient}
+                    initialSearchQuery={route.search ?? null}
                   />
                 </section>
               ) : route?.kind === "shelves" ? (

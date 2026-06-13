@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import type { ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
-
+import { useInitialBookSearch } from "./useInitialBookSearch";
 type SearchStatus = "idle" | "searching" | "ready" | "error";
-const SEARCH_RESULT_BATCH_SIZE = 50;
-const SEARCH_RESULT_SAFETY_LIMIT = 1000;
+const SEARCH_RESULT_BATCH_SIZE = 50, SEARCH_RESULT_SAFETY_LIMIT = 1000;
 
 export function BookSearchDrawer({
   open,
   ready,
   searchBook,
   bookTitle,
+  initialSearchQuery,
   onClose,
   onJump,
 }: {
@@ -18,6 +18,7 @@ export function BookSearchDrawer({
   ready: boolean;
   searchBook: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null;
   bookTitle?: string | null;
+  initialSearchQuery?: string | null;
   onClose: () => void;
   onJump: (result: ReaderSearchResult) => void;
 }) {
@@ -53,8 +54,6 @@ export function BookSearchDrawer({
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
 
-  if (!open) return null;
-
   const trimmed = query.trim();
   const canSubmitSearch = ready && Boolean(searchBook) && status !== "searching" && (trimmed.length === 0 || trimmed.length >= 2);
 
@@ -70,13 +69,14 @@ export function BookSearchDrawer({
     window.requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const runSearch = () => {
-    if (!trimmed) {
+  const runSearch = (rawQuery = query) => {
+    const submittedQuery = rawQuery.trim();
+    if (!submittedQuery) {
       clearSearchResults();
       return;
     }
     if (!searchBook) return;
-    if (trimmed.length < 2) return;
+    if (submittedQuery.length < 2) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -85,14 +85,14 @@ export function BookSearchDrawer({
     requestIdRef.current = requestId;
     setStatus("searching");
     setError(null);
-    setSearchedQuery(trimmed);
+    setSearchedQuery(submittedQuery);
     setResults([]);
     setVisibleCount(SEARCH_RESULT_BATCH_SIZE);
     setSelectedResultId(null);
 
     void (async () => {
       try {
-        const next = await searchBook(trimmed, {
+        const next = await searchBook(submittedQuery, {
           maxResults: SEARCH_RESULT_SAFETY_LIMIT,
           maxSeqEle: 6,
           signal: controller.signal,
@@ -112,10 +112,19 @@ export function BookSearchDrawer({
     })();
   };
 
+  useInitialBookSearch({
+    initialSearchQuery,
+    ready,
+    searchReady: Boolean(searchBook),
+    setQuery,
+    runSearch,
+  });
+
+  if (!open) return null;
+
   const visibleResults = results.slice(0, visibleCount);
   const canShowMore = visibleCount < results.length;
   const resultCountText = getResultCountText({ status, loadedCount: results.length, visibleCount: visibleResults.length });
-
   return (
     <div
       className="spBookSearchBackdrop"

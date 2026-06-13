@@ -26,11 +26,13 @@ export function ReadingActivity({
   onBackToLibrary,
   spl,
   settings,
+  initialSearchQuery,
 }: {
   openedBook: OpenedBook | null;
   onBackToLibrary: () => void;
   spl?: SecondPassClient | null;
   settings?: ReaderSettings;
+  initialSearchQuery?: string | null;
 }) {
   if (!openedBook) return <p className="muted">No book open.</p>;
 
@@ -72,6 +74,7 @@ export function ReadingActivity({
             endBookDialogOpen={endBookDialogOpen}
             setEndBookDialogOpen={setEndBookDialogOpen}
             spl={spl}
+            initialSearchQuery={initialSearchQuery}
           />
         )}
       </ReadingSessionOrchestrator>
@@ -92,6 +95,7 @@ function ReaderActivityContent({
   endBookDialogOpen,
   setEndBookDialogOpen,
   spl,
+  initialSearchQuery,
 }: {
   readerState: ReaderActivityRenderState;
   openedBook: OpenedBook;
@@ -105,6 +109,7 @@ function ReaderActivityContent({
   endBookDialogOpen: boolean;
   setEndBookDialogOpen: (open: boolean) => void;
   spl?: SecondPassClient | null;
+  initialSearchQuery?: string | null;
 }) {
   const { state, statusLine, autosaveStatus, shell, annotations, marginalia } = readerState;
   const currentSessionId = state.sessionId;
@@ -132,6 +137,11 @@ function ReaderActivityContent({
     { action: "detail", label: "View closed session" },
     { action: "sessions", label: "Go to sessions" },
   ];
+
+  useEffect(() => {
+    if (!initialSearchQuery?.trim()) return;
+    setSearchOpen(true);
+  }, [initialSearchQuery, setSearchOpen]);
 
   useEffect(() => {
     if (!currentSessionId || !nearEnd || endBookDialogOpen || closeDialogOpen) return;
@@ -318,10 +328,12 @@ function ReaderActivityContent({
       </div>
 
       <BookSearchDrawer
+        key={String(openedBook.book.id)}
         open={searchOpen}
         ready={readerState.search.ready}
         searchBook={readerState.search.searchBook}
         bookTitle={openedBook.book.title}
+        initialSearchQuery={initialSearchQuery}
         onClose={() => {
           readerState.search.clearTemporaryHighlight();
           setSearchOpen(false);
