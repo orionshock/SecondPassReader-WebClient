@@ -9,7 +9,7 @@ import type { LibraryBook, SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
-import { BookSearchDrawer } from "./shell/BookSearchDrawer";
+import { BookSearchDrawer } from "./shell/bookSearch/BookSearchDrawer";
 import { EndOfBookDialog } from "./EndOfBookDialog";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
