@@ -77,6 +77,8 @@ export type ReaderSearchResult = {
   id: string;
   cfi: string;
   excerpt: string;
+  quotePrefix?: string;
+  quoteSuffix?: string;
   sectionIndex?: number;
   linearIndex?: number;
   sectionHref?: string;

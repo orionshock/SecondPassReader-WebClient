@@ -17,6 +17,8 @@ export type StagedSelectionToolbarPosition = {
 export type ProgrammaticStagedSelectionInput = {
   cfiRange: string;
   text: string;
+  quotePrefix?: string;
+  quoteSuffix?: string;
   note?: string;
   color?: string;
   source?: StagedSelectionSource;

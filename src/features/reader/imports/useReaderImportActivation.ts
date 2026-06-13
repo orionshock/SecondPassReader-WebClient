@@ -52,6 +52,8 @@ export function useReaderImportActivation({
       stagedSelectionHandle.stageSelectionFromCfiRange({
         cfiRange: match.result.cfi,
         text: match.matchedText || row.importedText,
+        quotePrefix: match.result.quotePrefix,
+        quoteSuffix: match.result.quoteSuffix,
         note: row.importedNote,
         color: row.normalizedColor,
         source: { kind: "import", importJobId: job.id, importRowId: row.id },

@@ -1,5 +1,6 @@
 import type { Book } from "@likecoin/epub-ts";
 import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../domain/types";
+import { buildQuoteContext } from "../selection/quoteContext";
 import { findTocLabelForHref } from "../session/readerSessionLabels";
 
 type SectionRequest = (
@@ -38,12 +39,15 @@ export async function searchEpubTsBook(
       const matches = section.search(trimmed, maxSeqEle);
       for (const match of matches) {
         if (!match?.cfi) continue;
+        const quoteContext = buildSearchQuoteContext(section.document, trimmed, match.excerpt);
         const sectionIndex = typeof section.index === "number" ? section.index : undefined;
         const sectionHref = section.href;
         out.push({
           id: `${sectionIndex ?? "section"}:${out.length}:${match.cfi}`,
           cfi: match.cfi,
           excerpt: improveSearchExcerpt(section.document, match.excerpt, trimmed),
+          quotePrefix: quoteContext.prefix,
+          quoteSuffix: quoteContext.suffix,
           sectionIndex,
           linearIndex,
           sectionHref,
@@ -115,6 +119,28 @@ function improveSearchExcerpt(doc: Document | undefined, excerpt: string, query:
   const prefix = start > 0 ? "..." : "";
   const suffix = end < bodyText.length ? "..." : "";
   return `${prefix}${bodyText.slice(start, end).trim()}${suffix}`;
+}
+
+function buildSearchQuoteContext(doc: Document | undefined, query: string, excerpt: string): { prefix?: string; suffix?: string } {
+  const exact = normalizeSearchExcerpt(query);
+  if (!doc || !exact) return {};
+  const bodyText = normalizeSearchExcerpt(doc.body?.textContent ?? doc.documentElement?.textContent ?? "");
+  if (!bodyText) return {};
+  const lowerBody = bodyText.toLowerCase();
+  const lowerExact = exact.toLowerCase();
+  const normalizedExcerpt = normalizeSearchExcerpt(excerpt);
+  const lowerExcerpt = normalizedExcerpt.toLowerCase();
+  const excerptAt = lowerExcerpt ? lowerBody.indexOf(lowerExcerpt) : -1;
+  const exactInExcerptAt = lowerExcerpt.indexOf(lowerExact);
+  const at =
+    excerptAt >= 0 && exactInExcerptAt >= 0
+      ? excerptAt + exactInExcerptAt
+      : lowerBody.indexOf(lowerExact);
+  if (at < 0) return {};
+  const before = bodyText.slice(0, at);
+  const after = bodyText.slice(at + exact.length);
+  const { prefix, suffix } = buildQuoteContext({ exact, before, after });
+  return { prefix, suffix };
 }
 
 function sectionIndexLabel(index: number | undefined): string {

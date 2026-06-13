@@ -228,6 +228,22 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setStagedSelectionHandle(handle);
   }, []);
 
+  const handleStagedSelectionCommitted = useCallback(
+    (source: StagedSelectionSource) => {
+      if (source.kind === "import") setTemporarySearchHighlightCfi(null);
+      props.onStagedSelectionCommitted?.(source);
+    },
+    [props.onStagedSelectionCommitted],
+  );
+
+  const handleStagedSelectionCanceled = useCallback(
+    (source: StagedSelectionSource) => {
+      if (source.kind === "import") setTemporarySearchHighlightCfi(null);
+      props.onStagedSelectionCanceled?.(source);
+    },
+    [props.onStagedSelectionCanceled],
+  );
+
   // Keep this callback referentially stable: `ReadingShell`'s engine init effect depends on `onEvent`.
   // Unstable callbacks here can cause destroy/re-init loops (duplicated network requests, blank viewport).
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
@@ -295,8 +311,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onDescribeCfiReady={handleDescribeCfiReady}
         onSearchReady={handleSearchReady}
         onStagedSelectionReady={handleStagedSelectionReady}
-        onStagedSelectionCommitted={props.onStagedSelectionCommitted}
-        onStagedSelectionCanceled={props.onStagedSelectionCanceled}
+        onStagedSelectionCommitted={handleStagedSelectionCommitted}
+        onStagedSelectionCanceled={handleStagedSelectionCanceled}
         highlightMarks={visibleHighlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}
         highlightCommitBusy={annotationBusy}

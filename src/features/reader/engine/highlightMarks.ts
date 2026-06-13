@@ -10,7 +10,7 @@ export type HighlightMarkPainter = {
 export function createHighlightMarkPainter(args: { rendition: Rendition; onError?: (error: unknown) => void }): HighlightMarkPainter {
   const { rendition, onError } = args;
 
-  const paintedHighlightsById = new Map<string, { cfiRange: string; colorKey: string }>();
+  const paintedHighlightsById = new Map<string, { cfiRange: string; color?: string; colorKey: string }>();
   let temporarySearchCfiRange: string | null = null;
 
   const toHighlightAttributes = (color: string | undefined): Record<string, string> | undefined => {
@@ -33,23 +33,77 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
 
   const colorKeyOf = (color: string | undefined): string => (typeof color === "string" ? color.trim().toLowerCase() : "");
 
+  const repaintPaintedMarksAtCfi = (cfiRange: string) => {
+    for (const [id, existing] of paintedHighlightsById) {
+      if (existing.cfiRange !== cfiRange) continue;
+      try {
+        rendition.annotations.highlight(
+          existing.cfiRange,
+          { id },
+          undefined,
+          "sp-annotation-hl",
+          toHighlightAttributes(existing.color),
+        );
+      } catch (err) {
+        onError?.(err);
+      }
+    }
+  };
+
   return {
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       const nextIds = new Set<string>();
+      const validMarks: ReaderHighlightMark[] = [];
       for (const m of marks) {
         if (!m || typeof m.id !== "string") continue;
         const id = m.id;
         const cfiRange = typeof m.cfiRange === "string" ? m.cfiRange.trim() : "";
         if (!id || !cfiRange) continue;
         nextIds.add(id);
+        validMarks.push(m);
+      }
 
+      const removedCfiRanges = new Set<string>();
+      const nextCfiRanges = new Set(validMarks.map((m) => m.cfiRange.trim()));
+
+      if (temporarySearchCfiRange && nextCfiRanges.has(temporarySearchCfiRange)) {
+        try {
+          rendition.annotations.remove(temporarySearchCfiRange, "highlight");
+        } catch {
+          // ignore
+        }
+        temporarySearchCfiRange = null;
+      }
+
+      // Remove stale annotations before adding next annotations. epub-ts removes by
+      // cfiRange+type, so removing a stale staged mark after adding a durable mark
+      // at the same CFI can accidentally remove the durable annotation too.
+      for (const [id, existing] of paintedHighlightsById) {
+        if (nextIds.has(id)) continue;
+        removedCfiRanges.add(existing.cfiRange);
+        try {
+          rendition.annotations.remove(existing.cfiRange, "highlight");
+        } catch {
+          // ignore
+        }
+        paintedHighlightsById.delete(id);
+      }
+
+      for (const m of validMarks) {
+        const id = m.id;
+        const cfiRange = m.cfiRange.trim();
         const existing = paintedHighlightsById.get(id);
         const nextColorKey = colorKeyOf(m.color);
-        if (existing && existing.cfiRange === cfiRange && existing.colorKey === nextColorKey) continue;
+        const mustRepaintAfterSharedCfiRemoval = removedCfiRanges.has(cfiRange);
+        if (existing && existing.cfiRange === cfiRange && existing.colorKey === nextColorKey && !mustRepaintAfterSharedCfiRemoval) continue;
 
         // If this id moved, remove the old one first (epub-ts keys by cfiRange+type).
         try {
-          if (existing?.cfiRange) rendition.annotations.remove(existing.cfiRange, "highlight");
+          if (existing?.cfiRange) {
+            rendition.annotations.remove(existing.cfiRange, "highlight");
+          } else if (mustRepaintAfterSharedCfiRemoval) {
+            rendition.annotations.remove(cfiRange, "highlight");
+          }
         } catch {
           // ignore
         }
@@ -62,21 +116,10 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
             "sp-annotation-hl",
             toHighlightAttributes(m.color),
           );
-          paintedHighlightsById.set(id, { cfiRange, colorKey: nextColorKey });
+          paintedHighlightsById.set(id, { cfiRange, color: m.color, colorKey: nextColorKey });
         } catch (err) {
           onError?.(err);
         }
-      }
-
-      // Remove any painted highlights that are no longer present.
-      for (const [id, existing] of paintedHighlightsById) {
-        if (nextIds.has(id)) continue;
-        try {
-          rendition.annotations.remove(existing.cfiRange, "highlight");
-        } catch {
-          // ignore
-        }
-        paintedHighlightsById.delete(id);
       }
     },
     setTemporarySearchHighlight(cfiRange: string | null) {
@@ -88,6 +131,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
         } catch {
           // ignore
         }
+        repaintPaintedMarksAtCfi(temporarySearchCfiRange);
       }
       temporarySearchCfiRange = next;
       if (!temporarySearchCfiRange) return;
