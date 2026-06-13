@@ -58,6 +58,46 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
   - subcomponents as needed
 - Avoid creating index/barrel files unless the package already consistently uses them.
 
+## File size and organization
+
+- Prefer smaller, focused feature-local files over large multi-responsibility files.
+- A file can have one clear job and still be too large. If it becomes hard to scan, split it by sub-responsibility inside that job.
+- Soft size guidance:
+  - ~100 lines: comfortable
+  - 150-220 lines: usually fine for UI/components
+  - 250+ lines: look for obvious sub-responsibilities to extract
+  - 350+ lines: split unless it is truly orchestration/glue
+- Do not split into micro-files just to reduce line count. Split when the new file has a clear name and stable responsibility.
+- Prefer feature-local folders over generic shared utility folders.
+- Avoid broad `utils` dumping grounds.
+
+## Naming and grouping
+
+- Prefer folders for grouping related files, not underscore-based file names.
+- Use standard React/TypeScript naming:
+  - PascalCase for component files/classes/types that represent components, e.g. `BookSearchDrawer.tsx`, `BookSearchResultRow.tsx`
+  - camelCase for hooks/helpers, e.g. `useBookSearchController.ts`, `bookSearchLabels.ts`
+- For related UI pieces, prefer a feature folder with repeated readable prefixes:
+
+  `bookSearch/`
+  - `BookSearchDrawer.tsx`
+  - `BookSearchInputBar.tsx`
+  - `BookSearchResultList.tsx`
+  - `BookSearchResultRow.tsx`
+  - `useBookSearchController.ts`
+  - `bookSearchLabels.ts`
+
+- Avoid underscore grouping such as:
+  - `BookSearch_Drawer.tsx`
+  - `BookSearch_InputBar.tsx`
+
+## Rationale
+
+- Folder grouping is more conventional in React/TypeScript projects.
+- Prefixed file names remain searchable and understandable when viewed outside the folder.
+- Smaller feature-local files are easier for humans and AI agents to parse safely.
+- Prefer clear local composition over clever generic abstraction.
+
 ## Hook dependency stability
 
 - Custom hooks that return callbacks/arrays/objects used by shell/engine/orchestrator components should be referentially stable where practical.
