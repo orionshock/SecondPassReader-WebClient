@@ -63,12 +63,10 @@ export function MarginaliaMenu(props: {
       const panelH = panelRect.height;
       const viewportRight = window.innerWidth - margin;
       const viewportBottom = window.innerHeight - margin;
-
       const placement = hostRect.bottom + gap + panelH <= viewportBottom ? "below" : "above";
       const overflowLeft = Math.max(0, margin - panelRect.left);
       const overflowRight = Math.max(0, panelRect.right - viewportRight);
       const offsetX = overflowLeft || overflowRight ? overflowLeft - overflowRight : 0;
-
       setPanelPos({ offsetX, placement });
     };
 
@@ -85,6 +83,37 @@ export function MarginaliaMenu(props: {
   }, [props.onClose, props.open]);
 
   const previousLayers = useMemo(() => props.previousLayers ?? [], [props.previousLayers]);
+  const importTools = props.onImportMarginalia || (props.importJobActive && props.onOpenImport) ? (
+    <div className="spMarginaliaMenuSection">
+      <div className="spMarginaliaMenuSectionTitle muted">Import tools</div>
+      <div className="spMarginaliaMenuActions">
+        {props.onImportMarginalia ? (
+          <button
+            type="button"
+            className="button buttonCompact"
+            onClick={() => {
+              props.onClose();
+              props.onImportMarginalia?.();
+            }}
+          >
+            Import marginalia...
+          </button>
+        ) : null}
+        {props.importJobActive && props.onOpenImport ? (
+          <button
+            type="button"
+            className="button buttonCompact"
+            onClick={() => {
+              props.onClose();
+              props.onOpenImport?.();
+            }}
+          >
+            Resume import
+          </button>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="spMarginaliaMenuHost" ref={hostRef}>
@@ -137,41 +166,9 @@ export function MarginaliaMenu(props: {
             </div>
 
             <div className="spMarginaliaMenuBody">
-              {props.onImportMarginalia || (props.importJobActive && props.onOpenImport) ? (
-                <div className="spMarginaliaMenuSection">
-                  <div className="spMarginaliaMenuSectionTitle muted">Imports</div>
-                  <div className="spMarginaliaMenuActions">
-                    {props.onImportMarginalia ? (
-                      <button
-                        type="button"
-                        className="button buttonCompact"
-                        onClick={() => {
-                          props.onClose();
-                          props.onImportMarginalia?.();
-                        }}
-                      >
-                        Import marginalia…
-                      </button>
-                    ) : null}
-                    {props.importJobActive && props.onOpenImport ? (
-                      <button
-                        type="button"
-                        className="button buttonCompact"
-                        onClick={() => {
-                          props.onClose();
-                          props.onOpenImport?.();
-                        }}
-                      >
-                        Resume import
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-
               <div className="spMarginaliaMenuSection">
                 <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
-                {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading…</div> : null}
+                {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading...</div> : null}
                 {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">Failed to load sessions: {props.listError}</div> : null}
                 {props.listStatus !== "loading" && previousLayers.length === 0 ? (
                   <div className="muted spMarginaliaEmpty">No previous sessions.</div>
@@ -184,7 +181,7 @@ export function MarginaliaMenu(props: {
                       return (
                         <label
                           key={layer.sessionId}
-                          className={`spMarginaliaLayerRow ${checked ? "spMarginaliaLayerRowSelected" : ""}`}
+                          className={`spMarginaliaLayerRow ${checked ? " spMarginaliaLayerRowSelected" : ""}`}
                         >
                           <input
                             className="srOnly"
@@ -205,6 +202,8 @@ export function MarginaliaMenu(props: {
                   </div>
                 ) : null}
               </div>
+
+              {importTools}
 
               {props.onCloseSession ? (
                 <div className="spMarginaliaMenuFooter">

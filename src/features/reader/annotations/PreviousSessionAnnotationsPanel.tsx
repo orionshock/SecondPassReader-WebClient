@@ -96,7 +96,7 @@ export function PreviousSessionAnnotationsPanel(props: {
 
           {g.selected ? (
             <>
-              {g.status === "loading" ? <div className="muted">Loading annotations…</div> : null}
+              {g.status === "loading" ? <div className="muted">Loading annotations...</div> : null}
               {g.status === "error" ? <div className="muted">Failed to load annotations{g.error ? `: ${g.error}` : "."}</div> : null}
               {g.status === "idle" ? <div className="muted">Enable in Marginalia to load highlights.</div> : null}
               {g.status === "ready" && (!g.items || g.items.length === 0) ? <div className="muted">No annotations in this session.</div> : null}

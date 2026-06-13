@@ -92,9 +92,9 @@ export function AnnotationWorkspace({
 
       {tab === "current" ? (
         <div role="tabpanel" className="spAnnotationTabPanel">
-          {status === "loading" ? <div className="muted">Loading annotations…</div> : null}
+          {status === "loading" ? <div className="muted">Loading annotations...</div> : null}
           {status === "error" && error ? <div className="muted">Failed to load annotations: {error}</div> : null}
-          {busy ? <div className="muted">Updating annotations…</div> : null}
+          {busy ? <div className="muted">Updating annotations...</div> : null}
           {annotations.length === 0 ? <div className="muted">No annotations yet.</div> : null}
 
           {annotations.length > 0 ? (

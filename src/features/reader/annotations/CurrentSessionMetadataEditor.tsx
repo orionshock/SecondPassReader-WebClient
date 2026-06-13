@@ -54,7 +54,7 @@ export function CurrentSessionMetadataEditor(props: {
               className="input spCurrentSessionMetaNotes"
               value={draftNotes}
               onChange={(e) => setDraftNotes(e.target.value)}
-              placeholder="Notes…"
+              placeholder="Notes..."
               aria-label="Session notes"
               disabled={!canSave}
             />
@@ -132,7 +132,7 @@ export function CurrentSessionMetadataEditor(props: {
         </div>
       </div>
 
-      {props.loadStatus === "loading" ? <div className="muted spCurrentSessionMetaHint">Loading session details…</div> : null}
+      {props.loadStatus === "loading" ? <div className="muted spCurrentSessionMetaHint">Loading session details...</div> : null}
       {props.loadStatus === "error" && props.loadError ? (
         <div className="muted spCurrentSessionMetaHint">Failed to load session details: {props.loadError}</div>
       ) : null}

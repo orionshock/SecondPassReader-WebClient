@@ -89,7 +89,7 @@ export function EndOfBookDialog({
             </button>
           ) : null}
           <button type="button" className="button endBookFinishButton" onClick={onFinishSession}>
-            Finish this session…
+            Finish this session...
           </button>
         </div>
       </section>

@@ -143,7 +143,7 @@ function ReaderActivityContent({
   const returnLabel = buildReturnLabel(returnTarget);
   const showHomeAction = returnTarget.kind !== "home";
   const canLookupNextBook = seriesId != null && currentSeriesIndex != null;
-  const headerEndLabel = nextSeriesBook ? "Next book…" : "End options…";
+  const headerEndLabel = nextSeriesBook ? "Next book..." : "End options...";
   const closeAfterOptions: CloseSessionAfterOption[] = [
     ...(nextSeriesBook ? [{ action: "nextBook" as const, label: "Start next book" }] : []),
     { action: "restartBook", label: "Start this book again" },
