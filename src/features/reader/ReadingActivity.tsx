@@ -10,6 +10,9 @@ import { MaterialIcon } from "../../components/MaterialIcon";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MarginaliaMenu } from "./shell/MarginaliaMenu";
 import { BookSearchDrawer } from "./shell/bookSearch/BookSearchDrawer";
+import { ReaderImportDrawer } from "./imports/ReaderImportDrawer";
+import { ReaderImportModal } from "./imports/ReaderImportModal";
+import { useReaderImportJob } from "./imports/useReaderImportJob";
 import { EndOfBookDialog } from "./EndOfBookDialog";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
@@ -38,8 +41,10 @@ export function ReadingActivity({
 
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);
+  const readerImport = useReaderImportJob();
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
 
@@ -69,6 +74,9 @@ export function ReadingActivity({
             setMarginaliaOpen={setMarginaliaOpen}
             searchOpen={searchOpen}
             setSearchOpen={setSearchOpen}
+            importModalOpen={importModalOpen}
+            setImportModalOpen={setImportModalOpen}
+            readerImport={readerImport}
             closeDialogOpen={closeDialogOpen}
             setCloseDialogOpen={setCloseDialogOpen}
             endBookDialogOpen={endBookDialogOpen}
@@ -90,6 +98,9 @@ function ReaderActivityContent({
   setMarginaliaOpen,
   searchOpen,
   setSearchOpen,
+  importModalOpen,
+  setImportModalOpen,
+  readerImport,
   closeDialogOpen,
   setCloseDialogOpen,
   endBookDialogOpen,
@@ -104,6 +115,9 @@ function ReaderActivityContent({
   setMarginaliaOpen: (open: boolean) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  importModalOpen: boolean;
+  setImportModalOpen: (open: boolean) => void;
+  readerImport: ReturnType<typeof useReaderImportJob>;
   closeDialogOpen: boolean;
   setCloseDialogOpen: (open: boolean) => void;
   endBookDialogOpen: boolean;
@@ -275,6 +289,9 @@ function ReaderActivityContent({
               previousLayers={marginalia.previousLayers}
               selectedPreviousSessionIds={selectedPreviousSessionIds}
               onTogglePreviousSession={marginalia.togglePreviousSession}
+              importJobActive={Boolean(readerImport.job)}
+              onImportMarginalia={() => setImportModalOpen(true)}
+              onOpenImport={() => readerImport.setDrawerOpen(true)}
               onCloseSession={currentSessionId ? () => setCloseDialogOpen(true) : undefined}
             />
 
@@ -341,6 +358,23 @@ function ReaderActivityContent({
         onJump={(result) => {
           readerState.search.jumpToResult(result.cfi);
         }}
+      />
+
+      <ReaderImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onStartImport={readerImport.startGlaspCsvImport}
+      />
+
+      <ReaderImportDrawer
+        open={readerImport.drawerOpen}
+        job={readerImport.job}
+        counts={readerImport.counts}
+        onClose={() => readerImport.setDrawerOpen(false)}
+        onClear={readerImport.clearJob}
+        onSelectRow={readerImport.selectRow}
+        onSkipRow={readerImport.skipRow}
+        onUnskipRow={readerImport.unskipRow}
       />
 
       {closeDialogOpen ? (

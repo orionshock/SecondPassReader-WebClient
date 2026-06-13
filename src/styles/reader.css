@@ -670,6 +670,195 @@
   padding: 10px 4px 4px;
 }
 
+.spReaderModalBackdrop,
+.spReaderImportBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 116;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.spReaderImportModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(92vw, 480px);
+  transform: translate(-50%, -50%);
+  background: var(--sp-reader-surface-strong);
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px var(--sp-reader-shadow);
+  color: var(--sp-reader-text);
+}
+
+.spReaderImportModalHeader,
+.spReaderImportModalActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spReaderImportModalHeader h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.spReaderImportModalBody {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.spReaderImportModalActions {
+  justify-content: flex-end;
+  border-top: 1px solid var(--sp-reader-border);
+  border-bottom: 0;
+}
+
+.spReaderImportBackdrop {
+  z-index: 115;
+  background: transparent;
+}
+
+.spReaderImportDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(92vw, clamp(360px, 28vw, 480px));
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  background: var(--sp-reader-surface-strong);
+  border-left: 1px solid var(--sp-reader-border);
+  box-shadow: -20px 0 50px var(--sp-reader-shadow);
+  color: var(--sp-reader-text);
+}
+
+.spReaderImportDrawerHeader,
+.spReaderImportSummary,
+.spReaderImportDrawerFooter {
+  padding: 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spReaderImportDrawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.spReaderImportDrawerTitle {
+  margin: 0;
+  font-size: 16px;
+}
+
+.spReaderImportFileName,
+.spReaderImportWarnings {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.spReaderImportIconButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.spReaderImportRows {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.spReaderImportEmpty {
+  padding: 8px 4px;
+  font-size: 13px;
+}
+
+.spReaderImportRow {
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spReaderImportRowSelected {
+  background: var(--sp-reader-hover);
+  box-shadow: inset 3px 0 0 var(--sp-reader-accent);
+}
+
+.spReaderImportRowMain {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--sp-reader-text);
+  display: grid;
+  gap: 5px;
+  padding: 10px 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spReaderImportRowMain:hover {
+  background: var(--sp-reader-hover);
+}
+
+.spReaderImportRowMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sp-reader-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spReaderImportStatus {
+  font-weight: 600;
+}
+
+.spReaderImportColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-reader-border);
+}
+
+.spReaderImportColor-yellow { background: #facc15; }
+.spReaderImportColor-green { background: #86efac; }
+.spReaderImportColor-blue { background: #93c5fd; }
+.spReaderImportColor-pink { background: #f9a8d4; }
+.spReaderImportColor-purple { background: #c4b5fd; }
+
+.spReaderImportExcerpt {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.spReaderImportNote,
+.spReaderImportLocation {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.spReaderImportRowActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 6px 8px;
+}
+
+.spReaderImportDrawerFooter {
+  border-top: 1px solid var(--sp-reader-border);
+  border-bottom: 0;
+}
+
 .spMarginaliaMenuHost {
   position: relative;
   display: inline-flex;
@@ -733,6 +922,12 @@
 
 .spMarginaliaMenuSectionTitle {
   font-size: 12px;
+}
+
+.spMarginaliaMenuActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .spMarginaliaEmpty {

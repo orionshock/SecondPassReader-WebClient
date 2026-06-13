@@ -16,6 +16,7 @@
     "@likecoin/epub-ts": "^0.6.6",
     "@secondpass/client": "workspace:*",
     "material-symbols": "^0.44.10",
+    "papaparse": "^5.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

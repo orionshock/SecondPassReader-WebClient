@@ -29,3 +29,6 @@ logs/
 # Alternative package manager stores
 .pnpm-store/
 .yarn/
+
+# Test Import files
+TestImportFiles

@@ -22,6 +22,9 @@ export function MarginaliaMenu(props: {
   selectedPreviousSessionIds: Set<string>;
   onTogglePreviousSession: (sessionId: string) => void;
   onCloseSession?: () => void;
+  importJobActive?: boolean;
+  onImportMarginalia?: () => void;
+  onOpenImport?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -134,6 +137,38 @@ export function MarginaliaMenu(props: {
             </div>
 
             <div className="spMarginaliaMenuBody">
+              {props.onImportMarginalia || (props.importJobActive && props.onOpenImport) ? (
+                <div className="spMarginaliaMenuSection">
+                  <div className="spMarginaliaMenuSectionTitle muted">Imports</div>
+                  <div className="spMarginaliaMenuActions">
+                    {props.onImportMarginalia ? (
+                      <button
+                        type="button"
+                        className="button buttonCompact"
+                        onClick={() => {
+                          props.onClose();
+                          props.onImportMarginalia?.();
+                        }}
+                      >
+                        Import marginalia…
+                      </button>
+                    ) : null}
+                    {props.importJobActive && props.onOpenImport ? (
+                      <button
+                        type="button"
+                        className="button buttonCompact"
+                        onClick={() => {
+                          props.onClose();
+                          props.onOpenImport?.();
+                        }}
+                      >
+                        Resume import
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="spMarginaliaMenuSection">
                 <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
                 {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading…</div> : null}
