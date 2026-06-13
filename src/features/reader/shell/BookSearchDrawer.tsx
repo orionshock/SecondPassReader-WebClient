@@ -26,6 +26,7 @@ export function BookSearchDrawer({
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [results, setResults] = useState<ReaderSearchResult[]>([]);
   const [visibleCount, setVisibleCount] = useState(SEARCH_RESULT_BATCH_SIZE);
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -64,6 +65,7 @@ export function BookSearchDrawer({
     setStatus("idle");
     setResults([]);
     setVisibleCount(SEARCH_RESULT_BATCH_SIZE);
+    setSelectedResultId(null);
     setError(null);
     window.requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -86,6 +88,7 @@ export function BookSearchDrawer({
     setSearchedQuery(trimmed);
     setResults([]);
     setVisibleCount(SEARCH_RESULT_BATCH_SIZE);
+    setSelectedResultId(null);
 
     void (async () => {
       try {
@@ -111,7 +114,7 @@ export function BookSearchDrawer({
 
   const visibleResults = results.slice(0, visibleCount);
   const canShowMore = visibleCount < results.length;
-  const resultCountText = getResultCountText({ status, loadedCount: results.length });
+  const resultCountText = getResultCountText({ status, loadedCount: results.length, visibleCount: visibleResults.length });
 
   return (
     <div
@@ -174,7 +177,15 @@ export function BookSearchDrawer({
           ) : null}
           {visibleResults.map((result) => (
             <article key={result.id} className="spBookSearchResult">
-              <button type="button" className="spBookSearchResultButton" onClick={() => onJump(result)}>
+              <button
+                type="button"
+                className={`spBookSearchResultButton${selectedResultId === result.id ? " spBookSearchResultButtonSelected" : ""}`}
+                onClick={() => {
+                  setSelectedResultId(result.id);
+                  onJump(result);
+                }}
+                aria-current={selectedResultId === result.id ? "location" : undefined}
+              >
                 <span className="spBookSearchResultLabel">{getSearchResultDisplayLabel(result, bookTitle)}</span>
                 <span className="spBookSearchExcerpt" title={result.excerpt}>
                   {renderHighlightedExcerpt(result.excerpt, searchedQuery)}
@@ -199,15 +210,16 @@ export function BookSearchDrawer({
   );
 }
 
-function getResultCountText(input: { status: SearchStatus; loadedCount: number }): string | null {
+function getResultCountText(input: { status: SearchStatus; loadedCount: number; visibleCount: number }): string | null {
+  const showingText = input.loadedCount > input.visibleCount ? ` · showing ${input.visibleCount}` : "";
   if (input.status === "searching") {
-    return `Searching... ${input.loadedCount} found`;
+    return `Searching... ${input.loadedCount} found${showingText}`;
   }
   if (input.status !== "ready") return null;
   if (input.loadedCount >= SEARCH_RESULT_SAFETY_LIMIT) {
-    return `Showing first ${SEARCH_RESULT_SAFETY_LIMIT} results`;
+    return `Showing first ${SEARCH_RESULT_SAFETY_LIMIT} results${showingText}`;
   }
-  return `${input.loadedCount} result${input.loadedCount === 1 ? "" : "s"}`;
+  return `${input.loadedCount} result${input.loadedCount === 1 ? "" : "s"}${showingText}`;
 }
 
 function getSearchResultDisplayLabel(result: ReaderSearchResult, bookTitle: string | null | undefined): string {
