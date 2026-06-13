@@ -1,6 +1,14 @@
 import type { Book } from "@likecoin/epub-ts";
 import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../domain/types";
 
+type SectionRequest = (
+  url: string,
+  type?: string,
+  withCredentials?: boolean,
+  headers?: Record<string, string>,
+  signal?: AbortSignal,
+) => Promise<unknown>;
+
 export async function searchEpubTsBook(
   book: Book,
   query: string,
@@ -13,13 +21,14 @@ export async function searchEpubTsBook(
   const maxResults = clampInt(options?.maxResults, 1, 250, 100);
   const maxSeqEle = clampInt(options?.maxSeqEle, 1, 20, 6);
   const out: ReaderSearchResult[] = [];
+  const loadSectionResource = createSectionRequest(book);
 
   for (const section of book.spine.spineItems ?? []) {
     throwIfAborted(options?.signal);
     if (section.linear === false) continue;
 
     const wasLoaded = Boolean(section.document);
-    await section.load(book.request, options?.signal);
+    await section.load(loadSectionResource, options?.signal);
     throwIfAborted(options?.signal);
 
     try {
@@ -46,6 +55,15 @@ export async function searchEpubTsBook(
   }
 
   return out;
+}
+
+function createSectionRequest(book: Book): SectionRequest {
+  return async (url, type, _withCredentials, _headers, signal) => {
+    throwIfAborted(signal);
+    const result = await book.load(url, type);
+    throwIfAborted(signal);
+    return result;
+  };
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
