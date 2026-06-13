@@ -3,18 +3,21 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 import type { ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
 
 type SearchStatus = "idle" | "searching" | "ready" | "error";
-const MAX_SEARCH_RESULTS = 100;
+const SEARCH_RESULT_BATCH_SIZE = 50;
+const SEARCH_RESULT_SAFETY_LIMIT = 1000;
 
 export function BookSearchDrawer({
   open,
   ready,
   searchBook,
+  bookTitle,
   onClose,
   onJump,
 }: {
   open: boolean;
   ready: boolean;
   searchBook: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null;
+  bookTitle?: string | null;
   onClose: () => void;
   onJump: (result: ReaderSearchResult) => void;
 }) {
@@ -22,10 +25,12 @@ export function BookSearchDrawer({
   const [searchedQuery, setSearchedQuery] = useState("");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [results, setResults] = useState<ReaderSearchResult[]>([]);
+  const [visibleCount, setVisibleCount] = useState(SEARCH_RESULT_BATCH_SIZE);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -41,6 +46,11 @@ export function BookSearchDrawer({
   useEffect(() => {
     return () => abortRef.current?.abort();
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  }, [open]);
 
   if (!open) return null;
 
@@ -59,10 +69,20 @@ export function BookSearchDrawer({
     setStatus("searching");
     setError(null);
     setSearchedQuery(trimmed);
+    setResults([]);
+    setVisibleCount(SEARCH_RESULT_BATCH_SIZE);
 
     void (async () => {
       try {
-        const next = await searchBook(trimmed, { maxResults: MAX_SEARCH_RESULTS, maxSeqEle: 6, signal: controller.signal });
+        const next = await searchBook(trimmed, {
+          maxResults: SEARCH_RESULT_SAFETY_LIMIT,
+          maxSeqEle: 6,
+          signal: controller.signal,
+          onProgress: (partial) => {
+            if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+            setResults(partial);
+          },
+        });
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
         setResults(next);
         setStatus("ready");
@@ -74,12 +94,9 @@ export function BookSearchDrawer({
     })();
   };
 
-  const resultCountText =
-    status === "ready"
-      ? results.length >= MAX_SEARCH_RESULTS
-        ? `Showing first ${MAX_SEARCH_RESULTS} results`
-        : `${results.length} result${results.length === 1 ? "" : "s"}`
-      : null;
+  const visibleResults = results.slice(0, visibleCount);
+  const canShowMore = visibleCount < results.length;
+  const resultCountText = getResultCountText({ status, loadedCount: results.length });
 
   return (
     <div
@@ -113,6 +130,7 @@ export function BookSearchDrawer({
           }}
         >
           <input
+            ref={inputRef}
             className="input spBookSearchInput"
             type="search"
             value={query}
@@ -139,20 +157,81 @@ export function BookSearchDrawer({
           {status === "ready" && results.length === 0 ? (
             <div className="muted spBookSearchEmpty">No results for "{searchedQuery}".</div>
           ) : null}
-          {results.map((result) => (
+          {visibleResults.map((result) => (
             <article key={result.id} className="spBookSearchResult">
               <button type="button" className="spBookSearchResultButton" onClick={() => onJump(result)}>
-                <span className="spBookSearchResultLabel">{result.sectionLabel ?? "Section"}</span>
+                <span className="spBookSearchResultLabel">{getSearchResultDisplayLabel(result, bookTitle)}</span>
                 <span className="spBookSearchExcerpt" title={result.excerpt}>
                   {renderHighlightedExcerpt(result.excerpt, searchedQuery)}
                 </span>
               </button>
             </article>
           ))}
+          {canShowMore ? (
+            <div className="spBookSearchShowMoreRow">
+              <button
+                type="button"
+                className="button buttonCompact"
+                onClick={() => setVisibleCount((count) => count + SEARCH_RESULT_BATCH_SIZE)}
+              >
+                Show next {Math.min(SEARCH_RESULT_BATCH_SIZE, results.length - visibleCount)}
+              </button>
+            </div>
+          ) : null}
         </div>
       </aside>
     </div>
   );
+}
+
+function getResultCountText(input: { status: SearchStatus; loadedCount: number }): string | null {
+  if (input.status === "searching") {
+    return `Searching... ${input.loadedCount} found`;
+  }
+  if (input.status !== "ready") return null;
+  if (input.loadedCount >= SEARCH_RESULT_SAFETY_LIMIT) {
+    return `Showing first ${SEARCH_RESULT_SAFETY_LIMIT} results`;
+  }
+  return `${input.loadedCount} result${input.loadedCount === 1 ? "" : "s"}`;
+}
+
+function getSearchResultDisplayLabel(result: ReaderSearchResult, bookTitle: string | null | undefined): string {
+  const fallback = getSearchResultFallbackLabel(result);
+  const raw = typeof result.sectionLabel === "string" ? result.sectionLabel.trim() : "";
+  if (!raw) return fallback;
+
+  const stripped = stripBookTitleSuffix(raw, bookTitle);
+  if (!stripped) return fallback;
+  if (bookTitle && normalizeLabelForCompare(stripped) === normalizeLabelForCompare(bookTitle)) return fallback;
+  return stripped;
+}
+
+function getSearchResultFallbackLabel(result: ReaderSearchResult): string {
+  if (typeof result.linearIndex === "number" && result.linearIndex > 0) return `Chapter ${result.linearIndex}`;
+  if (typeof result.sectionIndex === "number") return `Section ${result.sectionIndex + 1}`;
+  return "Section";
+}
+
+function stripBookTitleSuffix(label: string, bookTitle: string | null | undefined): string {
+  const title = typeof bookTitle === "string" ? bookTitle.trim() : "";
+  if (!title) return label;
+  const normalizedTitle = normalizeLabelForCompare(title);
+  const separators = [",", " - ", " – ", " — ", ":", "|"];
+
+  for (const separator of separators) {
+    const idx = label.lastIndexOf(separator);
+    if (idx <= 0) continue;
+    const suffix = label.slice(idx + separator.length).trim();
+    if (normalizeLabelForCompare(suffix) === normalizedTitle) {
+      return label.slice(0, idx).trim();
+    }
+  }
+
+  return label;
+}
+
+function normalizeLabelForCompare(value: string): string {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function renderHighlightedExcerpt(excerpt: string, query: string) {

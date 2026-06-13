@@ -643,7 +643,7 @@
   line-height: 1.35;
   overflow-wrap: anywhere;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -653,6 +653,12 @@
   background: rgba(250, 204, 21, 0.38);
   color: inherit;
   padding: 0 1px;
+}
+
+.spBookSearchShowMoreRow {
+  display: flex;
+  justify-content: center;
+  padding: 10px 4px 4px;
 }
 
 .spMarginaliaMenuHost {

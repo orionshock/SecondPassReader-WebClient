@@ -88,6 +88,7 @@ export type ReaderSearchOptions = {
   maxResults?: number;
   maxSeqEle?: number;
   signal?: AbortSignal;
+  onProgress?: (results: ReaderSearchResult[]) => void;
 };
 
 export type ReaderLocationTarget =

@@ -19,7 +19,7 @@ export async function searchEpubTsBook(
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const maxResults = clampInt(options?.maxResults, 1, 250, 100);
+  const maxResults = clampInt(options?.maxResults, 1, 5000, 1000);
   const maxSeqEle = clampInt(options?.maxSeqEle, 1, 20, 6);
   const out: ReaderSearchResult[] = [];
   const loadSectionResource = createSectionRequest(book);
@@ -50,6 +50,7 @@ export async function searchEpubTsBook(
           sectionIdref: section.idref,
           sectionLabel: deriveSectionLabel({ toc, href: sectionHref, section, linearIndex, sectionIndex }),
         });
+        if (out.length % 25 === 0) options?.onProgress?.([...out]);
         if (out.length >= maxResults) return out;
       }
       // TODO: future search can flatten section text and map offsets back to CFI
@@ -57,6 +58,8 @@ export async function searchEpubTsBook(
     } finally {
       if (!wasLoaded) section.unload();
     }
+    options?.onProgress?.([...out]);
+    await yieldToBrowser();
   }
 
   return out;
@@ -73,6 +76,10 @@ function createSectionRequest(book: Book): SectionRequest {
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw new DOMException("Search cancelled.", "AbortError");
+}
+
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
 }
 
 function clampInt(value: number | undefined, min: number, max: number, fallback: number): number {

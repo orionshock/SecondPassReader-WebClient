@@ -321,6 +321,7 @@ function ReaderActivityContent({
         open={searchOpen}
         ready={readerState.search.ready}
         searchBook={readerState.search.searchBook}
+        bookTitle={openedBook.book.title}
         onClose={() => {
           readerState.search.clearTemporaryHighlight();
           setSearchOpen(false);
