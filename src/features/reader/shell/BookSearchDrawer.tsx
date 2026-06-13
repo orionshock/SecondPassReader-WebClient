@@ -55,9 +55,24 @@ export function BookSearchDrawer({
   if (!open) return null;
 
   const trimmed = query.trim();
-  const canSearch = ready && Boolean(searchBook) && trimmed.length >= 2 && status !== "searching";
+  const canSubmitSearch = ready && Boolean(searchBook) && status !== "searching" && (trimmed.length === 0 || trimmed.length >= 2);
+
+  const clearSearchResults = () => {
+    abortRef.current?.abort();
+    requestIdRef.current += 1;
+    setSearchedQuery("");
+    setStatus("idle");
+    setResults([]);
+    setVisibleCount(SEARCH_RESULT_BATCH_SIZE);
+    setError(null);
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  };
 
   const runSearch = () => {
+    if (!trimmed) {
+      clearSearchResults();
+      return;
+    }
     if (!searchBook) return;
     if (trimmed.length < 2) return;
 
@@ -139,7 +154,7 @@ export function BookSearchDrawer({
             aria-label="Search text"
             disabled={!ready}
           />
-          <button type="submit" className="button buttonPrimary spBookSearchButton" disabled={!canSearch}>
+          <button type="submit" className="button buttonPrimary spBookSearchButton" disabled={!canSubmitSearch}>
             Search
           </button>
         </form>
