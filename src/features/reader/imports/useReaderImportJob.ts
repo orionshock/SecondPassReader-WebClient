@@ -26,6 +26,13 @@ export function useReaderImportJob() {
     setJob((prev) => prev ? { ...prev, rows: prev.rows.map((row) => row.id === rowId ? { ...row, status } : row) } : prev);
   }, []);
 
+  const setSourcedRowStatus = useCallback((jobId: string, rowId: string, status: ReaderImportRowStatus) => {
+    setJob((prev) => {
+      if (!prev || prev.id !== jobId) return prev;
+      return { ...prev, rows: prev.rows.map((row) => row.id === rowId ? { ...row, status } : row) };
+    });
+  }, []);
+
   const selectRow = useCallback((rowId: string) => {
     setJob((prev) => prev ? { ...prev, activeRowId: rowId } : prev);
   }, []);
@@ -54,6 +61,9 @@ export function useReaderImportJob() {
     startGlaspCsvImport,
     clearJob,
     selectRow,
+    setRowStatus,
+    markRowAccepted: (jobId: string, rowId: string) => setSourcedRowStatus(jobId, rowId, "accepted"),
+    markRowPending: (jobId: string, rowId: string) => setSourcedRowStatus(jobId, rowId, "pending"),
     skipRow: (rowId: string) => setRowStatus(rowId, "skipped"),
     unskipRow: (rowId: string) => setRowStatus(rowId, "pending"),
   };

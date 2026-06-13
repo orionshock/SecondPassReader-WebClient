@@ -12,6 +12,7 @@ import { MarginaliaMenu } from "./shell/MarginaliaMenu";
 import { BookSearchDrawer } from "./shell/bookSearch/BookSearchDrawer";
 import { ReaderImportDrawer } from "./imports/ReaderImportDrawer";
 import { ReaderImportModal } from "./imports/ReaderImportModal";
+import { useReaderImportActivation } from "./imports/useReaderImportActivation";
 import { useReaderImportJob } from "./imports/useReaderImportJob";
 import { EndOfBookDialog } from "./EndOfBookDialog";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
@@ -64,6 +65,16 @@ export function ReadingActivity({
         settings={displaySettings}
         onSettingsChange={readerDisplaySettings.updateSettings}
         onSettingsReset={readerDisplaySettings.resetSettings}
+        onStagedSelectionCommitted={(source) => {
+          if (source.kind !== "import") return;
+          readerImport.markRowAccepted(source.importJobId, source.importRowId);
+          readerImport.setDrawerOpen(true);
+        }}
+        onStagedSelectionCanceled={(source) => {
+          if (source.kind !== "import") return;
+          readerImport.markRowPending(source.importJobId, source.importRowId);
+          readerImport.setDrawerOpen(true);
+        }}
       >
         {(readerState) => (
           <ReaderActivityContent
@@ -151,6 +162,26 @@ function ReaderActivityContent({
     { action: "detail", label: "View closed session" },
     { action: "sessions", label: "Go to sessions" },
   ];
+  const activateImportRow = useReaderImportActivation({
+    job: readerImport.job,
+    searchBook: readerState.search.searchBook,
+    stagedSelectionHandle: readerState.stagedSelection.handle,
+    selectRow: readerImport.selectRow,
+    setRowStatus: readerImport.setRowStatus,
+    setDrawerOpen: readerImport.setDrawerOpen,
+    jumpToResult: readerState.search.jumpToResult,
+  });
+
+  const clearImportJob = () => {
+    readerState.stagedSelection.handle?.cancelStagedSelection();
+    readerImport.clearJob();
+  };
+
+  const skipImportRow = (rowId: string) => {
+    const row = readerImport.job?.rows.find((item) => item.id === rowId);
+    if (row?.status === "staged") readerState.stagedSelection.handle?.cancelStagedSelection();
+    readerImport.skipRow(rowId);
+  };
 
   useEffect(() => {
     if (!initialSearchQuery?.trim()) return;
@@ -371,9 +402,11 @@ function ReaderActivityContent({
         job={readerImport.job}
         counts={readerImport.counts}
         onClose={() => readerImport.setDrawerOpen(false)}
-        onClear={readerImport.clearJob}
-        onSelectRow={readerImport.selectRow}
-        onSkipRow={readerImport.skipRow}
+        onClear={clearImportJob}
+        onSelectRow={(rowId) => {
+          void activateImportRow(rowId);
+        }}
+        onSkipRow={skipImportRow}
         onUnskipRow={readerImport.unskipRow}
       />
 

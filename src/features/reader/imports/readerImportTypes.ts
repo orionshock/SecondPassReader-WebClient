@@ -1,6 +1,6 @@
 export type ReaderImportFormat = "glasp-csv";
 export type ReaderHighlightColor = "yellow" | "green" | "blue" | "pink" | "purple";
-export type ReaderImportRowStatus = "pending" | "selected" | "accepted" | "skipped" | "not-found";
+export type ReaderImportRowStatus = "pending" | "searching" | "staged" | "accepted" | "skipped" | "not-found";
 
 export type ReaderImportRow = {
   id: string;

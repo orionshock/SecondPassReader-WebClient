@@ -26,7 +26,7 @@ export function ReaderImportRowItem({
         {row.importedLocation ? <span className="muted spReaderImportLocation">{row.importedLocation}</span> : null}
       </button>
       <div className="spReaderImportRowActions">
-        {row.status === "skipped" ? (
+        {row.status === "accepted" ? null : row.status === "skipped" ? (
           <button type="button" className="button buttonCompact" onClick={onUnskip}>Unskip</button>
         ) : (
           <button type="button" className="button buttonCompact" onClick={onSkip}>Skip</button>
@@ -38,5 +38,6 @@ export function ReaderImportRowItem({
 
 function statusLabel(status: ReaderImportRow["status"]): string {
   if (status === "not-found") return "Not found";
+  if (status === "staged") return "Reviewing";
   return status[0].toUpperCase() + status.slice(1);
 }
