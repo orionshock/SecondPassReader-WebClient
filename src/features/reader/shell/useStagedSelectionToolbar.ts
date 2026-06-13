@@ -63,6 +63,9 @@ export function useStagedSelectionToolbar(args: {
 
   const clearStaged = useCallback((options?: { notifyCancel?: boolean }) => {
     const source = stagedSourceRef.current;
+    stagedSelectionRef.current = null;
+    stagedSourceRef.current = { kind: "user-selection" };
+    noteDraftRef.current = "";
     setStagedSelection(null);
     setStagedSource({ kind: "user-selection" });
     setStagedColor("yellow");
@@ -106,8 +109,16 @@ export function useStagedSelectionToolbar(args: {
       // Selecting new text discards any previous uncommitted staged highlight.
       const nextColor = options?.color?.trim() || "yellow";
       const nextNote = options?.note?.trim() ?? "";
+      const nextSource = options?.source ?? { kind: "user-selection" };
+      const previousSource = stagedSourceRef.current;
+      if (stagedSelectionRef.current && previousSource.kind !== "user-selection" && nextSource.kind === "user-selection") {
+        onCanceledRef.current?.(previousSource);
+      }
+      stagedSelectionRef.current = selection;
+      stagedSourceRef.current = nextSource;
+      noteDraftRef.current = nextNote;
       setStagedSelection(selection);
-      setStagedSource(options?.source ?? { kind: "user-selection" });
+      setStagedSource(nextSource);
       setStagedColor(nextColor);
       setNoteOpen(Boolean(nextNote));
       setNoteDraft(nextNote);
@@ -137,13 +148,17 @@ export function useStagedSelectionToolbar(args: {
   const onSelectionChanged = useCallback(
     (selection: ReaderSelection | null) => {
       if (!selection) {
-        if (stagedSelectionRef.current) cancelStaged();
+        if (stagedSelectionRef.current && stagedSourceRef.current.kind === "user-selection") cancelStaged();
         return;
       }
       stageSelection(selection);
     },
     [cancelStaged, stageSelection],
   );
+
+  const shouldCancelOnLocationChange = useCallback(() => {
+    return Boolean(stagedSelectionRef.current && stagedSourceRef.current.kind === "user-selection");
+  }, []);
 
   const stagedMark: ReaderHighlightMark[] = useMemo(() => {
     return stagedSelection?.cfiRange
@@ -206,6 +221,7 @@ export function useStagedSelectionToolbar(args: {
     noteDraft,
     toolbarPos,
     onSelectionChanged,
+    shouldCancelOnLocationChange,
     cancelStaged,
     stageSelectionFromCfiRange,
     setNoteDraft,

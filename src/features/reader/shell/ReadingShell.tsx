@@ -90,7 +90,7 @@ export function ReadingShell(props: ReadingShellProps) {
     onStagedSelectionCanceled: props.onStagedSelectionCanceled,
     commitBusy: props.highlightCommitBusy,
   });
-  const { onSelectionChanged, cancelStaged, stagedSelectionRef } = staged;
+  const { onSelectionChanged, cancelStaged, shouldCancelOnLocationChange } = staged;
 
   useEffect(() => {
     props.onStagedSelectionReady?.({
@@ -146,7 +146,7 @@ export function ReadingShell(props: ReadingShellProps) {
            enableLocationsGeneration: true,
            displaySettings: settingsRef.current,
            onLocationChanged: (location) => {
-             if (stagedSelectionRef.current) cancelStaged();
+             if (shouldCancelOnLocationChange()) cancelStaged();
              onEventRef.current?.({ type: "locationChanged", location });
            },
           onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
@@ -222,7 +222,7 @@ export function ReadingShell(props: ReadingShellProps) {
     props.onSearchReady,
     reportCommandError,
     runCommandOnEngine,
-    stagedSelectionRef,
+    shouldCancelOnLocationChange,
   ]);
 
   useEffect(() => {
