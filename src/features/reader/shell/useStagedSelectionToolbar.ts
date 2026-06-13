@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import type { ReaderHighlightMark, ReaderSelection } from "../domain/types";
+import type {
+  ProgrammaticStagedSelectionInput,
+  StagedSelectionCommitInput,
+  StagedSelectionSource,
+  StagedSelectionToolbarPosition,
+} from "./stagedSelectionTypes";
 
-export type StagedSelectionToolbarPos = {
-  left: number;
-  top: number;
-  placement: "above" | "below";
-};
+export type StagedSelectionToolbarPos = StagedSelectionToolbarPosition;
 
 export function useStagedSelectionToolbar(args: {
   engineRef: React.MutableRefObject<EpubTsBookEngine | null>;
   mountWrapperRef: React.RefObject<HTMLDivElement | null>;
   highlightMarks?: ReaderHighlightMark[];
-  onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
+  onCommitHighlight?: (input: StagedSelectionCommitInput) => Promise<void>;
+  onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
+  onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
   commitBusy?: boolean;
 }) {
   const [stagedSelection, setStagedSelection] = useState<ReaderSelection | null>(null);
   const stagedSelectionRef = useRef<ReaderSelection | null>(null);
+  const [stagedSource, setStagedSource] = useState<StagedSelectionSource>({ kind: "user-selection" });
+  const stagedSourceRef = useRef<StagedSelectionSource>({ kind: "user-selection" });
   const [stagedColor, setStagedColor] = useState<string>("yellow");
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
@@ -33,42 +39,84 @@ export function useStagedSelectionToolbar(args: {
   }, [stagedSelection]);
 
   useEffect(() => {
+    stagedSourceRef.current = stagedSource;
+  }, [stagedSource]);
+
+  useEffect(() => {
     noteDraftRef.current = noteDraft;
   }, [noteDraft]);
 
-  const cancelStaged = useCallback(() => {
+  const clearStaged = useCallback((options?: { notifyCancel?: boolean }) => {
+    const source = stagedSourceRef.current;
     setStagedSelection(null);
+    setStagedSource({ kind: "user-selection" });
     setStagedColor("yellow");
     setNoteOpen(false);
     setNoteDraft("");
     setToolbarPos(null);
     args.engineRef.current?.clearSelection();
-  }, [args.engineRef]);
+    if (options?.notifyCancel && source.kind !== "user-selection") {
+      args.onStagedSelectionCanceled?.(source);
+    }
+  }, [args.engineRef, args.onStagedSelectionCanceled]);
 
-  const stageSelection = useCallback(
-    (selection: ReaderSelection) => {
-      // Selecting new text discards any previous uncommitted staged highlight.
-      setStagedSelection(selection);
-      setStagedColor("yellow");
-      setNoteOpen(false);
-      setNoteDraft("");
+  const cancelStaged = useCallback(() => {
+    clearStaged({ notifyCancel: true });
+  }, [clearStaged]);
 
+  const getFallbackToolbarPos = useCallback((): StagedSelectionToolbarPos | null => {
+    const wrapper = args.mountWrapperRef.current;
+    if (!wrapper) return null;
+    const r = wrapper.getBoundingClientRect();
+    return { left: r.width / 2, top: 18, placement: "below" };
+  }, [args.mountWrapperRef]);
+
+  const getToolbarPosForSelection = useCallback(
+    (selection: ReaderSelection, fallback?: StagedSelectionToolbarPos | null): StagedSelectionToolbarPos | null => {
       const wrapper = args.mountWrapperRef.current;
       const anchor = selection.anchor;
-      if (wrapper && anchor) {
-        const r = wrapper.getBoundingClientRect();
-        const left = Math.max(12, Math.min(r.width - 12, anchor.x - r.left));
-        const topRaw = Math.max(0, Math.min(r.height, anchor.y - r.top));
-        const placement: "above" | "below" = topRaw < 72 ? "below" : "above";
-        setToolbarPos({ left, top: topRaw, placement });
-      } else if (wrapper) {
-        const r = wrapper.getBoundingClientRect();
-        setToolbarPos({ left: r.width / 2, top: 18, placement: "below" });
-      } else {
-        setToolbarPos(null);
-      }
+      if (!wrapper) return fallback ?? null;
+      if (!anchor) return fallback ?? getFallbackToolbarPos();
+      const r = wrapper.getBoundingClientRect();
+      const left = Math.max(12, Math.min(r.width - 12, anchor.x - r.left));
+      const topRaw = Math.max(0, Math.min(r.height, anchor.y - r.top));
+      const placement: "above" | "below" = topRaw < 72 ? "below" : "above";
+      return { left, top: topRaw, placement };
     },
-    [args.mountWrapperRef],
+    [args.mountWrapperRef, getFallbackToolbarPos],
+  );
+
+  const stageSelection = useCallback(
+    (selection: ReaderSelection, options?: { source?: StagedSelectionSource; color?: string; note?: string; toolbarPosition?: StagedSelectionToolbarPos | null }) => {
+      // Selecting new text discards any previous uncommitted staged highlight.
+      const nextColor = options?.color?.trim() || "yellow";
+      const nextNote = options?.note?.trim() ?? "";
+      setStagedSelection(selection);
+      setStagedSource(options?.source ?? { kind: "user-selection" });
+      setStagedColor(nextColor);
+      setNoteOpen(Boolean(nextNote));
+      setNoteDraft(nextNote);
+      setToolbarPos(getToolbarPosForSelection(selection, options?.toolbarPosition ?? null));
+    },
+    [getToolbarPosForSelection],
+  );
+
+  const stageSelectionFromCfiRange = useCallback(
+    (input: ProgrammaticStagedSelectionInput) => {
+      const cfiRange = input.cfiRange.trim();
+      const text = input.text.trim();
+      if (!cfiRange || !text) return;
+      stageSelection(
+        { cfiRange, text },
+        {
+          color: input.color,
+          note: input.note,
+          source: input.source ?? { kind: "user-selection" },
+          toolbarPosition: input.toolbarPosition ?? getFallbackToolbarPos(),
+        },
+      );
+    },
+    [getFallbackToolbarPos, stageSelection],
   );
 
   const onSelectionChanged = useCallback(
@@ -123,23 +171,27 @@ export function useStagedSelectionToolbar(args: {
           color,
           note: noteTrimmed ? noteTrimmed : undefined,
         });
-        cancelStaged();
+        const source = stagedSourceRef.current;
+        clearStaged();
+        if (source.kind !== "user-selection") args.onStagedSelectionCommitted?.(source);
       } catch {
         // Keep staged highlight + toolbar open on failure.
       }
     },
-    [args.onCommitHighlight, cancelStaged],
+    [args.onCommitHighlight, args.onStagedSelectionCommitted, clearStaged],
   );
 
   return {
     stagedSelection,
     stagedSelectionRef,
+    stagedSource,
     stagedColor,
     noteOpen,
     noteDraft,
     toolbarPos,
     onSelectionChanged,
     cancelStaged,
+    stageSelectionFromCfiRange,
     setNoteDraft,
     toggleNote: () => setNoteOpen((v) => !v),
     commitColor,

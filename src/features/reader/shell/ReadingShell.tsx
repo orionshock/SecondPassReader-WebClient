@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
 import type {
   ReaderDescribeCfiHandle,
   ReaderSearchBookHandle,
@@ -15,6 +15,7 @@ import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
+import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -24,8 +25,11 @@ export type ReadingShellProps = {
   command?: ReadingShellCommand;
   highlightMarks?: ReaderHighlightMark[];
   temporarySearchHighlightCfi?: string | null;
-  onCommitHighlight?: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
+  onCommitHighlight?: (input: StagedSelectionCommitInput) => Promise<void>;
   highlightCommitBusy?: boolean;
+  onStagedSelectionReady?: (handle: StagedSelectionHandle | null) => void;
+  onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
+  onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
   onDescribeCfiReady?: (fn: ReaderDescribeCfiHandle | null) => void;
   onSearchReady?: (fn: ReaderSearchBookHandle | null) => void;
   settings?: ReaderSettings;
@@ -82,9 +86,19 @@ export function ReadingShell(props: ReadingShellProps) {
     mountWrapperRef,
     highlightMarks: props.highlightMarks,
     onCommitHighlight: props.onCommitHighlight,
+    onStagedSelectionCommitted: props.onStagedSelectionCommitted,
+    onStagedSelectionCanceled: props.onStagedSelectionCanceled,
     commitBusy: props.highlightCommitBusy,
   });
   const { onSelectionChanged, cancelStaged, stagedSelectionRef } = staged;
+
+  useEffect(() => {
+    props.onStagedSelectionReady?.({
+      stageSelectionFromCfiRange: staged.stageSelectionFromCfiRange,
+      cancelStagedSelection: staged.cancelStaged,
+    });
+    return () => props.onStagedSelectionReady?.(null);
+  }, [props.onStagedSelectionReady, staged.cancelStaged, staged.stageSelectionFromCfiRange]);
 
   const reportCommandError = useCallback(
     (err: unknown, fallback: string, generation: number) => {

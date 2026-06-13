@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
 import type { ReaderSearchBookHandle, ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/types";
+import type { StagedSelectionHandle, StagedSelectionSource } from "../shell/stagedSelectionTypes";
 import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
@@ -24,6 +25,8 @@ export type ReadingSessionOrchestratorProps = {
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
   onSettingsReset?: () => void;
+  onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
+  onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
   children: (arg: {
     state: ReadingSessionState;
     statusLine: string[];
@@ -36,6 +39,10 @@ export type ReadingSessionOrchestratorProps = {
       searchBook: ReaderSearchBookHandle | null;
       jumpToResult: (cfi: string) => void;
       clearTemporaryHighlight: () => void;
+    };
+    stagedSelection: {
+      ready: boolean;
+      handle: StagedSelectionHandle | null;
     };
     marginalia: {
       listStatus: "idle" | "loading" | "ready" | "error";
@@ -68,6 +75,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
+  const [stagedSelectionHandle, setStagedSelectionHandle] = useState<StagedSelectionHandle | null>(null);
   const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
   const commandSeqRef = useRef(0);
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
@@ -216,6 +224,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setSearchBook(() => fn);
   }, []);
 
+  const handleStagedSelectionReady = useCallback((handle: StagedSelectionHandle | null) => {
+    setStagedSelectionHandle(handle);
+  }, []);
+
   // Keep this callback referentially stable: `ReadingShell`'s engine init effect depends on `onEvent`.
   // Unstable callbacks here can cause destroy/re-init loops (duplicated network requests, blank viewport).
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
@@ -282,6 +294,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         temporarySearchHighlightCfi={temporarySearchHighlightCfi}
         onDescribeCfiReady={handleDescribeCfiReady}
         onSearchReady={handleSearchReady}
+        onStagedSelectionReady={handleStagedSelectionReady}
+        onStagedSelectionCommitted={props.onStagedSelectionCommitted}
+        onStagedSelectionCanceled={props.onStagedSelectionCanceled}
         highlightMarks={visibleHighlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}
         highlightCommitBusy={annotationBusy}
@@ -297,6 +312,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       searchBook,
       jumpToResult: jumpToSearchResult,
       clearTemporaryHighlight: clearSearchResultHighlight,
+    },
+    stagedSelection: {
+      ready: Boolean(stagedSelectionHandle),
+      handle: stagedSelectionHandle,
     },
     marginalia: {
       listStatus: previousLayers.listStatus,
