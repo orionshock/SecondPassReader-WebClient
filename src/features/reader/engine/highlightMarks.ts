@@ -208,15 +208,24 @@ function isReservedHighlightId(id: string): boolean {
 }
 
 function getEventClientPoint(event: Event | undefined): { clientX: number; clientY: number } | null {
+  const frameOffset = getFrameOffset(event);
   const mouse = event as MouseEvent | undefined;
   if (typeof mouse?.clientX === "number" && typeof mouse.clientY === "number" && (mouse.clientX || mouse.clientY)) {
-    return { clientX: mouse.clientX, clientY: mouse.clientY };
+    return { clientX: mouse.clientX + frameOffset.left, clientY: mouse.clientY + frameOffset.top };
   }
   const touch = event as TouchEvent | undefined;
   const firstTouch = touch?.changedTouches?.[0] ?? touch?.touches?.[0];
-  if (firstTouch) return { clientX: firstTouch.clientX, clientY: firstTouch.clientY };
+  if (firstTouch) return { clientX: firstTouch.clientX + frameOffset.left, clientY: firstTouch.clientY + frameOffset.top };
   const el = event?.currentTarget instanceof Element ? event.currentTarget : null;
   const rect = el?.getBoundingClientRect();
-  if (rect) return { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
+  if (rect) return { clientX: rect.left + rect.width / 2 + frameOffset.left, clientY: rect.top + rect.height / 2 + frameOffset.top };
   return null;
+}
+
+function getFrameOffset(event: Event | undefined): { left: number; top: number } {
+  const el = event?.currentTarget instanceof Element ? event.currentTarget : null;
+  const frame = el?.ownerDocument?.defaultView?.frameElement;
+  if (!(frame instanceof Element)) return { left: 0, top: 0 };
+  const rect = frame.getBoundingClientRect();
+  return { left: rect.left, top: rect.top };
 }

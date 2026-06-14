@@ -114,21 +114,25 @@ export function ReadingShell(props: ReadingShellProps) {
     const height = window.innerHeight || document.documentElement.clientHeight || 1;
     const toolbarWidth = Math.min(340, Math.max(220, width - margin * 2));
     const toolbarHalf = toolbarWidth / 2;
-    const estimatedToolbarHeight = Math.min(230, Math.max(120, height - margin * 2));
+    const estimatedToolbarHeight = Math.min(220, Math.max(120, height - margin * 2));
     const leftRaw = typeof clientX === "number" ? clientX : width / 2;
-    const topRaw = typeof clientY === "number" ? clientY : margin + 24;
+    const topRaw = typeof clientY === "number" ? clientY : height / 2;
     const minLeft = Math.min(width / 2, toolbarHalf + margin);
     const maxLeft = Math.max(minLeft, width - toolbarHalf - margin);
     const left = Math.max(minLeft, Math.min(maxLeft, leftRaw));
-    const topClampedToPage = Math.max(margin, Math.min(Math.max(margin, height - margin), topRaw));
-    const spaceAbove = topClampedToPage - margin;
-    const spaceBelow = height - topClampedToPage - margin;
-    const placement: "above" | "below" =
-      spaceBelow >= estimatedToolbarHeight || spaceBelow >= spaceAbove ? "below" : "above";
-    const top =
-      placement === "above"
-        ? Math.max(topClampedToPage, estimatedToolbarHeight + margin)
-        : Math.min(topClampedToPage, Math.max(margin, height - estimatedToolbarHeight - margin));
+    const topAtAnchor = Math.max(margin, Math.min(Math.max(margin, height - margin), topRaw));
+    const canFitAbove = topAtAnchor - margin >= estimatedToolbarHeight;
+    const canFitBelow = height - topAtAnchor - margin >= estimatedToolbarHeight;
+    const placement: "above" | "below" = chooseToolbarPlacement({
+      canFitAbove,
+      canFitBelow,
+      height,
+      top: topAtAnchor,
+      toolbarHeight: estimatedToolbarHeight,
+    });
+    const top = placement === "above"
+      ? Math.max(estimatedToolbarHeight + margin, topAtAnchor)
+      : Math.min(height - estimatedToolbarHeight - margin, topAtAnchor);
     return { left, top, placement };
   }, []);
 
@@ -530,4 +534,27 @@ function waitForReaderLayout(): Promise<void> {
       window.requestAnimationFrame(() => resolve());
     });
   });
+}
+
+function chooseToolbarPlacement({
+  canFitAbove,
+  canFitBelow,
+  height,
+  top,
+  toolbarHeight,
+}: {
+  canFitAbove: boolean;
+  canFitBelow: boolean;
+  height: number;
+  top: number;
+  toolbarHeight: number;
+}): "above" | "below" {
+  if (canFitAbove && !canFitBelow) return "above";
+  if (canFitBelow && !canFitAbove) return "below";
+  if (!canFitAbove && !canFitBelow) return top > height / 2 ? "above" : "below";
+
+  const viewportMiddle = height / 2;
+  const aboveMiddle = top - toolbarHeight / 2;
+  const belowMiddle = top + toolbarHeight / 2;
+  return Math.abs(aboveMiddle - viewportMiddle) <= Math.abs(belowMiddle - viewportMiddle) ? "above" : "below";
 }

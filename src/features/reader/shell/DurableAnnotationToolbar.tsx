@@ -55,7 +55,7 @@ export function DurableAnnotationToolbar({
   const style = useMemo(() => ({
     left: `${position.left}px`,
     top: `${position.top}px`,
-    transform: position.placement === "above" ? "translate(-50%, calc(-100% - 10px))" : "translate(-50%, 10px)",
+    transform: position.placement === "above" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
   }) as const, [position.left, position.placement, position.top]);
 
   const quote = item.quoteText?.trim() || "Highlight";
@@ -168,31 +168,33 @@ export function DurableAnnotationToolbar({
         note ? <div className="spDurableAnnotationNote">{note}</div> : null
       ) : null}
 
-      <div className="spDurableAnnotationActions">
-        {item.mode === "editable" && !editing ? (
-          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Edit note and color" aria-label="Edit note and color" onClick={() => setEditing(true)} disabled={isBusy}>
-            <MaterialIcon name="edit_note" />
+      {!editing ? (
+        <div className="spDurableAnnotationActions">
+          {item.mode === "editable" ? (
+            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Edit note and color" aria-label="Edit note and color" onClick={() => setEditing(true)} disabled={isBusy}>
+              <MaterialIcon name="edit_note" />
+            </button>
+          ) : null}
+          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in annotation workspace" aria-label="Open in annotation workspace" onClick={onOpenWorkspace} disabled={isBusy}>
+            <MaterialIcon name="open_in_new" />
           </button>
-        ) : null}
-        <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in annotation workspace" aria-label="Open in annotation workspace" onClick={onOpenWorkspace} disabled={isBusy}>
-          <MaterialIcon name="open_in_new" />
-        </button>
-        {item.mode === "editable" ? (
-          <button
-            type="button"
-            className="button buttonDanger buttonCompact spIconButton spIconButtonTight spDurableAnnotationDeleteButton"
-            title="Delete annotation"
-            aria-label="Delete annotation"
-            onClick={onDelete}
-            disabled={isBusy}
-          >
-            <MaterialIcon name="delete" />
+          {item.mode === "editable" ? (
+            <button
+              type="button"
+              className="button buttonDanger buttonCompact spIconButton spIconButtonTight spDurableAnnotationDeleteButton"
+              title="Delete annotation"
+              aria-label="Delete annotation"
+              onClick={onDelete}
+              disabled={isBusy}
+            >
+              <MaterialIcon name="delete" />
+            </button>
+          ) : null}
+          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close annotation toolbar" aria-label="Close annotation toolbar" onClick={onClose} disabled={isBusy}>
+            <MaterialIcon name="close" />
           </button>
-        ) : null}
-        <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close annotation toolbar" aria-label="Close annotation toolbar" onClick={onClose} disabled={isBusy}>
-          <MaterialIcon name="close" />
-        </button>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
