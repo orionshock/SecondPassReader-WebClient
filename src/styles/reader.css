@@ -401,9 +401,9 @@
 }
 
 .spDurableAnnotationToolbar {
-  position: absolute;
+  position: fixed;
   pointer-events: auto;
-  z-index: 121;
+  z-index: 180;
   width: min(340px, calc(100% - 16px));
   display: grid;
   gap: 7px;
@@ -413,13 +413,6 @@
   color: var(--sp-reader-text);
   background: var(--sp-reader-surface);
   box-shadow: 0 12px 32px rgba(17, 24, 39, 0.16);
-}
-
-.spDurableAnnotationHeader {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
-  align-items: start;
 }
 
 .spDurableAnnotationQuote {
@@ -461,6 +454,16 @@
   justify-content: flex-end;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.spDurableAnnotationDeleteButton {
+  color: #991b1b;
+  border-color: rgba(153, 27, 27, 0.35);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.spDurableAnnotationDeleteButton:hover {
+  background: rgba(220, 38, 38, 0.16);
 }
 
 .spReaderPageNav {

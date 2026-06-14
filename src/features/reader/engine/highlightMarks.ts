@@ -86,12 +86,12 @@ export function createHighlightMarkPainter(args: {
     return (event?: Event) => {
       event?.preventDefault?.();
       event?.stopPropagation?.();
-      const mouse = event as MouseEvent | undefined;
+      const point = getEventClientPoint(event);
       onHighlightClick({
         annotationId: id,
         cfiRange,
-        clientX: typeof mouse?.clientX === "number" ? mouse.clientX : undefined,
-        clientY: typeof mouse?.clientY === "number" ? mouse.clientY : undefined,
+        clientX: point?.clientX,
+        clientY: point?.clientY,
       });
     };
   };
@@ -205,4 +205,18 @@ export function createHighlightMarkPainter(args: {
 
 function isReservedHighlightId(id: string): boolean {
   return id === "__staged_selection__" || id === "sp-search-result-highlight";
+}
+
+function getEventClientPoint(event: Event | undefined): { clientX: number; clientY: number } | null {
+  const mouse = event as MouseEvent | undefined;
+  if (typeof mouse?.clientX === "number" && typeof mouse.clientY === "number" && (mouse.clientX || mouse.clientY)) {
+    return { clientX: mouse.clientX, clientY: mouse.clientY };
+  }
+  const touch = event as TouchEvent | undefined;
+  const firstTouch = touch?.changedTouches?.[0] ?? touch?.touches?.[0];
+  if (firstTouch) return { clientX: firstTouch.clientX, clientY: firstTouch.clientY };
+  const el = event?.currentTarget instanceof Element ? event.currentTarget : null;
+  const rect = el?.getBoundingClientRect();
+  if (rect) return { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
+  return null;
 }
