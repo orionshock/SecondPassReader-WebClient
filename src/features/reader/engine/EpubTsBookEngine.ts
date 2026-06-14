@@ -6,7 +6,7 @@ import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
-import { createHighlightMarkPainter } from "./highlightMarks";
+import { createHighlightMarkPainter, type HighlightMarkClick } from "./highlightMarks";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
 import { searchEpubTsBook } from "./EpubTsBookSearch";
@@ -26,6 +26,7 @@ export type EpubTsBookEngineInit = {
   onTocReady?: (toc: ReaderTocItem[]) => void;
   onLocationsReady?: () => void;
   onSelectionChanged?: (selection: ReaderSelection | null) => void;
+  onHighlightClick?: (click: HighlightMarkClick) => void;
   onError?: (error: unknown) => void;
   /**
    * Enables background locations generation for approximate whole-book percentages.
@@ -275,7 +276,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   if (init.enableLocationsGeneration) startLocationsGeneration();
 
-  const highlightMarkPainter = createHighlightMarkPainter({ rendition, onError: init.onError });
+  const highlightMarkPainter = createHighlightMarkPainter({ rendition, onError: init.onError, onHighlightClick: init.onHighlightClick });
 
   return {
     async display(target?: ReaderLocationTarget) {

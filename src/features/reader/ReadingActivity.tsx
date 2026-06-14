@@ -45,6 +45,7 @@ export function ReadingActivity({
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);
+  const [workspaceFocusRequest, setWorkspaceFocusRequest] = useState<{ annotationId: string; mode: "editable" | "readonly"; seq: number } | null>(null);
   const readerImport = useReaderImportJob();
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
@@ -75,6 +76,9 @@ export function ReadingActivity({
           readerImport.markRowPending(source.importJobId, source.importRowId);
           readerImport.setDrawerOpen(true);
         }}
+        onOpenAnnotationInWorkspace={(annotationId, mode) => {
+          setWorkspaceFocusRequest((prev) => ({ annotationId, mode, seq: (prev?.seq ?? 0) + 1 }));
+        }}
       >
         {(readerState) => (
           <ReaderActivityContent
@@ -92,6 +96,7 @@ export function ReadingActivity({
             setCloseDialogOpen={setCloseDialogOpen}
             endBookDialogOpen={endBookDialogOpen}
             setEndBookDialogOpen={setEndBookDialogOpen}
+            workspaceFocusRequest={workspaceFocusRequest}
             spl={spl}
             initialSearchQuery={initialSearchQuery}
           />
@@ -116,6 +121,7 @@ function ReaderActivityContent({
   setCloseDialogOpen,
   endBookDialogOpen,
   setEndBookDialogOpen,
+  workspaceFocusRequest,
   spl,
   initialSearchQuery,
 }: {
@@ -133,6 +139,7 @@ function ReaderActivityContent({
   setCloseDialogOpen: (open: boolean) => void;
   endBookDialogOpen: boolean;
   setEndBookDialogOpen: (open: boolean) => void;
+  workspaceFocusRequest: { annotationId: string; mode: "editable" | "readonly"; seq: number } | null;
   spl?: SecondPassClient | null;
   initialSearchQuery?: string | null;
 }) {
@@ -392,6 +399,7 @@ function ReaderActivityContent({
               onEnablePreviousSession={annotations.enablePreviousSession}
               currentSessionMeta={annotations.currentSessionMeta}
               onUpdateCurrentSessionMeta={annotations.updateCurrentSessionMeta}
+              focusRequest={workspaceFocusRequest}
               onRemoveAnnotation={(annotationId) => {
                 void annotations.removeById(annotationId);
               }}

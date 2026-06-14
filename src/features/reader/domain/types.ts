@@ -125,4 +125,6 @@ export type ReaderHighlightMark = {
   color?: string;
   text?: string;
   note?: string;
+  readOnly?: boolean;
+  sessionId?: string;
 };

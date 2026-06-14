@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors";
 import type { HighlightViewModel, CurrentSessionAnnotationViewModel } from "./viewModels";
 import { ANNOTATION_LIMITS } from "./annotationLimits";
@@ -28,6 +28,7 @@ export function AnnotationWorkspace({
   onEnablePreviousSession,
   currentSessionMeta,
   onUpdateCurrentSessionMeta,
+  focusRequest,
   onRemoveAnnotation,
   onUpdateHighlight,
 }: {
@@ -40,9 +41,11 @@ export function AnnotationWorkspace({
   onEnablePreviousSession?: (sessionId: string) => void;
   currentSessionMeta?: { name: string | null; notes: string | null; status: "idle" | "loading" | "ready" | "error"; error: string | null };
   onUpdateCurrentSessionMeta?: (update: { name: string; notes: string }) => Promise<void>;
+  focusRequest?: { annotationId: string; mode: "editable" | "readonly"; seq: number } | null;
   onRemoveAnnotation: (annotationId: string) => void;
   onUpdateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
 }) {
+  const rootRef = useRef<HTMLElement | null>(null);
   const [tab, setTab] = useState<TabKey>("current");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState<string>("");
@@ -50,8 +53,23 @@ export function AnnotationWorkspace({
   const [editStatus, setEditStatus] = useState<"idle" | "saving" | "error">("idle");
   const [editError, setEditError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!focusRequest?.annotationId) return;
+    setTab(focusRequest.mode === "readonly" ? "previous" : "current");
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const root = rootRef.current;
+        if (!root) return;
+        const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-annotation-id]"));
+        const card = cards.find((item) => item.dataset.annotationId === focusRequest.annotationId);
+        card?.scrollIntoView({ behavior: "smooth", block: "center" });
+        card?.focus({ preventScroll: true });
+      });
+    });
+  }, [focusRequest]);
+
   return (
-    <section className="panel spAnnotationWorkspace">
+    <section ref={rootRef} className="panel spAnnotationWorkspace">
       <div className="spAnnotationWorkspaceHeader">
         <div className="spAnnotationWorkspaceHeaderTop">
           <h2 className="panelTitle spAnnotationWorkspaceTitle">Annotations</h2>
@@ -107,6 +125,8 @@ export function AnnotationWorkspace({
                   return (
                     <article
                       key={b.id}
+                      tabIndex={-1}
+                      data-annotation-id={b.id}
                       className={`spAnnotationCard spAnnotationCardBookmark ${isCurrent ? "spAnnotationCardCurrent" : ""}`}
                     >
                       <div className="spAnnotationLeftRail" aria-hidden="true">
@@ -154,6 +174,8 @@ export function AnnotationWorkspace({
                 return (
                   <article
                     key={h.id}
+                    tabIndex={-1}
+                    data-annotation-id={h.id}
                     className="spAnnotationCard"
                     style={{ ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
                   >

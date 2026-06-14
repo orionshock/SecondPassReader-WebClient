@@ -20,7 +20,7 @@ function formatWhen(ts: string | undefined): string | null {
 function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
   if (item.kind === "bookmark") {
     return (
-      <article className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
+    <article tabIndex={-1} data-annotation-id={item.id} className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
         <div className="spAnnotationLeftRail" aria-hidden="true">
           <span className="spAnnotationTypeIcon" title={BOOKMARK_DISPLAY.label}>
             <MaterialIcon name={BOOKMARK_DISPLAY.iconName} />
@@ -39,6 +39,8 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
   const display = getHighlightAnnotationDisplay(item.note);
   return (
     <article
+      tabIndex={-1}
+      data-annotation-id={item.id}
       className="spAnnotationCard spAnnotationCardHighlight spAnnotationCardReadOnly"
       style={{ ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
     >

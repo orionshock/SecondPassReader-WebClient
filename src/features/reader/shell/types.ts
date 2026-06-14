@@ -30,4 +30,5 @@ export type ReadingShellEvent =
   | { type: "locationsReady" }
   | { type: "navigate"; target: ReaderLocationTarget }
   | { type: "searchResultDisplayed"; cfi: string }
+  | { type: "highlightClicked"; annotationId: string; cfiRange: string; clientX?: number; clientY?: number }
   | { type: "displayError"; error: unknown };

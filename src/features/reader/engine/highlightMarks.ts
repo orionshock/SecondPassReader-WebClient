@@ -7,8 +7,19 @@ export type HighlightMarkPainter = {
   clear(): void;
 };
 
-export function createHighlightMarkPainter(args: { rendition: Rendition; onError?: (error: unknown) => void }): HighlightMarkPainter {
-  const { rendition, onError } = args;
+export type HighlightMarkClick = {
+  annotationId: string;
+  cfiRange: string;
+  clientX?: number;
+  clientY?: number;
+};
+
+export function createHighlightMarkPainter(args: {
+  rendition: Rendition;
+  onError?: (error: unknown) => void;
+  onHighlightClick?: (click: HighlightMarkClick) => void;
+}): HighlightMarkPainter {
+  const { rendition, onError, onHighlightClick } = args;
 
   // epub-ts renderer annotations are keyed internally by CFI range + renderer
   // annotation type (for this painter, "highlight"), not by our app annotation
@@ -60,7 +71,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
         rendition.annotations.highlight(
           existing.cfiRange,
           { id },
-          undefined,
+          createDurableHighlightClickHandler(id, existing.cfiRange),
           "sp-annotation-hl",
           toHighlightAttributes(existing.color),
         );
@@ -68,6 +79,21 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
         onError?.(err);
       }
     }
+  };
+
+  const createDurableHighlightClickHandler = (id: string, cfiRange: string) => {
+    if (!onHighlightClick || isReservedHighlightId(id)) return undefined;
+    return (event?: Event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      const mouse = event as MouseEvent | undefined;
+      onHighlightClick({
+        annotationId: id,
+        cfiRange,
+        clientX: typeof mouse?.clientX === "number" ? mouse.clientX : undefined,
+        clientY: typeof mouse?.clientY === "number" ? mouse.clientY : undefined,
+      });
+    };
   };
 
   return {
@@ -124,7 +150,7 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
           rendition.annotations.highlight(
             cfiRange,
             { id },
-            undefined,
+            createDurableHighlightClickHandler(id, cfiRange),
             "sp-annotation-hl",
             toHighlightAttributes(m.color),
           );
@@ -175,4 +201,8 @@ export function createHighlightMarkPainter(args: { rendition: Rendition; onError
       paintedHighlightsById.clear();
     },
   };
+}
+
+function isReservedHighlightId(id: string): boolean {
+  return id === "__staged_selection__" || id === "sp-search-result-highlight";
 }

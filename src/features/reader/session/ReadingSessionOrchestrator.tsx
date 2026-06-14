@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
 import type { ReaderSearchBookHandle, ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/types";
 import type { StagedSelectionHandle, StagedSelectionSource } from "../shell/stagedSelectionTypes";
+import type { DurableAnnotationToolbarItem } from "../shell/DurableAnnotationToolbar";
 import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
@@ -27,6 +28,7 @@ export type ReadingSessionOrchestratorProps = {
   onSettingsReset?: () => void;
   onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
   onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
+  onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
   children: (arg: {
     state: ReadingSessionState;
     statusLine: string[];
@@ -210,6 +212,18 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return out;
   }, [highlightMarks, previousLayers.selectedHighlightMarks]);
 
+  const annotationToolbarItems: DurableAnnotationToolbarItem[] = useMemo(() => {
+    return visibleHighlightMarks
+      .filter((mark) => Boolean(mark.id && mark.cfiRange))
+      .map((mark) => ({
+        id: mark.id,
+        mode: mark.readOnly ? "readonly" : "editable",
+        quoteText: mark.text,
+        note: mark.note,
+        color: mark.color,
+      }));
+  }, [visibleHighlightMarks]);
+
   const sendCommand = useCallback((command: ReadingShellCommandValue) => {
     commandSeqRef.current += 1;
     setPendingCommand({ seq: commandSeqRef.current, value: command });
@@ -340,6 +354,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onStagedSelectionReady={handleStagedSelectionReady}
         onStagedSelectionCommitted={handleStagedSelectionCommitted}
         onStagedSelectionCanceled={handleStagedSelectionCanceled}
+        annotationToolbarItems={annotationToolbarItems}
+        onUpdateHighlight={updateHighlight}
+        onRemoveAnnotation={removeById}
+        onOpenAnnotationInWorkspace={props.onOpenAnnotationInWorkspace}
         highlightMarks={visibleHighlightMarks}
         onCommitHighlight={async (arg) => createHighlight(arg)}
         highlightCommitBusy={annotationBusy}

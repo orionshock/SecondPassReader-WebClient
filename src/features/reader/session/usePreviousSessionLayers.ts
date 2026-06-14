@@ -66,14 +66,14 @@ function buildLayerLabelParts(input: { name?: string | null; timeLabel: string; 
   ].filter((part): part is string => Boolean(part));
 }
 
-function toHighlightMarks(annotations: ReadingAnnotation[]): { marks: ReaderHighlightMark[]; highlightCount: number } {
+function toHighlightMarks(annotations: ReadingAnnotation[], sessionId?: string): { marks: ReaderHighlightMark[]; highlightCount: number } {
   const marks: ReaderHighlightMark[] = [];
   let count = 0;
   for (const a of annotations) {
     if (!isHighlightAnnotation(a)) continue;
     const ra = toReaderAnnotation(a);
     if (ra?.kind !== "highlight") continue;
-    const mark: ReaderHighlightMark = { id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "" };
+    const mark: ReaderHighlightMark = { id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "", readOnly: true, sessionId };
     const color = getAnnotationColor(a);
     if (color) mark.color = color;
     const note = getAnnotationNoteText(a);
@@ -232,7 +232,7 @@ export function usePreviousSessionLayers(args: {
       bump();
       try {
         const annotations = await fetchAllAnnotationsForSession({ spl: args.spl, sessionId: id });
-        const { marks, highlightCount } = toHighlightMarks(annotations);
+        const { marks, highlightCount } = toHighlightMarks(annotations, id);
         cacheRef.current.set(id, { status: "ready", annotations, highlightMarks: marks, highlightCount });
       } catch (e) {
         cacheRef.current.set(id, { status: "error", error: e instanceof Error ? e.message : "Failed to load annotations." });

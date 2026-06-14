@@ -400,6 +400,62 @@
   resize: vertical;
 }
 
+.spDurableAnnotationToolbar {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 121;
+  width: min(340px, calc(100% - 16px));
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 10px;
+  color: var(--sp-reader-text);
+  background: var(--sp-reader-surface);
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.16);
+}
+
+.spDurableAnnotationQuote {
+  padding: 7px 8px;
+  border-left: 3px solid var(--annotation-color, #facc15);
+  background: var(--annotation-bg, rgba(250, 204, 21, 0.14));
+  font-size: 13px;
+  line-height: 1.35;
+  max-height: 72px;
+  overflow: hidden;
+}
+
+.spDurableAnnotationNote {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--sp-reader-hover);
+  font-size: 13px;
+  line-height: 1.35;
+  max-height: 90px;
+  overflow: auto;
+}
+
+.spDurableAnnotationEdit {
+  display: grid;
+  gap: 8px;
+}
+
+.spDurableAnnotationTextarea {
+  width: 100%;
+  min-height: 74px;
+  font-size: 13px;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.spDurableAnnotationActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .spReaderPageNav {
   pointer-events: auto;
   position: absolute;
