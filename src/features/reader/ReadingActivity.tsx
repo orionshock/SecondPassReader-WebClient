@@ -1,29 +1,23 @@
 import type { ReaderSettings } from "../../storage/readerSettings";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { AnnotationWorkspace } from "./annotations/AnnotationWorkspace";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
-import type { ReadingSessionOrchestratorProps } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { LibraryBook, SecondPassClient } from "@secondpass/client";
-import { MaterialIcon } from "../../components/MaterialIcon";
-import { InlineMeta } from "../../components/MetaSeparator";
-import { MarginaliaMenu } from "./shell/MarginaliaMenu";
-import { BookSearchDrawer } from "./shell/bookSearch/BookSearchDrawer";
-import { ReaderImportDrawer } from "./imports/ReaderImportDrawer";
-import { ReaderImportModal } from "./imports/ReaderImportModal";
 import { useReaderImportActivation } from "./imports/useReaderImportActivation";
 import { useReaderImportJob } from "./imports/useReaderImportJob";
-import { EndOfBookDialog } from "./EndOfBookDialog";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
-import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../sessions/CloseSessionDialog";
+import type { CloseSessionAfterOption, CloseSessionInput } from "../sessions/CloseSessionDialog";
 import { navigateTo } from "../../app/navigation";
 import { findNextSeriesBook, normalizeSeriesIndex } from "../library/seriesUtils";
 import { buildReturnLabel, saveReaderReturnTarget } from "./readerReturnTarget";
+import { ReaderActivityDialogs } from "./activity/ReaderActivityDialogs";
+import { ReaderActivityHeader } from "./activity/ReaderActivityHeader";
+import { ReaderActivitySidePanels } from "./activity/ReaderActivitySidePanels";
+import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/readerActivityTypes";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
-type ReaderActivityRenderState = Parameters<ReadingSessionOrchestratorProps["children"]>[0];
 
 export function ReadingActivity({
   openedBook,
@@ -45,7 +39,7 @@ export function ReadingActivity({
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);
-  const [workspaceFocusRequest, setWorkspaceFocusRequest] = useState<{ annotationId: string; mode: "editable" | "readonly"; seq: number } | null>(null);
+  const [workspaceFocusRequest, setWorkspaceFocusRequest] = useState<ReaderActivityWorkspaceFocusRequest | null>(null);
   const readerImport = useReaderImportJob();
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
@@ -289,191 +283,89 @@ function ReaderActivityContent({
 
   return (
     <>
-      <div className="spReaderChrome">
-        <div className="spReaderTopBar">
-          <div className="spReaderTitle">
-            <div className="spReaderTitleLine">{openedBook.book.title}</div>
-            {statusLine.length ? <div className="spReaderStatusLine muted"><InlineMeta items={statusLine} /></div> : null}
-            {autosaveStatus ? (
-              <div className="spReaderAutosaveLine muted" title={autosaveStatus.title}>
-                {autosaveStatus.text}
-              </div>
-            ) : null}
-          </div>
+      <ReaderActivityHeader
+        title={openedBook.book.title}
+        statusLine={statusLine}
+        autosaveStatus={autosaveStatus}
+        showFinishControls={showFinishControls}
+        headerEndLabel={headerEndLabel}
+        nextBookAvailable={Boolean(nextSeriesBook)}
+        onOpenEndBookDialog={() => setEndBookDialogOpen(true)}
+        searchOpen={searchOpen}
+        onToggleSearch={() => setSearchOpen(!searchOpen)}
+        searchReady={readerState.search.ready}
+        canBookmark={canBookmark}
+        isBookmarked={isBookmarked}
+        annotationBusy={Boolean(annotations.busy)}
+        onToggleBookmark={() => {
+          void annotations.toggleBookmarkAtCurrentLocation();
+        }}
+        marginaliaOpen={marginaliaOpen}
+        onOpenMarginalia={() => setMarginaliaOpen(true)}
+        onCloseMarginalia={() => setMarginaliaOpen(false)}
+        marginalia={marginalia}
+        selectedPreviousSessionIds={selectedPreviousSessionIds}
+        importJobActive={Boolean(readerImport.job)}
+        onImportMarginalia={() => setImportModalOpen(true)}
+        onOpenImport={() => readerImport.setDrawerOpen(true)}
+        onCloseSession={currentSessionId ? () => setCloseDialogOpen(true) : undefined}
+        returnLabel={returnLabel}
+        onReturn={() => {
+          window.location.hash = returnTarget.route;
+        }}
+        showHomeAction={showHomeAction}
+        onHome={onBackToLibrary}
+      />
 
-          <div className="spReaderContextActions" aria-label="Session completion actions">
-            {showFinishControls ? (
-              <button
-                type="button"
-                className="button buttonCompact spIconButton"
-                onClick={() => setEndBookDialogOpen(true)}
-              >
-                <MaterialIcon name={nextSeriesBook ? "arrow_forward" : "flag"} />
-                <span className="spIconButtonLabel">{headerEndLabel}</span>
-              </button>
-            ) : null}
-          </div>
+      <ReaderActivitySidePanels
+        importDrawerInLayout={importDrawerInLayout}
+        shell={shell}
+        annotations={annotations}
+        currentCfi={state.location?.cfi ?? null}
+        workspaceFocusRequest={workspaceFocusRequest}
+        onJumpToCfi={readerState.search.jumpToCfi}
+        onJumpToCfiRange={readerState.search.jumpToCfiRange}
+        readerImport={readerImport}
+        onClearImport={clearImportJob}
+        onSelectImportRow={(rowId) => {
+          void activateImportRow(rowId);
+        }}
+        onSkipImportRow={skipImportRow}
+      />
 
-          <div className="spReaderActions">
-            <button
-              type="button"
-              className="button buttonCompact spIconButton"
-              onClick={() => setSearchOpen(!searchOpen)}
-              disabled={!readerState.search.ready}
-              aria-label={searchOpen ? "Close book search" : "Search in book"}
-              title={readerState.search.ready ? "Search in book" : "Search is unavailable until the reader is ready."}
-              aria-pressed={searchOpen}
-            >
-              <MaterialIcon name="search" />
-              <span className="spIconButtonLabel">Search</span>
-            </button>
-
-            <button
-              type="button"
-              className="button buttonCompact spIconButton"
-              onClick={() => {
-                void annotations.toggleBookmarkAtCurrentLocation();
-              }}
-              disabled={!canBookmark || Boolean(annotations.busy)}
-              title={!canBookmark ? "Bookmark is unavailable until a reading location is known." : "Bookmark"}
-              aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-            >
-              <MaterialIcon name={isBookmarked ? "bookmark_added" : "bookmark_add"} />
-              <span className="spIconButtonLabel">{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
-            </button>
-
-            <MarginaliaMenu
-              open={marginaliaOpen}
-              onOpen={() => setMarginaliaOpen(true)}
-              onClose={() => setMarginaliaOpen(false)}
-              listStatus={marginalia.listStatus}
-              listError={marginalia.listError}
-              previousLayers={marginalia.previousLayers}
-              selectedPreviousSessionIds={selectedPreviousSessionIds}
-              onTogglePreviousSession={marginalia.togglePreviousSession}
-              importJobActive={Boolean(readerImport.job)}
-              onImportMarginalia={() => setImportModalOpen(true)}
-              onOpenImport={() => readerImport.setDrawerOpen(true)}
-              onCloseSession={currentSessionId ? () => setCloseDialogOpen(true) : undefined}
-            />
-
-            <button
-              type="button"
-              className="button buttonCompact spIconButton"
-              onClick={() => {
-                window.location.hash = returnTarget.route;
-              }}
-              aria-label={returnLabel}
-              title={returnLabel}
-            >
-              <MaterialIcon name="arrow_back" />
-              <span className="spIconButtonLabel">{returnLabel}</span>
-            </button>
-            {showHomeAction ? (
-              <button
-                type="button"
-                className="button buttonCompact spIconButton"
-                onClick={onBackToLibrary}
-                aria-label="Home"
-                title="Home"
-              >
-                <MaterialIcon name="home" />
-                <span className="spIconButtonLabel">Home</span>
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <div className={`spReaderContentFrame${importDrawerInLayout ? " spReaderContentFrameImportOpen" : ""}`}>
-        <div className="spReaderLayout">
-          <div className="spReaderViewportRegion">{shell}</div>
-          <div className="spReaderAnnotationsRegion">
-            <AnnotationWorkspace
-              annotations={annotations.items}
-              status={annotations.status}
-              error={annotations.error}
-              busy={annotations.busy}
-              currentCfi={state.location?.cfi ?? null}
-              previousSessionGroups={annotations.previousSessionGroups}
-              onEnablePreviousSession={annotations.enablePreviousSession}
-              currentSessionMeta={annotations.currentSessionMeta}
-              onUpdateCurrentSessionMeta={annotations.updateCurrentSessionMeta}
-              focusRequest={workspaceFocusRequest}
-              onRemoveAnnotation={(annotationId) => {
-                void annotations.removeById(annotationId);
-              }}
-              onUpdateHighlight={(annotationId, update) => annotations.updateHighlight(annotationId, update)}
-              onJumpToCfi={readerState.search.jumpToCfi}
-              onJumpToCfiRange={readerState.search.jumpToCfiRange}
-            />
-          </div>
-        </div>
-
-        <ReaderImportDrawer
-          open={readerImport.drawerOpen}
-          job={readerImport.job}
-          counts={readerImport.counts}
-          onClose={() => readerImport.setDrawerOpen(false)}
-          onClear={clearImportJob}
-          onSelectRow={(rowId) => {
-            void activateImportRow(rowId);
-          }}
-          onSkipRow={skipImportRow}
-          onUnskipRow={readerImport.unskipRow}
-        />
-      </div>
-
-      <BookSearchDrawer
-        key={String(openedBook.book.id)}
-        open={searchOpen}
-        ready={readerState.search.ready}
-        searchBook={readerState.search.searchBook}
+      <ReaderActivityDialogs
+        bookId={openedBook.book.id}
         bookTitle={openedBook.book.title}
+        searchOpen={searchOpen}
+        search={readerState.search}
         initialSearchQuery={initialSearchQuery}
-        onClose={() => {
+        onCloseSearch={() => {
           readerState.search.clearTemporaryHighlight();
           setSearchOpen(false);
         }}
-        onJump={(result) => {
-          readerState.search.jumpToResult(result.cfi);
-        }}
-      />
-
-      <ReaderImportModal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
+        importModalOpen={importModalOpen}
+        onCloseImportModal={() => setImportModalOpen(false)}
         onStartImport={readerImport.startGlaspCsvImport}
+        closeDialogOpen={closeDialogOpen}
+        closeInitialName={annotations.currentSessionMeta.name ?? ""}
+        closeInitialNotes={annotations.currentSessionMeta.notes ?? ""}
+        closeAfterOptions={closeAfterOptions}
+        defaultAfterAction={nextSeriesBook ? "nextBook" : "home"}
+        nextBook={nextSeriesBook}
+        coverBase={coverBase}
+        onCancelCloseSession={() => setCloseDialogOpen(false)}
+        onSaveAndCloseSession={closeSession}
+        endBookDialogOpen={endBookDialogOpen}
+        nextBookStatus={nextSeriesStatus}
+        hasSeries={Boolean(canLookupNextBook)}
+        onStartNextBook={startNextBook}
+        onFinishSession={finishCurrentSession}
+        onKeepReading={() => setEndBookDialogOpen(false)}
+        onGoToLibrary={nextSeriesBook ? undefined : () => {
+          window.location.hash = returnTarget.route;
+        }}
+        returnLabel={returnLabel}
       />
-
-      {closeDialogOpen ? (
-        <CloseSessionDialog
-          initialName={annotations.currentSessionMeta.name ?? ""}
-          initialNotes={annotations.currentSessionMeta.notes ?? ""}
-          afterOptions={closeAfterOptions}
-          defaultAfterAction={nextSeriesBook ? "nextBook" : "home"}
-          nextBook={nextSeriesBook}
-          coverBase={coverBase}
-          onCancel={() => setCloseDialogOpen(false)}
-          onSaveAndClose={closeSession}
-        />
-      ) : null}
-
-      {endBookDialogOpen ? (
-        <EndOfBookDialog
-          nextBook={nextSeriesBook}
-          nextBookStatus={nextSeriesStatus}
-          coverBase={coverBase}
-          hasSeries={Boolean(canLookupNextBook)}
-          onStartNextBook={startNextBook}
-          onFinishSession={finishCurrentSession}
-          onKeepReading={() => setEndBookDialogOpen(false)}
-          onGoToLibrary={nextSeriesBook ? undefined : () => {
-            window.location.hash = returnTarget.route;
-          }}
-          returnLabel={returnLabel}
-        />
-      ) : null}
     </>
   );
 }
