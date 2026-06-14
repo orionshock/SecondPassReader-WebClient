@@ -4,7 +4,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   margin-top: 8px;
 }
@@ -29,21 +29,18 @@
   flex-wrap: wrap;
 }
 
-.sessionsSearch {
-  margin-top: 10px;
-  display: grid;
-  gap: 4px;
-}
-
 .sessionsSearchField {
   display: block;
+  flex: 1 1 280px;
+  min-width: min(280px, 100%);
 }
 
 .sessionsSearchInput {
-  width: min(520px, 100%);
+  width: 100%;
 }
 
 .sessionsSearchHint {
+  margin-top: 6px;
   font-size: 12px;
 }
 

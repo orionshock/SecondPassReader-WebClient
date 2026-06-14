@@ -116,15 +116,6 @@ export function SessionsPage({
   }, [effectiveSearchQuery]);
 
   useEffect(() => {
-    const next = searchDraft.trim();
-    if (next === effectiveSearchQuery) return;
-    const timer = window.setTimeout(() => {
-      navigateTo({ kind: "sessions", bookId: bookFilter ?? undefined, q: next || undefined }, { replace: true });
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [bookFilter, effectiveSearchQuery, searchDraft]);
-
-  useEffect(() => {
     setData(null);
     setError(null);
     setBusy(false);
@@ -138,12 +129,23 @@ export function SessionsPage({
   const contextBookSeries = formatBookSeries(contextBook);
   const sessions = data?.results ?? [];
 
+  const commitSearch = useCallback(() => {
+    const next = searchDraft.trim();
+    navigateTo({ kind: "sessions", bookId: bookFilter ?? undefined, q: next || undefined });
+  }, [bookFilter, searchDraft]);
+
   return (
     <section className="panel sessionsPage">
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 
-      <div className="sessionsToolbar">
+      <form
+        className="sessionsToolbar"
+        onSubmit={(e) => {
+          e.preventDefault();
+          commitSearch();
+        }}
+      >
         <div className="sessionsFilters" role="tablist" aria-label="Session filter">
           <button type="button" className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("all")}>
             All
@@ -156,17 +158,6 @@ export function SessionsPage({
           </button>
         </div>
 
-        <label className="toolbarField">
-          <span className="srOnly">Page size</span>
-          <select className="input inputCompact" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} disabled={busy}>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </label>
-      </div>
-
-      <div className="sessionsSearch">
         <label className="sessionsSearchField">
           <span className="srOnly">Search reading sessions and book metadata</span>
           <input
@@ -177,7 +168,23 @@ export function SessionsPage({
             disabled={!canLoad}
           />
         </label>
-        <div className="sessionsSearchHint muted">Searches session names and notes, plus visible book titles, authors, and series. Annotation text is not searched.</div>
+
+        <button type="submit" className="button buttonPrimary buttonCompact" disabled={!canLoad || busy}>
+          Search
+        </button>
+
+        <label className="toolbarField">
+          <span className="srOnly">Page size</span>
+          <select className="input inputCompact" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} disabled={busy}>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </label>
+      </form>
+
+      <div className="sessionsSearchHint muted">
+        Searches session names and notes, plus visible book titles, authors, and series. Annotation text is not searched.
       </div>
 
       {bookFilter && contextBook ? (
