@@ -37,7 +37,6 @@ function ReadOnlyItemRow({
         <div className="spAnnotationBody">
           <div className="spAnnotationBookmarkRow">
             <span className="spAnnotationBookmarkText">Bookmark</span>
-            <span className="spAnnotationBadge spAnnotationReadOnlyBadge">Read-only</span>
           </div>
           {formatWhen(item.timestamp) ? <div className="muted spAnnotationActionMeta">{formatWhen(item.timestamp)}</div> : null}
         </div>
@@ -72,9 +71,6 @@ function ReadOnlyItemRow({
         </span>
       </div>
       <div className="spAnnotationBody">
-        <div className="spAnnotationReadOnlyMeta">
-          <span className="spAnnotationBadge spAnnotationReadOnlyBadge">Read-only</span>
-        </div>
         <div className="spAnnotationQuote">{normalizeQuoteTextForDisplay(item.text)}</div>
         {item.note ? <div className="spAnnotationNote muted">{item.note}</div> : null}
         <div className="muted spAnnotationActionMeta">

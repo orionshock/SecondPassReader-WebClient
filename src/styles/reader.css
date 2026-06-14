@@ -1542,11 +1542,6 @@
   text-overflow: ellipsis;
 }
 
-.spAnnotationReadOnlyMeta {
-  display: flex;
-  justify-content: flex-start;
-}
-
 .spAnnotationEditForm {
   display: grid;
   gap: 10px;
