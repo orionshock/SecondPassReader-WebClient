@@ -1,27 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient, ReadingAnnotation } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
-import {
-  getAnnotationColor,
-  getAnnotationDescribingText,
-  getAnnotationFragmentCfi,
-  getAnnotationNoteText,
-  getAnnotationTimestamp,
-  isBookmarkAnnotation,
-  isHighlightAnnotation,
-  toReaderAnnotation,
-} from "../annotations/annotationUtils";
+import { getAnnotationFragmentCfi } from "../annotations/annotationUtils";
 import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../storage/marginaliaLayerPreferences";
-import { describeCfiBestEffort, toReaderCfiLocationDisplay } from "./readerCfiDescriptions";
+import { describeCfiBestEffort } from "./readerCfiDescriptions";
+import {
+  toPreviousSessionHighlightMarks,
+  toPreviousSessionItems,
+  type PreviousSessionLocationDescriptionCacheEntry,
+} from "./previousSessionAnnotationItems";
+import {
+  getPreviousSessionHighlightCount,
+  sortPreviousSessionSummariesByUpdatedAt,
+  stripPreviousSessionUpdatedAt,
+  toPreviousSessionAnnotationGroup,
+  toPreviousSessionLayerSummary,
+  toPreviousSessionSummary,
+  type PreviousSessionAnnotationGroup,
+  type PreviousSessionLayerSummary,
+  type PreviousSessionSummaryViewModel,
+} from "./previousSessionViewModels";
 
-export type PreviousSessionLayerSummary = {
-  sessionId: string;
-  label: string;
-  labelParts: string[];
-  highlightCount: number;
-  status: "idle" | "loading" | "ready" | "error";
-  error?: string;
-};
+export type { PreviousSessionAnnotationGroup, PreviousSessionLayerSummary } from "./previousSessionViewModels";
+export type { PreviousSessionAnnotationItem } from "./previousSessionAnnotationItems";
 
 type CachedSessionAnnotations = {
   status: "idle" | "loading" | "ready" | "error";
@@ -30,136 +31,6 @@ type CachedSessionAnnotations = {
   highlightMarks?: ReaderHighlightMark[];
   highlightCount?: number;
 };
-
-type LocationDescriptionCacheEntry =
-  | { status: "loading" }
-  | { status: "ready"; value: ReaderLocationDescription }
-  | { status: "error" };
-
-type PreviousSessionLocationLabel = {
-  locationLabel?: string;
-  descriptionStatus: "idle" | "loading" | "ready" | "error";
-};
-
-export type PreviousSessionAnnotationItem =
-  | {
-      kind: "highlight";
-      id: string;
-      cfiRange: string;
-      text: string;
-      note?: string;
-      color?: string;
-      timestamp?: string;
-      locationLabel?: string;
-      descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
-    }
-  | {
-      kind: "bookmark";
-      id: string;
-      cfi: string;
-      timestamp?: string;
-      locationLabel?: string;
-      descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
-    };
-
-export type PreviousSessionAnnotationGroup = {
-  sessionId: string;
-  label: string;
-  labelParts: string[];
-  highlightCount: number;
-  selected: boolean;
-  status: "idle" | "loading" | "ready" | "error";
-  error?: string;
-  items?: PreviousSessionAnnotationItem[];
-};
-
-function toSessionTimeLabel(input: { startedAt?: string | null; updatedAt?: string | null; createdAt?: string | null; completedAt?: string | null; fallbackId: string }): string {
-  const ts =
-    (typeof input.updatedAt === "string" ? input.updatedAt : null) ??
-    (typeof input.completedAt === "string" ? input.completedAt : null) ??
-    (typeof input.startedAt === "string" ? input.startedAt : null) ??
-    (typeof input.createdAt === "string" ? input.createdAt : null);
-  if (!ts) return input.fallbackId;
-  const ms = Date.parse(ts);
-  if (!Number.isFinite(ms)) return input.fallbackId;
-  return new Date(ms).toLocaleString();
-}
-
-function buildLayerLabelParts(input: { name?: string | null; timeLabel: string; highlightCount: number }): string[] {
-  const n = typeof input.name === "string" ? input.name.trim() : "";
-  return [
-    n || null,
-    input.timeLabel,
-    `${input.highlightCount} highlight${input.highlightCount === 1 ? "" : "s"}`,
-  ].filter((part): part is string => Boolean(part));
-}
-
-function toHighlightMarks(annotations: ReadingAnnotation[], sessionId?: string): { marks: ReaderHighlightMark[]; highlightCount: number } {
-  const marks: ReaderHighlightMark[] = [];
-  let count = 0;
-  for (const a of annotations) {
-    if (!isHighlightAnnotation(a)) continue;
-    const ra = toReaderAnnotation(a);
-    if (ra?.kind !== "highlight") continue;
-    const mark: ReaderHighlightMark = { id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "", readOnly: true, sessionId };
-    const color = getAnnotationColor(a);
-    if (color) mark.color = color;
-    const note = getAnnotationNoteText(a);
-    if (note) mark.note = note;
-    marks.push(mark);
-    count += 1;
-  }
-  return { marks: marks.filter((m) => Boolean(m.id && m.cfiRange)), highlightCount: count };
-}
-
-function toPreviousSessionLocationLabel(input: {
-  cfi: string;
-  descriptions: Map<string, LocationDescriptionCacheEntry>;
-  toc: ReaderTocItem[] | null | undefined;
-  bookTitle?: string | null;
-}): PreviousSessionLocationLabel {
-  const entry = input.descriptions.get(input.cfi);
-  const locationLabel =
-    entry?.status === "ready"
-      ? toReaderCfiLocationDisplay({ description: entry.value, toc: input.toc, bookTitle: input.bookTitle }).locationLabel
-      : undefined;
-  return { locationLabel, descriptionStatus: entry?.status ?? "idle" };
-}
-
-function toPreviousSessionItems(
-  annotations: ReadingAnnotation[],
-  descriptions: Map<string, LocationDescriptionCacheEntry>,
-  toc: ReaderTocItem[] | null | undefined,
-  bookTitle?: string | null,
-): PreviousSessionAnnotationItem[] {
-  const out: PreviousSessionAnnotationItem[] = [];
-  for (const a of annotations) {
-    const timestamp = getAnnotationTimestamp(a) ?? undefined;
-    if (isBookmarkAnnotation(a)) {
-      const cfi = getAnnotationFragmentCfi(a);
-      if (!cfi) continue;
-      out.push({ kind: "bookmark", id: a.id, cfi, timestamp, ...toPreviousSessionLocationLabel({ cfi, descriptions, toc, bookTitle }) });
-      continue;
-    }
-    if (isHighlightAnnotation(a)) {
-      const ra = toReaderAnnotation(a);
-      if (ra?.kind !== "highlight") continue;
-      const note = getAnnotationNoteText(a) ?? undefined;
-      const color = getAnnotationColor(a) ?? undefined;
-      out.push({
-        kind: "highlight",
-        id: ra.id,
-        cfiRange: ra.cfiRange,
-        text: (getAnnotationDescribingText(a) ?? ra.text ?? "").trim(),
-        note,
-        color,
-        timestamp,
-        ...toPreviousSessionLocationLabel({ cfi: ra.cfiRange, descriptions, toc, bookTitle }),
-      });
-    }
-  }
-  return out;
-}
 
 async function fetchAllAnnotationsForSession(args: {
   spl: SecondPassClient;
@@ -197,12 +68,12 @@ export function usePreviousSessionLayers(args: {
 }) {
   const [listStatus, setListStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [listError, setListError] = useState<string | null>(null);
-  const [sessionSummaries, setSessionSummaries] = useState<Array<{ sessionId: string; timeLabel: string; name: string | null; annotationCount: number | null }>>([]);
+  const [sessionSummaries, setSessionSummaries] = useState<PreviousSessionSummaryViewModel[]>([]);
 
   const [selectedPreviousSessionIds, setSelectedPreviousSessionIds] = useState<string[]>([]);
   const cacheRef = useRef<Map<string, CachedSessionAnnotations>>(new Map());
   const [cacheVersion, setCacheVersion] = useState(0);
-  const descriptionCacheRef = useRef<Map<string, LocationDescriptionCacheEntry>>(new Map());
+  const descriptionCacheRef = useRef<Map<string, PreviousSessionLocationDescriptionCacheEntry>>(new Map());
   const descriptionGenerationRef = useRef(0);
   const [descriptionCacheVersion, setDescriptionCacheVersion] = useState(0);
 
@@ -237,27 +108,11 @@ export function usePreviousSessionLayers(args: {
         if (cancelled) return;
         const currentId = args.currentSessionId ?? "";
         const results = resp.results ?? [];
-        const items = results
-          .map((s: any) => {
-            const sessionId = typeof s.id === "string" ? s.id : "";
-            const timeLabel = toSessionTimeLabel({
-              updatedAt: s.updated_at ?? null,
-              completedAt: s.completed_at ?? null,
-              startedAt: s.started_at ?? null,
-              createdAt: s.created_at ?? null,
-              fallbackId: sessionId || "(unknown session)",
-            });
-            const name = typeof s.name === "string" ? s.name : null;
-            const annotationCount = typeof s.annotation_count === "number" ? s.annotation_count : null;
-            return { sessionId, timeLabel, name, annotationCount, updatedAt: s.updated_at ?? null };
-          })
-          .filter((x) => Boolean(x.sessionId && x.sessionId !== currentId))
-          .sort((a, b) => {
-            const am = a.updatedAt ? Date.parse(a.updatedAt) : 0;
-            const bm = b.updatedAt ? Date.parse(b.updatedAt) : 0;
-            return (Number.isFinite(bm) ? bm : 0) - (Number.isFinite(am) ? am : 0);
-          })
-          .map(({ updatedAt, ...rest }) => rest);
+        const items = sortPreviousSessionSummariesByUpdatedAt(
+          results
+            .map((s: any) => toPreviousSessionSummary(s))
+            .filter((x) => Boolean(x.sessionId && x.sessionId !== currentId)),
+        ).map(stripPreviousSessionUpdatedAt);
 
         setSessionSummaries(items);
         setListStatus("ready");
@@ -290,7 +145,7 @@ export function usePreviousSessionLayers(args: {
       bump();
       try {
         const annotations = await fetchAllAnnotationsForSession({ spl: args.spl, sessionId: id });
-        const { marks, highlightCount } = toHighlightMarks(annotations, id);
+        const { marks, highlightCount } = toPreviousSessionHighlightMarks(annotations, id);
         cacheRef.current.set(id, { status: "ready", annotations, highlightMarks: marks, highlightCount });
       } catch (e) {
         cacheRef.current.set(id, { status: "error", error: e instanceof Error ? e.message : "Failed to load annotations." });
@@ -385,14 +240,11 @@ export function usePreviousSessionLayers(args: {
     return sessionSummaries.map((s) => {
       const cached = cacheRef.current.get(s.sessionId);
       const status = cached?.status ?? "idle";
-      const highlightCount =
-        typeof cached?.highlightCount === "number"
-          ? cached.highlightCount
-          : typeof s.annotationCount === "number"
-            ? s.annotationCount
-            : 0;
-      const labelParts = buildLayerLabelParts({ name: s.name, timeLabel: s.timeLabel, highlightCount });
-      return { sessionId: s.sessionId, label: labelParts.join(" "), labelParts, highlightCount, status, error: cached?.error };
+      const highlightCount = getPreviousSessionHighlightCount({
+        cachedHighlightCount: cached?.highlightCount,
+        annotationCount: s.annotationCount,
+      });
+      return toPreviousSessionLayerSummary({ summary: s, highlightCount, status, error: cached?.error });
     });
   }, [sessionSummaries, cacheVersion]);
 
@@ -401,18 +253,22 @@ export function usePreviousSessionLayers(args: {
     return sessionSummaries.map((s) => {
       const cached = cacheRef.current.get(s.sessionId);
       const status = cached?.status ?? "idle";
-      const highlightCount =
-        typeof cached?.highlightCount === "number"
-          ? cached.highlightCount
-          : typeof s.annotationCount === "number"
-            ? s.annotationCount
-            : 0;
-      const labelParts = buildLayerLabelParts({ name: s.name, timeLabel: s.timeLabel, highlightCount });
+      const highlightCount = getPreviousSessionHighlightCount({
+        cachedHighlightCount: cached?.highlightCount,
+        annotationCount: s.annotationCount,
+      });
       const items =
         cached?.status === "ready" && cached.annotations
           ? toPreviousSessionItems(cached.annotations, descriptionCacheRef.current, args.toc, args.bookTitle)
           : undefined;
-      return { sessionId: s.sessionId, label: labelParts.join(" "), labelParts, highlightCount, selected: selected.has(s.sessionId), status, error: cached?.error, items };
+      return toPreviousSessionAnnotationGroup({
+        summary: s,
+        highlightCount,
+        selected: selected.has(s.sessionId),
+        status,
+        error: cached?.error,
+        items,
+      });
     });
   }, [args.bookTitle, args.toc, cacheVersion, descriptionCacheVersion, selectedPreviousSessionIds, sessionSummaries]);
 
