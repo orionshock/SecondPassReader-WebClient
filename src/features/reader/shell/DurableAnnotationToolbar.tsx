@@ -130,7 +130,7 @@ export function DurableAnnotationToolbar({
           {error ? <div className="spAnnotationEditError" role="alert">{error}</div> : null}
 
           <div className="spDurableAnnotationActions">
-            <button type="submit" className="button buttonPrimary buttonCompact spIconButton spIconButtonTight" title="Save changes" aria-label="Save highlight changes" disabled={isBusy}>
+            <button type="submit" className="button buttonCompact spIconButton spIconButtonTight" title="Save changes" aria-label="Save highlight changes" disabled={isBusy}>
               <MaterialIcon name="check" />
             </button>
             <button
