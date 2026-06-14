@@ -137,6 +137,15 @@ Rationale:
 - If those values are dependencies of initialization or cleanup effects, harmless UI interactions can destroy/recreate expensive systems.
 - Stateful systems should be controlled by explicit lifecycle inputs, not incidental UI rerenders.
 
+## Temporary debug logging
+
+- For any project work, prefer adding scoped temporary `console.debug` logs early when behavior is unclear, runtime paths are hard to verify, or async/stateful code is involved.
+- Use stable searchable prefixes such as `[SPR reader]`, `[SPR engine]`, `[SPR annotations]`, `[SPR import]`, or another focused `[SPR ...]` prefix for the area being changed.
+- Log inputs, derived outputs, skip reasons, and cleanup/cancellation decisions.
+- Leave logs in place while the feature is under active development.
+- Before a production/polish pass, remove temporary debug logs or gate them behind an explicit debug flag.
+- Do not replace understanding with broad rewrites; use logs to verify the actual runtime path first.
+
 ## Layer handoff cleanup
 
 - Each layer owns the lifecycle of the temporary state it creates.
