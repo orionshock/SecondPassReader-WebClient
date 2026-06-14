@@ -46,6 +46,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
+  const latestSearchResultCommandRef = useRef<{ seq: number; cfi: string } | null>(null);
   const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
@@ -111,11 +112,25 @@ export function ReadingShell(props: ReadingShellProps) {
   );
 
   const runCommandOnEngine = useCallback(
-    async (engine: EpubTsBookEngine, command: ReadingShellCommandValue) => {
+    async (engine: EpubTsBookEngine, command: ReadingShellCommandValue, commandSeq?: number) => {
       switch (command.type) {
         case "display":
           await engine.display(command.target);
           return;
+        case "displaySearchResult": {
+          await engine.display({ type: "cfi", cfi: command.cfi });
+          const latestSearch = latestSearchResultCommandRef.current;
+          if (commandSeq != null && latestSearch && latestSearch.seq !== commandSeq) {
+            await engine.display({ type: "cfi", cfi: latestSearch.cfi });
+            return;
+          }
+          // Search result flashes are temporary visual state. Paint them only
+          // after display settles so the mark is attached to the target view.
+          if (commandSeq != null && lastHandledCommandSeqRef.current !== commandSeq) return;
+          engine.setTemporarySearchHighlight(command.cfi);
+          onEventRef.current?.({ type: "searchResultDisplayed", cfi: command.cfi });
+          return;
+        }
         case "next":
           await engine.next();
           return;
@@ -187,7 +202,7 @@ export function ReadingShell(props: ReadingShellProps) {
           deferredCommandRef.current = null;
           if (cmd) {
             try {
-              await runCommandOnEngine(engine, cmd.value);
+              await runCommandOnEngine(engine, cmd.value, cmd.seq);
             } catch (err) {
               reportCommandError(err, "Command failed.", generation);
             }
@@ -239,11 +254,14 @@ export function ReadingShell(props: ReadingShellProps) {
       const generation = engineGenerationRef.current;
       try {
         const engine = engineRef.current;
+        if (cmd.value.type === "displaySearchResult") {
+          latestSearchResultCommandRef.current = { seq: cmd.seq, cfi: cmd.value.cfi };
+        }
         if (!engine) {
           deferredCommandRef.current = cmd;
           return;
         }
-        await runCommandOnEngine(engine, cmd.value);
+        await runCommandOnEngine(engine, cmd.value, cmd.seq);
       } catch (err) {
         reportCommandError(err, "Command failed.", generation);
       }

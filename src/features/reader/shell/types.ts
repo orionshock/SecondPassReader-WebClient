@@ -10,6 +10,7 @@ import type {
 
 export type ReadingShellCommandValue =
   | { type: "display"; target: ReaderLocationTarget }
+  | { type: "displaySearchResult"; cfi: string }
   | { type: "next" }
   | { type: "previous" }
   | { type: "resize" };
@@ -28,4 +29,5 @@ export type ReadingShellEvent =
   | { type: "tocReady"; toc: ReaderTocItem[] }
   | { type: "locationsReady" }
   | { type: "navigate"; target: ReaderLocationTarget }
+  | { type: "searchResultDisplayed"; cfi: string }
   | { type: "displayError"; error: unknown };

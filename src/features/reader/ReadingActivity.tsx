@@ -171,7 +171,7 @@ function ReaderActivityContent({
     selectRow: readerImport.selectRow,
     setRowStatus: readerImport.setRowStatus,
     setDrawerOpen: readerImport.setDrawerOpen,
-    jumpToResult: readerState.search.jumpToResult,
+    jumpToResult: readerState.search.jumpToCfi,
   });
 
   const clearImportJob = () => {
