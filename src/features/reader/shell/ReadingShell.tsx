@@ -112,11 +112,25 @@ export function ReadingShell(props: ReadingShellProps) {
     const wrapper = mountWrapperRef.current;
     if (!wrapper) return null;
     const r = wrapper.getBoundingClientRect();
+    const margin = 10;
+    const toolbarWidth = Math.min(340, Math.max(220, r.width - margin * 2));
+    const toolbarHalf = toolbarWidth / 2;
+    const estimatedToolbarHeight = Math.min(190, Math.max(120, r.height - margin * 2));
     const leftRaw = typeof clientX === "number" ? clientX - r.left : r.width / 2;
     const topRaw = typeof clientY === "number" ? clientY - r.top : 18;
-    const left = Math.max(14, Math.min(r.width - 14, leftRaw));
-    const top = Math.max(0, Math.min(r.height, topRaw));
-    return { left, top, placement: top < 96 ? "below" : "above" };
+    const minLeft = Math.min(r.width / 2, toolbarHalf + margin);
+    const maxLeft = Math.max(minLeft, r.width - toolbarHalf - margin);
+    const left = Math.max(minLeft, Math.min(maxLeft, leftRaw));
+    const topClampedToPage = Math.max(margin, Math.min(Math.max(margin, r.height - margin), topRaw));
+    const spaceAbove = topClampedToPage - margin;
+    const spaceBelow = r.height - topClampedToPage - margin;
+    const placement: "above" | "below" =
+      spaceBelow >= estimatedToolbarHeight || spaceBelow >= spaceAbove ? "below" : "above";
+    const top =
+      placement === "above"
+        ? Math.max(topClampedToPage, estimatedToolbarHeight + margin)
+        : Math.min(topClampedToPage, Math.max(margin, r.height - estimatedToolbarHeight - margin));
+    return { left, top, placement };
   }, []);
 
   useEffect(() => {

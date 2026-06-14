@@ -406,8 +406,8 @@
   z-index: 121;
   width: min(340px, calc(100% - 16px));
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 7px;
+  padding: 8px;
   border: 1px solid var(--sp-reader-border);
   border-radius: 10px;
   color: var(--sp-reader-text);
@@ -415,23 +415,30 @@
   box-shadow: 0 12px 32px rgba(17, 24, 39, 0.16);
 }
 
+.spDurableAnnotationHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: start;
+}
+
 .spDurableAnnotationQuote {
-  padding: 7px 8px;
+  padding: 6px 8px;
   border-left: 3px solid var(--annotation-color, #facc15);
   background: var(--annotation-bg, rgba(250, 204, 21, 0.14));
   font-size: 13px;
   line-height: 1.35;
-  max-height: 72px;
+  max-height: 58px;
   overflow: hidden;
 }
 
 .spDurableAnnotationNote {
-  padding: 6px 8px;
+  padding: 5px 8px;
   border-radius: 6px;
   background: var(--sp-reader-hover);
   font-size: 13px;
   line-height: 1.35;
-  max-height: 90px;
+  max-height: 64px;
   overflow: auto;
 }
 
@@ -442,7 +449,7 @@
 
 .spDurableAnnotationTextarea {
   width: 100%;
-  min-height: 74px;
+  min-height: 68px;
   font-size: 13px;
   line-height: 1.35;
   resize: vertical;

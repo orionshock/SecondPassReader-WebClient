@@ -36,7 +36,7 @@ export function DurableAnnotationToolbar({
 }) {
   const [noteDraft, setNoteDraft] = useState(item.note ?? "");
   const [colorDraft, setColorDraft] = useState(item.color ?? "yellow");
-  const [editing, setEditing] = useState(item.mode === "editable");
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
@@ -44,7 +44,7 @@ export function DurableAnnotationToolbar({
   useEffect(() => {
     setNoteDraft(item.note ?? "");
     setColorDraft(item.color ?? "yellow");
-    setEditing(item.mode === "editable");
+    setEditing(false);
     setError(null);
   }, [item.id, item.mode, item.note, item.color]);
 
@@ -71,7 +71,12 @@ export function DurableAnnotationToolbar({
       aria-label={item.mode === "editable" ? "Edit highlight" : "Annotation details"}
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <div className="spDurableAnnotationQuote" title={quote}>{quote}</div>
+      <div className="spDurableAnnotationHeader">
+        <div className="spDurableAnnotationQuote" title={quote}>{quote}</div>
+        <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close" aria-label="Close annotation toolbar" onClick={onClose} disabled={isBusy}>
+          <MaterialIcon name="close" />
+        </button>
+      </div>
 
       {item.mode === "readonly" ? (
         note ? <div className="spDurableAnnotationNote">{note}</div> : null
@@ -126,10 +131,22 @@ export function DurableAnnotationToolbar({
           {error ? <div className="spAnnotationEditError" role="alert">{error}</div> : null}
 
           <div className="spDurableAnnotationActions">
-            <button type="submit" className="button buttonCompact spIconButton spIconButtonTight" title="Save" aria-label="Save highlight" disabled={isBusy}>
+            <button type="submit" className="button buttonPrimary buttonCompact spIconButton spIconButtonTight" title="Save changes" aria-label="Save highlight changes" disabled={isBusy}>
               <MaterialIcon name="check" />
             </button>
-            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Cancel" aria-label="Cancel" onClick={onClose} disabled={isBusy}>
+            <button
+              type="button"
+              className="button buttonCompact spIconButton spIconButtonTight"
+              title="Cancel editing"
+              aria-label="Cancel editing"
+              onClick={() => {
+                setNoteDraft(item.note ?? "");
+                setColorDraft(item.color ?? "yellow");
+                setEditing(false);
+                setError(null);
+              }}
+              disabled={isBusy}
+            >
               <MaterialIcon name="close" />
             </button>
           </div>
@@ -142,18 +159,18 @@ export function DurableAnnotationToolbar({
 
       <div className="spDurableAnnotationActions">
         {item.mode === "editable" && !editing ? (
-          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Edit note" aria-label="Edit note" onClick={() => setEditing(true)} disabled={isBusy}>
+          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Edit note and color" aria-label="Edit note and color" onClick={() => setEditing(true)} disabled={isBusy}>
             <MaterialIcon name="edit_note" />
           </button>
         ) : null}
-        <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in workspace" aria-label="Open in workspace" onClick={onOpenWorkspace} disabled={isBusy}>
+        <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in annotation workspace" aria-label="Open in annotation workspace" onClick={onOpenWorkspace} disabled={isBusy}>
           <MaterialIcon name="open_in_new" />
         </button>
         {item.mode === "editable" ? (
           <button
             type="button"
-            className="button buttonCompact spIconButton spIconButtonTight"
-            title="Delete"
+            className="button buttonDanger buttonCompact spIconButton spIconButtonTight"
+            title="Delete annotation"
             aria-label="Delete annotation"
             onClick={onDelete}
             disabled={isBusy}
@@ -161,9 +178,6 @@ export function DurableAnnotationToolbar({
             <MaterialIcon name="delete" />
           </button>
         ) : null}
-        <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close" aria-label="Close" onClick={onClose} disabled={isBusy}>
-          <MaterialIcon name="close" />
-        </button>
       </div>
     </div>
   );
