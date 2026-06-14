@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReaderStatusLine } from "../features/reader/session/readerSessionLabels";
+import { buildReaderStatusLine, findTocLabelForHref, getReaderLocationTocLabel } from "../features/reader/session/readerSessionLabels";
 import type { ReaderTocItem } from "../features/reader/domain/types";
 
 describe("buildReaderStatusLine", () => {
@@ -74,5 +74,59 @@ describe("buildReaderStatusLine", () => {
         },
       }),
     ).toEqual(["Chapter 10", "17%"]);
+  });
+
+  it("matches split spine hrefs directly against unsplit html TOC hrefs", () => {
+    expect(
+      findTocLabelForHref(
+        [{ id: "ch7", label: "Chapter 7", href: "text/part0007.html" }],
+        "text/part0007_split_001.html",
+      ),
+    ).toBe("Chapter 7");
+  });
+
+  it("matches split spine hrefs directly against unsplit xhtml TOC hrefs", () => {
+    expect(
+      findTocLabelForHref(
+        [{ id: "ch7", label: "Chapter 7", href: "text/part0007.xhtml" }],
+        "text/part0007_split_001.html",
+      ),
+    ).toBe("Chapter 7");
+  });
+
+  it("matches suffix paths and basenames", () => {
+    expect(
+      findTocLabelForHref(
+        [{ id: "ch1", label: "Chapter 1", href: "OPS/Text/chapter-1.xhtml" }],
+        "Text/chapter-1.xhtml",
+      ),
+    ).toBe("Chapter 1");
+
+    expect(
+      findTocLabelForHref(
+        [{ id: "ch2", label: "Chapter 2", href: "OPS/Text/chapter-2.xhtml" }],
+        "chapter-2.xhtml",
+      ),
+    ).toBe("Chapter 2");
+  });
+
+  it("suppresses book-title-only labels", () => {
+    expect(
+      getReaderLocationTocLabel({
+        toc: [{ id: "book", label: "Sample Book", href: "text/title.xhtml" }],
+        href: "text/title.xhtml",
+        bookTitle: "Sample Book",
+      }),
+    ).toBeNull();
+  });
+
+  it("strips redundant book title suffixes from chapter labels", () => {
+    expect(
+      getReaderLocationTocLabel({
+        toc: [{ id: "ch1", label: "Chapter 1 - Sample Book", href: "text/chapter-1.xhtml" }],
+        href: "text/chapter-1.xhtml",
+        bookTitle: "Sample Book",
+      }),
+    ).toBe("Chapter 1");
   });
 });
