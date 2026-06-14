@@ -12,6 +12,16 @@ export type HighlightMarkClick = {
   cfiRange: string;
   clientX?: number;
   clientY?: number;
+  bounds?: HighlightMarkBounds;
+};
+
+export type HighlightMarkBounds = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
 };
 
 export function createHighlightMarkPainter(args: {
@@ -87,11 +97,13 @@ export function createHighlightMarkPainter(args: {
       event?.preventDefault?.();
       event?.stopPropagation?.();
       const point = getEventClientPoint(event);
+      const bounds = getEventBounds(event);
       onHighlightClick({
         annotationId: id,
         cfiRange,
         clientX: point?.clientX,
         clientY: point?.clientY,
+        bounds: bounds ?? undefined,
       });
     };
   };
@@ -208,24 +220,47 @@ function isReservedHighlightId(id: string): boolean {
 }
 
 function getEventClientPoint(event: Event | undefined): { clientX: number; clientY: number } | null {
-  const frameOffset = getFrameOffset(event);
   const mouse = event as MouseEvent | undefined;
   if (typeof mouse?.clientX === "number" && typeof mouse.clientY === "number" && (mouse.clientX || mouse.clientY)) {
-    return { clientX: mouse.clientX + frameOffset.left, clientY: mouse.clientY + frameOffset.top };
+    return { clientX: mouse.clientX, clientY: mouse.clientY };
   }
   const touch = event as TouchEvent | undefined;
   const firstTouch = touch?.changedTouches?.[0] ?? touch?.touches?.[0];
-  if (firstTouch) return { clientX: firstTouch.clientX + frameOffset.left, clientY: firstTouch.clientY + frameOffset.top };
-  const el = event?.currentTarget instanceof Element ? event.currentTarget : null;
-  const rect = el?.getBoundingClientRect();
+  if (firstTouch) return { clientX: firstTouch.clientX, clientY: firstTouch.clientY };
+  const el = getEventElement(event);
+  const rect = el?.getBoundingClientRect() ?? null;
+  const frameOffset = getFrameOffset(el);
   if (rect) return { clientX: rect.left + rect.width / 2 + frameOffset.left, clientY: rect.top + rect.height / 2 + frameOffset.top };
   return null;
 }
 
-function getFrameOffset(event: Event | undefined): { left: number; top: number } {
-  const el = event?.currentTarget instanceof Element ? event.currentTarget : null;
+function getEventBounds(event: Event | undefined): HighlightMarkBounds | null {
+  const el = getEventElement(event);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  const frameOffset = getFrameOffset(el);
+  return {
+    left: rect.left + frameOffset.left,
+    right: rect.right + frameOffset.left,
+    top: rect.top + frameOffset.top,
+    bottom: rect.bottom + frameOffset.top,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
+function getEventElement(event: Event | undefined): Element | null {
+  const target = event?.currentTarget;
+  return isElementLike(target) ? target : null;
+}
+
+function getFrameOffset(el: Element | null): { left: number; top: number } {
   const frame = el?.ownerDocument?.defaultView?.frameElement;
-  if (!(frame instanceof Element)) return { left: 0, top: 0 };
+  if (!isElementLike(frame)) return { left: 0, top: 0 };
   const rect = frame.getBoundingClientRect();
   return { left: rect.left, top: rect.top };
+}
+
+function isElementLike(value: unknown): value is Element {
+  return Boolean(value && typeof (value as Element).getBoundingClientRect === "function");
 }

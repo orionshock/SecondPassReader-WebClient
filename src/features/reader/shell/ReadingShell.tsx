@@ -42,6 +42,19 @@ export type ReadingShellProps = {
   onSettingsReset?: () => void;
 };
 
+type DurableToolbarAnchor = {
+  clientX?: number;
+  clientY?: number;
+  bounds?: {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+    height: number;
+  };
+};
+
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
   const mountWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -108,32 +121,33 @@ export function ReadingShell(props: ReadingShellProps) {
     setDurableToolbar(null);
   }, []);
 
-  const toToolbarPosition = useCallback((clientX?: number, clientY?: number): DurableAnnotationToolbarPosition | null => {
+  const toToolbarPosition = useCallback((anchor?: DurableToolbarAnchor): DurableAnnotationToolbarPosition | null => {
     const margin = 12;
     const width = window.innerWidth || document.documentElement.clientWidth || 1;
     const height = window.innerHeight || document.documentElement.clientHeight || 1;
     const toolbarWidth = Math.min(340, Math.max(220, width - margin * 2));
-    const toolbarHalf = toolbarWidth / 2;
-    const estimatedToolbarHeight = Math.min(220, Math.max(120, height - margin * 2));
-    const leftRaw = typeof clientX === "number" ? clientX : width / 2;
-    const topRaw = typeof clientY === "number" ? clientY : height / 2;
-    const minLeft = Math.min(width / 2, toolbarHalf + margin);
-    const maxLeft = Math.max(minLeft, width - toolbarHalf - margin);
-    const left = Math.max(minLeft, Math.min(maxLeft, leftRaw));
-    const topAtAnchor = Math.max(margin, Math.min(Math.max(margin, height - margin), topRaw));
-    const canFitAbove = topAtAnchor - margin >= estimatedToolbarHeight;
-    const canFitBelow = height - topAtAnchor - margin >= estimatedToolbarHeight;
-    const placement: "above" | "below" = chooseToolbarPlacement({
-      canFitAbove,
-      canFitBelow,
+    const toolbarHeight = 160;
+    const leftRaw = typeof anchor?.clientX === "number" ? anchor.clientX : width / 2;
+    const topRaw = typeof anchor?.clientY === "number" ? anchor.clientY : height / 2;
+    const preferredPlacement = chooseClickToolbarPlacement({
+      clickX: leftRaw,
+      clickY: topRaw,
       height,
-      top: topAtAnchor,
-      toolbarHeight: estimatedToolbarHeight,
+      margin,
+      toolbarHeight,
+      toolbarWidth,
+      width,
     });
-    const top = placement === "above"
-      ? Math.max(estimatedToolbarHeight + margin, topAtAnchor)
-      : Math.min(height - estimatedToolbarHeight - margin, topAtAnchor);
-    return { left, top, placement };
+    return clampClickToolbarPosition({
+      clickX: leftRaw,
+      clickY: topRaw,
+      height,
+      margin,
+      placement: preferredPlacement,
+      toolbarHeight,
+      toolbarWidth,
+      width,
+    });
   }, []);
 
   useEffect(() => {
@@ -245,7 +259,7 @@ export function ReadingShell(props: ReadingShellProps) {
             if (!id) return;
             const item = annotationToolbarItemsRef.current.find((candidate) => candidate.id === id);
             if (!item) return;
-            const position = toToolbarPosition(click.clientX, click.clientY);
+            const position = toToolbarPosition(click);
             if (!position) return;
             cancelStaged();
             setDurableToolbar({ annotationId: id, position });
@@ -503,6 +517,7 @@ export function ReadingShell(props: ReadingShellProps) {
                 item={durableToolbarItem}
                 position={durableToolbar.position}
                 busy={props.highlightCommitBusy}
+                theme={props.settings?.theme}
                 onSave={(update) => {
                   if (durableToolbarItem.mode !== "editable" || !props.onUpdateHighlight) return Promise.resolve();
                   return props.onUpdateHighlight(durableToolbarItem.id, update);
@@ -536,25 +551,71 @@ function waitForReaderLayout(): Promise<void> {
   });
 }
 
-function chooseToolbarPlacement({
-  canFitAbove,
-  canFitBelow,
+function chooseClickToolbarPlacement({
+  clickX,
+  clickY,
   height,
-  top,
+  margin,
   toolbarHeight,
+  toolbarWidth,
+  width,
 }: {
-  canFitAbove: boolean;
-  canFitBelow: boolean;
+  clickX: number;
+  clickY: number;
   height: number;
-  top: number;
+  margin: number;
   toolbarHeight: number;
-}): "above" | "below" {
-  if (canFitAbove && !canFitBelow) return "above";
-  if (canFitBelow && !canFitAbove) return "below";
-  if (!canFitAbove && !canFitBelow) return top > height / 2 ? "above" : "below";
+  toolbarWidth: number;
+  width: number;
+}): DurableAnnotationToolbarPosition["placement"] {
+  const fitsRight = clickX + toolbarWidth <= width - margin;
+  const fitsLeft = clickX - toolbarWidth >= margin;
+  if (clickX < width / 2 && fitsRight) return "right";
+  if (clickX >= width / 2 && fitsLeft) return "left";
+  if (fitsRight) return "right";
+  if (fitsLeft) return "left";
 
-  const viewportMiddle = height / 2;
-  const aboveMiddle = top - toolbarHeight / 2;
-  const belowMiddle = top + toolbarHeight / 2;
-  return Math.abs(aboveMiddle - viewportMiddle) <= Math.abs(belowMiddle - viewportMiddle) ? "above" : "below";
+  const fitsBelow = clickY + toolbarHeight <= height - margin;
+  const fitsAbove = clickY - toolbarHeight >= margin;
+  if (clickY < height / 2 && fitsBelow) return "below";
+  if (fitsAbove) return "above";
+  return fitsBelow ? "below" : "above";
+}
+
+function clampClickToolbarPosition({
+  clickX,
+  clickY,
+  height,
+  margin,
+  placement,
+  toolbarHeight,
+  toolbarWidth,
+  width,
+}: {
+  clickX: number;
+  clickY: number;
+  height: number;
+  margin: number;
+  placement: DurableAnnotationToolbarPosition["placement"];
+  toolbarHeight: number;
+  toolbarWidth: number;
+  width: number;
+}): DurableAnnotationToolbarPosition {
+  if (placement === "left" || placement === "right") {
+    return {
+      left: placement === "left" ? Math.max(toolbarWidth + margin, clickX) : Math.min(width - toolbarWidth - margin, clickX),
+      top: clamp(clickY, margin + toolbarHeight / 2, height - margin - toolbarHeight / 2),
+      placement,
+    };
+  }
+
+  return {
+    left: clamp(clickX, margin + toolbarWidth / 2, width - margin - toolbarWidth / 2),
+    top: placement === "above" ? Math.max(toolbarHeight + margin, clickY) : Math.min(height - toolbarHeight - margin, clickY),
+    placement,
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }

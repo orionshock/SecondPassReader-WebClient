@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "../annotations/annotationColors";
 import { ANNOTATION_LIMITS } from "../annotations/annotationLimits";
@@ -14,13 +15,14 @@ export type DurableAnnotationToolbarItem = {
 export type DurableAnnotationToolbarPosition = {
   left: number;
   top: number;
-  placement: "above" | "below";
+  placement: "above" | "below" | "left" | "right";
 };
 
 export function DurableAnnotationToolbar({
   item,
   position,
   busy,
+  theme,
   onSave,
   onDelete,
   onOpenWorkspace,
@@ -29,6 +31,7 @@ export function DurableAnnotationToolbar({
   item: DurableAnnotationToolbarItem;
   position: DurableAnnotationToolbarPosition;
   busy?: boolean;
+  theme?: string;
   onSave: (update: { note: string; color: string }) => Promise<void>;
   onDelete: () => void;
   onOpenWorkspace: () => void;
@@ -55,7 +58,7 @@ export function DurableAnnotationToolbar({
   const style = useMemo(() => ({
     left: `${position.left}px`,
     top: `${position.top}px`,
-    transform: position.placement === "above" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
+    transform: transformForPlacement(position.placement),
   }) as const, [position.left, position.placement, position.top]);
 
   const quote = item.quoteText?.trim() || "Highlight";
@@ -63,9 +66,10 @@ export function DurableAnnotationToolbar({
   const isBusy = Boolean(busy || saving);
   const vars = toAnnotationCssVars(colorDraft);
 
-  return (
+  const toolbar = (
     <div
       className="spDurableAnnotationToolbar"
+      data-reader-theme={theme}
       style={{ ...style, ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
       role="dialog"
       aria-label={item.mode === "editable" ? "Edit highlight" : "Annotation details"}
@@ -197,4 +201,19 @@ export function DurableAnnotationToolbar({
       ) : null}
     </div>
   );
+
+  return createPortal(toolbar, document.body);
+}
+
+function transformForPlacement(placement: DurableAnnotationToolbarPosition["placement"]): string {
+  switch (placement) {
+    case "left":
+      return "translate(-100%, -50%)";
+    case "right":
+      return "translate(0, -50%)";
+    case "above":
+      return "translate(-50%, -100%)";
+    case "below":
+      return "translate(-50%, 0)";
+  }
 }

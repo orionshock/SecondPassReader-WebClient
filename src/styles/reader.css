@@ -401,38 +401,58 @@
 }
 
 .spDurableAnnotationToolbar {
+  --sp-reader-surface-strong: #ffffff;
+  --sp-reader-text: #111827;
+  --sp-reader-muted: #6b7280;
+  --sp-reader-border: rgba(17, 24, 39, 0.12);
   position: fixed;
   pointer-events: auto;
   z-index: 180;
-  width: min(340px, calc(100% - 16px));
+  width: max-content;
+  min-width: min(280px, calc(100vw - 24px));
+  max-width: min(520px, calc(100vw - 24px));
   display: grid;
   gap: 7px;
   padding: 8px;
   border: 1px solid var(--sp-reader-border);
   border-radius: 10px;
   color: var(--sp-reader-text);
-  background: var(--sp-reader-surface);
-  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.16);
+  background: var(--sp-reader-surface-strong, #ffffff);
+  box-shadow: 0 16px 42px rgba(17, 24, 39, 0.24);
+}
+
+.spDurableAnnotationToolbar[data-reader-theme="sepia"] {
+  --sp-reader-surface-strong: #fff7e8;
+  --sp-reader-text: #2f261b;
+  --sp-reader-muted: #7a6958;
+  --sp-reader-border: rgba(87, 65, 36, 0.2);
+}
+
+.spDurableAnnotationToolbar[data-reader-theme="dark"] {
+  --sp-reader-surface-strong: #1b2228;
+  --sp-reader-text: #eef2f5;
+  --sp-reader-muted: #a6b2bd;
+  --sp-reader-border: rgba(226, 232, 240, 0.16);
 }
 
 .spDurableAnnotationQuote {
   padding: 6px 8px;
   border-left: 3px solid var(--annotation-color, #facc15);
-  background: var(--annotation-bg, rgba(250, 204, 21, 0.14));
+  background: color-mix(in srgb, var(--annotation-color, #facc15) 16%, var(--sp-reader-surface-strong, #ffffff));
   font-size: 13px;
   line-height: 1.35;
-  max-height: 58px;
-  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .spDurableAnnotationNote {
   padding: 5px 8px;
   border-radius: 6px;
-  background: var(--sp-reader-hover);
+  background: color-mix(in srgb, var(--sp-reader-text, #111827) 7%, var(--sp-reader-surface-strong, #ffffff));
   font-size: 13px;
   line-height: 1.35;
-  max-height: 64px;
-  overflow: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .spDurableAnnotationEdit {
@@ -446,6 +466,14 @@
   font-size: 13px;
   line-height: 1.35;
   resize: vertical;
+  color: var(--sp-reader-text);
+  background: var(--sp-reader-surface-strong, #ffffff);
+  border: 1px solid var(--sp-reader-border);
+  box-shadow: none;
+}
+
+.spDurableAnnotationTextarea::placeholder {
+  color: var(--sp-reader-muted);
 }
 
 .spDurableAnnotationActions {
