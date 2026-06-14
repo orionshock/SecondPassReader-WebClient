@@ -24,6 +24,7 @@ export async function searchEpubTsBook(
   const maxResults = clampInt(options?.maxResults, 1, 5000, 1000);
   const maxSeqEle = clampInt(options?.maxSeqEle, 1, 20, 6);
   const out: ReaderSearchResult[] = [];
+  const seenCfiRanges = new Set<string>();
   const loadSectionResource = createSectionRequest(book);
   let linearIndex = 0;
 
@@ -50,6 +51,9 @@ export async function searchEpubTsBook(
             })
           : null;
         const resultCfi = repaired?.cfiRange ?? match.cfi;
+        const dedupeKey = normalizeCfiForDedupe(resultCfi);
+        if (!dedupeKey || seenCfiRanges.has(dedupeKey)) continue;
+        seenCfiRanges.add(dedupeKey);
         const resultText = repaired?.matchedText ?? trimmed;
         const quoteContext = buildSearchQuoteContext(section.document, resultText, match.excerpt);
         const sectionIndex = typeof section.index === "number" ? section.index : undefined;
@@ -106,6 +110,10 @@ function clampInt(value: number | undefined, min: number, max: number, fallback:
 
 function normalizeSearchExcerpt(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeCfiForDedupe(value: string): string {
+  return value.trim();
 }
 
 function improveSearchExcerpt(doc: Document | undefined, excerpt: string, query: string): string {
