@@ -525,7 +525,7 @@ export default function App() {
                 </div>
               ) : route?.kind === "sessions" ? (
                 <div className="libraryScreen">
-                  <SessionsPage profile={selectedProfile} spl={splClient} bookId={route.bookId ?? null} />
+                  <SessionsPage profile={selectedProfile} spl={splClient} bookId={route.bookId ?? null} searchQuery={route.q ?? ""} />
                 </div>
               ) : route?.kind === "session" ? (
                 <div className="libraryScreen">

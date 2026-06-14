@@ -208,6 +208,36 @@ describe("@secondpass/client high-level workflows", () => {
     expect(u.searchParams.getAll("motivation").sort()).toEqual(["bookmarking", "highlighting"]);
   });
 
+  it("reading.sessions.list sends q with existing filters and ignores whitespace-only q", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.sessions.list({
+      bookId: 123,
+      isActive: false,
+      page: 2,
+      pageSize: 50,
+      q: "  ursula le guin  ",
+    });
+    await spl.reading.sessions.list({ q: "   " });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const firstUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(firstUrl.origin + firstUrl.pathname).toBe("https://api.example/reading/sessions/");
+    expect(firstUrl.searchParams.get("book")).toBe("123");
+    expect(firstUrl.searchParams.get("is_active")).toBe("false");
+    expect(firstUrl.searchParams.get("page")).toBe("2");
+    expect(firstUrl.searchParams.get("page_size")).toBe("50");
+    expect(firstUrl.searchParams.get("q")).toBe("ursula le guin");
+
+    const secondUrl = new URL(String(fetchMock.mock.calls[1]![0]));
+    expect(secondUrl.searchParams.has("q")).toBe(false);
+  });
+
   it("reading.annotations.updateNote PATCHes body updates only (no anchors/session/motivation)", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));

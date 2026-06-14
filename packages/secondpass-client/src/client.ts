@@ -170,6 +170,7 @@ export type SecondPassClient = {
         bookId?: string | number;
         status?: "active" | "completed" | "archived" | string;
         isActive?: boolean;
+        q?: string;
       }): Promise<ReadingSessionsListResponse>;
       get(sessionId: string): Promise<ReadingSessionSummary>;
       updateDetails(sessionId: string, input: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;

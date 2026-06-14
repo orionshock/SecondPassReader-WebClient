@@ -12,7 +12,7 @@ export type AppRoute =
       view?: "list" | "grid";
       bookId?: string;
     }
-  | { kind: "sessions"; bookId?: string }
+  | { kind: "sessions"; bookId?: string; q?: string }
   | { kind: "session"; sessionId: string }
   | { kind: "shelves" }
   | { kind: "shelf"; shelfId: string; bookId?: string }
@@ -59,7 +59,7 @@ export function routeToHash(route: AppRoute): string {
         book: route.bookId,
       })}`;
     case "sessions":
-      return `#/sessions${buildQuery({ book: route.bookId })}`;
+      return `#/sessions${buildQuery({ book: route.bookId, q: route.q })}`;
     case "session":
       return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
@@ -140,7 +140,9 @@ export function parseCurrentRoute(): AppRoute | null {
         return { kind: "session", sessionId: parts[1] };
       }
     }
-    return bookId ? { kind: "sessions", bookId } : { kind: "sessions" };
+    const q = queryParams.get("q")?.trim() ?? "";
+    if (bookId || q) return { kind: "sessions", bookId: bookId || undefined, q: q || undefined };
+    return { kind: "sessions" };
   }
   if (head === "shelves") {
     if (typeof parts[1] === "string" && parts[1]) {

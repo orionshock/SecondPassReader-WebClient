@@ -412,6 +412,7 @@ export async function listReadingSessions(input: {
   bookId?: string | number;
   status?: "active" | "completed" | "archived" | string;
   isActive?: boolean;
+  q?: string;
 }): Promise<ReadingSessionsListResponse> {
   const url = new URL(resolveUrl(input.ctx.apiBaseUrl, "/reading/sessions/"));
   if (input.page !== undefined) url.searchParams.set("page", String(input.page));
@@ -419,6 +420,8 @@ export async function listReadingSessions(input: {
   if (input.bookId !== undefined) url.searchParams.set("book", String(input.bookId));
   if (input.status) url.searchParams.set("status", String(input.status));
   if (input.isActive !== undefined) url.searchParams.set("is_active", input.isActive ? "true" : "false");
+  const q = typeof input.q === "string" ? input.q.trim() : "";
+  if (q) url.searchParams.set("q", q);
 
   return requestJson<ReadingSessionsListResponse>({
     apiBaseUrl: input.ctx.apiBaseUrl,

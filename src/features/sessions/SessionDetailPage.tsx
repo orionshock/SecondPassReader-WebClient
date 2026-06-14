@@ -301,7 +301,18 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
               {coverSrc ? <img className="sessionCoverImg" src={coverSrc} alt={`${session.book?.title ?? "Book"} cover`} loading="lazy" /> : <div className="bookCoverPlaceholderText">No cover</div>}
             </div>
             <div className="sessionHeaderMain">
-              <div className="bookTitle">{session.book?.title ?? "Book"}</div>
+              {session.book?.id ? (
+                <button
+                  type="button"
+                  className="sessionBookTitleButton bookTitle"
+                  onClick={() => navigateTo({ kind: "sessions", bookId: String(session.book?.id) })}
+                  title="View reading sessions for this book"
+                >
+                  {session.book?.title ?? "Book"}
+                </button>
+              ) : (
+                <div className="bookTitle">{session.book?.title ?? "Book"}</div>
+              )}
               {bookLine.length ? <div className="muted"><InlineMeta items={bookLine} /></div> : null}
               <div className="muted">
                 <span className="sessionsId">{session.id}</span>

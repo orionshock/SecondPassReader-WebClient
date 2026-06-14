@@ -53,11 +53,23 @@ function formatAnnotationCount(n?: number | null): string | null {
 
 type Filter = "all" | "active" | "closed";
 
-export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; bookId?: string | null }) {
+export function SessionsPage({
+  profile,
+  spl,
+  bookId,
+  searchQuery = "",
+}: {
+  profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
+  bookId?: string | null;
+  searchQuery?: string | null;
+}) {
   const canLoad = Boolean(spl);
   const bookFilter = typeof bookId === "string" && bookId.trim() ? bookId.trim() : null;
+  const effectiveSearchQuery = typeof searchQuery === "string" ? searchQuery.trim() : "";
   const [filter, setFilter] = useState<Filter>("all");
   const [pageSize, setPageSize] = useState(20);
+  const [searchDraft, setSearchDraft] = useState(effectiveSearchQuery);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +87,7 @@ export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProf
           pageSize,
           bookId: bookFilter ?? undefined,
           isActive: filter === "active" ? true : filter === "closed" ? false : undefined,
+          q: effectiveSearchQuery || undefined,
         });
         setData(r);
         setPage(targetPage);
@@ -95,8 +108,21 @@ export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProf
         setBusy(false);
       }
     },
-    [bookFilter, filter, pageSize, spl],
+    [bookFilter, effectiveSearchQuery, filter, pageSize, spl],
   );
+
+  useEffect(() => {
+    setSearchDraft(effectiveSearchQuery);
+  }, [effectiveSearchQuery]);
+
+  useEffect(() => {
+    const next = searchDraft.trim();
+    if (next === effectiveSearchQuery) return;
+    const timer = window.setTimeout(() => {
+      navigateTo({ kind: "sessions", bookId: bookFilter ?? undefined, q: next || undefined }, { replace: true });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [bookFilter, effectiveSearchQuery, searchDraft]);
 
   useEffect(() => {
     setData(null);
@@ -105,7 +131,7 @@ export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProf
     setPage(1);
     if (!canLoad) return;
     void load(1);
-  }, [bookFilter, canLoad, filter, load, pageSize]);
+  }, [bookFilter, canLoad, effectiveSearchQuery, filter, load, pageSize]);
 
   const contextBook = data?.context?.book ?? null;
   const contextBookAuthors = formatBookAuthors(contextBook);
@@ -140,6 +166,20 @@ export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProf
         </label>
       </div>
 
+      <div className="sessionsSearch">
+        <label className="sessionsSearchField">
+          <span className="srOnly">Search reading sessions and book metadata</span>
+          <input
+            className="input sessionsSearchInput"
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            placeholder="Search sessions, books, authors, series…"
+            disabled={!canLoad}
+          />
+        </label>
+        <div className="sessionsSearchHint muted">Searches session names and notes, plus visible book titles, authors, and series. Annotation text is not searched.</div>
+      </div>
+
       {bookFilter && contextBook ? (
         <div className="sessionsScope">
           <div className="sessionsScopeTitle">Reading sessions for {contextBook.title}</div>
@@ -169,8 +209,16 @@ export function SessionsPage({ profile, spl, bookId }: { profile: ConnectionProf
 
           {sessions.length === 0 ? (
             <div className="sessionsEmpty">
-              <p className="muted">{bookFilter && contextBook ? `No reading sessions for ${contextBook.title} yet.` : "No sessions yet."}</p>
-              {bookFilter && contextBook ? (
+              <p className="muted">
+                {effectiveSearchQuery
+                  ? bookFilter
+                    ? "No sessions for this book match this search."
+                    : "No sessions match this search."
+                  : bookFilter && contextBook
+                    ? `No reading sessions for ${contextBook.title} yet.`
+                    : "No sessions yet."}
+              </p>
+              {bookFilter && contextBook && !effectiveSearchQuery ? (
                 <button
                   type="button"
                   className="button buttonPrimary buttonCompact"
