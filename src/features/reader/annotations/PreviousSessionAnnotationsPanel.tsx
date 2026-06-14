@@ -17,18 +17,40 @@ function formatWhen(ts: string | undefined): string | null {
   return new Date(ms).toLocaleString();
 }
 
-function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
+function ReadOnlyItemRow({
+  item,
+  onJumpToCfi,
+  onJumpToCfiRange,
+}: {
+  item: PreviousSessionAnnotationItem;
+  onJumpToCfi: (cfi: string) => void;
+  onJumpToCfiRange: (cfiRange: string) => void;
+}) {
   if (item.kind === "bookmark") {
     return (
-    <article tabIndex={-1} data-annotation-id={item.id} className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
+      <article tabIndex={-1} data-annotation-id={item.id} className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
         <div className="spAnnotationLeftRail" aria-hidden="true">
           <span className="spAnnotationTypeIcon" title={BOOKMARK_DISPLAY.label}>
             <MaterialIcon name={BOOKMARK_DISPLAY.iconName} />
           </span>
         </div>
         <div className="spAnnotationBody">
-          <div className="spAnnotationQuote">{item.cfi}</div>
+          <div className="spAnnotationBookmarkRow">
+            <span className="spAnnotationBookmarkText">Bookmark</span>
+            <span className="spAnnotationBadge spAnnotationReadOnlyBadge">Read-only</span>
+          </div>
           {formatWhen(item.timestamp) ? <div className="muted spAnnotationActionMeta">{formatWhen(item.timestamp)}</div> : null}
+        </div>
+        <div className="spAnnotationRightRail" aria-label="Read-only bookmark actions">
+          <button
+            type="button"
+            className="button buttonCompact spIconButton"
+            onClick={() => onJumpToCfi(item.cfi)}
+            aria-label="Jump to bookmark"
+            title="Jump to location"
+          >
+            <MaterialIcon name="my_location" />
+          </button>
         </div>
       </article>
     );
@@ -50,11 +72,25 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
         </span>
       </div>
       <div className="spAnnotationBody">
+        <div className="spAnnotationReadOnlyMeta">
+          <span className="spAnnotationBadge spAnnotationReadOnlyBadge">Read-only</span>
+        </div>
         <div className="spAnnotationQuote">{normalizeQuoteTextForDisplay(item.text)}</div>
         {item.note ? <div className="spAnnotationNote muted">{item.note}</div> : null}
         <div className="muted spAnnotationActionMeta">
           <InlineMeta items={[when, item.color]} />
         </div>
+      </div>
+      <div className="spAnnotationRightRail" aria-label="Read-only highlight actions">
+        <button
+          type="button"
+          className="button buttonCompact spIconButton"
+          onClick={() => onJumpToCfiRange(item.cfiRange)}
+          aria-label="Jump to highlight"
+          title="Jump to location"
+        >
+          <MaterialIcon name="my_location" />
+        </button>
       </div>
     </article>
   );
@@ -63,6 +99,8 @@ function ReadOnlyItemRow({ item }: { item: PreviousSessionAnnotationItem }) {
 export function PreviousSessionAnnotationsPanel(props: {
   groups: PreviousSessionAnnotationGroup[];
   onEnableInMarginalia: (sessionId: string) => void;
+  onJumpToCfi: (cfi: string) => void;
+  onJumpToCfiRange: (cfiRange: string) => void;
 }) {
   const groups = useMemo(() => {
     const g = [...(props.groups ?? [])];
@@ -94,6 +132,7 @@ export function PreviousSessionAnnotationsPanel(props: {
             <div className="spPreviousSessionTitle" title={g.label}>
               <InlineMeta items={g.labelParts.length ? g.labelParts : [g.label]} />
             </div>
+            {g.selected ? <span className="spAnnotationBadge spAnnotationReadOnlyBadge">Read-only</span> : null}
           </div>
 
           {g.selected ? (
@@ -106,7 +145,12 @@ export function PreviousSessionAnnotationsPanel(props: {
               {g.status === "ready" && g.items && g.items.length > 0 ? (
                 <div className="spAnnotationList" aria-label="Previous session annotations list">
                   {g.items.map((item) => (
-                    <ReadOnlyItemRow key={`${item.kind}:${item.id}`} item={item} />
+                    <ReadOnlyItemRow
+                      key={`${item.kind}:${item.id}`}
+                      item={item}
+                      onJumpToCfi={props.onJumpToCfi}
+                      onJumpToCfiRange={props.onJumpToCfiRange}
+                    />
                   ))}
                 </div>
               ) : null}

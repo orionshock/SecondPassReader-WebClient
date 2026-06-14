@@ -41,6 +41,7 @@ export type ReadingSessionOrchestratorProps = {
       searchBook: ReaderSearchBookHandle | null;
       jumpToResult: (cfi: string) => void;
       jumpToCfi: (cfi: string) => void;
+      jumpToCfiRange: (cfiRange: string) => void;
       clearTemporaryHighlight: () => void;
     };
     stagedSelection: {
@@ -248,6 +249,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     [sendCommand],
   );
 
+  const jumpToCfiRange = useCallback(
+    (cfiRange: string) => {
+      const trimmed = cfiRange.trim();
+      if (!trimmed) return;
+      sendCommand({ type: "display", target: { type: "cfiRange", cfiRange: trimmed } });
+    },
+    [sendCommand],
+  );
+
   const clearSearchResultHighlight = useCallback(() => {
     setTemporarySearchHighlightCfi(null);
   }, []);
@@ -373,6 +383,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       searchBook,
       jumpToResult: jumpToSearchResult,
       jumpToCfi,
+      jumpToCfiRange,
       clearTemporaryHighlight: clearSearchResultHighlight,
     },
     stagedSelection: {

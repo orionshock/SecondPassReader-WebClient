@@ -1318,6 +1318,13 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.spAnnotationCard:focus {
+  outline: 2px solid var(--sp-reader-text);
+  outline-offset: 3px;
+  border-color: var(--annotation-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--annotation-color) 22%, transparent);
+}
+
 .spAnnotationLeftRail {
   display: grid;
   align-content: start;
@@ -1340,9 +1347,11 @@
 }
 
 .spAnnotationRightRail {
-  display: grid;
-  align-content: center;
-  justify-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1414,10 +1423,6 @@
   white-space: nowrap;
 }
 
-.spAnnotationCardReadOnly .spAnnotationRightRail {
-  display: none;
-}
-
 .spAnnotationKindRow {
   display: flex;
   align-items: center;
@@ -1448,6 +1453,12 @@
   border: 1px solid rgba(59, 130, 246, 0.35);
   background: rgba(59, 130, 246, 0.08);
   color: rgba(37, 99, 235, 1);
+}
+
+.spAnnotationReadOnlyBadge {
+  border-color: var(--sp-reader-border);
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-muted);
 }
 
 .spAnnotationPrimary {
@@ -1529,6 +1540,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.spAnnotationReadOnlyMeta {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .spAnnotationEditForm {

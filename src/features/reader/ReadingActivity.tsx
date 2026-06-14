@@ -404,6 +404,8 @@ function ReaderActivityContent({
                 void annotations.removeById(annotationId);
               }}
               onUpdateHighlight={(annotationId, update) => annotations.updateHighlight(annotationId, update)}
+              onJumpToCfi={readerState.search.jumpToCfi}
+              onJumpToCfiRange={readerState.search.jumpToCfiRange}
             />
           </div>
         </div>

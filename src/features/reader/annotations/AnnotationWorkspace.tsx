@@ -31,6 +31,8 @@ export function AnnotationWorkspace({
   focusRequest,
   onRemoveAnnotation,
   onUpdateHighlight,
+  onJumpToCfi,
+  onJumpToCfiRange,
 }: {
   annotations: CurrentSessionAnnotationViewModel[];
   status: "idle" | "loading" | "ready" | "error";
@@ -44,6 +46,8 @@ export function AnnotationWorkspace({
   focusRequest?: { annotationId: string; mode: "editable" | "readonly"; seq: number } | null;
   onRemoveAnnotation: (annotationId: string) => void;
   onUpdateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
+  onJumpToCfi: (cfi: string) => void;
+  onJumpToCfiRange: (cfiRange: string) => void;
 }) {
   const rootRef = useRef<HTMLElement | null>(null);
   const [tab, setTab] = useState<TabKey>("current");
@@ -149,12 +153,21 @@ export function AnnotationWorkspace({
                         <button
                           type="button"
                           className="button buttonCompact spIconButton"
+                          onClick={() => onJumpToCfi(b.cfi)}
+                          aria-label="Jump to bookmark"
+                          title="Jump to location"
+                        >
+                          <MaterialIcon name="my_location" />
+                        </button>
+                        <button
+                          type="button"
+                          className="button buttonDanger buttonCompact spIconButton"
                           onClick={() => {
                             if (!window.confirm("Delete this bookmark?")) return;
                             onRemoveAnnotation(b.id);
                           }}
-                          aria-label="Remove bookmark"
-                          title="Remove"
+                          aria-label="Delete bookmark"
+                          title="Delete bookmark"
                         >
                           <MaterialIcon name="delete" />
                         </button>
@@ -303,22 +316,32 @@ export function AnnotationWorkspace({
                             setEditStatus("idle");
                             setEditError(null);
                           }}
-                          aria-label="Edit highlight"
-                          title="Edit"
+                          aria-label="Edit note and color"
+                          title="Edit note and color"
                           disabled={editStatus === "saving"}
                         >
-                          <MaterialIcon name="edit" />
+                          <MaterialIcon name="edit_note" />
                         </button>
                       ) : null}
                       <button
                         type="button"
                         className="button buttonCompact spIconButton"
+                        onClick={() => onJumpToCfiRange(h.cfiRange)}
+                        aria-label="Jump to highlight"
+                        title="Jump to location"
+                        disabled={editStatus === "saving"}
+                      >
+                        <MaterialIcon name="my_location" />
+                      </button>
+                      <button
+                        type="button"
+                        className="button buttonDanger buttonCompact spIconButton"
                         onClick={() => {
-                          if (!window.confirm("Delete this annotation?")) return;
+                          if (!window.confirm("Delete this highlight?")) return;
                           onRemoveAnnotation(h.id);
                         }}
-                        aria-label="Remove highlight"
-                        title="Remove"
+                        aria-label="Delete highlight"
+                        title="Delete highlight"
                         disabled={editStatus === "saving"}
                       >
                         <MaterialIcon name="delete" />
@@ -335,6 +358,8 @@ export function AnnotationWorkspace({
           <PreviousSessionAnnotationsPanel
             groups={previousSessionGroups ?? []}
             onEnableInMarginalia={(sessionId) => onEnablePreviousSession?.(sessionId)}
+            onJumpToCfi={onJumpToCfi}
+            onJumpToCfiRange={onJumpToCfiRange}
           />
         </div>
       )}
