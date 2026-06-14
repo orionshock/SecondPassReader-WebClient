@@ -72,13 +72,16 @@ export type ReadingSessionOrchestratorProps = {
 
 // Placeholder orchestrator: will eventually own session state, SPL calls, and Shell cross-talk.
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
-  const [location, setLocation] = useState<ReaderLocation | null>(null);
+  const activeBookKey = `${props.openedBook.book.id}|${props.openedBook.objectUrl}`;
+  const [locationEntry, setLocationEntry] = useState<{ bookKey: string; location: ReaderLocation } | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
   const [stagedSelectionHandle, setStagedSelectionHandle] = useState<StagedSelectionHandle | null>(null);
   const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
   const commandSeqRef = useRef(0);
+  const lastActiveBookKeyRef = useRef(activeBookKey);
+  const location = locationEntry?.bookKey === activeBookKey ? locationEntry.location : null;
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
   const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
@@ -121,6 +124,17 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     bookId: props.openedBook.book.id,
     currentSessionId: sessionId,
   });
+
+  useEffect(() => {
+    if (lastActiveBookKeyRef.current === activeBookKey) return;
+    lastActiveBookKeyRef.current = activeBookKey;
+    setLocationEntry(null);
+    setToc(null);
+    setPendingCommand(null);
+    setSearchBook(null);
+    setStagedSelectionHandle(null);
+    setTemporarySearchHighlightCfi(null);
+  }, [activeBookKey]);
 
   const state: ReadingSessionState = useMemo(() => {
     const seedAnnotations: ReaderAnnotation[] = annotationsRaw
@@ -259,7 +273,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
     switch (event.type) {
       case "locationChanged":
-        setLocation(event.location);
+        setLocationEntry({ bookKey: activeBookKey, location: event.location });
         return;
       case "displayError":
         // Keep errors visible in the browser console; avoid a permanent reader debug panel in the UI.
@@ -279,7 +293,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         setTemporarySearchHighlightCfi(event.cfi);
         return;
     }
-  }, [onLocationsReady, sendCommand]);
+  }, [activeBookKey, onLocationsReady, sendCommand]);
 
   // Restore saved location via the same command path used for future navigation.
   // Best-effort: this command may be deferred by the shell until the engine exists.

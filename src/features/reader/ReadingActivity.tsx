@@ -147,6 +147,7 @@ function ReaderActivityContent({
   const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
   const [nextSeriesBook, setNextSeriesBook] = useState<LibraryBook | null>(null);
   const [nextSeriesStatus, setNextSeriesStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const activeReaderKey = `${openedBook.book.id}|${currentSessionId ?? ""}`;
   const seriesId = openedBook.book.series?.id;
   const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series_index);
   const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
@@ -205,11 +206,18 @@ function ReaderActivityContent({
   }, [importDrawerInLayout, readerState.sendCommand]);
 
   useEffect(() => {
-    if (!currentSessionId || !nearEnd || endBookDialogOpen || closeDialogOpen) return;
+    setEndBookDialogOpen(false);
+    setCloseDialogOpen(false);
+    setNextSeriesBook(null);
+    setNextSeriesStatus("idle");
+  }, [activeReaderKey, setCloseDialogOpen, setEndBookDialogOpen]);
+
+  useEffect(() => {
+    if (!currentSessionId || !state.location || !nearEnd || endBookDialogOpen || closeDialogOpen) return;
     if (shownEndBookSessionIdsRef.current.has(currentSessionId)) return;
     shownEndBookSessionIdsRef.current.add(currentSessionId);
     setEndBookDialogOpen(true);
-  }, [closeDialogOpen, currentSessionId, endBookDialogOpen, nearEnd, setEndBookDialogOpen]);
+  }, [closeDialogOpen, currentSessionId, endBookDialogOpen, nearEnd, setEndBookDialogOpen, state.location]);
 
   useEffect(() => {
     if (!showFinishControls || !spl || !canLookupNextBook) {
