@@ -203,8 +203,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, nowMs, state.sessionId]);
 
   const statusLine = useMemo(() => {
-    return buildReaderStatusLine({ location: state.location, toc: state.toc });
-  }, [state.location, state.toc]);
+    return buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });
+  }, [props.openedBook.book.title, state.location, state.toc]);
 
   const visibleHighlightMarks: ReaderHighlightMark[] = useMemo(() => {
     const out: ReaderHighlightMark[] = [...highlightMarks, ...previousLayers.selectedHighlightMarks];
