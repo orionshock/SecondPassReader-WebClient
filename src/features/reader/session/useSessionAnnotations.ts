@@ -34,6 +34,19 @@ export type SessionAnnotations = {
   items: Array<ReaderBookmarkViewModel | HighlightViewModel>;
 };
 
+export function getSessionAnnotationsActiveKey(input: {
+  bookId: string | number;
+  objectUrl: string;
+  sessionId: string | null;
+}): string {
+  return `${String(input.bookId)}|${input.objectUrl}|${input.sessionId ?? ""}`;
+}
+
+export function getSeedAnnotationsFromOpen(annotations: ReadingAnnotation[] | null | undefined): ReadingAnnotation[] | null {
+  if (!Array.isArray(annotations)) return null;
+  return [...annotations];
+}
+
 export function useSessionAnnotations(args: {
   openedBook: OpenedBook;
   spl?: SecondPassClient | null;
@@ -41,7 +54,26 @@ export function useSessionAnnotations(args: {
   location: ReaderLocation | null;
   toc: ReaderTocItem[] | null;
 }) : SessionAnnotations {
-  const [raw, setRaw] = useState<ReadingAnnotation[]>([]);
+  const activeKey = getSessionAnnotationsActiveKey({
+    bookId: args.openedBook.book.id,
+    objectUrl: args.openedBook.objectUrl,
+    sessionId: args.sessionId,
+  });
+  const [rawEntry, setRawEntry] = useState<{ key: string; annotations: ReadingAnnotation[] }>(() => ({
+    key: activeKey,
+    annotations: [],
+  }));
+  const raw = rawEntry.key === activeKey ? rawEntry.annotations : [];
+  const setRaw = useCallback<React.Dispatch<React.SetStateAction<ReadingAnnotation[]>>>(
+    (value) => {
+      setRawEntry((prev) => {
+        const current = prev.key === activeKey ? prev.annotations : [];
+        const annotations = typeof value === "function" ? value(current) : value;
+        return { key: activeKey, annotations };
+      });
+    },
+    [activeKey],
+  );
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +84,7 @@ export function useSessionAnnotations(args: {
     Record<string, { status: "idle" | "loading" | "ready" | "error"; value?: ReaderLocationDescription }>
   >({});
   const descriptionGenerationRef = useRef(0);
+  const loadGenerationRef = useRef(0);
   const bookmarkDescriptionsRef = useRef(bookmarkDescriptions);
   useEffect(() => {
     bookmarkDescriptionsRef.current = bookmarkDescriptions;
@@ -59,8 +92,12 @@ export function useSessionAnnotations(args: {
 
   useEffect(() => {
     descriptionGenerationRef.current += 1;
+    loadGenerationRef.current += 1;
+    setRawEntry({ key: activeKey, annotations: [] });
+    setStatus("idle");
+    setError(null);
     setBookmarkDescriptions({});
-  }, [args.openedBook.book.id, args.openedBook.objectUrl, args.sessionId]);
+  }, [activeKey]);
 
   const handleDescribeCfiReady = useCallback((fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => {
     setDescribeCfi(() => fn);
@@ -87,29 +124,25 @@ export function useSessionAnnotations(args: {
     return copy;
   }, [raw]);
 
-  const seedAnnotationsFromOpen = useCallback((annotations: ReadingAnnotation[] | null | undefined) => {
-    const seeded: ReadingAnnotation[] = [];
-    for (const a of annotations ?? []) seeded.push(a);
-    if (seeded.length > 0) setRaw(seeded);
-  }, []);
-
   // Seed from readingOpen response (first page) immediately when available.
   const lastSeedKeyRef = useRef<string>("");
   useEffect(() => {
     const open = args.openedBook.readingOpen;
     const id = open?.session?.id ?? "";
     if (!id) return;
-    const key = `${args.openedBook.objectUrl}|${id}`;
-    if (lastSeedKeyRef.current === key) return;
-    lastSeedKeyRef.current = key;
-    seedAnnotationsFromOpen(open?.annotations?.results as unknown as ReadingAnnotation[] | undefined);
-  }, [args.openedBook.objectUrl, args.openedBook.readingOpen, seedAnnotationsFromOpen]);
+    if (lastSeedKeyRef.current === activeKey) return;
+    const seeded = getSeedAnnotationsFromOpen(open?.annotations?.results as unknown as ReadingAnnotation[] | undefined);
+    if (!seeded) return;
+    lastSeedKeyRef.current = activeKey;
+    setRaw(seeded);
+  }, [activeKey, args.openedBook.readingOpen, setRaw]);
 
   // Load annotations for the session (non-blocking).
   useEffect(() => {
     if (!args.spl) return;
     const sessionId = args.sessionId;
     if (!sessionId) return;
+    const generation = loadGenerationRef.current;
     setStatus("loading");
     setError(null);
 
@@ -132,10 +165,12 @@ export function useSessionAnnotations(args: {
           page += 1;
         }
         if (cancelled) return;
+        if (loadGenerationRef.current !== generation) return;
         setRaw(all);
         setStatus("ready");
       } catch (e) {
         if (cancelled) return;
+        if (loadGenerationRef.current !== generation) return;
         setStatus("error");
         setError(e instanceof Error ? e.message : "Failed to load annotations.");
       }
@@ -144,7 +179,7 @@ export function useSessionAnnotations(args: {
     return () => {
       cancelled = true;
     };
-  }, [args.spl, args.sessionId]);
+  }, [activeKey, args.spl, args.sessionId, setRaw]);
 
   const bookmarks: ReaderBookmark[] = useMemo(() => {
     const out: ReaderBookmark[] = [];

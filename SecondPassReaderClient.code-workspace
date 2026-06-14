@@ -1,28 +1,50 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-		"LineCount.includes": [
-			"**/*.{ts,tsx,js,jsx,html,css,scss,json,md}"
-		],
-		"LineCount.excludes": [
-			"**/.git/**",
-			"**/.vscode/**",
-			"**/node_modules/**",
-			"**/dist/**",
-			"**/out/**",
-			"**/docs/**",
-			"**/TestImportFiles/**",
-			"**/*.min.js",
-			"**/*.min.css",
-			"**/*.map",
-			"**/*.log",
-			"**/package-lock.json",
-			"**/linecount.json",
-			"**/linecount.txt"
-		]
-	}
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    "LineCount.includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.html",
+      "**/*.css",
+      "**/*.scss",
+      "**/*.json",
+    ],
+    "LineCount.excludes": [
+      "**/.git/**",
+      "**/.github/**",
+      "**/.vscode/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/out/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/docs/**",
+      "**/TestImportFiles/**",
+      "**/.vite/**",
+      "**/.turbo/**",
+      "**/.cache/**",
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "**/vite-env.d.ts",
+      "**/*.generated.*",
+      "**/*.gen.*",
+      "**/*.min.js",
+      "**/*.min.css",
+      "**/*.map",
+      "**/*.log",
+      "**/*.tsbuildinfo",
+      "**/package-lock.json",
+      "**/linecount.json",
+      "**/linecount.txt"
+    ],
+  },
 }
