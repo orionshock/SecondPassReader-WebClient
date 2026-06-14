@@ -1,3 +1,6 @@
+import type { ReadingAnnotation } from "@secondpass/client";
+import { getAnnotationFragmentCfi, getAnnotationMotivations } from "./annotationSelectors";
+
 export type AnnotationDisplay = {
   iconName: "bookmark" | "chat_bubble" | "border_color" | "edit_note";
   label: "Bookmark" | "Commented highlight" | "Highlight" | "Annotation";
@@ -19,40 +22,14 @@ export function getHighlightAnnotationDisplay(note: string | null | undefined): 
   return hasAnnotationComment(note) ? COMMENTED_HIGHLIGHT_DISPLAY : HIGHLIGHT_DISPLAY;
 }
 
-function normalizeMotivations(motivation: unknown): string[] {
-  if (Array.isArray(motivation)) return motivation.filter((m): m is string => typeof m === "string").map((m) => m.toLowerCase());
-  if (typeof motivation === "string") return [motivation.toLowerCase()];
-  return [];
-}
-
-function getFragmentSelectorValue(selector: unknown): string | null {
-  if (!selector || typeof selector !== "object") return null;
-  const anySelector = selector as { type?: unknown; value?: unknown };
-  if (anySelector.type !== "FragmentSelector") return null;
-  if (typeof anySelector.value !== "string") return null;
-  const value = anySelector.value.trim();
-  return value || null;
-}
-
-function getFragmentCfi(annotation: unknown): string | null {
-  const selector = (annotation as { target?: { selector?: unknown } } | null | undefined)?.target?.selector;
-  if (Array.isArray(selector)) {
-    for (const item of selector) {
-      const value = getFragmentSelectorValue(item);
-      if (value) return value;
-    }
-    return null;
-  }
-  return getFragmentSelectorValue(selector);
-}
-
 function isRangeCfi(cfi: string | null): boolean {
   return Boolean(cfi && cfi.includes(","));
 }
 
 export function getRawAnnotationDisplay(annotation: unknown, note: string | null | undefined): AnnotationDisplay {
-  const motivations = normalizeMotivations((annotation as { motivation?: unknown } | null | undefined)?.motivation);
-  const cfi = getFragmentCfi(annotation);
+  const rawAnnotation = (annotation ?? {}) as ReadingAnnotation;
+  const motivations = getAnnotationMotivations(rawAnnotation);
+  const cfi = getAnnotationFragmentCfi(rawAnnotation);
 
   if (motivations.includes("bookmarking") || (cfi && !isRangeCfi(cfi) && !motivations.includes("highlighting"))) {
     return BOOKMARK_DISPLAY;
