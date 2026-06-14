@@ -1,0 +1,53 @@
+.spReaderActivity .spSelectionToolbar,
+.spReaderActivity .spTocDrawer,
+.spReaderActivity .spMarginaliaMenuPanel,
+.spReaderActivity .panel,
+.spReaderActivity .spAnnotationCard,
+.spReaderActivity .spAnnotationTabActive {
+  background: var(--sp-reader-surface-strong);
+  border-color: var(--sp-reader-border);
+  color: var(--sp-reader-text);
+}
+
+.spReaderActivity .panelTitle {
+  color: var(--sp-reader-muted);
+}
+
+.spReaderActivity .spTocDrawerBackdrop {
+  background: var(--sp-reader-overlay);
+}
+
+.spReaderActivity .spTocDrawerHeader,
+.spReaderActivity .spTocDrawerSearch,
+.spReaderActivity .spMarginaliaMenuHeader {
+  border-color: var(--sp-reader-border);
+}
+
+.spReaderActivity .spTocListNested {
+  border-left-color: var(--sp-reader-border);
+}
+
+.spReaderActivity .spTocItemButton:hover {
+  background: var(--sp-reader-hover);
+}
+
+.spReaderActivity .spAnnotationTabs {
+  background: var(--sp-reader-hover);
+  border-color: var(--sp-reader-border);
+}
+
+.spReaderActivity .spAnnotationKind,
+.spReaderActivity .spAnnotationKindDetail,
+.spReaderActivity .spAnnotationBookmarkText,
+.spReaderActivity .spAnnotationTypeIcon {
+  color: var(--sp-reader-muted);
+}
+
+.spReaderActivity .spAnnotationNote {
+  background: var(--sp-reader-hover);
+}
+
+.spReaderActivity[data-reader-theme="dark"] .spAnnotationQuote {
+  background: rgba(59, 130, 246, 0.16);
+}
+

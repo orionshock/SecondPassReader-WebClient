@@ -1,0 +1,27 @@
+.spReadingShell {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.spReaderShellStack {
+  display: grid;
+  gap: 12px;
+}
+
+.spReaderDebugPanel {
+  display: grid;
+  gap: 8px;
+}
+
+.spReaderDebugDetails {
+  padding: 12px;
+}
+
+.spReaderDebugSummary {
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+}
+

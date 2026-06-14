@@ -1,0 +1,464 @@
+.spAnnotationWorkspaceHeader {
+  display: grid;
+  gap: 10px;
+}
+
+.spAnnotationWorkspaceHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.spAnnotationWorkspaceHeaderMeta {
+  display: block;
+}
+
+.spAnnotationTabs {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 999px;
+  background: var(--sp-reader-hover);
+}
+
+.spAnnotationSessionId {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.spCurrentSessionMeta {
+  display: grid;
+  gap: 6px;
+}
+
+.spCurrentSessionMetaSummaryRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spCurrentSessionMetaSummaryLabel {
+  font-size: 12px;
+  color: var(--sp-muted);
+  white-space: nowrap;
+}
+
+.spCurrentSessionMetaSummaryValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.spCurrentSessionMetaSummaryName {
+  font-weight: 600;
+}
+
+.spCurrentSessionMetaSummaryNotes {
+  color: var(--sp-muted);
+}
+
+.spCurrentSessionMetaGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 10px;
+  align-items: start;
+}
+
+.spCurrentSessionMetaFieldLabel {
+  font-size: 13px;
+  color: var(--sp-muted);
+  padding-top: 8px;
+}
+
+.spCurrentSessionMetaFieldBody {
+  min-width: 0;
+}
+
+.spCurrentSessionMetaName {
+  width: 100%;
+}
+
+.spCurrentSessionMetaNotes {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+
+.spCurrentSessionMetaActionsRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.spCurrentSessionMetaHint {
+  font-size: 12px;
+}
+
+.spCurrentSessionMetaError {
+  font-size: 12px;
+}
+
+.spCurrentSessionMetaActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spAnnotationTab {
+  border: 0;
+  background: transparent;
+  color: var(--sp-reader-text);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spAnnotationTabActive {
+  background: var(--sp-reader-control-bg);
+  border: 1px solid var(--sp-reader-border);
+}
+
+.spAnnotationTabPanel {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.spAnnotationList {
+  display: grid;
+  gap: 8px;
+}
+
+.spAnnotationCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 12px;
+  background: var(--sp-reader-surface);
+  min-width: 0;
+  --annotation-color: rgba(59, 130, 246, 0.55);
+  --annotation-bg: rgba(59, 130, 246, 0.08);
+}
+
+.spAnnotationCardCurrent {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.spAnnotationCard:focus {
+  outline: 2px solid var(--sp-reader-text);
+  outline-offset: 3px;
+  border-color: var(--annotation-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--annotation-color) 22%, transparent);
+}
+
+.spAnnotationLeftRail {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  padding-top: 2px;
+  width: 32px;
+}
+
+.spAnnotationCardBookmark .spAnnotationLeftRail {
+  align-content: center;
+  padding-top: 0;
+}
+
+.spAnnotationTypeIcon {
+  color: var(--sp-reader-muted);
+}
+
+.spAnnotationTypeIcon .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.spAnnotationRightRail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.spIconButtonTight {
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 9px;
+  min-width: 28px;
+}
+
+.spIconButtonLabel {
+  line-height: 1;
+}
+
+.material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.spReaderPageNavIcon {
+  font-size: 22px;
+}
+
+.spAnnotationBody {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  align-items: start;
+}
+
+.spPreviousSessionsPanel {
+  display: grid;
+  gap: 14px;
+}
+
+.spPreviousSessionGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.spPreviousSessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.spPreviousSessionHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spPreviousSessionTitle {
+  font-weight: 700;
+  font-size: 13px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spAnnotationKindRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spAnnotationKind {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sp-reader-muted);
+}
+
+.spAnnotationKindDetail {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--sp-reader-text);
+}
+
+.spAnnotationBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+  color: rgba(37, 99, 235, 1);
+}
+
+.spAnnotationReadOnlyBadge {
+  border-color: var(--sp-reader-border);
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-muted);
+}
+
+.spAnnotationPrimary {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sp-reader-text);
+  min-width: 0;
+}
+
+.spAnnotationBookmarkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.spAnnotationBookmarkText {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-reader-text);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spAnnotationQuote {
+  font-size: 14px;
+  color: var(--sp-reader-text);
+  padding: 6px 10px;
+  border-left: 3px solid var(--annotation-color);
+  background: var(--annotation-bg);
+  border-radius: 10px;
+  line-height: 1.35;
+  display: inline-block;
+  width: fit-content;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  /* Natural sizing: do not clamp height or hide overflow; metadata must not overlap clipped text. */
+  /* Defensive: ensure no JS/old styles lock quote height. */
+  height: auto !important;
+  padding-bottom: 6px !important;
+  align-self: start;
+}
+
+.spAnnotationNote {
+  margin-left: 8px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-text);
+  font-size: 13px;
+  line-height: 1.35;
+  width: fit-content;
+  max-width: min(72ch, 100%);
+  align-self: start;
+}
+
+.spAnnotationMetaLine {
+  font-size: 12px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spAnnotationActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.spAnnotationActionMeta {
+  font-size: 12px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spAnnotationEditForm {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.spAnnotationEditRow {
+  display: grid;
+  gap: 6px;
+}
+
+.spAnnotationEditLabel {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.spAnnotationEditTextarea {
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.spAnnotationColorSwatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spAnnotationSwatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(17, 24, 39, 0.15);
+  background: var(--swatch-color, rgba(59, 130, 246, 0.55));
+  cursor: pointer;
+}
+
+.spAnnotationSwatchActive {
+  border-color: var(--sp-reader-text);
+  box-shadow: 0 0 0 3px var(--sp-reader-hover);
+}
+
+.spAnnotationEditActions {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.spAnnotationEditPrimaryActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spAnnotationEditError {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: rgba(153, 27, 27, 1);
+}
+
+.spAnnotationPreviousPlaceholder {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.spReaderDebugBody {
+  margin-top: 10px;
+}
+
+.spReaderDebugGrid {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 6px 10px;
+  font-size: 12px;
+}
+

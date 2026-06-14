@@ -1,0 +1,99 @@
+.spReaderActivity .spReaderChrome {
+  background: var(--sp-reader-surface);
+  border-bottom-color: var(--sp-reader-border);
+  box-shadow: 0 10px 24px var(--sp-reader-shadow);
+}
+
+.spReaderActivity .spReaderTitleLine,
+.spReaderActivity .spTocItemButton,
+.spReaderActivity .spAnnotationPrimary,
+.spReaderActivity .spAnnotationQuote,
+.spReaderActivity .spAnnotationNote,
+.spReaderActivity .spAnnotationTab,
+.spReaderActivity .spReaderPageNav,
+.spReaderActivity .spReaderTocButton,
+.spReaderActivity .spReaderSettingsButton,
+.spReaderActivity .button {
+  color: var(--sp-reader-text);
+}
+
+.spReaderActivity .muted,
+.spReaderActivity .spCurrentSessionMetaSummaryLabel,
+.spReaderActivity .spCurrentSessionMetaFieldLabel,
+.spReaderActivity .spCurrentSessionMetaSummaryNotes {
+  color: var(--sp-reader-muted);
+}
+
+.spReaderActivity .button,
+.spReaderActivity .input,
+.spReaderActivity textarea,
+.spReaderActivity input[type="text"],
+.spReaderActivity input[type="search"] {
+  background: var(--sp-reader-control-bg);
+  border-color: var(--sp-reader-border);
+  color: var(--sp-reader-text);
+}
+
+.spReaderActivity .spMarginaliaCloseSessionButton {
+  background: rgba(185, 28, 28, 0.08);
+  border-color: rgba(185, 28, 28, 0.32);
+  color: #991b1b;
+}
+
+.spReaderActivity[data-reader-theme="dark"] .spMarginaliaCloseSessionButton {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.42);
+  color: #fecaca;
+}
+
+.spReaderActivity .endBookDialog {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.spReaderActivity .endBookDialog .muted {
+  color: var(--color-text-muted);
+}
+
+.spReaderActivity .endBookDialog .button {
+  background: var(--sp-button-bg);
+  border-color: var(--color-border);
+  color: var(--sp-button-text);
+}
+
+.spReaderActivity .endBookDialog .buttonPrimary {
+  background: var(--sp-primary-bg);
+  border-color: var(--sp-primary-border);
+  color: var(--sp-primary-text);
+}
+
+.spReaderActivity .endBookFinishButton {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.spReaderActivity .spReaderViewportRegion {
+  width: 100%;
+  max-width: var(--sp-reader-viewport-max);
+  margin: 0 auto;
+}
+
+.spReaderActivity .spReaderViewport {
+  background: var(--sp-reader-surface);
+  border-color: var(--sp-reader-border);
+}
+
+.spReaderActivity .spReaderViewportMount {
+  background: var(--sp-reader-surface-strong);
+  border-color: var(--sp-reader-border);
+}
+
+.spReaderActivity .spReaderPageNav,
+.spReaderActivity .spReaderTocButton,
+.spReaderActivity .spReaderSettingsButton {
+  background: var(--sp-reader-control-bg);
+  border-color: var(--sp-reader-border);
+}
+

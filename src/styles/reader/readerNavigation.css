@@ -1,0 +1,147 @@
+.spReaderPageNav {
+  pointer-events: auto;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-reader-border);
+  background: var(--sp-reader-control-bg);
+  color: var(--sp-reader-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.spReaderPageNav:disabled {
+  opacity: 0.5;
+}
+
+.spReaderPageNavPrev {
+  left: 10px;
+}
+
+.spReaderPageNavNext {
+  right: 10px;
+}
+
+.spReaderTocButton {
+  pointer-events: auto;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-reader-border);
+  background: var(--sp-reader-control-bg);
+  color: var(--sp-reader-text);
+  display: grid;
+  place-items: center;
+  z-index: 15;
+}
+
+.spReaderTocButton:disabled {
+  opacity: 0.5;
+}
+
+.spReaderTocButtonIcon {
+  font-size: 20px;
+}
+
+.spTocDrawerBackdrop {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.35);
+  z-index: 100;
+}
+
+.spTocDrawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: min(360px, calc(100% - 40px));
+  background: var(--sp-panel);
+  border-right: 1px solid var(--sp-reader-border);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  box-shadow: 0 20px 60px rgba(17, 24, 39, 0.18);
+}
+
+.spTocDrawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spTocDrawerTitle {
+  font-weight: 700;
+}
+
+.spTocDrawerSearch {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spTocDrawerSearchInput {
+  width: 100%;
+}
+
+.spTocDrawerBody {
+  padding: 10px 0;
+  overflow: auto;
+}
+
+.spTocEmpty {
+  padding: 8px 12px;
+}
+
+.spTocList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.spTocListNested {
+  margin-left: 10px;
+  border-left: 1px solid var(--sp-reader-border);
+}
+
+.spTocListNested > .spTocItem > .spTocItemButton {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.spTocItem {
+  margin: 0;
+}
+
+.spTocDrawerCloseButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.spTocItemButton {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--sp-reader-text);
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.spTocItemButton:hover {
+  background: var(--sp-reader-hover);
+}
+

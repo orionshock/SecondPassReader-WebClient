@@ -1,0 +1,148 @@
+.spMarginaliaMenuHost {
+  position: relative;
+  display: inline-flex;
+}
+
+.spMarginaliaMenuBackdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 79;
+}
+
+.spMarginaliaMenuPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  width: min(340px, calc(100vw - 24px));
+  background: var(--sp-panel);
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(17, 24, 39, 0.18);
+  overflow: hidden;
+}
+
+.spMarginaliaMenuPanelAbove {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.spMarginaliaMenuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spMarginaliaMenuTitle {
+  font-weight: 700;
+}
+
+.spMarginaliaMenuCloseButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.spMarginaliaMenuBody {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.spMarginaliaMenuSection {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spMarginaliaMenuSectionTitle {
+  font-size: 12px;
+}
+
+.spMarginaliaMenuActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spMarginaliaEmpty {
+  font-size: 13px;
+}
+
+.spMarginaliaLayerList {
+  display: grid;
+  gap: 4px;
+  max-height: min(260px, 42vh);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.spMarginaliaLayerRow {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  border-radius: 9px;
+  padding: 5px 6px;
+  cursor: pointer;
+}
+
+.spMarginaliaLayerRow:hover {
+  background: var(--sp-reader-hover);
+}
+
+.spMarginaliaLayerRow:focus-within {
+  outline: 2px solid var(--sp-primary-border);
+  outline-offset: 1px;
+}
+
+.spMarginaliaLayerRowSelected {
+  background: var(--color-primary-bg);
+}
+
+.spMarginaliaLayerIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sp-reader-muted);
+}
+
+.spMarginaliaLayerRowSelected .spMarginaliaLayerIndicator {
+  color: var(--color-primary);
+}
+
+.spMarginaliaLayerIndicator .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.spMarginaliaLayerLabel {
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.spMarginaliaMenuFooter {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding-top: 10px;
+  border-top: 1px solid var(--sp-reader-border);
+}
+
+.spMarginaliaSessionNote {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.spMarginaliaCloseSessionButton {
+  border-color: rgba(185, 28, 28, 0.32);
+  background: rgba(185, 28, 28, 0.08);
+  color: #991b1b;
+}
+

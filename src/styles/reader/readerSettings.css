@@ -1,0 +1,110 @@
+.spReaderSettingsButton {
+  pointer-events: auto;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-reader-border);
+  background: var(--sp-reader-control-bg);
+  color: var(--sp-reader-text);
+  display: grid;
+  place-items: center;
+  z-index: 15;
+}
+
+.spReaderSettingsButton:disabled {
+  opacity: 0.5;
+}
+
+.spReaderSettingsButtonIcon {
+  font-size: 20px;
+}
+
+.spReaderSettingsBackdrop {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  z-index: 105;
+  background: transparent;
+}
+
+.spReaderSettingsPanel {
+  position: absolute;
+  top: 54px;
+  right: 10px;
+  width: min(340px, calc(100% - 20px));
+  max-height: calc(100% - 64px);
+  overflow: auto;
+  background: var(--sp-reader-surface-strong);
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px var(--sp-reader-shadow);
+  color: var(--sp-reader-text);
+}
+
+.spReaderSettingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sp-reader-border);
+}
+
+.spReaderSettingsTitle {
+  font-weight: 700;
+}
+
+.spReaderSettingsCloseButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.spReaderSettingsBody {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.spReaderSettingsGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.spReaderSettingsGroupLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sp-reader-muted);
+}
+
+.spReaderSettingsChoiceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spReaderSettingsChoice {
+  border: 1px solid var(--sp-reader-border);
+  background: var(--sp-reader-control-bg);
+  color: var(--sp-reader-text);
+  border-radius: 999px;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.spReaderSettingsChoiceActive {
+  border-color: rgba(37, 99, 235, 0.5);
+  background: rgba(37, 99, 235, 0.14);
+}
+
+.spReaderSettingsResetRow {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+

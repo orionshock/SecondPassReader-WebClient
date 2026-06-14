@@ -1,0 +1,162 @@
+.spReaderActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.spReaderTitle {
+  min-width: 0;
+}
+
+.spReaderStatusLine,
+.spReaderAutosaveLine {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.spReaderTitleLine {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--sp-reader-text);
+}
+
+@media (max-width: 720px) {
+  .spReaderTopBar {
+    grid-template-columns: 1fr;
+  }
+
+  .spReaderContextActions {
+    justify-content: flex-start;
+  }
+
+  .spReaderActions {
+    justify-content: flex-start;
+  }
+}
+
+.spReaderLayout {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  align-items: start;
+  min-width: 0;
+}
+
+.spReaderContentFrame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.spReaderContentFrame > .spReaderLayout {
+  min-width: 0;
+}
+
+.spReaderViewportRegion,
+.spReaderAnnotationsRegion,
+.spReaderDebugRegion {
+  min-width: 0;
+}
+
+.spReaderViewportRegion {
+  /* Prevent engine-rendered content from expanding the page horizontally. */
+  overflow-x: hidden;
+}
+
+.spReaderViewport {
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--sp-reader-surface);
+  display: grid;
+  gap: 10px;
+  min-height: 60vh;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.spReaderViewportMountWrapper {
+  position: relative;
+  min-width: 0;
+}
+
+.spReaderViewportMount {
+  border: 1px dashed var(--sp-reader-border);
+  border-radius: 10px;
+  /* Prefer a tall reading area; annotation workspace scrolls below. */
+  height: clamp(420px, 68vh, 920px);
+  background: var(--sp-reader-hover);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Keep media from overflowing the viewport, but do not constrain layout containers.
+   Paginated mode relies on some inner elements being wider than the viewport. */
+.spReaderViewportMount img,
+.spReaderViewportMount svg,
+.spReaderViewportMount video,
+.spReaderViewportMount canvas {
+  max-width: 100%;
+}
+
+.spReaderViewportMount iframe {
+  display: block;
+  border: 0;
+  overflow: hidden;
+}
+
+.spReaderViewportOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.spSelectionToolbar {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 120;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 12px;
+  background: var(--sp-reader-surface);
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12);
+  max-width: min(520px, calc(100% - 16px));
+}
+
+.spSelectionToolbarRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.spSelectionToolbarChips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spSelectionToolbarNote {
+  display: grid;
+  gap: 8px;
+}
+
+.spSelectionToolbarTextarea {
+  font-size: 13px;
+  line-height: 1.35;
+  resize: vertical;
+}
+

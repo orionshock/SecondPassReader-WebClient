@@ -1,0 +1,94 @@
+.spDurableAnnotationToolbar {
+  --sp-reader-surface-strong: #ffffff;
+  --sp-reader-text: #111827;
+  --sp-reader-muted: #6b7280;
+  --sp-reader-border: rgba(17, 24, 39, 0.12);
+  position: fixed;
+  pointer-events: auto;
+  z-index: 180;
+  width: max-content;
+  min-width: min(280px, calc(100vw - 24px));
+  max-width: min(520px, calc(100vw - 24px));
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 10px;
+  color: var(--sp-reader-text);
+  background: var(--sp-reader-surface-strong, #ffffff);
+  box-shadow: 0 16px 42px rgba(17, 24, 39, 0.24);
+}
+
+.spDurableAnnotationToolbar[data-reader-theme="sepia"] {
+  --sp-reader-surface-strong: #fff7e8;
+  --sp-reader-text: #2f261b;
+  --sp-reader-muted: #7a6958;
+  --sp-reader-border: rgba(87, 65, 36, 0.2);
+}
+
+.spDurableAnnotationToolbar[data-reader-theme="dark"] {
+  --sp-reader-surface-strong: #1b2228;
+  --sp-reader-text: #eef2f5;
+  --sp-reader-muted: #a6b2bd;
+  --sp-reader-border: rgba(226, 232, 240, 0.16);
+}
+
+.spDurableAnnotationQuote {
+  padding: 6px 8px;
+  border-left: 3px solid var(--annotation-color, #facc15);
+  background: color-mix(in srgb, var(--annotation-color, #facc15) 16%, var(--sp-reader-surface-strong, #ffffff));
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.spDurableAnnotationNote {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--sp-reader-text, #111827) 7%, var(--sp-reader-surface-strong, #ffffff));
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.spDurableAnnotationEdit {
+  display: grid;
+  gap: 8px;
+}
+
+.spDurableAnnotationTextarea {
+  width: 100%;
+  min-height: 68px;
+  font-size: 13px;
+  line-height: 1.35;
+  resize: vertical;
+  color: var(--sp-reader-text);
+  background: var(--sp-reader-surface-strong, #ffffff);
+  border: 1px solid var(--sp-reader-border);
+  box-shadow: none;
+}
+
+.spDurableAnnotationTextarea::placeholder {
+  color: var(--sp-reader-muted);
+}
+
+.spDurableAnnotationActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.spDurableAnnotationDeleteButton {
+  color: #991b1b;
+  border-color: rgba(153, 27, 27, 0.35);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.spDurableAnnotationDeleteButton:hover {
+  background: rgba(220, 38, 38, 0.16);
+}
+
