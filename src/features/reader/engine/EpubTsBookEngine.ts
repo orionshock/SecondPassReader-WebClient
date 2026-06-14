@@ -339,11 +339,16 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       let spineIndex: number | undefined;
       let href: string | undefined;
       try {
-        const parsed = new EpubCFI(trimmed);
-        spineIndex = typeof parsed.spinePos === "number" ? parsed.spinePos : undefined;
-        if (typeof spineIndex === "number") {
-          const section = book.spine.get(spineIndex);
-          href = section?.href ?? undefined;
+        const section = book.spine.get(trimmed);
+        if (section) {
+          spineIndex = typeof section.index === "number" ? section.index : undefined;
+          href = section.href ?? undefined;
+        } else {
+          const parsed = new EpubCFI(trimmed);
+          spineIndex = typeof parsed.spinePos === "number" ? parsed.spinePos : undefined;
+          if (typeof spineIndex === "number") {
+            href = book.spine.get(spineIndex)?.href ?? undefined;
+          }
         }
       } catch {
         // ignore parse/lookup errors; fall back to minimal description

@@ -27,6 +27,8 @@ function ReadOnlyItemRow({
   onJumpToCfiRange: (cfiRange: string) => void;
 }) {
   if (item.kind === "bookmark") {
+    const when = formatWhen(item.timestamp);
+    const label = item.locationLabel?.trim() || "Bookmark";
     return (
       <article tabIndex={-1} data-annotation-id={item.id} className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
         <div className="spAnnotationLeftRail" aria-hidden="true">
@@ -36,9 +38,9 @@ function ReadOnlyItemRow({
         </div>
         <div className="spAnnotationBody">
           <div className="spAnnotationBookmarkRow">
-            <span className="spAnnotationBookmarkText">Bookmark</span>
+            <span className="spAnnotationBookmarkText">{label}</span>
           </div>
-          {formatWhen(item.timestamp) ? <div className="muted spAnnotationActionMeta">{formatWhen(item.timestamp)}</div> : null}
+          {when ? <div className="muted spAnnotationActionMeta">{when}</div> : null}
         </div>
         <div className="spAnnotationRightRail" aria-label="Read-only bookmark actions">
           <button
@@ -58,6 +60,11 @@ function ReadOnlyItemRow({
   const when = formatWhen(item.timestamp);
   const vars = toAnnotationCssVars(item.color);
   const display = getHighlightAnnotationDisplay(item.note);
+  const quoteText = normalizeQuoteTextForDisplay(item.text);
+  const noteText = item.note?.replace(/\s+/g, " ").trim() ?? "";
+  const primaryText = quoteText || noteText || item.locationLabel || "Highlight";
+  const showNote = Boolean(noteText && quoteText);
+  const metaLocation = item.locationLabel && item.locationLabel !== primaryText ? item.locationLabel : null;
   return (
     <article
       tabIndex={-1}
@@ -71,11 +78,13 @@ function ReadOnlyItemRow({
         </span>
       </div>
       <div className="spAnnotationBody">
-        <div className="spAnnotationQuote">{normalizeQuoteTextForDisplay(item.text)}</div>
-        {item.note ? <div className="spAnnotationNote muted">{item.note}</div> : null}
-        <div className="muted spAnnotationActionMeta">
-          <InlineMeta items={[when, item.color]} />
-        </div>
+        <div className="spAnnotationQuote">{primaryText}</div>
+        {showNote ? <div className="spAnnotationNote muted">{item.note}</div> : null}
+        {metaLocation || when ? (
+          <div className="muted spAnnotationActionMeta">
+            <InlineMeta items={[metaLocation, when]} />
+          </div>
+        ) : null}
       </div>
       <div className="spAnnotationRightRail" aria-label="Read-only highlight actions">
         <button

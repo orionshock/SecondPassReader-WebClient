@@ -9,8 +9,8 @@ export type HighlightViewModel = {
   color?: string;
   timestamp?: string;
   label: string;
+  labelParts: string[];
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 };
 
 export type CurrentSessionAnnotationViewModel = ReaderBookmarkViewModel | HighlightViewModel;
-

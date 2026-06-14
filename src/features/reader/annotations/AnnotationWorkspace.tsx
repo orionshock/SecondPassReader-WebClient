@@ -18,6 +18,18 @@ function normalizeQuoteTextForDisplay(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+function formatWhen(ts: string | undefined): string | null {
+  const s = typeof ts === "string" ? ts.trim() : "";
+  if (!s) return null;
+  const ms = Date.parse(s);
+  if (!Number.isFinite(ms)) return s;
+  return new Date(ms).toLocaleString();
+}
+
+function toLocationMetaParts(parts: string[] | undefined): string[] {
+  return (parts ?? []).filter((part) => part !== "Saved location");
+}
+
 export function AnnotationWorkspace({
   annotations,
   status,
@@ -125,6 +137,8 @@ export function AnnotationWorkspace({
                 if ("cfi" in a) {
                   const b = a;
                   const isCurrent = b.isCurrent || Boolean(currentCfi && b.cfi === currentCfi);
+                  const when = formatWhen(b.timestamp);
+                  const locationMetaParts = toLocationMetaParts(b.labelParts);
 
                   return (
                     <article
@@ -142,11 +156,16 @@ export function AnnotationWorkspace({
                       <div className="spAnnotationBody">
                         <div className="spAnnotationBookmarkRow" title={b.label}>
                           <span className="spAnnotationBookmarkText">
-                            <InlineMeta items={["Bookmark", ...b.labelParts]} />
+                            Bookmark
                             {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
                           </span>
                           {isCurrent ? <span className="spAnnotationBadge">Current</span> : null}
                         </div>
+                        {locationMetaParts.length > 0 || when ? (
+                          <div className="muted spAnnotationActionMeta" title={b.label}>
+                            <InlineMeta items={[...locationMetaParts, when]} />
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="spAnnotationRightRail" aria-label="Bookmark actions">
@@ -179,8 +198,8 @@ export function AnnotationWorkspace({
                 const h = a as HighlightViewModel;
                 const vars = toAnnotationCssVars(h.color);
                 const quoteText = h.text ? normalizeQuoteTextForDisplay(h.text) : "";
-                const when =
-                  h.timestamp && !Number.isNaN(Date.parse(h.timestamp)) ? new Date(h.timestamp).toLocaleString() : null;
+                const when = formatWhen(h.timestamp);
+                const locationMetaParts = toLocationMetaParts(h.labelParts);
                 const isEditing = editingId === h.id;
                 const canSave = editStatus !== "saving" && !busy;
                 const display = getHighlightAnnotationDisplay(h.note);
@@ -207,10 +226,12 @@ export function AnnotationWorkspace({
 
                       {!isEditing ? (
                         <div className="spAnnotationActionRow">
-                          <div className="muted spAnnotationActionMeta" title={h.label}>
-                            <InlineMeta items={[h.label, when]} />
-                            {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                          </div>
+                          {locationMetaParts.length > 0 || when || h.descriptionStatus === "loading" ? (
+                            <div className="muted spAnnotationActionMeta" title={h.label}>
+                              <InlineMeta items={[...locationMetaParts, when]} />
+                              {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
 
@@ -295,10 +316,12 @@ export function AnnotationWorkspace({
                               </button>
                             </div>
 
-                            <div className="muted spAnnotationActionMeta" title={h.label}>
-                              <InlineMeta items={[h.label, when]} />
-                              {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                            </div>
+                            {locationMetaParts.length > 0 || when || h.descriptionStatus === "loading" ? (
+                              <div className="muted spAnnotationActionMeta" title={h.label}>
+                                <InlineMeta items={[...locationMetaParts, when]} />
+                                {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
+                              </div>
+                            ) : null}
                           </div>
                         </form>
                       ) : null}

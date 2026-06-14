@@ -5,11 +5,24 @@
 		}
 	],
 	"settings": {
+		"LineCount.includes": [
+			"**/*.{ts,tsx,js,jsx,html,css,scss,json,md}"
+		],
 		"LineCount.excludes": [
-			"**/.npm-cache/**",
-			"**/dist/**",
+			"**/.git/**",
 			"**/.vscode/**",
-			"**/node_modules/**"
+			"**/node_modules/**",
+			"**/dist/**",
+			"**/out/**",
+			"**/docs/**",
+			"**/TestImportFiles/**",
+			"**/*.min.js",
+			"**/*.min.css",
+			"**/*.map",
+			"**/*.log",
+			"**/package-lock.json",
+			"**/linecount.json",
+			"**/linecount.txt"
 		]
 	}
 }

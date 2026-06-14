@@ -48,4 +48,31 @@ describe("buildReaderStatusLine", () => {
       }),
     ).toEqual(["p1/2", "0%"]);
   });
+
+  it("matches split spine hrefs back to their TOC chapter", () => {
+    expect(
+      buildReaderStatusLine({
+        toc: [
+          { id: "ch7", label: "Chapter 7", href: "text/part0007.html" },
+          { id: "ch10", label: "Chapter 10", href: "text/part0010.xhtml" },
+        ],
+        location: {
+          href: "text/part0007_split_001.html",
+          bookProgress: 0.0839,
+        },
+      }),
+    ).toEqual(["Chapter 7", "8%"]);
+  });
+
+  it("matches split spine hrefs across html and xhtml extensions", () => {
+    expect(
+      buildReaderStatusLine({
+        toc: [{ id: "ch10", label: "Chapter 10", href: "text/part0010.xhtml" }],
+        location: {
+          href: "text/part0010_split_001.html",
+          bookProgress: 0.1739,
+        },
+      }),
+    ).toEqual(["Chapter 10", "17%"]);
+  });
 });

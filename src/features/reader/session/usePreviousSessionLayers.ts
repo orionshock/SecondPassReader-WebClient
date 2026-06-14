@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient, ReadingAnnotation } from "@secondpass/client";
-import type { ReaderHighlightMark } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
 import {
   getAnnotationColor,
   getAnnotationDescribingText,
@@ -12,6 +12,7 @@ import {
   toReaderAnnotation,
 } from "../annotations/annotationUtils";
 import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../storage/marginaliaLayerPreferences";
+import { describeCfiBestEffort, toReaderCfiLocationDisplay } from "./readerCfiDescriptions";
 
 export type PreviousSessionLayerSummary = {
   sessionId: string;
@@ -30,9 +31,36 @@ type CachedSessionAnnotations = {
   highlightCount?: number;
 };
 
+type LocationDescriptionCacheEntry =
+  | { status: "loading" }
+  | { status: "ready"; value: ReaderLocationDescription }
+  | { status: "error" };
+
+type PreviousSessionLocationLabel = {
+  locationLabel?: string;
+  descriptionStatus: "idle" | "loading" | "ready" | "error";
+};
+
 export type PreviousSessionAnnotationItem =
-  | { kind: "highlight"; id: string; cfiRange: string; text: string; note?: string; color?: string; timestamp?: string }
-  | { kind: "bookmark"; id: string; cfi: string; timestamp?: string };
+  | {
+      kind: "highlight";
+      id: string;
+      cfiRange: string;
+      text: string;
+      note?: string;
+      color?: string;
+      timestamp?: string;
+      locationLabel?: string;
+      descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
+    }
+  | {
+      kind: "bookmark";
+      id: string;
+      cfi: string;
+      timestamp?: string;
+      locationLabel?: string;
+      descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
+    };
 
 export type PreviousSessionAnnotationGroup = {
   sessionId: string;
@@ -84,14 +112,33 @@ function toHighlightMarks(annotations: ReadingAnnotation[], sessionId?: string):
   return { marks: marks.filter((m) => Boolean(m.id && m.cfiRange)), highlightCount: count };
 }
 
-function toPreviousSessionItems(annotations: ReadingAnnotation[]): PreviousSessionAnnotationItem[] {
+function toPreviousSessionLocationLabel(input: {
+  cfi: string;
+  descriptions: Map<string, LocationDescriptionCacheEntry>;
+  toc: ReaderTocItem[] | null | undefined;
+  bookTitle?: string | null;
+}): PreviousSessionLocationLabel {
+  const entry = input.descriptions.get(input.cfi);
+  const locationLabel =
+    entry?.status === "ready"
+      ? toReaderCfiLocationDisplay({ description: entry.value, toc: input.toc, bookTitle: input.bookTitle }).locationLabel
+      : undefined;
+  return { locationLabel, descriptionStatus: entry?.status ?? "idle" };
+}
+
+function toPreviousSessionItems(
+  annotations: ReadingAnnotation[],
+  descriptions: Map<string, LocationDescriptionCacheEntry>,
+  toc: ReaderTocItem[] | null | undefined,
+  bookTitle?: string | null,
+): PreviousSessionAnnotationItem[] {
   const out: PreviousSessionAnnotationItem[] = [];
   for (const a of annotations) {
     const timestamp = getAnnotationTimestamp(a) ?? undefined;
     if (isBookmarkAnnotation(a)) {
       const cfi = getAnnotationFragmentCfi(a);
       if (!cfi) continue;
-      out.push({ kind: "bookmark", id: a.id, cfi, timestamp });
+      out.push({ kind: "bookmark", id: a.id, cfi, timestamp, ...toPreviousSessionLocationLabel({ cfi, descriptions, toc, bookTitle }) });
       continue;
     }
     if (isHighlightAnnotation(a)) {
@@ -107,6 +154,7 @@ function toPreviousSessionItems(annotations: ReadingAnnotation[]): PreviousSessi
         note,
         color,
         timestamp,
+        ...toPreviousSessionLocationLabel({ cfi: ra.cfiRange, descriptions, toc, bookTitle }),
       });
     }
   }
@@ -143,6 +191,9 @@ export function usePreviousSessionLayers(args: {
   spl?: SecondPassClient | null;
   bookId: string | number | null;
   currentSessionId: string | null;
+  describeCfi?: ((cfi: string) => Promise<ReaderLocationDescription>) | null;
+  toc?: ReaderTocItem[] | null;
+  bookTitle?: string | null;
 }) {
   const [listStatus, setListStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [listError, setListError] = useState<string | null>(null);
@@ -151,8 +202,12 @@ export function usePreviousSessionLayers(args: {
   const [selectedPreviousSessionIds, setSelectedPreviousSessionIds] = useState<string[]>([]);
   const cacheRef = useRef<Map<string, CachedSessionAnnotations>>(new Map());
   const [cacheVersion, setCacheVersion] = useState(0);
+  const descriptionCacheRef = useRef<Map<string, LocationDescriptionCacheEntry>>(new Map());
+  const descriptionGenerationRef = useRef(0);
+  const [descriptionCacheVersion, setDescriptionCacheVersion] = useState(0);
 
   const bump = useCallback(() => setCacheVersion((n) => n + 1), []);
+  const bumpDescriptionCache = useCallback(() => setDescriptionCacheVersion((n) => n + 1), []);
 
   useEffect(() => {
     const bookId = args.bookId;
@@ -161,8 +216,11 @@ export function usePreviousSessionLayers(args: {
       return;
     }
 
+    descriptionCacheRef.current.clear();
+    descriptionGenerationRef.current += 1;
+    bumpDescriptionCache();
     setSelectedPreviousSessionIds(loadMarginaliaLayerPreferences(bookId));
-  }, [args.bookId]);
+  }, [args.bookId, bumpDescriptionCache]);
 
   useEffect(() => {
     if (!args.spl) return;
@@ -282,6 +340,47 @@ export function usePreviousSessionLayers(args: {
     [ensureLoaded],
   );
 
+  useEffect(() => {
+    const describeCfi = args.describeCfi;
+    if (!describeCfi) return;
+
+    const cfiSet = new Set<string>();
+    for (const sessionId of selectedPreviousSessionIds) {
+      const cached = cacheRef.current.get(sessionId);
+      if (cached?.status !== "ready" || !cached.annotations) continue;
+      for (const annotation of cached.annotations) {
+        const cfi = getAnnotationFragmentCfi(annotation);
+        if (cfi) cfiSet.add(cfi);
+      }
+    }
+    if (cfiSet.size === 0) return;
+
+    const generation = descriptionGenerationRef.current;
+    for (const cfi of cfiSet) {
+      const existing = descriptionCacheRef.current.get(cfi);
+      if (existing?.status === "loading") continue;
+      if (existing?.status === "ready" && existing.value.href) continue;
+      descriptionCacheRef.current.set(cfi, { status: "loading" });
+      bumpDescriptionCache();
+      void (async () => {
+        try {
+          const value = await describeCfiBestEffort(describeCfi, cfi);
+          if (descriptionGenerationRef.current !== generation) {
+            return;
+          }
+          descriptionCacheRef.current.set(cfi, { status: "ready", value });
+        } catch {
+          if (descriptionGenerationRef.current !== generation) {
+            return;
+          }
+          descriptionCacheRef.current.set(cfi, { status: "error" });
+        } finally {
+          if (descriptionGenerationRef.current === generation) bumpDescriptionCache();
+        }
+      })();
+    }
+  }, [args.describeCfi, args.toc, bumpDescriptionCache, cacheVersion, selectedPreviousSessionIds]);
+
   const previousLayers: PreviousSessionLayerSummary[] = useMemo(() => {
     return sessionSummaries.map((s) => {
       const cached = cacheRef.current.get(s.sessionId);
@@ -309,10 +408,13 @@ export function usePreviousSessionLayers(args: {
             ? s.annotationCount
             : 0;
       const labelParts = buildLayerLabelParts({ name: s.name, timeLabel: s.timeLabel, highlightCount });
-      const items = cached?.status === "ready" && cached.annotations ? toPreviousSessionItems(cached.annotations) : undefined;
+      const items =
+        cached?.status === "ready" && cached.annotations
+          ? toPreviousSessionItems(cached.annotations, descriptionCacheRef.current, args.toc, args.bookTitle)
+          : undefined;
       return { sessionId: s.sessionId, label: labelParts.join(" "), labelParts, highlightCount, selected: selected.has(s.sessionId), status, error: cached?.error, items };
     });
-  }, [cacheVersion, selectedPreviousSessionIds, sessionSummaries]);
+  }, [args.bookTitle, args.toc, cacheVersion, descriptionCacheVersion, selectedPreviousSessionIds, sessionSummaries]);
 
   const selectedHighlightMarks: ReaderHighlightMark[] = useMemo(() => {
     const selected = new Set(selectedPreviousSessionIds);

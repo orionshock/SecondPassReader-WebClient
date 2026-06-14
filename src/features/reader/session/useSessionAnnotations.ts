@@ -11,6 +11,7 @@ import {
   toReaderAnnotation,
 } from "../annotations/annotationUtils";
 import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
+import { describeCfiBestEffort, toReaderCfiLocationDisplay } from "./readerCfiDescriptions";
 
 export type SessionAnnotations = {
   raw: ReadingAnnotation[];
@@ -50,10 +51,16 @@ export function useSessionAnnotations(args: {
   const [bookmarkDescriptions, setBookmarkDescriptions] = useState<
     Record<string, { status: "idle" | "loading" | "ready" | "error"; value?: ReaderLocationDescription }>
   >({});
+  const descriptionGenerationRef = useRef(0);
   const bookmarkDescriptionsRef = useRef(bookmarkDescriptions);
   useEffect(() => {
     bookmarkDescriptionsRef.current = bookmarkDescriptions;
   }, [bookmarkDescriptions]);
+
+  useEffect(() => {
+    descriptionGenerationRef.current += 1;
+    setBookmarkDescriptions({});
+  }, [args.openedBook.book.id, args.openedBook.objectUrl, args.sessionId]);
 
   const handleDescribeCfiReady = useCallback((fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => {
     setDescribeCfi(() => fn);
@@ -172,13 +179,14 @@ export function useSessionAnnotations(args: {
     if (!describeCfi) return;
     if (bookmarks.length === 0 && highlights.length === 0) return;
 
-    let cancelled = false;
+    const generation = descriptionGenerationRef.current;
 
     const current = bookmarkDescriptionsRef.current;
     const toDescribe = [...bookmarks.map((b) => b.cfi), ...highlights.map((h) => h.cfiRange)].filter((cfi) => {
       const entry = current[cfi];
       if (!entry) return true;
       if (entry.status === "error") return true;
+      if (entry.status === "ready" && !entry.value?.href) return true;
       // Once locations are generated, refresh descriptions that previously
       // lacked locations-derived metadata (e.g. approximate bookProgress).
       if (locationsReady && entry.status === "ready" && entry.value && entry.value.bookProgress == null) return true;
@@ -189,7 +197,11 @@ export function useSessionAnnotations(args: {
       setBookmarkDescriptions((prev) => {
         const existing = prev[cfi];
         if (existing?.status === "loading") return prev;
-        if (existing?.status === "ready" && !(locationsReady && existing.value && existing.value.bookProgress == null)) {
+        if (
+          existing?.status === "ready" &&
+          existing.value?.href &&
+          !(locationsReady && existing.value && existing.value.bookProgress == null)
+        ) {
           return prev;
         }
         return { ...prev, [cfi]: { status: "loading" } };
@@ -197,19 +209,19 @@ export function useSessionAnnotations(args: {
 
       void (async () => {
         try {
-          const desc = await describeCfi(cfi);
-          if (cancelled) return;
+          const desc = await describeCfiBestEffort(describeCfi, cfi);
+          if (descriptionGenerationRef.current !== generation) {
+            return;
+          }
           setBookmarkDescriptions((prev) => ({ ...prev, [cfi]: { status: "ready", value: desc } }));
         } catch {
-          if (cancelled) return;
+          if (descriptionGenerationRef.current !== generation) {
+            return;
+          }
           setBookmarkDescriptions((prev) => ({ ...prev, [cfi]: { status: "error" } }));
         }
       })();
     }
-
-    return () => {
-      cancelled = true;
-    };
   }, [bookmarks, describeCfi, highlights, locationsReady]);
 
   const bookmarkViewModels: ReaderBookmarkViewModel[] = useMemo(() => {
@@ -221,13 +233,14 @@ export function useSessionAnnotations(args: {
         bookmark: b,
         currentCfi: args.location?.cfi ?? null,
         toc: args.toc,
+        bookTitle: args.openedBook.book.title,
         description: entry?.value ?? null,
         fallbackBookProgress: args.location?.bookProgress ?? null,
         timestamp,
         descriptionStatus: entry?.status ?? (describeCfi ? "idle" : "idle"),
       });
     });
-  }, [args.location?.bookProgress, args.location?.cfi, args.toc, bookmarks, bookmarkDescriptions, describeCfi, sortedRaw]);
+  }, [args.location?.bookProgress, args.location?.cfi, args.openedBook.book.title, args.toc, bookmarks, bookmarkDescriptions, describeCfi, sortedRaw]);
 
   const highlightViewModels = useMemo(() => {
     return highlights.map((h) => {
@@ -236,13 +249,11 @@ export function useSessionAnnotations(args: {
       const color = rawA ? getAnnotationColor(rawA) : null;
       const timestamp = rawA ? getAnnotationTimestamp(rawA) : null;
       const entry = bookmarkDescriptions[h.cfiRange];
-      const href = entry?.value?.href ?? undefined;
-      const chapterLabel = href && args.toc ? findTocLabelForHref(args.toc, href) : null;
-      const label = chapterLabel
-        ? chapterLabel
-        : typeof entry?.value?.bookProgress === "number" && Number.isFinite(entry.value.bookProgress)
-          ? `${Math.round(entry.value.bookProgress * 100)}%`
-          : "Saved location";
+      const locationDisplay = toReaderCfiLocationDisplay({
+        description: entry?.value ?? null,
+        toc: args.toc,
+        bookTitle: args.openedBook.book.title,
+      });
 
       return {
         kind: "highlight" as const,
@@ -252,11 +263,12 @@ export function useSessionAnnotations(args: {
         note: note ?? undefined,
         color: color ?? undefined,
         timestamp: timestamp ?? undefined,
-        label,
+        label: locationDisplay.label,
+        labelParts: locationDisplay.labelParts,
         descriptionStatus: entry?.status ?? "idle",
       };
     });
-  }, [args.toc, bookmarkDescriptions, highlights, sortedRaw]);
+  }, [args.openedBook.book.title, args.toc, bookmarkDescriptions, highlights, sortedRaw]);
 
   const highlightMarks: ReaderHighlightMark[] = useMemo(() => {
     return highlightViewModels
@@ -317,34 +329,4 @@ export function useSessionAnnotations(args: {
       status,
     ],
   );
-}
-
-function normalizeHrefForCompare(href: string): string {
-  const s = href.trim();
-  const hashIdx = s.indexOf("#");
-  return (hashIdx >= 0 ? s.slice(0, hashIdx) : s).toLowerCase();
-}
-
-function findTocLabelForHref(toc: ReaderTocItem[], href: string): string | null {
-  const target = normalizeHrefForCompare(href);
-  const visit = (items: ReaderTocItem[]): { label: string; score: 2 | 1 } | null => {
-    let best: { label: string; score: 2 | 1 } | null = null;
-    for (const item of items) {
-      if (item.href) {
-        const candidate = normalizeHrefForCompare(item.href);
-        if (candidate === target) return { label: item.label, score: 2 };
-        if (candidate && target && (candidate.endsWith(target) || target.endsWith(candidate))) {
-          if (!best) best = { label: item.label, score: 1 };
-        }
-      }
-      if (item.children && item.children.length > 0) {
-        const found = visit(item.children);
-        if (found?.score === 2) return found;
-        if (!best && found) best = found;
-      }
-    }
-    return best;
-  };
-
-  return visit(toc)?.label ?? null;
 }

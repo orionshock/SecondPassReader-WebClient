@@ -5,7 +5,7 @@ import { ReadingShell } from "../shell/ReadingShell";
 import type { ReaderSearchBookHandle, ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/types";
 import type { StagedSelectionHandle, StagedSelectionSource } from "../shell/stagedSelectionTypes";
 import type { DurableAnnotationToolbarItem } from "../shell/DurableAnnotationToolbar";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
@@ -81,6 +81,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
   const [stagedSelectionHandle, setStagedSelectionHandle] = useState<StagedSelectionHandle | null>(null);
+  const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
   const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
   const commandSeqRef = useRef(0);
   const lastActiveBookKeyRef = useRef(activeBookKey);
@@ -122,10 +123,21 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     currentBookmark,
   } = sessionAnnotations;
 
+  const handleDescribeCfiReadyForReader = useCallback(
+    (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => {
+      handleDescribeCfiReady(fn);
+      setDescribeCfi(() => fn);
+    },
+    [handleDescribeCfiReady],
+  );
+
   const previousLayers = usePreviousSessionLayers({
     spl: props.spl,
     bookId: props.openedBook.book.id,
     currentSessionId: sessionId,
+    describeCfi,
+    toc,
+    bookTitle: props.openedBook.book.title,
   });
 
   useEffect(() => {
@@ -136,6 +148,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setPendingCommand(null);
     setSearchBook(null);
     setStagedSelectionHandle(null);
+    setDescribeCfi(null);
     setTemporarySearchHighlightCfi(null);
   }, [activeBookKey]);
 
@@ -359,7 +372,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         command={pendingCommand ?? undefined}
         toc={toc}
         temporarySearchHighlightCfi={temporarySearchHighlightCfi}
-        onDescribeCfiReady={handleDescribeCfiReady}
+        onDescribeCfiReady={handleDescribeCfiReadyForReader}
         onSearchReady={handleSearchReady}
         onStagedSelectionReady={handleStagedSelectionReady}
         onStagedSelectionCommitted={handleStagedSelectionCommitted}

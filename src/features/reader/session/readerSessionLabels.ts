@@ -41,18 +41,20 @@ export function normalizeHrefForCompare(href: string): string {
 export function findTocLabelForHref(toc: ReaderTocItem[], href: string): string | null {
   const target = normalizeHrefForCompare(href);
   if (!target) return null;
-  const targetBase = getHrefBasename(target);
+  const targetVariants = getHrefCompareVariants(target);
+  const targetBases = new Set(Array.from(targetVariants).map((variant) => getHrefBasename(variant)).filter(Boolean));
   const visit = (items: ReaderTocItem[]): { label: string; score: 3 | 2 | 1 } | null => {
     let best: { label: string; score: 3 | 2 | 1 } | null = null;
     for (const item of items) {
       if (item.href) {
         const candidate = normalizeHrefForCompare(item.href);
+        const candidateVariants = getHrefCompareVariants(candidate);
         const label = normalizeLabel(item.label);
         if (label) {
-          if (candidate === target) return { label, score: 3 };
-          if (candidate && target && (candidate.endsWith(target) || target.endsWith(candidate))) {
+          if (setsIntersect(candidateVariants, targetVariants)) return { label, score: 3 };
+          if (hasSuffixMatch(candidateVariants, targetVariants)) {
             if (!best || best.score < 2) best = { label, score: 2 };
-          } else if (targetBase && getHrefBasename(candidate) === targetBase) {
+          } else if (hasBasenameMatch(candidateVariants, targetBases)) {
             if (!best) best = { label, score: 1 };
           }
         }
@@ -67,6 +69,57 @@ export function findTocLabelForHref(toc: ReaderTocItem[], href: string): string 
   };
 
   return visit(toc)?.label ?? null;
+}
+
+function getHrefCompareVariants(href: string): Set<string> {
+  const variants = new Set<string>();
+  const normalized = normalizeHrefForCompare(href);
+  if (!normalized) return variants;
+  variants.add(normalized);
+
+  const collapsedSplit = collapseEpubSplitHref(normalized);
+  variants.add(collapsedSplit);
+
+  for (const variant of Array.from(variants)) {
+    const htmlVariant = swapHtmlExtension(variant);
+    if (htmlVariant) variants.add(htmlVariant);
+  }
+
+  return variants;
+}
+
+function collapseEpubSplitHref(href: string): string {
+  return href.replace(/_split_\d+(?=\.[^./]+$|$)/i, "");
+}
+
+function swapHtmlExtension(href: string): string | null {
+  if (href.endsWith(".xhtml")) return `${href.slice(0, -6)}.html`;
+  if (href.endsWith(".html")) return `${href.slice(0, -5)}.xhtml`;
+  return null;
+}
+
+function setsIntersect(a: Set<string>, b: Set<string>): boolean {
+  for (const value of a) {
+    if (b.has(value)) return true;
+  }
+  return false;
+}
+
+function hasSuffixMatch(a: Set<string>, b: Set<string>): boolean {
+  for (const left of a) {
+    for (const right of b) {
+      if (left && right && (left.endsWith(right) || right.endsWith(left))) return true;
+    }
+  }
+  return false;
+}
+
+function hasBasenameMatch(candidateVariants: Set<string>, targetBases: Set<string>): boolean {
+  for (const candidate of candidateVariants) {
+    const base = getHrefBasename(candidate);
+    if (base && targetBases.has(base)) return true;
+  }
+  return false;
 }
 
 export function getReaderLocationTocLabel(input: {
