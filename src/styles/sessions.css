@@ -489,8 +489,8 @@
 
 .sessionAnnoQuote {
   padding: 8px 10px;
-  border-left: 3px solid var(--sp-primary-border);
-  background: var(--color-surface-muted);
+  border-left: 3px solid var(--annotation-color, var(--sp-primary-border));
+  background: var(--annotation-bg, var(--color-surface-muted));
   border-radius: 10px;
   overflow-wrap: anywhere;
   font-weight: 600;

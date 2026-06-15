@@ -1,6 +1,8 @@
 import type { ReadingAnnotationPage } from "@secondpass/client";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
+import { getAnnotationColor } from "../reader/annotations/annotationUtils";
+import { toAnnotationCssVars } from "../reader/annotations/annotationColors";
 import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
 import { formatIso, getAnnotationTexts } from "./sessionDetailDisplay";
 
@@ -37,6 +39,8 @@ export function SessionDetailAnnotationsList({
             const { quote, note } = getAnnotationTexts(a);
             const { iconName, label } = getRawAnnotationDisplay(a, note);
             const metaBits = [when ? when : null].filter(Boolean);
+            const color = quote ? getAnnotationColor(a) : null;
+            const colorVars = color ? toAnnotationCssVars(color) : null;
             return (
               <div
                 key={a.id}
@@ -47,7 +51,16 @@ export function SessionDetailAnnotationsList({
                 </div>
                 <div className="sessionAnnoMain">
                   {quote ? (
-                    <div className="sessionAnnoQuote">{quote}</div>
+                    <div
+                      className="sessionAnnoQuote"
+                      style={
+                        colorVars
+                          ? { ["--annotation-color" as any]: colorVars.color, ["--annotation-bg" as any]: colorVars.bg }
+                          : undefined
+                      }
+                    >
+                      {quote}
+                    </div>
                   ) : null}
                   {note ? (
                     <div className="sessionAnnoNote">{note}</div>
