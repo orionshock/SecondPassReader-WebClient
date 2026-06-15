@@ -36,27 +36,29 @@ import { createLoginRequest, discoverSecondPass, getMe, pollLoginRequest } from 
 import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
 import {
   closeReadingSession,
-  createBookmarkAnnotation,
-  createHighlightAnnotation,
-  deleteReadingAnnotation,
   getReadingBookActivitySummary,
   getReadingSession,
-  listReadingAnnotations,
   listReadingSessions,
   listRecentReadingSessions,
   openReadingSession,
-  saveReadingProgress,
   startOverReadingSession,
-  updateNoteAnnotation,
   updateReadingSession,
-} from "./readingApi";
+} from "./readingSessionsApi";
+import {
+  createBookmarkAnnotation,
+  createHighlightAnnotation,
+  deleteReadingAnnotation,
+  listReadingAnnotations,
+  updateNoteAnnotation,
+} from "./readingAnnotationsApi";
+import { saveReadingProgress } from "./readingProgressApi";
 import type {
   CreateBookmarkInput,
   CreateHighlightInput,
   ListReadingAnnotationsInput,
-  SaveReadingProgressInput,
   UpdateNoteInput,
-} from "./readingApi";
+} from "./readingAnnotationsApi";
+import type { SaveReadingProgressInput } from "./readingProgressApi";
 
 export type {
   CreateBookmarkInput,
@@ -64,9 +66,9 @@ export type {
   ListReadingAnnotationsInput,
   ReadingAnnotationMotivation,
   ReadingAnnotationsOrdering,
-  SaveReadingProgressInput,
   UpdateNoteInput,
-} from "./readingApi";
+} from "./readingAnnotationsApi";
+export type { SaveReadingProgressInput } from "./readingProgressApi";
 import {
   addShelfItem,
   createShelf,
