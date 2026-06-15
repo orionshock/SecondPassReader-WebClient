@@ -4,85 +4,12 @@ import type { ReadingAnnotationPage, ReadingSessionSummary, SecondPassClient } f
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
-import { InlineMeta } from "../../components/MetaSeparator";
-import { MaterialIcon } from "../../components/MaterialIcon";
-import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
 import { CloseSessionDialog, type CloseSessionInput } from "./CloseSessionDialog";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
-
-function formatIso(iso?: string | null): string | null {
-  if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    return Number.isFinite(d.getTime()) ? d.toLocaleString() : iso;
-  } catch {
-    return iso;
-  }
-}
-
-function formatProgress(p?: number | null): string | null {
-  if (typeof p !== "number" || !Number.isFinite(p)) return null;
-  const clamped = Math.min(1, Math.max(0, p));
-  return `${Math.round(clamped * 100)}%`;
-}
-
-function normalizeStatus(status?: string | null, isActive?: boolean | null): "active" | "completed" | "archived" | string {
-  if (isActive === true) return "active";
-  const raw = typeof status === "string" ? status.trim().toLowerCase() : "";
-  if (raw === "active" || raw === "completed" || raw === "archived") return raw;
-  if (raw) return raw;
-  if (isActive === false) return "completed";
-  return "active";
-}
-
-function formatAnnotationCount(n?: number | null): string | null {
-  if (typeof n !== "number" || !Number.isFinite(n)) return null;
-  const count = Math.max(0, Math.floor(n));
-  return count === 1 ? "1 annotation" : `${count} annotations`;
-}
-
-function getAnnotationTexts(annotation: unknown): { quote: string | null; note: string | null } {
-  const bodies = (annotation as any)?.body;
-  if (!Array.isArray(bodies)) return { quote: null, note: null };
-
-  const textBodies: Array<{ purpose: string | null; value: string }> = [];
-  for (const b of bodies) {
-    if (!b || typeof b !== "object") continue;
-    const type = (b as any).type;
-    if (typeof type === "string" && type !== "TextualBody") continue;
-
-    const value = (b as any).value;
-    if (typeof value !== "string") continue;
-    const trimmed = value.replace(/\s+/g, " ").trim();
-    if (!trimmed) continue;
-    const purposeRaw = (b as any).purpose;
-    const purpose = typeof purposeRaw === "string" ? purposeRaw.trim().toLowerCase() : null;
-    textBodies.push({ purpose, value: trimmed });
-  }
-
-  if (!textBodies.length) return { quote: null, note: null };
-
-  const quote = textBodies.find((tb) => tb.purpose === "describing")?.value ?? null;
-  const note = textBodies.find((tb) => tb.purpose === "commenting")?.value ?? null;
-  if (quote || note) return { quote, note };
-
-  const rawMotivation = (annotation as any)?.motivation;
-  const motivations: string[] = Array.isArray(rawMotivation)
-    ? rawMotivation.filter((x): x is string => typeof x === "string")
-    : typeof rawMotivation === "string"
-      ? [rawMotivation]
-      : [];
-  const isHighlight = motivations.includes("highlighting");
-  const isComment = motivations.includes("commenting");
-
-  // Minimal fallbacks (explicit):
-  // - Highlight-only: use first textual body as quote.
-  // - Comment-only: if there is only one textual body, treat it as note-only.
-  if (isHighlight) return { quote: textBodies[0]?.value ?? null, note: null };
-  if (isComment && textBodies.length === 1) return { quote: null, note: textBodies[0]?.value ?? null };
-
-  return { quote: textBodies[0]?.value ?? null, note: null };
-}
+import { SessionDetailAnnotationsList } from "./SessionDetailAnnotationsList";
+import { SessionDetailHeader } from "./SessionDetailHeader";
+import { SessionDetailMetadataEditor } from "./SessionDetailMetadataEditor";
+import { formatAnnotationCount, formatIso, formatProgress, normalizeStatus } from "./sessionDetailDisplay";
 
 export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
   const canLoad = Boolean(spl);
@@ -167,7 +94,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
 
   const isActive = Boolean(session?.is_active);
   const progressText = formatProgress(session?.progression ?? null);
-  const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile);
+  const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile) ?? null;
   const statusText = normalizeStatus(typeof session?.status === "string" ? session.status : null, session?.is_active ?? null);
   const annoText = formatAnnotationCount(session?.annotation_count ?? null);
 
@@ -277,7 +204,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
     const seriesName = session?.book?.series?.name ?? null;
     const idx = session?.book?.series_index;
     const series = seriesName ? (idx === null || idx === undefined || idx === "" ? seriesName : `${seriesName} #${idx}`) : null;
-    return [authors || null, series || null].filter(Boolean);
+    return [authors || null, series || null].filter((item): item is string => Boolean(item));
   }, [session?.book?.authors, session?.book?.series?.name, session?.book?.series_index]);
 
   const canOpenReader = Boolean(session?.book?.id);
@@ -296,56 +223,28 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
 
       {session ? (
         <>
-          <div className="sessionHeader">
-            <div className="sessionCover">
-              {coverSrc ? <img className="sessionCoverImg" src={coverSrc} alt={`${session.book?.title ?? "Book"} cover`} loading="lazy" /> : <div className="bookCoverPlaceholderText">No cover</div>}
-            </div>
-            <div className="sessionHeaderMain">
-              {session.book?.id ? (
-                <button
-                  type="button"
-                  className="sessionBookTitleButton bookTitle"
-                  onClick={() => navigateTo({ kind: "sessions", bookId: String(session.book?.id) })}
-                  title="View reading sessions for this book"
-                >
-                  {session.book?.title ?? "Book"}
-                </button>
-              ) : (
-                <div className="bookTitle">{session.book?.title ?? "Book"}</div>
-              )}
-              {bookLine.length ? <div className="muted"><InlineMeta items={bookLine} /></div> : null}
-              <div className="muted">
-                <span className="sessionsId">{session.id}</span>
-              </div>
-              <div className="muted">
-                <InlineMeta items={[statusText || null, progressText || null, annoText || null]} />
-              </div>
-            </div>
-            <div className="sessionHeaderActions">
-              <button
-                type="button"
-                className="button buttonPrimary"
-                onClick={() => {
-                  const bookId = String(session.book?.id ?? "");
-                  saveReaderReturnTarget(bookId, {
-                    kind: "sessions",
-                    label: session.name?.trim() ? session.name.trim() : "Session detail",
-                    route: `#/sessions/${encodeURIComponent(sessionId)}`,
-                    sessionId,
-                  });
-                  navigateTo({ kind: "reader", bookId });
-                }}
-                disabled={!canOpenReader}
-              >
-                Open reader
-              </button>
-              {isActive ? (
-                <button type="button" className="button buttonCompact" onClick={() => setCloseDialogOpen(true)}>
-                  Close session
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <SessionDetailHeader
+            session={session}
+            coverSrc={coverSrc}
+            bookLine={bookLine}
+            statusText={statusText}
+            progressText={progressText}
+            annotationText={annoText}
+            isActive={isActive}
+            canOpenReader={canOpenReader}
+            onOpenReader={() => {
+              const bookId = String(session.book?.id ?? "");
+              saveReaderReturnTarget(bookId, {
+                kind: "sessions",
+                label: session.name?.trim() ? session.name.trim() : "Session detail",
+                route: `#/sessions/${encodeURIComponent(sessionId)}`,
+                sessionId,
+              });
+              navigateTo({ kind: "reader", bookId });
+            }}
+            onCloseSession={() => setCloseDialogOpen(true)}
+            onOpenBookSessions={() => navigateTo({ kind: "sessions", bookId: String(session.book?.id) })}
+          />
 
           <div className="sessionMetaGrid">
             {session.started_at ? <div className="detailRow"><span className="muted">Started:</span> {formatIso(session.started_at)}</div> : null}
@@ -353,193 +252,31 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
             {session.completed_at ? <div className="detailRow"><span className="muted">Completed:</span> {formatIso(session.completed_at)}</div> : null}
           </div>
 
-          {isActive ? (
-            <div className="sessionEdit">
-              <div className="sessionInlineEditRow">
-                <div className="sessionInlineEditLabel">Name</div>
-                {!editingName ? (
-                  <div className="sessionInlineEditFieldRow">
-                    {session.name && session.name.trim() ? (
-                      <div className="sessionInlineEditValue">{session.name}</div>
-                    ) : (
-                      <div className="sessionInlineEditValue muted">Unnamed session</div>
-                    )}
-                    <button
-                      type="button"
-                      className="button buttonCompact sessionInlineEditButton"
-                      onClick={() => {
-                        setDraftName(typeof session.name === "string" ? session.name : "");
-                        setEditingName(true);
-                      }}
-                      aria-label="Edit session name"
-                      title="Edit"
-                    >
-                      {"\u270E"}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="sessionInlineEditFieldRow">
-                    <input
-                      className="input inputCompact sessionInlineEditInput"
-                      value={draftName}
-                      onChange={(e) => setDraftName(e.target.value)}
-                      placeholder="Session name"
-                      maxLength={255}
-                    />
-                    <button type="button" className="button buttonPrimary buttonCompact" onClick={() => void handleSaveName()} disabled={saveBusy}>
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      className="button buttonCompact"
-                      onClick={() => {
-                        setEditingName(false);
-                        setDraftName(typeof session.name === "string" ? session.name : "");
-                        setSaveError(null);
-                      }}
-                      disabled={saveBusy}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
+          <SessionDetailMetadataEditor
+            session={session}
+            isActive={isActive}
+            draftName={draftName}
+            setDraftName={setDraftName}
+            draftNotes={draftNotes}
+            setDraftNotes={setDraftNotes}
+            editingName={editingName}
+            setEditingName={setEditingName}
+            editingNotes={editingNotes}
+            setEditingNotes={setEditingNotes}
+            saveBusy={saveBusy}
+            saveError={saveError}
+            clearSaveError={() => setSaveError(null)}
+            onSaveName={() => void handleSaveName()}
+            onSaveNotes={() => void handleSaveNotes()}
+          />
 
-              <div className="sessionInlineEditRow">
-                <div className="sessionInlineEditLabel">Notes</div>
-                {!editingNotes ? (
-                  <div className="sessionInlineEditFieldRow">
-                    {session.notes && session.notes.trim() ? (
-                      <div className="sessionInlineEditValue">{session.notes}</div>
-                    ) : (
-                      <div className="sessionInlineEditValue muted">No notes</div>
-                    )}
-                    <button
-                      type="button"
-                      className="button buttonCompact sessionInlineEditButton"
-                      onClick={() => {
-                        setDraftNotes(typeof session.notes === "string" ? session.notes : "");
-                        setEditingNotes(true);
-                      }}
-                      aria-label="Edit session notes"
-                      title="Edit"
-                    >
-                      {"\u270E"}
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="sessionInlineEditNotesWrap">
-                      <textarea
-                        className="input sessionInlineEditTextarea"
-                        cols={40}
-                        rows={4}
-                        value={draftNotes}
-                        onChange={(e) => setDraftNotes(e.target.value.slice(0, 500))}
-                        placeholder={`Notes${"\u2026"}`}
-                        maxLength={500}
-                      />
-                      <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/500</div>
-                    </div>
-                    <div className="sessionInlineEditFieldRow">
-                      <button type="button" className="button buttonPrimary buttonCompact" onClick={() => void handleSaveNotes()} disabled={saveBusy}>
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        className="button buttonCompact"
-                        onClick={() => {
-                          setEditingNotes(false);
-                          setDraftNotes(typeof session.notes === "string" ? session.notes : "");
-                          setSaveError(null);
-                        }}
-                        disabled={saveBusy}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {saveError ? <div className="errorText">{saveError}</div> : null}
-            </div>
-          ) : (
-            <div className="sessionReadOnly">
-              <div className="sessionClosedNotice muted">
-                This session is closed. Name, notes, and annotations are read-only.
-              </div>
-              {session.name ? (
-                <div className="detailRow">
-                  <span className="muted">Name:</span> {session.name}
-                </div>
-              ) : null}
-              {session.notes ? (
-                <div className="detailRow">
-                  <span className="muted">Notes:</span> {session.notes}
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          <div className="sessionAnnotations">
-            <div className="panelHeaderRow" style={{ marginTop: 10 }}>
-              <div className="panelTitle" style={{ margin: 0 }}>
-                Annotations
-              </div>
-              {annoPage ? <div className="muted">{annoPage.count ?? 0} total</div> : null}
-            </div>
-
-            {annoError ? <div className="errorText">{annoError}</div> : null}
-            {annoBusy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
-
-            {annoPage?.results?.length ? (
-              <div className="sessionAnnoList">
-                {annoPage.results.map((a) => {
-                  const updated = (a.updated_at as any) || (a.modified as any) || (a.created_at as any) || (a.created as any);
-                  const when = typeof updated === "string" ? formatIso(updated) : null;
-                  const { quote, note } = getAnnotationTexts(a);
-                  const { iconName, label } = getRawAnnotationDisplay(a, note);
-                  const metaBits = [when ? when : null].filter(Boolean);
-                  return (
-                    <div
-                      key={a.id}
-                      className="sessionAnnoRow"
-                    >
-                      <div className="sessionAnnoIcon" aria-hidden="true" title={label}>
-                        <MaterialIcon name={iconName} />
-                      </div>
-                      <div className="sessionAnnoMain">
-                        {quote ? (
-                          <div className="sessionAnnoQuote">{quote}</div>
-                        ) : null}
-                        {note ? (
-                          <div className="sessionAnnoNote">{note}</div>
-                        ) : !quote ? (
-                          <div className="sessionAnnoNote">{label}</div>
-                        ) : null}
-                        {metaBits.length ? (
-                          <div className="sessionAnnoMeta muted">
-                            <InlineMeta items={metaBits} />
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : !annoBusy ? (
-              <div className="muted">No annotations yet.</div>
-            ) : null}
-
-            {annoPage?.next ? (
-              <div style={{ marginTop: 10 }}>
-                <button type="button" className="button buttonCompact" onClick={() => void handleLoadMoreAnnotations()} disabled={annoLoadingMore}>
-                  {annoLoadingMore ? `Loading${"\u2026"}` : "Load more"}
-                </button>
-              </div>
-            ) : null}
-          </div>
+          <SessionDetailAnnotationsList
+            annoPage={annoPage}
+            annoBusy={annoBusy}
+            annoError={annoError}
+            annoLoadingMore={annoLoadingMore}
+            onLoadMore={() => void handleLoadMoreAnnotations()}
+          />
         </>
       ) : null}
 
