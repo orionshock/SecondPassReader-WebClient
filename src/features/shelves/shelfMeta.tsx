@@ -33,9 +33,17 @@ function groupOwnerName(shelf: Shelf): string {
   );
 }
 
-export function formatShelfOwnerParts(shelf: Shelf): { kind: "user"; displayName: string; handle: string } | { kind: "group"; name: string } {
+export function isCanonicalPublicShelfGroup(shelf: Shelf): boolean {
+  return shelf.owner_type === "group" && shelf.owner_group?.is_public_group === true;
+}
+
+export function formatShelfOwnerParts(shelf: Shelf): { kind: "user"; displayName: string; handle: string } | { kind: "group"; name: string; isPublicGroup: boolean } {
   if (shelf.owner_type === "group") {
-    return { kind: "group", name: groupOwnerName(shelf) };
+    return {
+      kind: "group",
+      name: groupOwnerName(shelf),
+      isPublicGroup: isCanonicalPublicShelfGroup(shelf),
+    };
   }
   return {
     kind: "user",
@@ -50,8 +58,8 @@ export function ShelfMetaLine({ shelf }: { shelf: Shelf }) {
 
   if (ownerParts.kind === "group") {
     const owner = (
-      <span className="shelfOwnerChip shelfOwnerGroupChip">
-        <MaterialIcon name="groups" />
+      <span className={`shelfOwnerChip shelfOwnerGroupChip${ownerParts.isPublicGroup ? " shelfOwnerGroupChipPublic" : ""}`}>
+        <MaterialIcon name={ownerParts.isPublicGroup ? "public" : "groups"} />
         <span className="shelfOwnerGroupName">{ownerParts.name}</span>
       </span>
     );

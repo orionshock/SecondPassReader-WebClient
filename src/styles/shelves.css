@@ -103,6 +103,16 @@
   background: var(--color-surface);
 }
 
+.shelfOwnerGroupChipPublic {
+  border-color: rgba(34, 197, 94, 0.42);
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.shelfOwnerGroupChipPublic .material-symbols-outlined {
+  color: #16a34a;
+}
+
 .shelfOwnerGroupName {
   font-weight: 600;
 }
