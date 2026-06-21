@@ -383,12 +383,20 @@ export default function App() {
     navigateTo({ kind: "reader", bookId: id });
   }
 
-  function handleForgetServer() {
+  function returnToConnect(options?: { replace?: boolean }) {
     clearActiveConnection();
     handleCloseReader();
     refreshProfiles();
     setView("main");
-    navigateTo({ kind: "connect" });
+    navigateTo({ kind: "connect" }, options);
+  }
+
+  function handleForgetServer() {
+    returnToConnect();
+  }
+
+  function handleCancelPairing() {
+    returnToConnect({ replace: true });
   }
 
   return (
@@ -446,7 +454,12 @@ export default function App() {
 
             {workflowStep === "pair_device" ? (
               <section className="panel workflowPanel">
-                <h2 className="panelTitle">Pair this device</h2>
+                <div className="panelHeaderRow">
+                  <h2 className="panelTitle">Pair this device</h2>
+                  <button type="button" className="button buttonCompact" onClick={handleCancelPairing}>
+                    Back
+                  </button>
+                </div>
                 <ServerSummary profile={selectedProfile} />
                 <ClientApiLinking
                   selectedProfileId={selectedProfileId}
