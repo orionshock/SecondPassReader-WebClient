@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSecondPassClient, type SecondPassClient } from "@secondpass/client";
 import type { ClientApiLoginRequestResponse, ClientApiPollResponse, SecondPassDiscovery } from "@secondpass/client";
+import { MaterialIcon } from "../../components/MaterialIcon";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { isProfileLinked } from "./connectionStatus";
 import { buildDefaultDeviceName } from "./defaultDeviceName";
@@ -9,6 +10,7 @@ type Props = {
   selectedProfileId?: string | null;
   onProfilesChanged?: () => void;
   profilesVersion?: number;
+  onCancel?: () => void;
 };
 
 type LinkingState =
@@ -34,7 +36,7 @@ function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
   };
 }
 
-export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profilesVersion }: Props) {
+export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profilesVersion, onCancel }: Props) {
   const [state, setState] = useState<LinkingState>({ phase: "idle" });
   const [pollDetail, setPollDetail] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>(() => buildDefaultDeviceName());
@@ -119,8 +121,8 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
   if (!selectedProfileId) {
     return (
-      <section className="panel">
-        <h2 className="panelTitle">Link this browser</h2>
+      <section className="panel pairScreen">
+        <h1 className="pairTitle">Connect to SecondPass Library</h1>
         <p className="muted">Connect a library to start linking.</p>
       </section>
     );
@@ -128,70 +130,69 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
   if (!profile) {
     return (
-      <section className="panel">
-        <h2 className="panelTitle">Link this browser</h2>
-        <p className="muted">Connected library not found. Connect a library again.</p>
+      <section className="panel pairScreen">
+        <h1 className="pairTitle">Connect to SecondPass Library</h1>
+        <p className="muted">Connected library not found. Connect the library again.</p>
       </section>
     );
   }
 
   return (
-    <section className="panel">
-      <h2 className="panelTitle">Link this browser</h2>
+    <section className="panel pairScreen">
+      <div className="pairHeader">
+        <h1 className="pairTitle">Connect to SecondPass Library</h1>
+        <div className="pairLibraryName">{profile.serverName ?? profile.label}</div>
+        {profile.serverDescription ? <p className="pairLibraryDescription">{profile.serverDescription}</p> : null}
+        <div className="pairLibraryAddress">
+          <span className="muted">at</span> <span className="mono">{profile.serverBaseUrl}</span>
+        </div>
+      </div>
 
       {!discovery ? (
         <p className="muted">Client API endpoints are unknown for this library. Connect the library again.</p>
       ) : null}
 
-      <label className="field">
-        <span className="fieldLabel">Device name</span>
-        <input
-          className="input"
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-          placeholder={"SecondPass Reader \u00b7 Browser"}
-          disabled={state.phase === "starting" || state.phase === "waiting"}
-        />
-      </label>
+      <div className="pairDivider" />
 
-      {isProfileLinked(profile) ? (
-        <div className="discoveryBox">
-          <div>
-            <span className="muted">Status:</span> <span className="pill pillOk">linked</span>
-          </div>
-          <div>
-            <span className="muted">Linked at:</span> {profile.linkedAt ?? "—"}
-          </div>
-          <div>
-            <span className="muted">Bearer token:</span> stored
-          </div>
-          <div>
-            <span className="muted">Client session:</span> <span className="mono">{profile.clientSessionId ?? "—"}</span>
-          </div>
-          {profile.clientSessionName ? (
-            <div>
-              <span className="muted">Client name:</span> {profile.clientSessionName}
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <p className="muted">Not linked yet.</p>
-      )}
+      <div className="pairBrowserSection">
+        <label className="field">
+          <span className="pairSectionTitle">Name this browser</span>
+          <input
+            className="input"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            placeholder={"SecondPass Reader \u00b7 Browser"}
+            disabled={state.phase === "starting" || state.phase === "waiting"}
+          />
+          <span className="fieldHelp muted">This is how this browser will appear in your library profile.</span>
+        </label>
 
-      <div className="formActions">
-        <button
-          type="button"
-          className="button buttonPrimary"
-          onClick={() => void startLinking()}
-          disabled={!discovery || state.phase === "starting" || state.phase === "waiting"}
-        >
-          {state.phase === "starting" ? `Starting${"\u2026"}` : state.phase === "waiting" ? `Linking${"\u2026"}` : "Start linking"}
-        </button>
-        {state.phase !== "idle" ? (
-          <button type="button" className="button" onClick={resetLocal}>
-            Reset local state
+        <p className="pairStatus muted" aria-live="polite">
+          {isProfileLinked(profile)
+            ? "Linked."
+            : state.phase === "starting"
+              ? "Starting the linking request..."
+              : state.phase === "waiting"
+                ? "Waiting for approval in your library..."
+                : state.phase === "success"
+                  ? "Linked."
+                  : "Not linked yet."}
+        </p>
+
+        <div className="formActions pairActions">
+          <button type="button" className="button" onClick={onCancel}>
+            Cancel
           </button>
-        ) : null}
+          <button
+            type="button"
+            className="button buttonPrimary"
+            onClick={() => void startLinking()}
+            disabled={!discovery || state.phase === "starting" || state.phase === "waiting"}
+          >
+            <MaterialIcon name="link" />
+            {state.phase === "starting" ? `Starting${"\u2026"}` : state.phase === "waiting" ? `Linking${"\u2026"}` : "Start linking"}
+          </button>
+        </div>
       </div>
 
       {state.phase === "waiting" ? (
@@ -212,6 +213,11 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
             </span>
           </div>
           {pollDetail ? <div className="muted">{pollDetail}</div> : null}
+          <div>
+            <button type="button" className="button buttonCompact" onClick={resetLocal}>
+              Stop waiting
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -229,6 +235,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           </button>
         </div>
       ) : null}
+
     </section>
   );
 }

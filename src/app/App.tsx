@@ -453,20 +453,12 @@ export default function App() {
             ) : null}
 
             {workflowStep === "pair_device" ? (
-              <section className="panel workflowPanel">
-                <div className="panelHeaderRow">
-                  <h2 className="panelTitle">Pair this device</h2>
-                  <button type="button" className="button buttonCompact" onClick={handleCancelPairing}>
-                    Back
-                  </button>
-                </div>
-                <ServerSummary profile={selectedProfile} />
-                <ClientApiLinking
-                  selectedProfileId={selectedProfileId}
-                  onProfilesChanged={refreshProfiles}
-                  profilesVersion={profilesVersion}
-                />
-              </section>
+              <ClientApiLinking
+                selectedProfileId={selectedProfileId}
+                onProfilesChanged={refreshProfiles}
+                profilesVersion={profilesVersion}
+                onCancel={handleCancelPairing}
+              />
             ) : null}
 
             {workflowStep === "verify_connection" ? (

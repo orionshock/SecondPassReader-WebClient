@@ -4,6 +4,72 @@
   max-width: 680px;
 }
 
+.pairScreen {
+  max-width: 760px;
+  display: grid;
+  gap: 20px;
+}
+
+.pairHeader {
+  display: grid;
+  gap: 6px;
+}
+
+.pairTitle {
+  margin: 0 0 10px;
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.2;
+}
+
+.pairLibraryName {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.pairLibraryDescription {
+  margin: 0;
+  color: var(--sp-muted);
+}
+
+.pairLibraryAddress {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.pairDivider {
+  height: 1px;
+  background: var(--sp-border);
+}
+
+.pairBrowserSection {
+  display: grid;
+  gap: 12px;
+}
+
+.pairSectionTitle {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.pairStatus {
+  margin: 0;
+}
+
+.pairActions {
+  justify-content: space-between;
+}
+
+.pairActions .buttonPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pairActions .buttonPrimary .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
 .connectAdvanced {
   border: 1px dashed var(--sp-border);
   border-radius: 10px;
