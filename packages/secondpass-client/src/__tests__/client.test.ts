@@ -238,6 +238,53 @@ describe("@secondpass/client high-level workflows", () => {
     expect(secondUrl.searchParams.has("q")).toBe(false);
   });
 
+  it("shelves.list sends scoped and existing shelf filters", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.list({
+      scope: "shared",
+      ownerGroup: 42,
+      book: "book-1",
+      page: 2,
+      pageSize: 25,
+    });
+    await spl.shelves.list({ scope: "personal", book: 7 });
+
+    const sharedUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(sharedUrl.origin + sharedUrl.pathname).toBe("https://api.example/shelves/");
+    expect(sharedUrl.searchParams.get("scope")).toBe("shared");
+    expect(sharedUrl.searchParams.get("owner_group")).toBe("42");
+    expect(sharedUrl.searchParams.get("book")).toBe("book-1");
+    expect(sharedUrl.searchParams.get("page")).toBe("2");
+    expect(sharedUrl.searchParams.get("page_size")).toBe("25");
+
+    const personalUrl = new URL(String(fetchMock.mock.calls[1]![0]));
+    expect(personalUrl.searchParams.get("scope")).toBe("personal");
+    expect(personalUrl.searchParams.get("book")).toBe("7");
+    expect(personalUrl.searchParams.has("owner_group")).toBe(false);
+  });
+
+  it("shelves.list preserves unscoped behavior and rejects personal owner-group filters", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.list({ ownerGroup: "group-1" });
+
+    const unscopedUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(unscopedUrl.searchParams.has("scope")).toBe(false);
+    expect(unscopedUrl.searchParams.get("owner_group")).toBe("group-1");
+
+    await expect(
+      spl.shelves.list({ scope: "personal", ownerGroup: "group-1" } as never),
+    ).rejects.toThrowError(/cannot be combined/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("reading.annotations.updateNote PATCHes body updates only (no anchors/session/motivation)", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));

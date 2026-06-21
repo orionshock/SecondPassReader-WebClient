@@ -43,6 +43,7 @@ export type {
   PaginatedShelfResponse,
   Shelf,
   ShelfItem,
+  ShelfListParams,
   UpdateShelfInput,
   UpdateShelfItemInput,
 } from "./schemas/shelves";

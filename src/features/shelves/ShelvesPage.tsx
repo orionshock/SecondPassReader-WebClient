@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
@@ -15,15 +14,16 @@ function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   };
 }
 
-function shelfOwnerProfileId(shelf: Shelf): string | null {
-  return shelf.owner_type === "user" && shelf.owner_user?.profile_id ? shelf.owner_user.profile_id : null;
-}
+type ScopedShelves = {
+  personal: Shelf[];
+  shared: Shelf[];
+};
 
-export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | null; spl: SecondPassClient | null }) {
+export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
   const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<Shelf[] | null>(null);
+  const [data, setData] = useState<ScopedShelves | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
   const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
@@ -35,8 +35,14 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     setBusy(true);
     setError(null);
     try {
-      const r = await spl.shelves.list();
-      setData(r.results ?? []);
+      const [personal, shared] = await Promise.all([
+        spl.shelves.list({ scope: "personal" }),
+        spl.shelves.list({ scope: "shared" }),
+      ]);
+      setData({
+        personal: personal.results ?? [],
+        shared: shared.results ?? [],
+      });
     } catch (e) {
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
@@ -61,19 +67,6 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     if (!canLoad) return;
     void load();
   }, [canLoad, load]);
-
-  const currentProfileId = profile?.verifiedUser?.profileId ?? null;
-
-  const { myShelves, sharedShelves } = useMemo(() => {
-    const shelves = data ?? [];
-    const myShelves = currentProfileId
-      ? shelves.filter((s) => shelfOwnerProfileId(s) === currentProfileId)
-      : [];
-    const sharedShelves = currentProfileId
-      ? shelves.filter((s) => shelfOwnerProfileId(s) !== currentProfileId)
-      : shelves;
-    return { myShelves, sharedShelves };
-  }, [currentProfileId, data]);
 
   const handleCreate = useCallback(async () => {
     if (!spl) return;
@@ -263,7 +256,9 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
         </div>
       ) : null}
 
-      {canLoad && !busy && !error && data && data.length === 0 ? <p className="muted">No shelves yet.</p> : null}
+      {canLoad && !busy && !error && data && data.personal.length === 0 && data.shared.length === 0
+        ? <p className="muted">No shelves yet.</p>
+        : null}
 
       {data ? (
         <div className="shelfList">
@@ -271,16 +266,16 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
             <h3 className="panelTitle" style={{ margin: "6px 0 8px" }}>
               My shelves
             </h3>
-            {myShelves.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
-            {myShelves.map(renderShelf)}
+            {data.personal.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
+            {data.personal.map(renderShelf)}
           </div>
 
           <div>
             <h3 className="panelTitle" style={{ margin: "6px 0 8px" }}>
               Shared shelves
             </h3>
-            {sharedShelves.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
-            {sharedShelves.map(renderShelf)}
+            {data.shared.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
+            {data.shared.map(renderShelf)}
           </div>
         </div>
       ) : null}

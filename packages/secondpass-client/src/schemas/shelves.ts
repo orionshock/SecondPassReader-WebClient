@@ -60,6 +60,22 @@ export type ShelfItem = {
 export type PaginatedShelfResponse = PaginatedResponse<Shelf>;
 export type PaginatedShelfItemResponse = PaginatedResponse<ShelfItem>;
 
+type ShelfListBaseParams = {
+  book?: string | number;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ShelfListParams =
+  | (ShelfListBaseParams & {
+      scope: "personal";
+      ownerGroup?: never;
+    })
+  | (ShelfListBaseParams & {
+      scope?: "shared";
+      ownerGroup?: string | number;
+    });
+
 export type CreateShelfInput = {
   name: string;
   description?: string;

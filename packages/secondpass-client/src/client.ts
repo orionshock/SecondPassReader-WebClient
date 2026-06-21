@@ -17,6 +17,7 @@ import type {
   PaginatedShelfResponse,
   Shelf,
   ShelfItem,
+  ShelfListParams,
   UpdateShelfInput,
   UpdateShelfItemInput,
 } from "./schemas/shelves";
@@ -144,7 +145,7 @@ export type SecondPassClient = {
   };
 
   shelves: {
-    list(params?: { page?: number }): Promise<PaginatedShelfResponse>;
+    list(params?: ShelfListParams): Promise<PaginatedShelfResponse>;
     create(input: CreateShelfInput): Promise<Shelf>;
     get(shelfId: string): Promise<Shelf>;
     update(shelfId: string, input: UpdateShelfInput): Promise<Shelf>;
@@ -287,9 +288,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
     },
 
     shelves: {
-      list: () => {
+      list: (params) => {
         const auth = requireAuth(ctx);
-        return listShelves(auth);
+        return listShelves(auth, params);
       },
       create: (input) => {
         const auth = requireAuth(ctx);

@@ -5,6 +5,7 @@ import type {
   PaginatedShelfResponse,
   Shelf,
   ShelfItem,
+  ShelfListParams,
   UpdateShelfInput,
   UpdateShelfItemInput,
 } from "./schemas/shelves";
@@ -13,8 +14,21 @@ import { authErrorMessages, requestJson, resolveUrl } from "./apiHttp";
 
 const SHELVES_FORBIDDEN_403 = "Token is not allowed to access shelves (403).";
 
-export async function listShelves(ctx: AuthenticatedClientContext): Promise<PaginatedShelfResponse> {
+export async function listShelves(
+  ctx: AuthenticatedClientContext,
+  input?: ShelfListParams,
+): Promise<PaginatedShelfResponse> {
+  if (input?.scope === "personal" && input.ownerGroup !== undefined) {
+    throw new TypeError("Shelf scope 'personal' cannot be combined with ownerGroup.");
+  }
+
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/shelves/"));
+  if (input?.scope) url.searchParams.set("scope", input.scope);
+  if (input?.ownerGroup !== undefined) url.searchParams.set("owner_group", String(input.ownerGroup));
+  if (input?.book !== undefined) url.searchParams.set("book", String(input.book));
+  if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
+  if (input?.pageSize !== undefined) url.searchParams.set("page_size", String(input.pageSize));
+
   return requestJson<PaginatedShelfResponse>({
     apiBaseUrl: ctx.apiBaseUrl,
     accessToken: ctx.accessToken,
