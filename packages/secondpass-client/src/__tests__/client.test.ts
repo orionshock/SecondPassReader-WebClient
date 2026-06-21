@@ -479,6 +479,47 @@ describe("@secondpass/client high-level workflows", () => {
     expect(() => spl.library.books.list()).toThrowError(ApiError);
   });
 
+  it("server.createLoginRequest submits the caller-provided editable client name", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        id: "request-1",
+        code: "ABCD",
+        authorize_url: "https://server.example/authorize",
+        poll_url: "https://api.example/client-api/login-request/request-1/poll/",
+        expires_at: "2026-06-21T12:00:00Z",
+        interval: 3,
+      }),
+    );
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
+    await spl.server.createLoginRequest(
+      {
+        server_name: "Library Server",
+        api_base_url: "https://api.example",
+        client_api: {
+          discovery_version: "1",
+          discovery_endpoint: "/.well-known/secondpass",
+          login_request_endpoint: "/client-api/login-request/",
+          authorize_url: "https://server.example/authorize",
+          poll_endpoint_template: "/client-api/login-request/{id}/poll/",
+          token_type: "Bearer",
+        },
+      },
+      {
+        clientName: "SecondPass Reader \u00b7 Firefox on Linux",
+        clientType: "reader",
+      },
+    );
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/client-api/login-request/");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      client_name: "SecondPass Reader \u00b7 Firefox on Linux",
+      client_type: "reader",
+    });
+  });
+
   it("401 responses surface as ApiError(kind=unauthorized) and 204 JSON responses are handled", async () => {
     const fetchMock = asMockFetch();
 

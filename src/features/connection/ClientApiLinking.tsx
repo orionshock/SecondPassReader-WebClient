@@ -3,6 +3,7 @@ import { createSecondPassClient, type SecondPassClient } from "@secondpass/clien
 import type { ClientApiLoginRequestResponse, ClientApiPollResponse, SecondPassDiscovery } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { isProfileLinked } from "./connectionStatus";
+import { buildDefaultDeviceName } from "./defaultDeviceName";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -36,7 +37,7 @@ function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
 export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profilesVersion }: Props) {
   const [state, setState] = useState<LinkingState>({ phase: "idle" });
   const [pollDetail, setPollDetail] = useState<string | null>(null);
-  const [clientName, setClientName] = useState<string>("Second Pass Reader");
+  const [clientName, setClientName] = useState<string>(() => buildDefaultDeviceName());
   const abortRef = useRef<AbortController | null>(null);
 
   const profile = useMemo(() => {
@@ -49,7 +50,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
   useEffect(() => {
     if (!profile) return;
-    setClientName(profile.clientSessionName ?? profile.label ?? "Second Pass Reader");
+    setClientName(profile.clientSessionName ?? buildDefaultDeviceName());
   }, [profile?.id]);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     try {
       const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "" });
       const loginRequest = await spl.server.createLoginRequest(discovery, {
-        clientName: clientName.trim() || "Second Pass Reader",
+        clientName: clientName.trim(),
         clientType: "reader",
       });
       setState({ phase: "waiting", loginRequest, pollStatus: "pending" });
@@ -148,7 +149,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           className="input"
           value={clientName}
           onChange={(e) => setClientName(e.target.value)}
-          placeholder="Second Pass Reader"
+          placeholder={"SecondPass Reader \u00b7 Browser"}
           disabled={state.phase === "starting" || state.phase === "waiting"}
         />
       </label>
