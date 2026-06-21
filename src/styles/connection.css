@@ -70,6 +70,17 @@
   line-height: 1;
 }
 
+.pairExternalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pairExternalLink .material-symbols-outlined {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .connectAdvanced {
   border: 1px dashed var(--sp-border);
   border-radius: 10px;

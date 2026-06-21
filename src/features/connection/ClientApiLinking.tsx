@@ -202,8 +202,9 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           </div>
           <div className="selectedRow">
             <span className="muted">Authorize URL:</span>{" "}
-            <a href={state.loginRequest.authorize_url} target="_blank" rel="noreferrer">
+            <a className="pairExternalLink" href={state.loginRequest.authorize_url} target="_blank" rel="noreferrer">
               Open authorization page
+              <MaterialIcon name="open_in_new" />
             </a>
           </div>
           <div className="selectedRow">
