@@ -16,7 +16,7 @@ type Props = {
 type LinkingState =
   | { phase: "idle" }
   | { phase: "starting" }
-  | { phase: "waiting"; loginRequest: ClientApiLoginRequestResponse; pollStatus: ClientApiPollResponse["status"] }
+  | { phase: "waiting"; loginRequest: ClientApiLoginRequestResponse }
   | { phase: "success" }
   | { phase: "error"; message: string };
 
@@ -38,7 +38,8 @@ function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
 
 export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profilesVersion, onCancel }: Props) {
   const [state, setState] = useState<LinkingState>({ phase: "idle" });
-  const [pollDetail, setPollDetail] = useState<string | null>(null);
+  const [nextPollAt, setNextPollAt] = useState<number | null>(null);
+  const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [clientName, setClientName] = useState<string>(() => buildDefaultDeviceName());
   const abortRef = useRef<AbortController | null>(null);
 
@@ -61,6 +62,13 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     };
   }, []);
 
+  useEffect(() => {
+    if (state.phase !== "waiting" || nextPollAt === null) return;
+    setCountdownNow(Date.now());
+    const timer = window.setInterval(() => setCountdownNow(Date.now()), 250);
+    return () => window.clearInterval(timer);
+  }, [nextPollAt, state.phase]);
+
   async function startLinking() {
     if (!profile) return;
     if (!discovery) {
@@ -68,7 +76,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       return;
     }
 
-    setPollDetail(null);
+    setNextPollAt(null);
     setState({ phase: "starting" });
 
     abortRef.current?.abort();
@@ -81,15 +89,14 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         clientName: clientName.trim(),
         clientType: "reader",
       });
-      setState({ phase: "waiting", loginRequest, pollStatus: "pending" });
+      setState({ phase: "waiting", loginRequest });
 
       await pollUntilDone({
         spl,
         loginRequest,
         signal: abort.signal,
-        onUpdate: (status, detail) => {
-          setPollDetail(detail ?? null);
-          setState((prev) => (prev.phase === "waiting" ? { ...prev, pollStatus: status } : prev));
+        onUpdate: (nextAt) => {
+          setNextPollAt(nextAt);
         },
         onApproved: (approved) => {
           const now = new Date().toISOString();
@@ -104,20 +111,25 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           };
           saveConnectionProfile(updated);
           onProfilesChanged?.();
+          setNextPollAt(null);
           setState({ phase: "success" });
         },
       });
     } catch (e) {
       if (abort.signal.aborted) return;
+      setNextPollAt(null);
       setState({ phase: "error", message: e instanceof Error ? e.message : "Linking failed." });
     }
   }
 
   function resetLocal() {
     abortRef.current?.abort();
-    setPollDetail(null);
+    setNextPollAt(null);
     setState({ phase: "idle" });
   }
+
+  const secondsUntilNextPoll =
+    nextPollAt === null ? null : Math.max(0, Math.ceil((nextPollAt - countdownNow) / 1000));
 
   if (!selectedProfileId) {
     return (
@@ -196,30 +208,36 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       </div>
 
       {state.phase === "waiting" ? (
-        <div className="linkingBox">
-          <div className="selectedRow">
-            <span className="muted">Code:</span> <span className="mono">{state.loginRequest.code}</span>
+        <section className="linkingBox pairPendingPanel" aria-labelledby="pair-pending-title">
+          <div>
+            <h2 className="pairPendingTitle" id="pair-pending-title">Waiting for approval</h2>
+            <p className="pairPendingInstruction">Use this code to approve this browser in your library:</p>
           </div>
-          <div className="selectedRow">
-            <span className="muted">Authorize URL:</span>{" "}
-            <a className="pairExternalLink" href={state.loginRequest.authorize_url} target="_blank" rel="noreferrer">
+
+          <div className="pairApprovalCode mono">{state.loginRequest.code}</div>
+
+          <div className="formActions pairPendingActions">
+            <a
+              className="button buttonPrimary pairExternalLink"
+              href={state.loginRequest.authorize_url}
+              target="_blank"
+              rel="noreferrer"
+            >
               Open authorization page
               <MaterialIcon name="open_in_new" />
             </a>
           </div>
-          <div className="selectedRow">
-            <span className="muted">Polling status:</span>{" "}
-            <span className={state.pollStatus === "pending" ? "pill pillIdle" : "pill pillWarn"}>
-              {state.pollStatus}
+
+          <div className="pairWaitingStatus muted" aria-live="polite">
+            <span className="pairWaitingDot" aria-hidden="true" />
+            <span>
+              {`Waiting for your library to approve this browser${"\u2026"}`}
+              {secondsUntilNextPoll === null
+                ? " Checking now."
+                : ` Next check in ${secondsUntilNextPoll}s.`}
             </span>
           </div>
-          {pollDetail ? <div className="muted">{pollDetail}</div> : null}
-          <div>
-            <button type="button" className="button buttonCompact" onClick={resetLocal}>
-              Stop waiting
-            </button>
-          </div>
-        </div>
+        </section>
       ) : null}
 
       {state.phase === "success" ? (
@@ -245,14 +263,13 @@ async function pollUntilDone(input: {
   spl: SecondPassClient;
   loginRequest: ClientApiLoginRequestResponse;
   signal: AbortSignal;
-  onUpdate: (status: ClientApiPollResponse["status"], detail?: string) => void;
+  onUpdate: (nextPollAt: number) => void;
   onApproved: (approved: Extract<ClientApiPollResponse, { status: "approved" }>) => void;
 }) {
   const intervalSeconds = Math.max(1, Math.floor(input.loginRequest.interval ?? 3));
 
   while (!input.signal.aborted) {
     const result = await input.spl.server.pollLoginRequest(input.loginRequest.poll_url);
-    input.onUpdate(result.status, `Polling every ${intervalSeconds}s${"\u2026"}`);
 
     if (result.status === "approved") {
       input.onApproved(result);
@@ -262,6 +279,7 @@ async function pollUntilDone(input: {
       throw new Error(`Linking ended: ${result.status}`);
     }
 
+    input.onUpdate(Date.now() + intervalSeconds * 1000);
     await sleep(intervalSeconds * 1000, input.signal);
   }
 }

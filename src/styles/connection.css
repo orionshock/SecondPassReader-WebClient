@@ -81,6 +81,79 @@
   line-height: 1;
 }
 
+.pairPendingPanel {
+  padding: 20px;
+  gap: 18px;
+  text-align: center;
+}
+
+.pairPendingTitle {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.pairPendingInstruction {
+  margin: 6px 0 0;
+  color: var(--sp-muted);
+}
+
+.pairApprovalCode {
+  border: 1px solid var(--sp-primary-border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: clamp(24px, 5vw, 36px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.pairWaitingStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pairWaitingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  animation: pairWaitingPulse 1.6s ease-in-out infinite;
+}
+
+.pairPendingActions {
+  align-items: center;
+  justify-content: center;
+}
+
+.pairPendingActions .pairExternalLink {
+  text-decoration: none;
+}
+
+@keyframes pairWaitingPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pairWaitingDot {
+    animation: none;
+  }
+}
+
 .connectAdvanced {
   border: 1px dashed var(--sp-border);
   border-radius: 10px;
