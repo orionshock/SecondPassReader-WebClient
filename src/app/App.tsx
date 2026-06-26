@@ -28,6 +28,7 @@ import { BookDetailModal } from "../features/library/BookDetailModal";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
+import { applyCurrentAccountToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
 import type { SecondPassClient } from "@secondpass/client";
 import { saveReaderReturnTarget } from "../features/reader/readerReturnTarget";
 import type { ReaderReturnTarget } from "../features/reader/types";
@@ -91,36 +92,14 @@ export default function App() {
 
     try {
       const me = await splClient.account.getCurrent();
-
-      const firstName = typeof (me as any)?.first_name === "string" ? ((me as any).first_name as string) : undefined;
-      const lastName = typeof (me as any)?.last_name === "string" ? ((me as any).last_name as string) : undefined;
-
-      const nextVerifiedUser = {
-        profileId: me.profile_id,
-        username: me.username,
-        displayName: me.display_name,
-        firstName,
-        lastName,
-        email: me.email,
-      };
-
-      const prev = selectedProfile.verifiedUser;
-      const changed =
-        !prev ||
-        prev.profileId !== nextVerifiedUser.profileId ||
-        prev.username !== nextVerifiedUser.username ||
-        prev.displayName !== nextVerifiedUser.displayName ||
-        prev.firstName !== nextVerifiedUser.firstName ||
-        prev.lastName !== nextVerifiedUser.lastName ||
-        prev.email !== nextVerifiedUser.email;
+      const nextProfile = applyCurrentAccountToProfile(selectedProfile, me, new Date().toISOString(), {
+        markVerified: false,
+      });
+      const changed = hasCurrentAccountProfileChanged(selectedProfile, nextProfile);
 
       if (!changed) return;
 
-      saveConnectionProfile({
-        ...selectedProfile,
-        verifiedUser: nextVerifiedUser,
-        lastUsedAt: new Date().toISOString(),
-      });
+      saveConnectionProfile(nextProfile);
       refreshProfiles();
     } catch {
       // ignore: keep existing verified identity if refresh fails

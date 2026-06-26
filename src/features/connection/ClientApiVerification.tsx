@@ -3,6 +3,7 @@ import { ApiError } from "@secondpass/client";
 import type { MePayload } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
+import { applyCurrentAccountToProfile } from "./accountProfile";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -16,17 +17,6 @@ type State =
   | { phase: "verifying" }
   | { phase: "success"; me: MePayload }
   | { phase: "error"; message: string };
-
-function pickVerifiedUser(me: MePayload): ConnectionProfile["verifiedUser"] {
-  return {
-    profileId: me.profile_id,
-    username: me.username,
-    displayName: me.display_name,
-    firstName: me.first_name,
-    lastName: me.last_name,
-    email: me.email,
-  };
-}
 
 export function ClientApiVerification({ selectedProfileId, profilesVersion, onProfilesChanged, autoVerify }: Props) {
   const [state, setState] = useState<State>({ phase: "idle" });
@@ -67,13 +57,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
       const me = await spl.account.getCurrent();
 
       const now = new Date().toISOString();
-      const updated: ConnectionProfile = {
-        ...profile,
-        verifiedAt: now,
-        verifiedUser: pickVerifiedUser(me),
-        mustChangePassword: me.must_change_password ?? false,
-        lastUsedAt: now,
-      };
+      const updated: ConnectionProfile = applyCurrentAccountToProfile(profile, me, now);
 
       saveConnectionProfile(updated);
       onProfilesChanged?.();

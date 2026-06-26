@@ -16,6 +16,8 @@ export type {
 export type {
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
+  MeCapabilities,
+  MeGroup,
   MePayload,
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";

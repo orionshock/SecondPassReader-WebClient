@@ -4,6 +4,7 @@ import { saveConnectionProfile } from "../storage/connectionProfiles";
 import type { AppTheme } from "../storage/appTheme";
 import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
 import { discoverSecondPass } from "../features/connection/connectionUtils";
+import { applyCurrentAccountToProfile } from "../features/connection/accountProfile";
 import { createSplClientFromProfile } from "./createSplClient";
 import type { AppWorkflowStep } from "./appWorkflow";
 import { navigateTo } from "./navigation";
@@ -61,20 +62,7 @@ export function SettingsPanel({
       };
 
       const me = await createSplClientFromProfile(discoveredProfile).account.getCurrent();
-      saveConnectionProfile({
-        ...discoveredProfile,
-        verifiedAt: now,
-        lastUsedAt: now,
-        verifiedUser: {
-          profileId: me.profile_id,
-          username: me.username,
-          displayName: me.display_name,
-          firstName: me.first_name,
-          lastName: me.last_name,
-          email: me.email,
-        },
-        mustChangePassword: me.must_change_password ?? false,
-      });
+      saveConnectionProfile(applyCurrentAccountToProfile(discoveredProfile, me, now));
       onProfilesChanged();
       setState({ phase: "success", message: "Connection checked successfully." });
     } catch (e) {

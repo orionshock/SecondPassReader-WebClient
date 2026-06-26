@@ -18,6 +18,25 @@ export type ConnectionProfile = {
     firstName?: string;
     lastName?: string;
     email?: string;
+    role?: string;
+    isOwner?: boolean;
+    capabilities?: {
+      can_manage_users?: boolean;
+      can_manage_library?: boolean;
+      can_import_books?: boolean;
+      can_create_library_groups?: boolean;
+      can_manage_group_memberships?: boolean;
+      can_manage_group_identity?: boolean;
+      can_edit_group_presentation?: boolean;
+      can_access_imports?: boolean;
+      [key: string]: boolean | undefined;
+    };
+    groups?: Array<{
+      id: string;
+      name: string;
+      isPublicGroup: boolean;
+      isCurator: boolean;
+    }>;
   };
   mustChangePassword?: boolean;
   clientApi?: {
