@@ -192,7 +192,7 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
             }}
             disabled={busy || mutationBusy || formOpen}
           >
-            Create shelf
+            Create personal shelf
           </button>
         ) : null}
       </div>
@@ -223,7 +223,7 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
           <section className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-form-title">
             <div className="modalHeaderRow">
               <div className="modalTitle" id="shelf-form-title">
-                Create shelf
+                Create personal shelf
               </div>
               <button
                 type="button"
@@ -240,6 +240,7 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
               </button>
             </div>
             <div className="modalBody">
+              <p className="muted shelfModalHint">Group shelves cannot be edited here.</p>
               <ShelfForm
                 values={createDraft}
                 onChange={setCreateDraft}
@@ -248,7 +249,7 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
                   setCreateOpen(false);
                   setMutationError(null);
                 }}
-                submitLabel="Create shelf"
+                submitLabel="Create personal shelf"
                 busy={mutationBusy}
               />
             </div>
