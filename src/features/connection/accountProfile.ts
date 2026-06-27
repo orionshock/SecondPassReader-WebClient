@@ -36,7 +36,6 @@ function pickVerifiedUser(me: MePayload): VerifiedUser {
     email: me.email,
     role: me.role,
     isOwner: me.is_owner,
-    capabilities: pickCapabilities(me.capabilities),
     groups: Array.isArray(me.groups)
       ? me.groups.map((group) => ({
           id: group.id,
@@ -46,17 +45,6 @@ function pickVerifiedUser(me: MePayload): VerifiedUser {
         }))
       : undefined,
   };
-}
-
-function pickCapabilities(capabilities: MePayload["capabilities"]): VerifiedUser["capabilities"] {
-  if (!capabilities || typeof capabilities !== "object") return undefined;
-
-  const picked: VerifiedUser["capabilities"] = {};
-  for (const [key, value] of Object.entries(capabilities)) {
-    if (typeof value === "boolean") picked[key] = value;
-  }
-
-  return Object.keys(picked).length > 0 ? picked : undefined;
 }
 
 function verifiedUsersEqual(a: ConnectionProfile["verifiedUser"], b: ConnectionProfile["verifiedUser"]): boolean {
@@ -70,7 +58,6 @@ function verifiedUsersEqual(a: ConnectionProfile["verifiedUser"], b: ConnectionP
     a.email === b.email &&
     a.role === b.role &&
     a.isOwner === b.isOwner &&
-    JSON.stringify(a.capabilities ?? null) === JSON.stringify(b.capabilities ?? null) &&
     JSON.stringify(a.groups ?? null) === JSON.stringify(b.groups ?? null)
   );
 }
