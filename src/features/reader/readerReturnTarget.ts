@@ -11,6 +11,7 @@ export const DEFAULT_READER_RETURN_TARGET: ReaderReturnTarget = {
 const RETURN_TARGET_KINDS = new Set<ReaderReturnTarget["kind"]>([
   "home",
   "library",
+  "shelves",
   "shelf",
   "sessions",
   "bookDetail",

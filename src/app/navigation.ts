@@ -14,7 +14,7 @@ export type AppRoute =
     }
   | { kind: "sessions"; bookId?: string; q?: string }
   | { kind: "session"; sessionId: string }
-  | { kind: "shelves" }
+  | { kind: "shelves"; bookId?: string }
   | { kind: "shelf"; shelfId: string; bookId?: string }
   | { kind: "shelfEdit"; shelfId: string }
   | { kind: "settings" }
@@ -63,7 +63,7 @@ export function routeToHash(route: AppRoute): string {
     case "session":
       return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
-      return "#/shelves";
+      return `#/shelves${buildQuery({ book: route.bookId })}`;
     case "shelf":
       return `#/shelves/${encodeURIComponent(route.shelfId)}${buildQuery({ book: route.bookId })}`;
     case "shelfEdit":
@@ -160,7 +160,7 @@ export function parseCurrentRoute(): AppRoute | null {
         return bookId ? { kind: "shelf", shelfId: parts[1], bookId } : { kind: "shelf", shelfId: parts[1] };
       }
     }
-    return { kind: "shelves" };
+    return bookId ? { kind: "shelves", bookId } : { kind: "shelves" };
   }
   if (head === "settings") return { kind: "settings" };
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {
@@ -227,6 +227,10 @@ export function withoutBookModal(route: AppRoute): AppRoute {
       return rest;
     }
     case "shelf": {
+      const { bookId: _bookId, ...rest } = route;
+      return rest;
+    }
+    case "shelves": {
       const { bookId: _bookId, ...rest } = route;
       return rest;
     }

@@ -1,7 +1,7 @@
 import type { LibraryBook, ReadingOpenResponse } from "@secondpass/client";
 
 export type ReaderReturnTarget = {
-  kind: "home" | "library" | "shelf" | "sessions" | "bookDetail" | "series";
+  kind: "home" | "library" | "shelves" | "shelf" | "sessions" | "bookDetail" | "series";
   label: string;
   route: string;
   bookId?: string;

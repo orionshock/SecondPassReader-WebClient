@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -249,6 +249,12 @@ export function LibraryBrowsePage({
     onCommitSearch?.(next);
   }, [onCommitSearch, qDraft]);
 
+  const handleCardKeyDown = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    action();
+  }, []);
+
   const booksPager = useMemo(() => {
     if (!booksData) return null;
     const totalPages = Math.max(1, Math.ceil((booksData.count ?? 0) / pageSize));
@@ -364,7 +370,7 @@ export function LibraryBrowsePage({
                       <div className="muted">{selectedSeries.book_count} books</div>
                     ) : null}
                     {selectedSeries.summary ? <div className="muted">{selectedSeries.summary}</div> : null}
-                    <CoverPreviewStrip books={selectedSeries.preview_books} baseUrl={profile} />
+                    <CoverPreviewStrip books={selectedSeries.preview_books} baseUrl={profile} onBookClick={onViewBook} />
                   </div>
                   <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowSeries?.()}>
                     All series
@@ -382,7 +388,7 @@ export function LibraryBrowsePage({
                       <div className="muted">{selectedAuthor.book_count} books</div>
                     ) : null}
                     {selectedAuthor.biography ? <div className="muted">{selectedAuthor.biography}</div> : null}
-                    <CoverPreviewStrip books={selectedAuthor.preview_books} baseUrl={profile} />
+                    <CoverPreviewStrip books={selectedAuthor.preview_books} baseUrl={profile} onBookClick={onViewBook} />
                   </div>
                   <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowAuthors?.()}>
                     All authors
@@ -501,12 +507,16 @@ export function LibraryBrowsePage({
 
               {seriesData?.results?.length ? (
                 <div className="libraryEntityList">
-                  {seriesData.results.map((s) => (
-                    <button
+                  {seriesData.results.map((s) => {
+                    const openSeries = () => onShowSeriesBooks?.(String(s.id));
+                    return (
+                    <div
                       key={String(s.id)}
-                      type="button"
                       className="libraryEntityCard libraryEntityCardButton"
-                      onClick={() => onShowSeriesBooks?.(String(s.id))}
+                      role="button"
+                      tabIndex={0}
+                      onClick={openSeries}
+                      onKeyDown={(event) => handleCardKeyDown(event, openSeries)}
                       aria-label={`View books in ${s.name}`}
                       title={`View books in ${s.name}`}
                     >
@@ -514,10 +524,11 @@ export function LibraryBrowsePage({
                         <div className="libraryEntityTitle">{s.name}</div>
                         {typeof s.book_count === "number" ? <div className="muted">{s.book_count} books</div> : null}
                         {s.summary ? <div className="muted">{s.summary}</div> : null}
-                        <CoverPreviewStrip books={s.preview_books} baseUrl={profile} />
                       </div>
-                    </button>
-                  ))}
+                      <CoverPreviewStrip books={s.preview_books} baseUrl={profile} onBookClick={onViewBook} />
+                    </div>
+                    );
+                  })}
                 </div>
               ) : null}
 
@@ -554,12 +565,16 @@ export function LibraryBrowsePage({
 
               {authorsData?.results?.length ? (
                 <div className="libraryEntityList">
-                  {authorsData.results.map((a) => (
-                    <button
+                  {authorsData.results.map((a) => {
+                    const openAuthor = () => onShowAuthorBooks?.(String(a.id));
+                    return (
+                    <div
                       key={String(a.id)}
-                      type="button"
                       className="libraryEntityCard libraryEntityCardButton"
-                      onClick={() => onShowAuthorBooks?.(String(a.id))}
+                      role="button"
+                      tabIndex={0}
+                      onClick={openAuthor}
+                      onKeyDown={(event) => handleCardKeyDown(event, openAuthor)}
                       aria-label={`View books by ${a.name}`}
                       title={`View books by ${a.name}`}
                     >
@@ -567,10 +582,11 @@ export function LibraryBrowsePage({
                         <div className="libraryEntityTitle">{a.name}</div>
                         {typeof a.book_count === "number" ? <div className="muted">{a.book_count} books</div> : null}
                         {a.biography ? <div className="muted">{a.biography}</div> : null}
-                        <CoverPreviewStrip books={a.preview_books} baseUrl={profile} />
                       </div>
-                    </button>
-                  ))}
+                      <CoverPreviewStrip books={a.preview_books} baseUrl={profile} onBookClick={onViewBook} />
+                    </div>
+                    );
+                  })}
                 </div>
               ) : null}
 

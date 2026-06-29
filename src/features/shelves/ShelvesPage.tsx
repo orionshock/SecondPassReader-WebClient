@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
@@ -110,27 +110,44 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     }
   }, [load, spl]);
 
+  const handleCardKeyDown = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    action();
+  }, []);
+
   const renderShelf = useCallback((shelf: Shelf) => {
     const canEdit = canEditShelf(shelf);
     const menuOpen = menuShelfId === shelf.id;
+    const openShelf = () => navigateTo({ kind: "shelf", shelfId: shelf.id });
     return (
-      <div key={shelf.id} className="shelfCard">
-          <div className="shelfCardMain">
-            <div className="shelfCardTitle">{shelf.name}</div>
-            <div className="muted">
-              <ShelfMetaLine shelf={shelf} />
-            </div>
-            <CoverPreviewStrip books={shelf.preview_books} baseUrl={profile} />
+      <div
+        key={shelf.id}
+        className="shelfCard shelfCardButton"
+        role="button"
+        tabIndex={0}
+        onClick={openShelf}
+        onKeyDown={(event) => handleCardKeyDown(event, openShelf)}
+        aria-label={`Open shelf ${shelf.name}`}
+        title={`Open shelf ${shelf.name}`}
+      >
+        <div className="shelfCardMain">
+          <div className="shelfCardTitle">{shelf.name}</div>
+          <div className="muted">
+            <ShelfMetaLine shelf={shelf} />
           </div>
-        <div className="shelfCardActions">
-          <button
-            type="button"
-            className="button buttonCompact"
-            onClick={() => navigateTo({ kind: "shelf", shelfId: shelf.id })}
+        </div>
+        <CoverPreviewStrip
+          books={shelf.preview_books}
+          baseUrl={profile}
+          onBookClick={(bookId) => navigateTo({ kind: "shelves", bookId })}
+        />
+        {canEdit ? (
+          <div
+            className="shelfCardActions"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            Open
-          </button>
-          {canEdit ? (
             <div className="shelfOverflow">
               <button
                 type="button"
@@ -171,11 +188,11 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
                 </div>
               ) : null}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     );
-  }, [handleDelete, menuShelfId, mutationBusy, profile]);
+  }, [handleCardKeyDown, handleDelete, menuShelfId, mutationBusy, profile]);
 
   const formOpen = createOpen;
 

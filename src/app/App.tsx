@@ -330,6 +330,13 @@ export default function App() {
         seriesId: currentRoute.browse === "series" ? currentRoute.seriesId : undefined,
       };
     }
+    if (currentRoute.kind === "shelves") {
+      return {
+        kind: "shelves",
+        label: "Shelves",
+        route: routeToHash(withoutBookModal(currentRoute)),
+      };
+    }
     if (currentRoute.kind === "shelf") {
       return {
         kind: "shelf",
@@ -566,7 +573,7 @@ export default function App() {
       {workflowStep === "library_home" && route?.kind !== "reader" ? (
         (() => {
           const modalBookId =
-            route?.kind === "home" ? route.bookId ?? null : route?.kind === "library" ? route.bookId ?? null : route?.kind === "shelf" ? route.bookId ?? null : null;
+            route?.kind === "home" ? route.bookId ?? null : route?.kind === "library" ? route.bookId ?? null : route?.kind === "shelves" ? route.bookId ?? null : route?.kind === "shelf" ? route.bookId ?? null : null;
           if (!modalBookId) return null;
           return (
             <BookDetailModal
