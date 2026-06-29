@@ -20,6 +20,12 @@ export type PaginatedResponse<T> = {
   results: T[];
 };
 
+export type PreviewBook = {
+  id: string;
+  title: string;
+  cover_url: string | null;
+};
+
 export type LibraryAuthorSummary = {
   id: string | number;
   name: string;
@@ -70,6 +76,7 @@ export type LibrarySeries = {
   name: string;
   summary?: string | null;
   book_count?: number | null;
+  preview_books?: PreviewBook[];
   created_at?: string;
   updated_at?: string;
   [k: string]: unknown;
@@ -80,6 +87,7 @@ export type LibraryAuthor = {
   name: string;
   biography?: string | null;
   book_count?: number | null;
+  preview_books?: PreviewBook[];
   created_at?: string;
   updated_at?: string;
   [k: string]: unknown;

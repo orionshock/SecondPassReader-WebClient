@@ -1,5 +1,5 @@
 import type { PaginatedResponse } from "./library";
-import type { LibraryAuthorSummary, LibrarySeriesSummary } from "./library";
+import type { LibraryAuthorSummary, LibrarySeriesSummary, PreviewBook } from "./library";
 
 export type ShelfOwnerType = "user" | "group" | string;
 export type ShelfVisibility = "private" | "listed" | string;
@@ -30,6 +30,7 @@ export type Shelf = {
   item_count?: number | null;
   matched_item_id?: string | null;
   can_edit?: boolean;
+  preview_books?: PreviewBook[];
   created_by?: ShelfOwnerUserSummary | null;
   created_at?: string;
   updated_at?: string;
@@ -64,6 +65,7 @@ type ShelfListBaseParams = {
   book?: string | number;
   page?: number;
   pageSize?: number;
+  includePreviewBooks?: boolean;
 };
 
 export type ShelfListParams =

@@ -99,6 +99,11 @@ export type LibraryBookListParams = {
   pageSize?: number;
 };
 
+export type LibraryEntityListParams = {
+  page?: number;
+  includePreviewBooks?: boolean;
+};
+
 export type SecondPassClient = {
   readonly config: Readonly<SecondPassClientConfig>;
 
@@ -133,13 +138,13 @@ export type SecondPassClient = {
       download(book: LibraryBook | string | number): Promise<Blob>;
     };
     series: {
-      list(params?: { page?: number }): Promise<PaginatedResponse<LibrarySeries>>;
-      get(seriesId: string): Promise<LibrarySeries>;
+      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<LibrarySeries>>;
+      get(seriesId: string, params?: { includePreviewBooks?: boolean }): Promise<LibrarySeries>;
       books(seriesId: string, params?: Omit<LibraryBookListParams, "series">): Promise<PaginatedResponse<LibraryBook>>;
     };
     authors: {
-      list(params?: { page?: number }): Promise<PaginatedResponse<LibraryAuthor>>;
-      get(authorId: string): Promise<LibraryAuthor>;
+      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<LibraryAuthor>>;
+      get(authorId: string, params?: { includePreviewBooks?: boolean }): Promise<LibraryAuthor>;
       books(authorId: string, params?: Omit<LibraryBookListParams, "author">): Promise<PaginatedResponse<LibraryBook>>;
     };
   };
@@ -147,7 +152,7 @@ export type SecondPassClient = {
   shelves: {
     list(params?: ShelfListParams): Promise<PaginatedShelfResponse>;
     create(input: CreateShelfInput): Promise<Shelf>;
-    get(shelfId: string): Promise<Shelf>;
+    get(shelfId: string, params?: { includePreviewBooks?: boolean }): Promise<Shelf>;
     update(shelfId: string, input: UpdateShelfInput): Promise<Shelf>;
     remove(shelfId: string): Promise<void>;
     items(shelfId: string, params?: { page?: number }): Promise<PaginatedShelfItemResponse>;
@@ -259,11 +264,14 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       series: {
         list: (params) => {
           const auth = requireAuth(ctx);
-          return listSeries(auth, { page: params?.page });
+          return listSeries(auth, {
+            page: params?.page,
+            includePreviewBooks: params?.includePreviewBooks,
+          });
         },
-        get: (seriesId) => {
+        get: (seriesId, params) => {
           const auth = requireAuth(ctx);
-          return getSeries(auth, { seriesId });
+          return getSeries(auth, { seriesId, includePreviewBooks: params?.includePreviewBooks });
         },
         books: (seriesId, params) => {
           const auth = requireAuth(ctx);
@@ -274,11 +282,14 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       authors: {
         list: (params) => {
           const auth = requireAuth(ctx);
-          return listAuthors(auth, { page: params?.page });
+          return listAuthors(auth, {
+            page: params?.page,
+            includePreviewBooks: params?.includePreviewBooks,
+          });
         },
-        get: (authorId) => {
+        get: (authorId, params) => {
           const auth = requireAuth(ctx);
-          return getAuthor(auth, { authorId });
+          return getAuthor(auth, { authorId, includePreviewBooks: params?.includePreviewBooks });
         },
         books: (authorId, params) => {
           const auth = requireAuth(ctx);
@@ -296,9 +307,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         const auth = requireAuth(ctx);
         return createShelf(auth, input);
       },
-      get: (shelfId) => {
+      get: (shelfId, params) => {
         const auth = requireAuth(ctx);
-        return getShelf(auth, { shelfId });
+        return getShelf(auth, { shelfId, includePreviewBooks: params?.includePreviewBooks });
       },
       update: (shelfId, input) => {
         const auth = requireAuth(ctx);

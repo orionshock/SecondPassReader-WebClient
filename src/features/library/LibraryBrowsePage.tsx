@@ -5,6 +5,7 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookGrid } from "./display/BookGrid";
 import { BookList } from "./display/BookList";
+import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 
@@ -137,7 +138,7 @@ export function LibraryBrowsePage({
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const r = await spl.library.series.list({ page });
+        const r = await spl.library.series.list({ page, includePreviewBooks: true });
         setSeriesData(r);
         setSeriesPage(page);
       } catch (e) {
@@ -156,7 +157,7 @@ export function LibraryBrowsePage({
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const r = await spl.library.authors.list({ page });
+        const r = await spl.library.authors.list({ page, includePreviewBooks: true });
         setAuthorsData(r);
         setAuthorsPage(page);
       } catch (e) {
@@ -218,7 +219,7 @@ export function LibraryBrowsePage({
     if (browseMode === "series" && route.seriesId) {
       void (async () => {
         try {
-          const s = await spl.library.series.get(route.seriesId!);
+          const s = await spl.library.series.get(route.seriesId!, { includePreviewBooks: true });
           setSelectedSeries(s);
         } catch {
           setSelectedSeries(null);
@@ -231,7 +232,7 @@ export function LibraryBrowsePage({
     if (browseMode === "authors" && route.authorId) {
       void (async () => {
         try {
-          const a = await spl.library.authors.get(route.authorId!);
+          const a = await spl.library.authors.get(route.authorId!, { includePreviewBooks: true });
           setSelectedAuthor(a);
         } catch {
           setSelectedAuthor(null);
@@ -363,6 +364,7 @@ export function LibraryBrowsePage({
                       <div className="muted">{selectedSeries.book_count} books</div>
                     ) : null}
                     {selectedSeries.summary ? <div className="muted">{selectedSeries.summary}</div> : null}
+                    <CoverPreviewStrip books={selectedSeries.preview_books} baseUrl={profile} />
                   </div>
                   <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowSeries?.()}>
                     All series
@@ -380,6 +382,7 @@ export function LibraryBrowsePage({
                       <div className="muted">{selectedAuthor.book_count} books</div>
                     ) : null}
                     {selectedAuthor.biography ? <div className="muted">{selectedAuthor.biography}</div> : null}
+                    <CoverPreviewStrip books={selectedAuthor.preview_books} baseUrl={profile} />
                   </div>
                   <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowAuthors?.()}>
                     All authors
@@ -511,6 +514,7 @@ export function LibraryBrowsePage({
                         <div className="libraryEntityTitle">{s.name}</div>
                         {typeof s.book_count === "number" ? <div className="muted">{s.book_count} books</div> : null}
                         {s.summary ? <div className="muted">{s.summary}</div> : null}
+                        <CoverPreviewStrip books={s.preview_books} baseUrl={profile} />
                       </div>
                     </button>
                   ))}
@@ -563,6 +567,7 @@ export function LibraryBrowsePage({
                         <div className="libraryEntityTitle">{a.name}</div>
                         {typeof a.book_count === "number" ? <div className="muted">{a.book_count} books</div> : null}
                         {a.biography ? <div className="muted">{a.biography}</div> : null}
+                        <CoverPreviewStrip books={a.preview_books} baseUrl={profile} />
                       </div>
                     </button>
                   ))}

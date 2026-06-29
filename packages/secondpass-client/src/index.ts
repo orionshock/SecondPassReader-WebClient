@@ -4,6 +4,7 @@ export type {
   SecondPassClient,
   SecondPassClientConfig,
   LibraryBookListParams,
+  LibraryEntityListParams,
   SaveReadingProgressInput,
   CreateHighlightInput,
   CreateBookmarkInput,
@@ -21,7 +22,7 @@ export type {
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
 
-export type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "./schemas/library";
+export type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, PreviewBook } from "./schemas/library";
 
 export type {
   ReadingAnnotation,

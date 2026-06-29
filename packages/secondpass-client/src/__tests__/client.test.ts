@@ -251,8 +251,9 @@ describe("@secondpass/client high-level workflows", () => {
       book: "book-1",
       page: 2,
       pageSize: 25,
+      includePreviewBooks: true,
     });
-    await spl.shelves.list({ scope: "personal", book: 7 });
+    await spl.shelves.list({ scope: "personal", book: 7, includePreviewBooks: false });
 
     const sharedUrl = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(sharedUrl.origin + sharedUrl.pathname).toBe("https://api.example/shelves/");
@@ -261,11 +262,46 @@ describe("@secondpass/client high-level workflows", () => {
     expect(sharedUrl.searchParams.get("book")).toBe("book-1");
     expect(sharedUrl.searchParams.get("page")).toBe("2");
     expect(sharedUrl.searchParams.get("page_size")).toBe("25");
+    expect(sharedUrl.searchParams.get("include_preview_books")).toBe("true");
 
     const personalUrl = new URL(String(fetchMock.mock.calls[1]![0]));
     expect(personalUrl.searchParams.get("scope")).toBe("personal");
     expect(personalUrl.searchParams.get("book")).toBe("7");
     expect(personalUrl.searchParams.has("owner_group")).toBe(false);
+    expect(personalUrl.searchParams.has("include_preview_books")).toBe(false);
+  });
+
+  it("library authors and series optionally request preview books", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: "s1", name: "Series" }))
+      .mockResolvedValueOnce(jsonResponse({ id: "a1", name: "Author" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.library.series.list({ page: 3, includePreviewBooks: true });
+    await spl.library.authors.list({ page: 4, includePreviewBooks: false });
+    await spl.library.series.get("s1", { includePreviewBooks: true });
+    await spl.library.authors.get("a1");
+
+    const seriesListUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(seriesListUrl.origin + seriesListUrl.pathname).toBe("https://api.example/library/series/");
+    expect(seriesListUrl.searchParams.get("page")).toBe("3");
+    expect(seriesListUrl.searchParams.get("include_preview_books")).toBe("true");
+
+    const authorsListUrl = new URL(String(fetchMock.mock.calls[1]![0]));
+    expect(authorsListUrl.origin + authorsListUrl.pathname).toBe("https://api.example/library/authors/");
+    expect(authorsListUrl.searchParams.get("page")).toBe("4");
+    expect(authorsListUrl.searchParams.has("include_preview_books")).toBe(false);
+
+    const seriesDetailUrl = new URL(String(fetchMock.mock.calls[2]![0]));
+    expect(seriesDetailUrl.origin + seriesDetailUrl.pathname).toBe("https://api.example/library/series/s1/");
+    expect(seriesDetailUrl.searchParams.get("include_preview_books")).toBe("true");
+
+    const authorDetailUrl = new URL(String(fetchMock.mock.calls[3]![0]));
+    expect(authorDetailUrl.origin + authorDetailUrl.pathname).toBe("https://api.example/library/authors/a1/");
+    expect(authorDetailUrl.searchParams.has("include_preview_books")).toBe(false);
   });
 
   it("shelves.list preserves unscoped behavior and rejects personal owner-group filters", async () => {

@@ -43,10 +43,11 @@ export async function listBooks(
 
 export async function listSeries(
   ctx: AuthenticatedClientContext,
-  input?: { page?: number },
+  input?: { page?: number; includePreviewBooks?: boolean },
 ): Promise<PaginatedResponse<LibrarySeries>> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/series/"));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
+  if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
 
   return requestJson<PaginatedResponse<LibrarySeries>>({
     apiBaseUrl: ctx.apiBaseUrl,
@@ -59,13 +60,17 @@ export async function listSeries(
   });
 }
 
-export async function getSeries(ctx: AuthenticatedClientContext, input: { seriesId: string }): Promise<LibrarySeries> {
-  const url = resolveUrl(ctx.apiBaseUrl, `/library/series/${encodeURIComponent(input.seriesId)}/`);
+export async function getSeries(
+  ctx: AuthenticatedClientContext,
+  input: { seriesId: string; includePreviewBooks?: boolean },
+): Promise<LibrarySeries> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/library/series/${encodeURIComponent(input.seriesId)}/`));
+  if (input.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
   return requestJson<LibrarySeries>({
     apiBaseUrl: ctx.apiBaseUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
-    endpointOrUrl: url,
+    endpointOrUrl: url.toString(),
     options: {
       errorMessages: authErrorMessages({
         forbidden: LIBRARY_FORBIDDEN_403,
@@ -77,10 +82,11 @@ export async function getSeries(ctx: AuthenticatedClientContext, input: { series
 
 export async function listAuthors(
   ctx: AuthenticatedClientContext,
-  input?: { page?: number },
+  input?: { page?: number; includePreviewBooks?: boolean },
 ): Promise<PaginatedResponse<LibraryAuthor>> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/authors/"));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
+  if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
 
   return requestJson<PaginatedResponse<LibraryAuthor>>({
     apiBaseUrl: ctx.apiBaseUrl,
@@ -93,13 +99,17 @@ export async function listAuthors(
   });
 }
 
-export async function getAuthor(ctx: AuthenticatedClientContext, input: { authorId: string }): Promise<LibraryAuthor> {
-  const url = resolveUrl(ctx.apiBaseUrl, `/library/authors/${encodeURIComponent(input.authorId)}/`);
+export async function getAuthor(
+  ctx: AuthenticatedClientContext,
+  input: { authorId: string; includePreviewBooks?: boolean },
+): Promise<LibraryAuthor> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/library/authors/${encodeURIComponent(input.authorId)}/`));
+  if (input.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
   return requestJson<LibraryAuthor>({
     apiBaseUrl: ctx.apiBaseUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
-    endpointOrUrl: url,
+    endpointOrUrl: url.toString(),
     options: {
       errorMessages: authErrorMessages({
         forbidden: LIBRARY_FORBIDDEN_403,

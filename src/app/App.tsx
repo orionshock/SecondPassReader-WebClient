@@ -497,7 +497,7 @@ export default function App() {
                 </section>
               ) : route?.kind === "shelves" ? (
                 <div className="libraryScreen">
-                  <ShelvesPage spl={splClient} />
+                  <ShelvesPage profile={selectedProfile} spl={splClient} />
                 </div>
               ) : route?.kind === "shelf" ? (
                 <div className="libraryScreen">

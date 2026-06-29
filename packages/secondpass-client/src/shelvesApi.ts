@@ -28,6 +28,7 @@ export async function listShelves(
   if (input?.book !== undefined) url.searchParams.set("book", String(input.book));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input?.pageSize !== undefined) url.searchParams.set("page_size", String(input.pageSize));
+  if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
 
   return requestJson<PaginatedShelfResponse>({
     apiBaseUrl: ctx.apiBaseUrl,
@@ -40,13 +41,17 @@ export async function listShelves(
   });
 }
 
-export async function getShelf(ctx: AuthenticatedClientContext, input: { shelfId: string }): Promise<Shelf> {
-  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
+export async function getShelf(
+  ctx: AuthenticatedClientContext,
+  input: { shelfId: string; includePreviewBooks?: boolean },
+): Promise<Shelf> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`));
+  if (input.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
   return requestJson<Shelf>({
     apiBaseUrl: ctx.apiBaseUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
-    endpointOrUrl: url,
+    endpointOrUrl: url.toString(),
     options: {
       errorMessages: authErrorMessages({
         forbidden: SHELVES_FORBIDDEN_403,

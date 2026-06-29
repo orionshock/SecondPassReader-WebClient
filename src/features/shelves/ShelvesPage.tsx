@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
+import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
+import { CoverPreviewStrip } from "../library/display/CoverPreviewStrip";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
 
@@ -19,7 +21,7 @@ type ScopedShelves = {
   shared: Shelf[];
 };
 
-export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
+export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | null; spl: SecondPassClient | null }) {
   const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +38,8 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
     setError(null);
     try {
       const [personal, shared] = await Promise.all([
-        spl.shelves.list({ scope: "personal" }),
-        spl.shelves.list({ scope: "shared" }),
+        spl.shelves.list({ scope: "personal", includePreviewBooks: true }),
+        spl.shelves.list({ scope: "shared", includePreviewBooks: true }),
       ]);
       setData({
         personal: personal.results ?? [],
@@ -113,12 +115,13 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
     const menuOpen = menuShelfId === shelf.id;
     return (
       <div key={shelf.id} className="shelfCard">
-        <div className="shelfCardMain">
-          <div className="shelfCardTitle">{shelf.name}</div>
-          <div className="muted">
-            <ShelfMetaLine shelf={shelf} />
+          <div className="shelfCardMain">
+            <div className="shelfCardTitle">{shelf.name}</div>
+            <div className="muted">
+              <ShelfMetaLine shelf={shelf} />
+            </div>
+            <CoverPreviewStrip books={shelf.preview_books} baseUrl={profile} />
           </div>
-        </div>
         <div className="shelfCardActions">
           <button
             type="button"
@@ -172,7 +175,7 @@ export function ShelvesPage({ spl }: { spl: SecondPassClient | null }) {
         </div>
       </div>
     );
-  }, [handleDelete, menuShelfId, mutationBusy]);
+  }, [handleDelete, menuShelfId, mutationBusy, profile]);
 
   const formOpen = createOpen;
 
