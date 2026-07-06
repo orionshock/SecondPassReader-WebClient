@@ -13,8 +13,9 @@ describe("reader import handlers", () => {
     expect(getReaderImportHandlers().map((format) => format.kind)).toEqual(["glasp-csv", "spl-session-json"]);
     expect(getReaderImportHandlers().map((format) => format.displayName)).toEqual([
       "Glasp CSV",
-      "SecondPassMarginaliaExport session JSON",
+      "SPL Marginalia",
     ]);
+    expect(getReaderImportFormat("spl-session-json").description).toBe("Import a One Session File in SPL Marginalia Format");
   });
 
   it("keeps duplicate handler registration safe by kind", () => {
@@ -57,7 +58,7 @@ describe("reader import handlers", () => {
                   id: "ann-1",
                   highlight_text: "Selected text",
                   comment_text: "Note",
-                  highlight_color: "green",
+                  body: [{ type: "TextualBody", purpose: "describing", value: "Selected text", color: "green" }],
                   selector: { kind: "epub_cfi", value: "/6/2" },
                 },
               ],
@@ -138,7 +139,7 @@ describe("reader import handlers", () => {
                 {
                   id: "ann",
                   comment_text: "Comment",
-                  color: "yellow",
+                  body: [{ type: "TextualBody", purpose: "describing", value: "quoted text", color: "yellow" }],
                   deleted: true,
                   annotation_unknown: { keep: true },
                   target: { selector: selectorArray },
@@ -159,12 +160,39 @@ describe("reader import handlers", () => {
     expect(row.rawAnnotation).toEqual({
       id: "ann",
       comment_text: "Comment",
-      color: "yellow",
+      body: [{ type: "TextualBody", purpose: "describing", value: "quoted text", color: "yellow" }],
       deleted: true,
       annotation_unknown: { keep: true },
       target: { selector: selectorArray },
     });
     expect(job.sourceSession).toMatchObject({ id: "session", session_unknown: true });
+  });
+
+  it("reads SPL highlight color from body color through the handler boundary", async () => {
+    const file = jsonFile({
+      schema_version: "0.1.0",
+      books: [
+        {
+          title: "Book",
+          sessions: [
+            {
+              id: "session",
+              annotations: [
+                { id: "green", highlight_text: "Green", body: [{ type: "TextualBody", color: "green" }] },
+                { id: "pink", highlight_text: "Pink", body: [{ type: "TextualBody", color: "pink" }] },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const job = await getReaderImportFormat("spl-session-json").importFile(file);
+
+    expect(job.rows.map((row) => [row.id, row.importedColor, row.normalizedColor])).toEqual([
+      ["green", "green", "green"],
+      ["pink", "pink", "pink"],
+    ]);
   });
 });
 

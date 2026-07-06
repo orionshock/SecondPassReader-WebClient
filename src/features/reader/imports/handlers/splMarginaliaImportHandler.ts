@@ -22,10 +22,10 @@ class SplMarginaliaSessionCountError extends Error {
   }
 }
 
-export const splSessionJsonImportHandler = {
+export const splMarginaliaImportHandler = {
   kind: "spl-session-json" as const,
-  displayName: "SecondPassMarginaliaExport session JSON",
-  description: "Stage one split SecondPass marginalia session export.",
+  displayName: "SPL Marginalia",
+  description: "Import a One Session File in SPL Marginalia Format",
   accept: "application/json,.json",
   importFile: async (file: File) => {
     try {
@@ -49,7 +49,7 @@ export const splSessionJsonImportHandler = {
   },
 };
 
-registerReaderImportHandler(splSessionJsonImportHandler);
+registerReaderImportHandler(splMarginaliaImportHandler);
 
 function parseSplMarginaliaSessionImport(text: string, fileName: string, now = new Date()): { job: ReaderImportJob } {
   const split = parseAndSplitMarginaliaExport(text);
@@ -84,7 +84,7 @@ function toImportRow(annotation: Record<string, unknown>, index: number): Reader
   const quote = readQuote(annotation);
   const text = getString(annotation.highlight_text) ?? quote ?? getString(annotation.text) ?? "(No highlight text)";
   const note = getString(annotation.comment_text) ?? getString(annotation.note) ?? getString(annotation.comment);
-  const color = getString(annotation.highlight_color) ?? getString(annotation.color);
+  const color = readColor(annotation);
   const location = readLocationHint(annotation);
 
   return {
@@ -98,6 +98,17 @@ function toImportRow(annotation: Record<string, unknown>, index: number): Reader
     status: "staged",
     rawAnnotation: annotation,
   };
+}
+
+function readColor(annotation: Record<string, unknown>): string | undefined {
+  const body = annotation.body;
+  const bodies = Array.isArray(body) ? body : [body];
+  for (const item of bodies) {
+    if (!isRecord(item)) continue;
+    const color = getString(item.color);
+    if (color) return color;
+  }
+  return undefined;
 }
 
 function readAnnotations(session: Record<string, unknown>): Record<string, unknown>[] {
