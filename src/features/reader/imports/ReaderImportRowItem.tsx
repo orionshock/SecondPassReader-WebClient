@@ -21,13 +21,31 @@ export function ReaderImportRowItem({
       className={`spReaderImportRow${selected ? " spReaderImportRowSelected" : ""}`}
       style={{ ["--annotation-color" as any]: colorVars.color, ["--annotation-bg" as any]: colorVars.bg }}
     >
+      <div className="spReaderImportRowHeader">
+        <button
+          type="button"
+          className="spReaderImportRowMetaButton"
+          onClick={onSelect}
+          aria-current={selected ? "true" : undefined}
+        >
+          <span className="spReaderImportRowMeta">
+            <span>#{row.index}</span>
+            {row.kind === "bookmark" ? <span>Bookmark</span> : null}
+            <span className={`spReaderImportStatus spReaderImportStatus-${row.status}`}>{statusLabel(row.status)}</span>
+          </span>
+        </button>
+        <div className="spReaderImportRowActions">
+          {row.status === "accepted" ? null : row.status === "skipped" ? (
+            <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onUnskip}>Unskip</button>
+          ) : (
+            <>
+              {row.status === "searching" ? <span className="muted spReaderImportRowActionText">Searching...</span> : null}
+              <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onSkip}>Skip</button>
+            </>
+          )}
+        </div>
+      </div>
       <button type="button" className="spReaderImportRowMain" onClick={onSelect} aria-current={selected ? "true" : undefined}>
-        <span className="spReaderImportRowMeta">
-          <span>#{row.index}</span>
-          {row.kind === "bookmark" ? <span>Bookmark</span> : null}
-          <span className={`spReaderImportStatus spReaderImportStatus-${row.status}`}>{statusLabel(row.status)}</span>
-          {row.normalizedColor ? <span className={`spReaderImportColor spReaderImportColor-${row.normalizedColor}`} /> : null}
-        </span>
         {row.kind === "bookmark" ? null : row.importedText.trim() ? (
           <span className="spAnnotationQuote spReaderImportQuote">{row.importedText}</span>
         ) : (
@@ -38,13 +56,6 @@ export function ReaderImportRowItem({
           <span className="muted spReaderImportLocation">{row.importedLocation}</span>
         ) : null}
       </button>
-      <div className="spReaderImportRowActions">
-        {row.status === "accepted" ? null : row.status === "skipped" ? (
-          <button type="button" className="button buttonCompact" onClick={onUnskip}>Unskip</button>
-        ) : (
-          <button type="button" className="button buttonCompact" onClick={onSkip}>Skip</button>
-        )}
-      </div>
     </article>
   );
 }
