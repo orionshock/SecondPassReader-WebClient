@@ -47,6 +47,15 @@
   gap: 4px;
 }
 
+.shelfCardRight {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
 .shelfCardActions {
   display: flex;
   flex-wrap: wrap;
@@ -361,6 +370,7 @@
     display: none;
   }
 
+  .shelfCardRight,
   .shelfCardActions,
   .shelfBookActions {
     justify-content: flex-start;

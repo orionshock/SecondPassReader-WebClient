@@ -137,59 +137,61 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
             <ShelfMetaLine shelf={shelf} />
           </div>
         </div>
-        <CoverPreviewStrip
-          books={shelf.preview_books}
-          baseUrl={profile}
-          onBookClick={(bookId) => navigateTo({ kind: "shelves", bookId })}
-        />
-        {canEdit ? (
-          <div
-            className="shelfCardActions"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <div className="shelfOverflow">
-              <button
-                type="button"
-                className="button buttonCompact shelfIconButton"
-                onClick={() => setMenuShelfId((current) => (current === shelf.id ? null : shelf.id))}
-                disabled={mutationBusy}
-                aria-label={`More actions for ${shelf.name}`}
-                aria-expanded={menuOpen}
-                title="More actions"
-              >
-                <MaterialIcon name="more_vert" />
-              </button>
-              {menuOpen ? (
-                <div className="shelfOverflowMenu" role="menu">
-                  <button
-                    type="button"
-                    className="shelfOverflowItem"
-                    onClick={() => {
-                      setMenuShelfId(null);
-                      navigateTo({ kind: "shelfEdit", shelfId: shelf.id });
-                    }}
-                    disabled={mutationBusy}
-                    role="menuitem"
-                  >
-                    <MaterialIcon name="edit" />
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="shelfOverflowItem shelfOverflowItemDanger"
-                    onClick={() => void handleDelete(shelf)}
-                    disabled={mutationBusy}
-                    role="menuitem"
-                  >
-                    <MaterialIcon name="delete" />
-                    Delete
-                  </button>
-                </div>
-              ) : null}
+        <div className="shelfCardRight">
+          <CoverPreviewStrip
+            books={shelf.preview_books}
+            baseUrl={profile}
+            onBookClick={(bookId) => navigateTo({ kind: "shelves", bookId })}
+          />
+          {canEdit ? (
+            <div
+              className="shelfCardActions"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <div className="shelfOverflow">
+                <button
+                  type="button"
+                  className="button buttonCompact shelfIconButton"
+                  onClick={() => setMenuShelfId((current) => (current === shelf.id ? null : shelf.id))}
+                  disabled={mutationBusy}
+                  aria-label={`More actions for ${shelf.name}`}
+                  aria-expanded={menuOpen}
+                  title="More actions"
+                >
+                  <MaterialIcon name="more_vert" />
+                </button>
+                {menuOpen ? (
+                  <div className="shelfOverflowMenu" role="menu">
+                    <button
+                      type="button"
+                      className="shelfOverflowItem"
+                      onClick={() => {
+                        setMenuShelfId(null);
+                        navigateTo({ kind: "shelfEdit", shelfId: shelf.id });
+                      }}
+                      disabled={mutationBusy}
+                      role="menuitem"
+                    >
+                      <MaterialIcon name="edit" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="shelfOverflowItem shelfOverflowItemDanger"
+                      onClick={() => void handleDelete(shelf)}
+                      disabled={mutationBusy}
+                      role="menuitem"
+                    >
+                      <MaterialIcon name="delete" />
+                      Delete
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     );
   }, [handleCardKeyDown, handleDelete, menuShelfId, mutationBusy, profile]);
