@@ -145,6 +145,39 @@ describe("reader import handlers", () => {
     ]);
   });
 
+  it("keeps SPL highlights without quote text as empty highlight rows", async () => {
+    const file = jsonFile({
+      schema_version: "0.1.0",
+      books: [
+        {
+          title: "Book",
+          sessions: [
+            {
+              id: "session",
+              annotations: [
+                {
+                  id: "empty-highlight",
+                  motivation: ["highlighting"],
+                  target: { selector: [{ type: "FragmentSelector", value: "epubcfi(/6/8)" }] },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const job = await getReaderImportFormat("spl-session-json").importFile(file);
+
+    expect(job.rows[0]).toMatchObject({
+      id: "empty-highlight",
+      kind: "highlight",
+      importedText: "",
+      selectorHint: { kind: "epub_cfi", value: "epubcfi(/6/8)" },
+      status: "staged",
+    });
+  });
+
   it("rejects zero SPL sessions through the shared parse error contract", async () => {
     const file = jsonFile({ schema_version: "0.1.0", books: [{ title: "Book", sessions: [] }] }, "empty.json");
 

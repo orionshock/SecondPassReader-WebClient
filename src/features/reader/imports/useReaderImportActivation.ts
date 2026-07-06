@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { ReaderSearchBookHandle } from "../shell/types";
 import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
+import { getReaderImportActivationEligibility } from "./readerImportActivationPolicy";
 import { findImportRowSearchMatch } from "./readerImportSearch";
 
 export function useReaderImportActivation({
@@ -30,7 +31,13 @@ export function useReaderImportActivation({
     const row = job?.rows.find((r) => r.id === rowId);
     if (!job || !row || row.status === "accepted" || row.status === "skipped") return;
     selectRow(rowId);
-    if (row.kind === "bookmark") {
+    const eligibility = getReaderImportActivationEligibility(row);
+    if (eligibility.kind === "bookmark-location") {
+      setDrawerOpen(true);
+      return;
+    }
+    if (eligibility.kind === "not-searchable") {
+      setRowStatus(rowId, "not-found");
       setDrawerOpen(true);
       return;
     }

@@ -84,7 +84,7 @@ function toImportRow(annotation: Record<string, unknown>, index: number): Reader
   const kind = isBookmarkAnnotation(annotation) ? "bookmark" : "highlight";
   const quote = readQuote(annotation);
   const selectorHint = readSelectorHint(annotation);
-  const text = kind === "bookmark" ? "Bookmark" : getString(annotation.highlight_text) ?? quote ?? getString(annotation.text) ?? "(No highlight text)";
+  const text = kind === "bookmark" ? "Bookmark" : getString(annotation.highlight_text) ?? quote ?? getString(annotation.text) ?? "";
   const note = getString(annotation.comment_text) ?? getString(annotation.note) ?? getString(annotation.comment);
   const color = readColor(annotation);
   const location = selectorHint ? `Location hint: ${selectorHint.value}` : undefined;
