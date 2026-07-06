@@ -99,7 +99,7 @@ function toImportRow(annotation: Record<string, unknown>, index: number): Reader
     normalizedColor: normalizeImportedHighlightColor(color),
     importedLocation: location,
     selectorHint,
-    status: "staged",
+    status: "pending",
     rawAnnotation: annotation,
   };
 }

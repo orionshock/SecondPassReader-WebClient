@@ -36,7 +36,7 @@ function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {
     kind: "highlight",
     index: 1,
     importedText: "Text",
-    status: "staged",
+    status: "pending",
     ...overrides,
   };
 }

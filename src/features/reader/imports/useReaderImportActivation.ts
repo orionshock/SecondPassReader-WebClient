@@ -3,6 +3,7 @@ import type { ReaderSearchBookHandle } from "../shell/types";
 import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { getReaderImportActivationEligibility } from "./readerImportActivationPolicy";
+import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatch } from "./readerImportSearch";
 
 export function useReaderImportActivation({
@@ -30,6 +31,7 @@ export function useReaderImportActivation({
   return useCallback(async (rowId: string) => {
     const row = job?.rows.find((r) => r.id === rowId);
     if (!job || !row || row.status === "accepted" || row.status === "skipped") return;
+    if (hasOtherStagedRows(job.rows, rowId)) stagedSelectionHandle?.cancelStagedSelection();
     selectRow(rowId);
     const eligibility = getReaderImportActivationEligibility(row);
     if (eligibility.kind === "bookmark-location") {

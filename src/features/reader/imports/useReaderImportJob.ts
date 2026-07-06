@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportFormat } from "./readerImportFormats";
+import { resetOtherStagedRowsForActivation } from "./readerImportJobState";
 import type { ReaderImportFormat, ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
@@ -28,7 +29,7 @@ export function useReaderImportJob() {
   }, []);
 
   const selectRow = useCallback((rowId: string) => {
-    setJob((prev) => prev ? { ...prev, activeRowId: rowId } : prev);
+    setJob((prev) => prev ? { ...prev, activeRowId: rowId, rows: resetOtherStagedRowsForActivation(prev.rows, rowId) } : prev);
   }, []);
 
   const clearJob = useCallback(() => {

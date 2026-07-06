@@ -90,7 +90,7 @@ describe("reader import handlers", () => {
       normalizedColor: "green",
       importedLocation: "Location hint: /6/2",
       selectorHint: { kind: "epub_cfi", value: "/6/2" },
-      status: "staged",
+      status: "pending",
     });
   });
 
@@ -132,7 +132,7 @@ describe("reader import handlers", () => {
         importedText: "Bookmark",
         importedLocation: "Location hint: epubcfi(/6/2)",
         selectorHint: { kind: "epub_cfi", value: "epubcfi(/6/2)" },
-        status: "staged",
+        status: "pending",
       }),
       expect.objectContaining({
         id: "bookmark-2",
@@ -140,7 +140,7 @@ describe("reader import handlers", () => {
         importedText: "Bookmark",
         importedLocation: "Location hint: /6/4",
         selectorHint: { kind: "epub_cfi", value: "/6/4" },
-        status: "staged",
+        status: "pending",
       }),
     ]);
   });
@@ -174,7 +174,7 @@ describe("reader import handlers", () => {
       kind: "highlight",
       importedText: "",
       selectorHint: { kind: "epub_cfi", value: "epubcfi(/6/8)" },
-      status: "staged",
+      status: "pending",
     });
   });
 
