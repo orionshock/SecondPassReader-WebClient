@@ -46,6 +46,6 @@ export function ReaderImportRowItem({
 
 function statusLabel(status: ReaderImportRow["status"]): string {
   if (status === "not-found") return "Not found";
-  if (status === "staged") return "Reviewing";
+  if (status === "staged") return "Staged";
   return status[0].toUpperCase() + status.slice(1);
 }

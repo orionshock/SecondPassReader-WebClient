@@ -57,12 +57,12 @@ export function ReaderImportDrawer({
         {job.sourceSummary ? (
           <div className="spReaderImportSourceSummary">
             <div className="spReaderImportSourceTitle">{job.sourceSummary.bookLabel}</div>
+            <div className="muted spReaderImportSourceSubtitle">{job.sourceSummary.sessionLabel}</div>
             <InlineMeta
               items={[
-                job.sourceSummary.sessionLabel,
                 `${job.sourceSummary.annotationCount} annotations`,
-                `${job.sourceSummary.commentCount} with comments`,
-                `${job.sourceSummary.colorCount} with colors`,
+                `${job.sourceSummary.commentCount} comments`,
+                `${job.sourceSummary.colorCount} colors`,
                 `${job.sourceSummary.deletedCount} deleted`,
               ]}
             />
