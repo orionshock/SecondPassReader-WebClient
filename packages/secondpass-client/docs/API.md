@@ -96,13 +96,17 @@ The client maps app-friendly input into the server wire payload:
 
 High-level helpers for common workflows:
 
-- `spl.reading.annotations.list({ sessionId, page?, kind?, ordering? })`
+- `spl.reading.annotations.list({ sessionId?, bookId?, page?, pageSize?, kind?, includeDeleted?, ordering? })`
   - `kind` may be a single value or an array; arrays are sent as **repeatable** query params:
     - `kind=highlight&kind=bookmark`
+  - `sessionId` maps to `session_id`
+  - `bookId` maps to `book_id`
+  - `includeDeleted` maps to `include_deleted`
   - `ordering` may be:
     - `"created" | "-created" | "modified" | "-modified"`
 - `spl.reading.annotations.createHighlight(input, { idempotencyKey? }?)`
 - `spl.reading.annotations.createBookmark(input, { idempotencyKey? }?)`
+- `spl.reading.annotations.batchCreate(input)`
 - `spl.reading.annotations.updateNote(annotationId, input)`
 - `spl.reading.annotations.remove(annotationId)` (server-side soft-delete)
 
@@ -124,8 +128,8 @@ Callers should catch errors and render user-friendly messages. Never log or pers
 
 Behavior:
 
-- CFI (from `cfiRange`) remains the primary anchor in the SPL `selector` field.
-- `quotePrefix` / `quoteSuffix` are accepted for compatibility with reader/import code, but they are not sent to the live annotation endpoint.
+- CFI (from `cfiRange`) is sent as `selector: { kind: "epub_cfi", value }`.
+- `quotePrefix` / `quoteSuffix` are sent inside the optional `quote` object when present.
 - Selection heuristics (how much context to capture) belong to the reader/selection layer.
 
 ## Annotation updates (PATCH immutability)

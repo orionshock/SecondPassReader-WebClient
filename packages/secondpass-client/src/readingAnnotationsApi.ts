@@ -16,7 +16,6 @@ const READING_ANNOTATIONS_DELETE_FORBIDDEN_403 = "Token cannot delete reading an
 
 export type CreateHighlightInput = {
   sessionId: string;
-  profileVersion: string;
   cfiRange: string;
   text?: string;
   color?: string;
@@ -27,15 +26,12 @@ export type CreateHighlightInput = {
 
 export type CreateBookmarkInput = {
   sessionId: string;
-  profileVersion: string;
   cfi: string;
 };
 
 export type UpdateNoteInput = {
-  profileVersion?: string;
   note?: string | null;
   color?: string | null;
-  text?: string;
 };
 
 export type ReadingAnnotationKind = "highlight" | "bookmark";
@@ -43,9 +39,12 @@ export type ReadingAnnotationKind = "highlight" | "bookmark";
 export type ReadingAnnotationsOrdering = "created" | "-created" | "modified" | "-modified";
 
 export type ListReadingAnnotationsInput = {
-  sessionId: string;
+  sessionId?: string;
+  bookId?: string | number;
   page?: number;
+  pageSize?: number;
   kind?: ReadingAnnotationKind | ReadingAnnotationKind[];
+  includeDeleted?: boolean;
   ordering?: ReadingAnnotationsOrdering;
 };
 
@@ -60,14 +59,15 @@ export async function createHighlightAnnotation(input: {
   const text = typeof input.create.text === "string" ? input.create.text.trim() : "";
   const note = typeof input.create.note === "string" ? input.create.note.trim() : "";
   const color = typeof input.create.color === "string" ? input.create.color.trim() : "";
+  const prefix = typeof input.create.quotePrefix === "string" ? input.create.quotePrefix.trim() : "";
+  const suffix = typeof input.create.quoteSuffix === "string" ? input.create.quoteSuffix.trim() : "";
 
   const payload: ReadingAnnotationCreatePayload = {
-    profile_version: input.create.profileVersion,
     session: input.create.sessionId,
     kind: "highlight",
-    selector: cfiRange,
+    selector: { kind: "epub_cfi", value: cfiRange },
     highlight_text: text,
-    quote: text,
+    ...(text ? { quote: { exact: text, ...(prefix ? { prefix } : {}), ...(suffix ? { suffix } : {}) } } : {}),
     highlight_color: color || "yellow",
     ...(note ? { comment_text: note } : {}),
   };
@@ -84,10 +84,9 @@ export async function createBookmarkAnnotation(input: {
   if (!cfi) throw new Error("Bookmark requires a cfi.");
 
   const payload: ReadingAnnotationCreatePayload = {
-    profile_version: input.create.profileVersion,
     session: input.create.sessionId,
     kind: "bookmark",
-    selector: cfi,
+    selector: { kind: "epub_cfi", value: cfi },
   };
 
   return createReadingAnnotation(input.ctx, { payload, idempotencyKey: input.idempotencyKey });
@@ -118,8 +117,11 @@ export async function listReadingAnnotations(input: {
   params: ListReadingAnnotationsInput;
 }): Promise<ReadingAnnotationPage> {
   const url = new URL(resolveUrl(input.ctx.apiBaseUrl, "/reading/annotations/"));
-  url.searchParams.set("session_id", input.params.sessionId);
+  if (input.params.sessionId !== undefined) url.searchParams.set("session_id", input.params.sessionId);
+  if (input.params.bookId !== undefined) url.searchParams.set("book_id", String(input.params.bookId));
   if (input.params.page !== undefined) url.searchParams.set("page", String(input.params.page));
+  if (input.params.pageSize !== undefined) url.searchParams.set("page_size", String(input.params.pageSize));
+  if (input.params.includeDeleted !== undefined) url.searchParams.set("include_deleted", input.params.includeDeleted ? "true" : "false");
   if (input.params.ordering) url.searchParams.set("ordering", input.params.ordering);
   if (input.params.kind) {
     const kinds = Array.isArray(input.params.kind) ? input.params.kind : [input.params.kind];
@@ -145,9 +147,9 @@ export async function listReadingAnnotations(input: {
 
 export async function batchCreateReadingAnnotations(
   ctx: AuthenticatedClientContext,
-  input: { payload: ReadingAnnotationBatchCreatePayload; idempotencyKey?: string },
+  input: { payload: ReadingAnnotationBatchCreatePayload },
 ): Promise<ReadingAnnotationBatchCreateResponse> {
-  if (input.payload.items.length > 100) throw new Error("Annotation batch create supports at most 100 items.");
+  if (input.payload.annotations.length > 100) throw new Error("Annotation batch create supports at most 100 items.");
   const url = resolveUrl(ctx.apiBaseUrl, "/reading/annotations/batch/");
 
   return requestJson<ReadingAnnotationBatchCreateResponse>({
@@ -158,7 +160,6 @@ export async function batchCreateReadingAnnotations(
     options: {
       method: "POST",
       body: input.payload,
-      headers: input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : undefined,
       errorMessages: authErrorMessages({
         forbidden: READING_ANNOTATIONS_CREATE_FORBIDDEN_403,
         notFound: "Reading annotation batch endpoint not found (404).",

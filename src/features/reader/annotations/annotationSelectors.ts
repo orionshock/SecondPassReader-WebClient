@@ -36,9 +36,10 @@ export function isCommentAnnotation(annotation: ReadingAnnotation): boolean {
 
 function getFragmentSelectorValue(selector: AnySelector): string | null {
   if (!selector || typeof selector !== "object") return null;
-  const anySel = selector as { type?: unknown; value?: unknown };
-  if (typeof anySel.type !== "string") return null;
-  if (anySel.type !== "FragmentSelector") return null;
+  const anySel = selector as { kind?: unknown; type?: unknown; value?: unknown };
+  const isSplEpubCfi = anySel.kind === "epub_cfi";
+  const isLegacyFragmentSelector = anySel.type === "FragmentSelector";
+  if (!isSplEpubCfi && !isLegacyFragmentSelector) return null;
   if (typeof anySel.value !== "string") return null;
   const cfi = anySel.value.trim();
   return cfi ? cfi : null;

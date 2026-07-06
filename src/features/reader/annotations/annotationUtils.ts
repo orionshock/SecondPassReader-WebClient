@@ -7,7 +7,13 @@ export { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation }
 export function getAnnotationDescribingText(annotation: ReadingAnnotation): string | null {
   const highlightText = typeof annotation.highlight_text === "string" ? annotation.highlight_text.trim() : "";
   if (highlightText) return highlightText;
-  const quote = typeof annotation.quote === "string" ? annotation.quote.trim() : "";
+  const quoteRaw = (annotation as unknown as { quote?: unknown }).quote;
+  const quote =
+    typeof quoteRaw === "string"
+      ? quoteRaw.trim()
+      : quoteRaw && typeof quoteRaw === "object" && typeof (quoteRaw as { exact?: unknown }).exact === "string"
+        ? (quoteRaw as { exact: string }).exact.trim()
+        : "";
   if (quote) return quote;
 
   const body = (annotation as unknown as { body?: unknown }).body;

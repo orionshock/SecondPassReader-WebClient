@@ -204,7 +204,6 @@ export type SecondPassClient = {
       createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
       batchCreate(
         input: ReadingAnnotationBatchCreatePayload,
-        options?: { idempotencyKey?: string },
       ): Promise<ReadingAnnotationBatchCreateResponse>;
       updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
       remove(annotationId: string): Promise<void>;
@@ -415,9 +414,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           const auth = requireAuth(ctx);
           return createBookmarkAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
         },
-        batchCreate: (input, options) => {
+        batchCreate: (input) => {
           const auth = requireAuth(ctx);
-          return batchCreateReadingAnnotations(auth, { payload: input, idempotencyKey: options?.idempotencyKey });
+          return batchCreateReadingAnnotations(auth, { payload: input });
         },
         updateNote: (annotationId, input) => {
           const auth = requireAuth(ctx);

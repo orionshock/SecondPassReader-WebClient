@@ -143,7 +143,7 @@ function ReaderActivityContent({
   const progress = state.location?.bookProgress;
   const nearEnd = typeof progress === "number" && Number.isFinite(progress) && progress >= READER_FINISH_PROGRESS_THRESHOLD;
   const showFinishControls = Boolean(currentSessionId && nearEnd);
-  const canBookmark = Boolean(openedBook.readingOpen?.session?.id && openedBook.readingOpen?.profile_version && state.location?.cfi);
+  const canBookmark = Boolean(openedBook.readingOpen?.session?.id && state.location?.cfi);
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
   const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
   const [nextSeriesBook, setNextSeriesBook] = useState<LibraryBook | null>(null);

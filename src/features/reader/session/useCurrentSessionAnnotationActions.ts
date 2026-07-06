@@ -3,12 +3,11 @@ import type { Dispatch, SetStateAction } from "react";
 import type { ReadingAnnotation, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation, ReaderSelection } from "../domain/types";
 import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
-import { getAnnotationColor, getAnnotationDescribingText } from "../annotations/annotationUtils";
+import { getAnnotationColor } from "../annotations/annotationUtils";
 
 export function useCurrentSessionAnnotationActions(args: {
   spl?: SecondPassClient | null;
   sessionId: string | null;
-  profileVersion: string | number | null;
   location: ReaderLocation | null;
   currentBookmark: ReaderBookmark | null;
   annotationsRaw: ReadingAnnotation[];
@@ -17,7 +16,6 @@ export function useCurrentSessionAnnotationActions(args: {
   canMutate?: boolean;
 }) {
   const [annotationBusy, setAnnotationBusy] = useState(false);
-  const profileVersion = args.profileVersion == null ? "" : String(args.profileVersion);
 
   const removeById = useCallback(
     async (annotationId: string) => {
@@ -43,13 +41,9 @@ export function useCurrentSessionAnnotationActions(args: {
       if (!args.spl) throw new Error("Not connected.");
       if (args.canMutate === false) throw new Error("This session cannot be modified.");
       if (!annotationId) return;
-      if (!profileVersion) throw new Error("Missing profile version.");
 
       const raw = args.annotationsRaw.find((a) => a.id === annotationId) ?? null;
       if (!raw) throw new Error("Annotation not found.");
-
-      const text = getAnnotationDescribingText(raw) ?? "";
-      if (!text.trim()) throw new Error("Cannot edit highlight without describing text.");
 
       const nextColor = update.color.trim() || (getAnnotationColor(raw) ?? "").trim() || "yellow";
       const nextNote = update.note.trim();
@@ -58,8 +52,6 @@ export function useCurrentSessionAnnotationActions(args: {
       args.setAnnotationError(null);
       try {
         const updated = await args.spl.reading.annotations.updateNote(annotationId, {
-          profileVersion,
-          text,
           color: nextColor,
           note: nextNote ? nextNote : null,
         });
@@ -71,14 +63,13 @@ export function useCurrentSessionAnnotationActions(args: {
         setAnnotationBusy(false);
       }
     },
-    [args.annotationsRaw, args.canMutate, args.spl, args.setAnnotationError, args.setAnnotationsRaw, profileVersion],
+    [args.annotationsRaw, args.canMutate, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
   );
 
   const toggleBookmarkAtCurrentLocation = useCallback(async () => {
     if (!args.spl) return;
     if (args.canMutate === false) return;
     if (!args.sessionId) return;
-    if (!profileVersion) return;
     const cfi = args.location?.cfi?.trim() ?? "";
     if (!cfi) return;
 
@@ -92,7 +83,6 @@ export function useCurrentSessionAnnotationActions(args: {
     try {
       const created = await args.spl.reading.annotations.createBookmark({
         sessionId: args.sessionId,
-        profileVersion,
         cfi,
       });
       const b = toReaderBookmark(created as unknown as ReadingAnnotation);
@@ -112,7 +102,6 @@ export function useCurrentSessionAnnotationActions(args: {
     args.spl,
     args.setAnnotationError,
     args.setAnnotationsRaw,
-    profileVersion,
     removeById,
   ]);
 
@@ -121,7 +110,6 @@ export function useCurrentSessionAnnotationActions(args: {
       if (!args.spl) throw new Error("Not connected.");
       if (args.canMutate === false) throw new Error("This session cannot be modified.");
       if (!args.sessionId) throw new Error("Missing session.");
-      if (!profileVersion) throw new Error("Missing profile version.");
       const sel = input.selection;
       if (!sel?.cfiRange || !sel.text) throw new Error("Missing selection.");
 
@@ -130,7 +118,6 @@ export function useCurrentSessionAnnotationActions(args: {
       try {
         const created = await args.spl.reading.annotations.createHighlight({
           sessionId: args.sessionId,
-          profileVersion,
           cfiRange: sel.cfiRange,
           text: sel.text,
           color: input.color,
@@ -146,7 +133,7 @@ export function useCurrentSessionAnnotationActions(args: {
         setAnnotationBusy(false);
       }
     },
-    [args.canMutate, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw, profileVersion],
+    [args.canMutate, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
   );
 
   return {

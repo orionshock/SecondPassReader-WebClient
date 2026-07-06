@@ -353,7 +353,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   } = useCurrentSessionAnnotationActions({
     spl: props.spl,
     sessionId,
-    profileVersion,
     location,
     currentBookmark,
     annotationsRaw,

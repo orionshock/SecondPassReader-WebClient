@@ -69,12 +69,11 @@ export type ReadingProgress = {
 
 export type ReadingAnnotation = {
   id: string;
-  profile_version?: string;
   session?: string;
   book?: string | number | { id: string | number } | null;
   kind?: "highlight" | "bookmark" | string;
-  selector?: string | { type?: string; value?: string; [k: string]: unknown } | unknown;
-  quote?: string | null;
+  selector?: ReadingAnnotationSelector | unknown;
+  quote?: ReadingAnnotationQuote | null;
   highlight_text?: string | null;
   highlight_color?: string | null;
   comment_text?: string | null;
@@ -125,12 +124,22 @@ export type ReadingProgressUpdatePayload = {
   progression?: number | null;
 };
 
+export type ReadingAnnotationSelector = {
+  kind: "epub_cfi";
+  value: string;
+};
+
+export type ReadingAnnotationQuote = {
+  exact: string;
+  prefix?: string;
+  suffix?: string;
+};
+
 export type ReadingAnnotationCreatePayload = {
-  profile_version: string;
   session: string;
   kind: "highlight" | "bookmark";
-  selector: string;
-  quote?: string;
+  selector: ReadingAnnotationSelector;
+  quote?: ReadingAnnotationQuote;
   highlight_text?: string;
   highlight_color?: string;
   comment_text?: string;
@@ -141,14 +150,13 @@ export type ReadingAnnotationUpdatePayload = {
   highlight_color?: string | null;
 };
 
-export type ReadingAnnotationBatchCreateItem = Omit<ReadingAnnotationCreatePayload, "session" | "profile_version"> & {
+export type ReadingAnnotationBatchCreateItem = Omit<ReadingAnnotationCreatePayload, "session"> & {
   client_id?: string;
 };
 
 export type ReadingAnnotationBatchCreatePayload = {
-  profile_version: string;
   session: string;
-  items: ReadingAnnotationBatchCreateItem[];
+  annotations: ReadingAnnotationBatchCreateItem[];
 };
 
 export type ReadingAnnotationBatchCreateResponse = {

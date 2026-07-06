@@ -79,7 +79,6 @@ describe("@secondpass/client high-level workflows", () => {
     await spl.reading.annotations.createBookmark(
       {
         sessionId: "sess-1",
-        profileVersion: "pv1",
         cfi: "epubcfi(/6/2[chap01]!/4/1:0)",
       },
       { idempotencyKey: "k1" },
@@ -95,10 +94,12 @@ describe("@secondpass/client high-level workflows", () => {
     expect(headers["Idempotency-Key"]).toBe("k1");
 
     const payload = JSON.parse(String(init?.body));
-    expect(payload.profile_version).toBe("pv1");
-    expect(payload.session).toBe("sess-1");
-    expect(payload.kind).toBe("bookmark");
-    expect(payload.selector).toBe("epubcfi(/6/2[chap01]!/4/1:0)");
+    expect(payload).toEqual({
+      session: "sess-1",
+      kind: "bookmark",
+      selector: { kind: "epub_cfi", value: "epubcfi(/6/2[chap01]!/4/1:0)" },
+    });
+    expect(payload).not.toHaveProperty("profile_version");
     expect(payload).not.toHaveProperty("motivation");
     expect(payload).not.toHaveProperty("target");
     expect(payload).not.toHaveProperty("body");
@@ -109,10 +110,11 @@ describe("@secondpass/client high-level workflows", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.reading.annotations.createBookmark({ sessionId: "sess-1", profileVersion: "pv1", cfi: "epubcfi(/6/2[chap01]!/4/1:0)" });
+    await spl.reading.annotations.createBookmark({ sessionId: "sess-1", cfi: "epubcfi(/6/2[chap01]!/4/1:0)" });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
     expect(payload.kind).toBe("bookmark");
+    expect(payload).not.toHaveProperty("profile_version");
     expect(payload).not.toHaveProperty("quote");
     expect(payload).not.toHaveProperty("highlight_text");
     expect(payload).not.toHaveProperty("highlight_color");
@@ -126,7 +128,6 @@ describe("@secondpass/client high-level workflows", () => {
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.createHighlight({
       sessionId: "sess-1",
-      profileVersion: "pv1",
       cfiRange: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
       text: "Selected text",
       color: "#ff0",
@@ -139,15 +140,15 @@ describe("@secondpass/client high-level workflows", () => {
 
     const payload = JSON.parse(String(init?.body));
     expect(payload).toEqual({
-      profile_version: "pv1",
       session: "sess-1",
       kind: "highlight",
-      selector: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
+      selector: { kind: "epub_cfi", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" },
       highlight_text: "Selected text",
-      quote: "Selected text",
+      quote: { exact: "Selected text" },
       highlight_color: "#ff0",
       comment_text: "A note",
     });
+    expect(payload).not.toHaveProperty("profile_version");
   });
 
   it("reading.annotations.createHighlight defaults missing color to yellow", async () => {
@@ -157,17 +158,17 @@ describe("@secondpass/client high-level workflows", () => {
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.createHighlight({
       sessionId: "sess-1",
-      profileVersion: "pv1",
       cfiRange: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
       text: "Selected text",
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.selector).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
+    expect(payload.selector).toEqual({ kind: "epub_cfi", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
     expect(payload.highlight_color).toBe("yellow");
+    expect(payload).not.toHaveProperty("profile_version");
   });
 
-  it("reading.annotations.createHighlight ignores quotePrefix/suffix for live SPL payloads", async () => {
+  it("reading.annotations.createHighlight sends quotePrefix/suffix in SPL quote object", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
@@ -175,7 +176,6 @@ describe("@secondpass/client high-level workflows", () => {
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.createHighlight({
       sessionId: "sess-1",
-      profileVersion: "pv1",
       cfiRange: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
       text: "Selected text",
       quotePrefix: ` ${long} `,
@@ -184,9 +184,10 @@ describe("@secondpass/client high-level workflows", () => {
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
     expect(payload.kind).toBe("highlight");
-    expect(payload.selector).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
+    expect(payload.selector).toEqual({ kind: "epub_cfi", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
     expect(payload).not.toHaveProperty("target");
-    expect(payload.quote).toBe("Selected text");
+    expect(payload.quote).toEqual({ exact: "Selected text", prefix: long, suffix: long });
+    expect(payload).not.toHaveProperty("profile_version");
   });
 
   it("reading.annotations.list supports repeatable kind filters and ordering", async () => {
@@ -196,9 +197,12 @@ describe("@secondpass/client high-level workflows", () => {
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.list({
       sessionId: "sess-1",
+      bookId: 123,
       ordering: "-created",
       kind: ["highlight", "bookmark"],
+      includeDeleted: true,
       page: 2,
+      pageSize: 50,
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -208,8 +212,11 @@ describe("@secondpass/client high-level workflows", () => {
     const u = new URL(String(url));
     expect(u.origin + u.pathname).toBe("https://api.example/reading/annotations/");
     expect(u.searchParams.get("session_id")).toBe("sess-1");
+    expect(u.searchParams.get("book_id")).toBe("123");
     expect(u.searchParams.get("ordering")).toBe("-created");
     expect(u.searchParams.get("page")).toBe("2");
+    expect(u.searchParams.get("page_size")).toBe("50");
+    expect(u.searchParams.get("include_deleted")).toBe("true");
     expect(u.searchParams.getAll("kind").sort()).toEqual(["bookmark", "highlight"]);
     expect(u.searchParams.has("motivation")).toBe(false);
   });
@@ -221,40 +228,40 @@ describe("@secondpass/client high-level workflows", () => {
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.batchCreate(
       {
-        profile_version: "pv1",
         session: "sess-1",
-        items: [
+        annotations: [
           {
             client_id: "row-1",
             kind: "highlight",
-            selector: "epubcfi(/6/2,/4/2,/4/8)",
+            selector: { kind: "epub_cfi", value: "epubcfi(/6/2,/4/2,/4/8)" },
             highlight_text: "Selected text",
             highlight_color: "yellow",
             comment_text: "Note",
           },
         ],
       },
-      { idempotencyKey: "batch-1" },
     );
 
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe("https://api.example/reading/annotations/batch/");
     expect(init?.method).toBe("POST");
-    expect((init?.headers as Record<string, string>)["Idempotency-Key"]).toBe("batch-1");
-    expect(JSON.parse(String(init?.body))).toEqual({
-      profile_version: "pv1",
+    expect((init?.headers as Record<string, string>)["Idempotency-Key"]).toBeUndefined();
+    const payload = JSON.parse(String(init?.body));
+    expect(payload).toEqual({
       session: "sess-1",
-      items: [
+      annotations: [
         {
           client_id: "row-1",
           kind: "highlight",
-          selector: "epubcfi(/6/2,/4/2,/4/8)",
+          selector: { kind: "epub_cfi", value: "epubcfi(/6/2,/4/2,/4/8)" },
           highlight_text: "Selected text",
           highlight_color: "yellow",
           comment_text: "Note",
         },
       ],
     });
+    expect(payload).not.toHaveProperty("profile_version");
+    expect(payload).not.toHaveProperty("items");
   });
 
   it("reading.annotations.batchCreate rejects more than 100 items client-side", async () => {
@@ -263,11 +270,10 @@ describe("@secondpass/client high-level workflows", () => {
 
     await expect(
       spl.reading.annotations.batchCreate({
-        profile_version: "pv1",
         session: "sess-1",
-        items: Array.from({ length: 101 }, () => ({
+        annotations: Array.from({ length: 101 }, () => ({
           kind: "bookmark" as const,
-          selector: "epubcfi(/6/2)",
+          selector: { kind: "epub_cfi" as const, value: "epubcfi(/6/2)" },
         })),
       }),
     ).rejects.toThrowError(/at most 100/i);
@@ -392,7 +398,7 @@ describe("@secondpass/client high-level workflows", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.reading.annotations.updateNote("ann-1", { profileVersion: "pv1", note: "Hello" });
+    await spl.reading.annotations.updateNote("ann-1", { note: "Hello" });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
@@ -428,8 +434,6 @@ describe("@secondpass/client high-level workflows", () => {
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.updateNote("ann-1", {
-      profileVersion: "pv1",
-      text: "Selected text",
       color: "yellow",
       note: null,
     });
@@ -453,8 +457,6 @@ describe("@secondpass/client high-level workflows", () => {
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.updateNote("ann-1", {
-      profileVersion: "pv1",
-      text: "Selected text",
       color: "green",
       note: "Note text",
     });
