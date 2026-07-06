@@ -253,6 +253,14 @@
   gap: 4px;
 }
 
+.libraryBrowseHeaderText {
+  margin-top: 6px;
+  max-width: 72ch;
+  color: var(--color-text);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .libraryGroupTitleLine {
   display: flex;
   gap: 8px;

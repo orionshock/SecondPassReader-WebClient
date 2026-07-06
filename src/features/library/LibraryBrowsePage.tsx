@@ -322,6 +322,15 @@ export function LibraryBrowsePage({
     return { totalPages };
   }, [booksData, pageSize]);
 
+  const selectedSeriesSummary = typeof selectedSeries?.summary === "string" ? selectedSeries.summary.trim() : "";
+  const selectedAuthorBiography = typeof selectedAuthor?.biography === "string" ? selectedAuthor.biography.trim() : "";
+  const bookListMetaItems = booksData
+    ? [
+        `Page ${booksPage} of ${booksPager?.totalPages ?? 1}`,
+        `${booksData.count} books`,
+      ]
+    : [];
+
   const showBookList = Boolean(
     qFromRoute ||
       browseMode === "books" ||
@@ -444,13 +453,8 @@ export function LibraryBrowsePage({
                     <div className="panelTitle" style={{ margin: 0 }}>
                       {selectedSeries.name}
                     </div>
-                    {typeof selectedSeries.book_count === "number" ? (
-                      <div className="muted">{selectedSeries.book_count} books</div>
-                    ) : null}
+                    {selectedSeriesSummary ? <div className="libraryBrowseHeaderText">{selectedSeriesSummary}</div> : null}
                   </div>
-                  <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowSeries?.()}>
-                    All series
-                  </button>
                 </div>
               ) : null}
 
@@ -460,13 +464,8 @@ export function LibraryBrowsePage({
                     <div className="panelTitle" style={{ margin: 0 }}>
                       {selectedAuthor.name}
                     </div>
-                    {typeof selectedAuthor.book_count === "number" ? (
-                      <div className="muted">{selectedAuthor.book_count} books</div>
-                    ) : null}
+                    {selectedAuthorBiography ? <div className="libraryBrowseHeaderText">{selectedAuthorBiography}</div> : null}
                   </div>
-                  <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowAuthors?.()}>
-                    All authors
-                  </button>
                 </div>
               ) : null}
 
@@ -485,9 +484,6 @@ export function LibraryBrowsePage({
                     ) : null}
                     {selectedGroup.description ? <div className="muted">{selectedGroup.description}</div> : null}
                   </div>
-                  <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowGroups?.()}>
-                    All library groups
-                  </button>
                 </div>
               ) : null}
 
@@ -495,7 +491,7 @@ export function LibraryBrowsePage({
                 <>
                   <div className="libraryMetaRow">
                     <div className="muted">
-                      <InlineMeta items={[`Page ${booksPage} of ${booksPager?.totalPages ?? 1}`, `${booksData.count} books`]} />
+                      <InlineMeta items={bookListMetaItems} />
                     </div>
                     <div className="pagerButtons">
                       <button
@@ -553,7 +549,7 @@ export function LibraryBrowsePage({
 
                   <div className="libraryMetaRow libraryMetaRowBottom">
                     <div className="muted">
-                      <InlineMeta items={[`Page ${booksPage} of ${booksPager?.totalPages ?? 1}`, `${booksData.count} books`]} />
+                      <InlineMeta items={bookListMetaItems} />
                     </div>
                     <div className="pagerButtons">
                       <button
