@@ -22,7 +22,7 @@ export type {
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
 
-export type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, PreviewBook } from "./schemas/library";
+export type { LibraryAuthor, LibraryBook, LibraryGroup, LibrarySeries, PaginatedResponse, PreviewBook } from "./schemas/library";
 
 export type {
   ReadingAnnotation,

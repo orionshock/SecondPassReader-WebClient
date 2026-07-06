@@ -532,6 +532,7 @@ export default function App() {
                       browse: route.browse,
                       seriesId: route.seriesId,
                       authorId: route.authorId,
+                      groupId: route.groupId,
                       view: route.view,
                     }}
                     selectedBookId={route.bookId ?? null}
@@ -552,11 +553,17 @@ export default function App() {
                     onShowAuthors={() => {
                       navigateTo({ kind: "library", browse: "authors", bookId: route.bookId });
                     }}
+                    onShowGroups={() => {
+                      navigateTo({ kind: "library", browse: "groups", bookId: route.bookId });
+                    }}
                     onShowSeriesBooks={(seriesId) => {
                       navigateTo({ kind: "library", browse: "series", seriesId, bookId: route.bookId });
                     }}
                     onShowAuthorBooks={(authorId) => {
                       navigateTo({ kind: "library", browse: "authors", authorId, bookId: route.bookId });
+                    }}
+                    onShowGroupBooks={(groupId) => {
+                      navigateTo({ kind: "library", browse: "groups", groupId, bookId: route.bookId });
                     }}
                   />
                 </div>

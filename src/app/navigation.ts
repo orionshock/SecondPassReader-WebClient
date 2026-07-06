@@ -6,9 +6,10 @@ export type AppRoute =
   | {
       kind: "library";
       q?: string;
-      browse?: "books" | "series" | "authors";
+      browse?: "books" | "series" | "authors" | "groups";
       seriesId?: string;
       authorId?: string;
+      groupId?: string;
       view?: "list" | "grid";
       bookId?: string;
     }
@@ -55,6 +56,7 @@ export function routeToHash(route: AppRoute): string {
         browse: !route.q && route.browse && route.browse !== "books" ? route.browse : undefined,
         series: !route.q && route.browse === "series" ? route.seriesId : undefined,
         author: !route.q && route.browse === "authors" ? route.authorId : undefined,
+        group: !route.q && route.browse === "groups" ? route.groupId : undefined,
         view: route.view,
         book: route.bookId,
       })}`;
@@ -97,11 +99,12 @@ export function parseCurrentRoute(): AppRoute | null {
   if (head === "library") {
     const q = queryParams.get("q")?.trim() ?? "";
     const browseRaw = queryParams.get("browse")?.trim() ?? "";
-    const browse = browseRaw === "series" || browseRaw === "authors" || browseRaw === "books" ? browseRaw : "";
+    const browse = browseRaw === "series" || browseRaw === "authors" || browseRaw === "groups" || browseRaw === "books" ? browseRaw : "";
     const viewRaw = queryParams.get("view")?.trim() ?? "";
     const view = viewRaw === "list" || viewRaw === "grid" ? viewRaw : undefined;
     const seriesId = queryParams.get("series")?.trim() ?? "";
     const authorId = queryParams.get("author")?.trim() ?? "";
+    const groupId = queryParams.get("group")?.trim() ?? "";
     // Old route format `#/library/<bookId>` is intentionally not supported anymore.
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
 
@@ -109,8 +112,8 @@ export function parseCurrentRoute(): AppRoute | null {
       return bookId ? { kind: "library", q, view, bookId } : { kind: "library", q, view };
     }
 
-    const effectiveBrowse: "books" | "series" | "authors" =
-      browse === "series" || browse === "authors" || browse === "books" ? (browse as any) : "books";
+    const effectiveBrowse: "books" | "series" | "authors" | "groups" =
+      browse === "series" || browse === "authors" || browse === "groups" || browse === "books" ? (browse as any) : "books";
 
     if (effectiveBrowse === "series") {
       return {
@@ -126,6 +129,15 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "authors",
         authorId: authorId || undefined,
+        view,
+        bookId: bookId || undefined,
+      };
+    }
+    if (effectiveBrowse === "groups") {
+      return {
+        kind: "library",
+        browse: "groups",
+        groupId: groupId || undefined,
         view,
         bookId: bookId || undefined,
       };

@@ -1,9 +1,16 @@
-import type { BookFileDownloadResult, LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse } from "./schemas/library";
+import type { BookFileDownloadResult, LibraryAuthor, LibraryBook, LibraryGroup, LibrarySeries, PaginatedResponse } from "./schemas/library";
 import type { AuthenticatedClientContext } from "./clientContext";
 import { authErrorMessages, requestBlob, requestJson, resolveUrl, tryParseFilename } from "./apiHttp";
 
 const LIBRARY_FORBIDDEN_403 = "Token is not allowed to access the library (403).";
 const LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 = "Token is not allowed to download files (403).";
+
+type GroupBooksListParams = {
+  hasFiles?: boolean;
+  ordering?: string;
+  page?: number;
+  pageSize?: number;
+};
 
 export async function listBooks(
   ctx: AuthenticatedClientContext,
@@ -115,6 +122,67 @@ export async function getAuthor(
         forbidden: LIBRARY_FORBIDDEN_403,
         notFound: "Author not found or not accessible (404).",
       }),
+    },
+  });
+}
+
+export async function listGroups(
+  ctx: AuthenticatedClientContext,
+  input?: { page?: number; includePreviewBooks?: boolean },
+): Promise<PaginatedResponse<LibraryGroup>> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/groups/"));
+  if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
+  if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+
+  return requestJson<PaginatedResponse<LibraryGroup>>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }),
+    },
+  });
+}
+
+export async function getGroup(
+  ctx: AuthenticatedClientContext,
+  input: { groupId: string; includePreviewBooks?: boolean },
+): Promise<LibraryGroup> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/library/groups/${encodeURIComponent(input.groupId)}/`));
+  if (input.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+  return requestJson<LibraryGroup>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: authErrorMessages({
+        forbidden: LIBRARY_FORBIDDEN_403,
+        notFound: "Library group not found or not accessible (404).",
+      }),
+    },
+  });
+}
+
+export async function listGroupBooks(
+  ctx: AuthenticatedClientContext,
+  input: { groupId: string; params?: GroupBooksListParams },
+): Promise<PaginatedResponse<LibraryBook>> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/library/groups/${encodeURIComponent(input.groupId)}/books/`));
+  const params = input.params ?? {};
+  if (params.hasFiles !== undefined) url.searchParams.set("has_files", params.hasFiles ? "true" : "false");
+  if (params.ordering) url.searchParams.set("ordering", params.ordering);
+  if (params.page !== undefined) url.searchParams.set("page", String(params.page));
+  if (params.pageSize !== undefined) url.searchParams.set("page_size", String(params.pageSize));
+
+  return requestJson<PaginatedResponse<LibraryBook>>({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: ctx.accessToken,
+    tokenType: ctx.tokenType,
+    endpointOrUrl: url.toString(),
+    options: {
+      errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }),
     },
   });
 }

@@ -39,6 +39,7 @@ export type LibrarySeriesSummary = {
 export type LibraryGroupSummary = {
   id: string | number;
   name: string;
+  is_public_group?: boolean;
 };
 
 export type LibraryBookFileSummary = {
@@ -86,6 +87,19 @@ export type LibraryAuthor = {
   id: string | number;
   name: string;
   biography?: string | null;
+  book_count?: number | null;
+  preview_books?: PreviewBook[];
+  created_at?: string;
+  updated_at?: string;
+  [k: string]: unknown;
+};
+
+export type LibraryGroup = {
+  id: string | number;
+  name: string;
+  description?: string | null;
+  is_public_group: boolean;
+  is_curator: boolean;
   book_count?: number | null;
   preview_books?: PreviewBook[];
   created_at?: string;

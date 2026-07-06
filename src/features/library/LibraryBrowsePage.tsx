@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import type { LibraryAuthor, LibraryBook, LibraryGroup, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookGrid } from "./display/BookGrid";
@@ -9,7 +9,7 @@ import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 
-type BrowseMode = "books" | "series" | "authors";
+type BrowseMode = "books" | "series" | "authors" | "groups";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -19,6 +19,7 @@ type Props = {
     browse?: BrowseMode;
     seriesId?: string;
     authorId?: string;
+    groupId?: string;
     view?: LibraryBooksView;
   };
   selectedBookId?: string | null;
@@ -27,8 +28,10 @@ type Props = {
   onShowBooks?: () => void;
   onShowSeries?: () => void;
   onShowAuthors?: () => void;
+  onShowGroups?: () => void;
   onShowSeriesBooks?: (seriesId: string) => void;
   onShowAuthorBooks?: (authorId: string) => void;
+  onShowGroupBooks?: (groupId: string) => void;
 };
 
 export function LibraryBrowsePage({
@@ -41,17 +44,22 @@ export function LibraryBrowsePage({
   onShowBooks,
   onShowSeries,
   onShowAuthors,
+  onShowGroups,
   onShowSeriesBooks,
   onShowAuthorBooks,
+  onShowGroupBooks,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const apiReady = Boolean(spl);
+  const groupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
 
   const qFromRoute = (route.q ?? "").trim();
   const browseFromRoute = route.browse ?? "books";
   const browseMode: BrowseMode = qFromRoute
     ? "books"
-    : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "books"
+    : browseFromRoute === "groups" && !groupsEnabled
+      ? "books"
+    : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "groups" || browseFromRoute === "books"
       ? browseFromRoute
       : "books";
 
@@ -76,6 +84,12 @@ export function LibraryBrowsePage({
   const [authorsData, setAuthorsData] = useState<PaginatedResponse<LibraryAuthor> | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<LibraryAuthor | null>(null);
 
+  const [groupsBusy, setGroupsBusy] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [groupsPage, setGroupsPage] = useState(1);
+  const [groupsData, setGroupsData] = useState<PaginatedResponse<LibraryGroup> | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<LibraryGroup | null>(null);
+
   useEffect(() => {
     setQDraft(qFromRoute);
   }, [qFromRoute]);
@@ -99,6 +113,7 @@ export function LibraryBrowsePage({
       q?: string;
       seriesId?: string;
       authorId?: string;
+      groupId?: string;
       ordering: "title" | "series_index";
     }) => {
       if (!spl) return;
@@ -106,14 +121,20 @@ export function LibraryBrowsePage({
       setBooksBusy(true);
       setBooksError(null);
       try {
-        const result = await spl.library.books.list({
-          q: input.q?.trim() ? input.q.trim() : undefined,
-          series: input.seriesId,
-          author: input.authorId,
-          ordering: input.ordering,
-          page: input.page,
-          pageSize,
-        });
+        const result = input.groupId
+          ? await spl.library.groups.books(input.groupId, {
+              ordering: input.ordering,
+              page: input.page,
+              pageSize,
+            })
+          : await spl.library.books.list({
+              q: input.q?.trim() ? input.q.trim() : undefined,
+              series: input.seriesId,
+              author: input.authorId,
+              ordering: input.ordering,
+              page: input.page,
+              pageSize,
+            });
         setBooksData(result);
         setBooksPage(input.page);
       } catch (e) {
@@ -170,12 +191,31 @@ export function LibraryBrowsePage({
     [spl],
   );
 
+  const loadGroups = useCallback(
+    async (page: number) => {
+      if (!spl) return;
+      setGroupsBusy(true);
+      setGroupsError(null);
+      try {
+        const r = await spl.library.groups.list({ page, includePreviewBooks: true });
+        setGroupsData(r);
+        setGroupsPage(page);
+      } catch (e) {
+        setGroupsData(null);
+        setGroupsError(e instanceof Error ? e.message : "Failed to load groups.");
+      } finally {
+        setGroupsBusy(false);
+      }
+    },
+    [spl],
+  );
+
   useEffect(() => {
     setBooksData(null);
     setBooksError(null);
     setBooksBusy(false);
     setBooksPage(1);
-  }, [qFromRoute, browseMode, route.seriesId, route.authorId, pageSize]);
+  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -197,6 +237,11 @@ export function LibraryBrowsePage({
       return;
     }
 
+    if (browseMode === "groups" && route.groupId) {
+      void loadBooks({ page: 1, groupId: route.groupId, ordering: "title" });
+      return;
+    }
+
     if (browseMode === "books") {
       void loadBooks({ page: 1, ordering: "title" });
       return;
@@ -204,8 +249,9 @@ export function LibraryBrowsePage({
 
     if (browseMode === "series" && !route.seriesId && !seriesData && !seriesBusy) void loadSeries(1);
     if (browseMode === "authors" && !route.authorId && !authorsData && !authorsBusy) void loadAuthors(1);
+    if (browseMode === "groups" && groupsEnabled && !route.groupId && !groupsData && !groupsBusy) void loadGroups(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -213,6 +259,7 @@ export function LibraryBrowsePage({
     if (qFromRoute) {
       setSelectedSeries(null);
       setSelectedAuthor(null);
+      setSelectedGroup(null);
       return;
     }
 
@@ -241,8 +288,21 @@ export function LibraryBrowsePage({
     } else {
       setSelectedAuthor(null);
     }
+
+    if (browseMode === "groups" && route.groupId && groupsEnabled) {
+      void (async () => {
+        try {
+          const g = await spl.library.groups.get(route.groupId!, { includePreviewBooks: true });
+          setSelectedGroup(g);
+        } catch {
+          setSelectedGroup(null);
+        }
+      })();
+    } else {
+      setSelectedGroup(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, browseMode, route.seriesId, route.authorId, qFromRoute, spl]);
+  }, [status, apiReady, browseMode, route.seriesId, route.authorId, route.groupId, qFromRoute, spl, groupsEnabled]);
 
   const handleCommitSearch = useCallback(() => {
     const next = qDraft.trim();
@@ -262,7 +322,11 @@ export function LibraryBrowsePage({
   }, [booksData, pageSize]);
 
   const showBookList = Boolean(
-    qFromRoute || browseMode === "books" || (browseMode === "series" && route.seriesId) || (browseMode === "authors" && route.authorId),
+    qFromRoute ||
+      browseMode === "books" ||
+      (browseMode === "series" && route.seriesId) ||
+      (browseMode === "authors" && route.authorId) ||
+      (browseMode === "groups" && route.groupId && groupsEnabled),
   );
 
   return (
@@ -334,6 +398,15 @@ export function LibraryBrowsePage({
               >
                 Authors
               </button>
+              {groupsEnabled ? (
+                <button
+                  type="button"
+                  className={`libraryBrowseTab ${browseMode === "groups" ? "libraryBrowseTabActive" : ""}`}
+                  onClick={() => onShowGroups?.()}
+                >
+                  Library Groups
+                </button>
+              ) : null}
             </div>
 
             {browseMode === "books" ? (
@@ -369,8 +442,6 @@ export function LibraryBrowsePage({
                     {typeof selectedSeries.book_count === "number" ? (
                       <div className="muted">{selectedSeries.book_count} books</div>
                     ) : null}
-                    {selectedSeries.summary ? <div className="muted">{selectedSeries.summary}</div> : null}
-                    <CoverPreviewStrip books={selectedSeries.preview_books} baseUrl={profile} onBookClick={onViewBook} />
                   </div>
                   <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowSeries?.()}>
                     All series
@@ -387,11 +458,30 @@ export function LibraryBrowsePage({
                     {typeof selectedAuthor.book_count === "number" ? (
                       <div className="muted">{selectedAuthor.book_count} books</div>
                     ) : null}
-                    {selectedAuthor.biography ? <div className="muted">{selectedAuthor.biography}</div> : null}
-                    <CoverPreviewStrip books={selectedAuthor.preview_books} baseUrl={profile} onBookClick={onViewBook} />
                   </div>
                   <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowAuthors?.()}>
                     All authors
+                  </button>
+                </div>
+              ) : null}
+
+              {browseMode === "groups" && selectedGroup ? (
+                <div className="libraryBrowseHeader">
+                  <div className="libraryBrowseHeaderMain">
+                    <div className="libraryGroupTitleLine">
+                      <div className="panelTitle" style={{ margin: 0 }}>
+                        {selectedGroup.name}
+                      </div>
+                      {selectedGroup.is_public_group ? <span className="libraryGroupChip libraryGroupChipPublic">Public</span> : null}
+                      {selectedGroup.is_curator ? <span className="libraryGroupChip">Curator</span> : null}
+                    </div>
+                    {typeof selectedGroup.book_count === "number" ? (
+                      <div className="muted">{selectedGroup.book_count} books</div>
+                    ) : null}
+                    {selectedGroup.description ? <div className="muted">{selectedGroup.description}</div> : null}
+                  </div>
+                  <button type="button" className="button buttonCompact libraryBrowseBack" onClick={() => onShowGroups?.()}>
+                    All library groups
                   </button>
                 </div>
               ) : null}
@@ -412,6 +502,7 @@ export function LibraryBrowsePage({
                             q: qFromRoute || undefined,
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
+                            groupId: browseMode === "groups" ? route.groupId : undefined,
                             ordering: browseMode === "series" ? "series_index" : "title",
                           })
                         }
@@ -428,6 +519,7 @@ export function LibraryBrowsePage({
                             q: qFromRoute || undefined,
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
+                            groupId: browseMode === "groups" ? route.groupId : undefined,
                             ordering: browseMode === "series" ? "series_index" : "title",
                           })
                         }
@@ -468,6 +560,7 @@ export function LibraryBrowsePage({
                             q: qFromRoute || undefined,
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
+                            groupId: browseMode === "groups" ? route.groupId : undefined,
                             ordering: browseMode === "series" ? "series_index" : "title",
                           })
                         }
@@ -484,6 +577,7 @@ export function LibraryBrowsePage({
                             q: qFromRoute || undefined,
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
+                            groupId: browseMode === "groups" ? route.groupId : undefined,
                             ordering: browseMode === "series" ? "series_index" : "title",
                           })
                         }
@@ -523,7 +617,6 @@ export function LibraryBrowsePage({
                       <div className="libraryEntityMain">
                         <div className="libraryEntityTitle">{s.name}</div>
                         {typeof s.book_count === "number" ? <div className="muted">{s.book_count} books</div> : null}
-                        {s.summary ? <div className="muted">{s.summary}</div> : null}
                       </div>
                       <CoverPreviewStrip books={s.preview_books} baseUrl={profile} onBookClick={onViewBook} />
                     </div>
@@ -558,7 +651,7 @@ export function LibraryBrowsePage({
                 </div>
               ) : null}
             </>
-          ) : (
+          ) : browseMode === "authors" ? (
             <>
               {authorsError ? <p className="errorText">{authorsError}</p> : null}
               {authorsBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
@@ -581,7 +674,6 @@ export function LibraryBrowsePage({
                       <div className="libraryEntityMain">
                         <div className="libraryEntityTitle">{a.name}</div>
                         {typeof a.book_count === "number" ? <div className="muted">{a.book_count} books</div> : null}
-                        {a.biography ? <div className="muted">{a.biography}</div> : null}
                       </div>
                       <CoverPreviewStrip books={a.preview_books} baseUrl={profile} onBookClick={onViewBook} />
                     </div>
@@ -609,6 +701,68 @@ export function LibraryBrowsePage({
                       type="button"
                       onClick={() => void loadAuthors(authorsPage + 1)}
                       disabled={authorsBusy || !authorsData.next}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {groupsError ? <p className="errorText">{groupsError}</p> : null}
+              {groupsBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
+
+              {groupsData?.results?.length ? (
+                <div className="libraryEntityList">
+                  {groupsData.results.map((g) => {
+                    const openGroup = () => onShowGroupBooks?.(String(g.id));
+                    return (
+                    <div
+                      key={String(g.id)}
+                      className="libraryEntityCard libraryEntityCardButton"
+                      role="button"
+                      tabIndex={0}
+                      onClick={openGroup}
+                      onKeyDown={(event) => handleCardKeyDown(event, openGroup)}
+                      aria-label={`View books in ${g.name}`}
+                      title={`View books in ${g.name}`}
+                    >
+                      <div className="libraryEntityMain">
+                        <div className="libraryGroupTitleLine">
+                          <div className="libraryEntityTitle">{g.name}</div>
+                          {g.is_public_group ? <span className="libraryGroupChip libraryGroupChipPublic">Public</span> : null}
+                          {g.is_curator ? <span className="libraryGroupChip">Curator</span> : null}
+                        </div>
+                        {typeof g.book_count === "number" ? <div className="muted">{g.book_count} books</div> : null}
+                        {g.description ? <div className="muted">{g.description}</div> : null}
+                      </div>
+                      <CoverPreviewStrip books={g.preview_books} baseUrl={profile} onBookClick={onViewBook} />
+                    </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {groupsData ? (
+                <div className="libraryMetaRow">
+                  <div className="muted">
+                    <InlineMeta items={[`Page ${groupsPage}`, `${groupsData.count} groups`]} />
+                  </div>
+                  <div className="pagerButtons">
+                    <button
+                      className="button buttonCompact"
+                      type="button"
+                      onClick={() => void loadGroups(Math.max(1, groupsPage - 1))}
+                      disabled={groupsBusy || !groupsData.previous}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      className="button buttonCompact"
+                      type="button"
+                      onClick={() => void loadGroups(groupsPage + 1)}
+                      disabled={groupsBusy || !groupsData.next}
                     >
                       Next
                     </button>

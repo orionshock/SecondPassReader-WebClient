@@ -376,6 +376,35 @@ describe("@secondpass/client high-level workflows", () => {
     expect(authorDetailUrl.searchParams.has("include_preview_books")).toBe(false);
   });
 
+  it("library groups list/detail optionally request preview books and group books", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: "g1", name: "Group", is_public_group: true, is_curator: false }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.library.groups.list({ page: 2, includePreviewBooks: true });
+    await spl.library.groups.get("g1", { includePreviewBooks: true });
+    await spl.library.groups.books("g1", { page: 3, pageSize: 50, ordering: "title", hasFiles: true });
+
+    const groupListUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(groupListUrl.origin + groupListUrl.pathname).toBe("https://api.example/library/groups/");
+    expect(groupListUrl.searchParams.get("page")).toBe("2");
+    expect(groupListUrl.searchParams.get("include_preview_books")).toBe("true");
+
+    const groupDetailUrl = new URL(String(fetchMock.mock.calls[1]![0]));
+    expect(groupDetailUrl.origin + groupDetailUrl.pathname).toBe("https://api.example/library/groups/g1/");
+    expect(groupDetailUrl.searchParams.get("include_preview_books")).toBe("true");
+
+    const groupBooksUrl = new URL(String(fetchMock.mock.calls[2]![0]));
+    expect(groupBooksUrl.origin + groupBooksUrl.pathname).toBe("https://api.example/library/groups/g1/books/");
+    expect(groupBooksUrl.searchParams.get("page")).toBe("3");
+    expect(groupBooksUrl.searchParams.get("page_size")).toBe("50");
+    expect(groupBooksUrl.searchParams.get("ordering")).toBe("title");
+    expect(groupBooksUrl.searchParams.get("has_files")).toBe("true");
+  });
+
   it("shelves.list preserves unscoped behavior and rejects personal owner-group filters", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));

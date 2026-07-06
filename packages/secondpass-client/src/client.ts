@@ -7,6 +7,7 @@ import type {
 import type {
   LibraryAuthor,
   LibraryBook,
+  LibraryGroup,
   LibrarySeries,
   PaginatedResponse,
 } from "./schemas/library";
@@ -36,7 +37,7 @@ import type {
 } from "./schemas/readingSession";
 
 import { createLoginRequest, discoverSecondPass, getMe, pollLoginRequest } from "./clientApiAuthApi";
-import { downloadBookFile, getAuthor, getBook, getSeries, listAuthors, listBooks, listSeries } from "./libraryApi";
+import { downloadBookFile, getAuthor, getBook, getGroup, getSeries, listAuthors, listBooks, listGroupBooks, listGroups, listSeries } from "./libraryApi";
 import {
   closeReadingSession,
   getReadingBookActivitySummary,
@@ -150,6 +151,11 @@ export type SecondPassClient = {
       list(params?: LibraryEntityListParams): Promise<PaginatedResponse<LibraryAuthor>>;
       get(authorId: string, params?: { includePreviewBooks?: boolean }): Promise<LibraryAuthor>;
       books(authorId: string, params?: Omit<LibraryBookListParams, "author">): Promise<PaginatedResponse<LibraryBook>>;
+    };
+    groups: {
+      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<LibraryGroup>>;
+      get(groupId: string, params?: { includePreviewBooks?: boolean }): Promise<LibraryGroup>;
+      books(groupId: string, params?: Omit<LibraryBookListParams, "q" | "series" | "author">): Promise<PaginatedResponse<LibraryBook>>;
     };
   };
 
@@ -301,6 +307,24 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         books: (authorId, params) => {
           const auth = requireAuth(ctx);
           return listBooks(auth, { params: { ...params, author: authorId } });
+        },
+      },
+
+      groups: {
+        list: (params) => {
+          const auth = requireAuth(ctx);
+          return listGroups(auth, {
+            page: params?.page,
+            includePreviewBooks: params?.includePreviewBooks,
+          });
+        },
+        get: (groupId, params) => {
+          const auth = requireAuth(ctx);
+          return getGroup(auth, { groupId, includePreviewBooks: params?.includePreviewBooks });
+        },
+        books: (groupId, params) => {
+          const auth = requireAuth(ctx);
+          return listGroupBooks(auth, { groupId, params });
         },
       },
     },
