@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
@@ -40,9 +40,11 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [ordering, setOrdering] = useState<ShelfOrdering>("name");
+  const loadRequestSeq = useRef(0);
 
   const load = useCallback(async () => {
     if (!spl) return;
+    const requestSeq = ++loadRequestSeq.current;
     setBusy(true);
     setError(null);
     try {
@@ -50,11 +52,13 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
         spl.shelves.list({ scope: "personal", includePreviewBooks: true, ordering }),
         spl.shelves.list({ scope: "shared", includePreviewBooks: true, ordering }),
       ]);
+      if (requestSeq !== loadRequestSeq.current) return;
       setData({
         personal: personal.results ?? [],
         shared: shared.results ?? [],
       });
     } catch (e) {
+      if (requestSeq !== loadRequestSeq.current) return;
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
           ? "Could not load shelves. Your device token may be revoked or not allowed to access shelves."
@@ -64,7 +68,7 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
       setError(message);
       setData(null);
     } finally {
-      setBusy(false);
+      if (requestSeq === loadRequestSeq.current) setBusy(false);
     }
   }, [ordering, spl]);
 

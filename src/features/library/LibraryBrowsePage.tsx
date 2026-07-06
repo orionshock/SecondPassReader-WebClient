@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibraryGroup, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -133,6 +133,10 @@ export function LibraryBrowsePage({
   const [groupsPage, setGroupsPage] = useState(1);
   const [groupsData, setGroupsData] = useState<PaginatedResponse<LibraryGroup> | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<LibraryGroup | null>(null);
+  const booksRequestSeq = useRef(0);
+  const seriesRequestSeq = useRef(0);
+  const authorsRequestSeq = useRef(0);
+  const groupsRequestSeq = useRef(0);
 
   useEffect(() => {
     setQDraft(qFromRoute);
@@ -169,6 +173,7 @@ export function LibraryBrowsePage({
     }) => {
       if (!spl) return;
 
+      const requestSeq = ++booksRequestSeq.current;
       setBooksBusy(true);
       setBooksError(null);
       try {
@@ -186,9 +191,11 @@ export function LibraryBrowsePage({
               page: input.page,
               pageSize,
             });
+        if (requestSeq !== booksRequestSeq.current) return;
         setBooksData(result);
         setBooksPage(input.page);
       } catch (e) {
+        if (requestSeq !== booksRequestSeq.current) return;
         if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
           setBooksError(
             "Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.",
@@ -198,7 +205,7 @@ export function LibraryBrowsePage({
         }
         setBooksData(null);
       } finally {
-        setBooksBusy(false);
+        if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
       }
     },
     [pageSize, spl],
@@ -207,17 +214,20 @@ export function LibraryBrowsePage({
   const loadSeries = useCallback(
     async (page: number) => {
       if (!spl) return;
+      const requestSeq = ++seriesRequestSeq.current;
       setSeriesBusy(true);
       setSeriesError(null);
       try {
         const r = await spl.library.series.list({ page, includePreviewBooks: true, ordering: seriesOrdering });
+        if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesData(r);
         setSeriesPage(page);
       } catch (e) {
+        if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesData(null);
         setSeriesError(e instanceof Error ? e.message : "Failed to load series.");
       } finally {
-        setSeriesBusy(false);
+        if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
       }
     },
     [seriesOrdering, spl],
@@ -226,17 +236,20 @@ export function LibraryBrowsePage({
   const loadAuthors = useCallback(
     async (page: number) => {
       if (!spl) return;
+      const requestSeq = ++authorsRequestSeq.current;
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
         const r = await spl.library.authors.list({ page, includePreviewBooks: true, ordering: authorsOrdering });
+        if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsData(r);
         setAuthorsPage(page);
       } catch (e) {
+        if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsData(null);
         setAuthorsError(e instanceof Error ? e.message : "Failed to load authors.");
       } finally {
-        setAuthorsBusy(false);
+        if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
       }
     },
     [authorsOrdering, spl],
@@ -245,17 +258,20 @@ export function LibraryBrowsePage({
   const loadGroups = useCallback(
     async (page: number) => {
       if (!spl) return;
+      const requestSeq = ++groupsRequestSeq.current;
       setGroupsBusy(true);
       setGroupsError(null);
       try {
         const r = await spl.library.groups.list({ page, includePreviewBooks: true, ordering: "name" });
+        if (requestSeq !== groupsRequestSeq.current) return;
         setGroupsData(r);
         setGroupsPage(page);
       } catch (e) {
+        if (requestSeq !== groupsRequestSeq.current) return;
         setGroupsData(null);
         setGroupsError(e instanceof Error ? e.message : "Failed to load groups.");
       } finally {
-        setGroupsBusy(false);
+        if (requestSeq === groupsRequestSeq.current) setGroupsBusy(false);
       }
     },
     [spl],
@@ -312,9 +328,17 @@ export function LibraryBrowsePage({
       return;
     }
 
-    if (browseMode === "series" && !route.seriesId && !seriesData && !seriesBusy) void loadSeries(1);
-    if (browseMode === "authors" && !route.authorId && !authorsData && !authorsBusy) void loadAuthors(1);
-    if (browseMode === "groups" && groupsEnabled && !route.groupId && !groupsData && !groupsBusy) void loadGroups(1);
+    if (browseMode === "series" && !route.seriesId) {
+      void loadSeries(1);
+      return;
+    }
+    if (browseMode === "authors" && !route.authorId) {
+      void loadAuthors(1);
+      return;
+    }
+    if (browseMode === "groups" && groupsEnabled && !route.groupId) {
+      void loadGroups(1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering]);
 
@@ -327,14 +351,15 @@ export function LibraryBrowsePage({
       setSelectedGroup(null);
       return;
     }
+    let cancelled = false;
 
     if (browseMode === "series" && route.seriesId) {
       void (async () => {
         try {
           const s = await spl.library.series.get(route.seriesId!, { includePreviewBooks: true });
-          setSelectedSeries(s);
+          if (!cancelled) setSelectedSeries(s);
         } catch {
-          setSelectedSeries(null);
+          if (!cancelled) setSelectedSeries(null);
         }
       })();
     } else {
@@ -345,9 +370,9 @@ export function LibraryBrowsePage({
       void (async () => {
         try {
           const a = await spl.library.authors.get(route.authorId!, { includePreviewBooks: true });
-          setSelectedAuthor(a);
+          if (!cancelled) setSelectedAuthor(a);
         } catch {
-          setSelectedAuthor(null);
+          if (!cancelled) setSelectedAuthor(null);
         }
       })();
     } else {
@@ -358,14 +383,17 @@ export function LibraryBrowsePage({
       void (async () => {
         try {
           const g = await spl.library.groups.get(route.groupId!, { includePreviewBooks: true });
-          setSelectedGroup(g);
+          if (!cancelled) setSelectedGroup(g);
         } catch {
-          setSelectedGroup(null);
+          if (!cancelled) setSelectedGroup(null);
         }
       })();
     } else {
       setSelectedGroup(null);
     }
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, apiReady, browseMode, route.seriesId, route.authorId, route.groupId, qFromRoute, spl, groupsEnabled]);
 

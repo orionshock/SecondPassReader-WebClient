@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { LibraryBook, SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
@@ -37,9 +37,13 @@ export function ShelfDetailPage({
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => getLibraryBooksView());
   const [ordering, setOrdering] = useState<ShelfItemOrdering>("position");
+  const loadFirstRequestSeq = useRef(0);
+  const loadMoreRequestSeq = useRef(0);
 
   const loadFirst = useCallback(async () => {
     if (!spl) return;
+    const requestSeq = ++loadFirstRequestSeq.current;
+    loadMoreRequestSeq.current += 1;
     setBusy(true);
     setError(null);
     try {
@@ -47,11 +51,13 @@ export function ShelfDetailPage({
         spl.shelves.get(shelfId),
         spl.shelves.items(shelfId, { page: 1, ordering }),
       ]);
+      if (requestSeq !== loadFirstRequestSeq.current) return;
       setShelf(s);
       const results = page.results ?? [];
       setItems(results);
       setNextUrl(page.next ?? null);
     } catch (e) {
+      if (requestSeq !== loadFirstRequestSeq.current) return;
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
           ? "Could not load shelf. Your device token may be revoked or not allowed to access shelves."
@@ -65,7 +71,7 @@ export function ShelfDetailPage({
       setItems([]);
       setNextUrl(null);
     } finally {
-      setBusy(false);
+      if (requestSeq === loadFirstRequestSeq.current) setBusy(false);
     }
   }, [ordering, shelfId, spl]);
 
@@ -99,19 +105,22 @@ export function ShelfDetailPage({
     if (!nextPage) return;
     if (loadMoreBusy) return;
 
+    const requestSeq = ++loadMoreRequestSeq.current;
     setLoadMoreBusy(true);
     setError(null);
     try {
       const page = await spl.shelves.items(shelfId, { page: nextPage, ordering });
+      if (requestSeq !== loadMoreRequestSeq.current) return;
       const results = page.results ?? [];
       setItems((prev) => {
         return [...prev, ...results];
       });
       setNextUrl(page.next ?? null);
     } catch (e) {
+      if (requestSeq !== loadMoreRequestSeq.current) return;
       setError(e instanceof Error ? e.message : "Failed to load more items.");
     } finally {
-      setLoadMoreBusy(false);
+      if (requestSeq === loadMoreRequestSeq.current) setLoadMoreBusy(false);
     }
   }, [loadMoreBusy, nextUrl, ordering, parseNextPage, shelfId, spl]);
 
