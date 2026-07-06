@@ -88,6 +88,14 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
   cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.libraryBrowseTab .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .libraryBrowseTabActive {

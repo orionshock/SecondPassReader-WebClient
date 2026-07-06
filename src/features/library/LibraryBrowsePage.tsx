@@ -7,6 +7,7 @@ import { BookGrid } from "./display/BookGrid";
 import { BookList } from "./display/BookList";
 import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
 import { InlineMeta } from "../../components/MetaSeparator";
+import { MaterialIcon } from "../../components/MaterialIcon";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 
 type BrowseMode = "books" | "series" | "authors" | "groups";
@@ -382,6 +383,7 @@ export function LibraryBrowsePage({
                 className={`libraryBrowseTab ${browseMode === "books" ? "libraryBrowseTabActive" : ""}`}
                 onClick={() => onShowBooks?.()}
               >
+                <MaterialIcon name="menu_book" />
                 Books
               </button>
               <button
@@ -389,6 +391,7 @@ export function LibraryBrowsePage({
                 className={`libraryBrowseTab ${browseMode === "series" ? "libraryBrowseTabActive" : ""}`}
                 onClick={() => onShowSeries?.()}
               >
+                <MaterialIcon name="auto_stories" />
                 Series
               </button>
               <button
@@ -396,6 +399,7 @@ export function LibraryBrowsePage({
                 className={`libraryBrowseTab ${browseMode === "authors" ? "libraryBrowseTabActive" : ""}`}
                 onClick={() => onShowAuthors?.()}
               >
+                <MaterialIcon name="person" />
                 Authors
               </button>
               {groupsEnabled ? (
@@ -404,6 +408,7 @@ export function LibraryBrowsePage({
                   className={`libraryBrowseTab ${browseMode === "groups" ? "libraryBrowseTabActive" : ""}`}
                   onClick={() => onShowGroups?.()}
                 >
+                  <MaterialIcon name="groups" />
                   Library Groups
                 </button>
               ) : null}
