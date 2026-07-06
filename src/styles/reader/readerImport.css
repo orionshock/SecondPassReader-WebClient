@@ -40,6 +40,15 @@
   padding: 12px;
 }
 
+.spReaderImportModal .errorText {
+  padding: 8px 10px;
+  border: 1px solid var(--sp-reader-danger-border);
+  border-radius: 8px;
+  background: var(--sp-reader-danger-bg);
+  color: var(--sp-reader-danger-text);
+  font-weight: 600;
+}
+
 .spReaderImportModalActions {
   justify-content: flex-end;
   border-top: 1px solid var(--sp-reader-border);
