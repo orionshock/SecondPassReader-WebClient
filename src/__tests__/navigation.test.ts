@@ -166,4 +166,17 @@ describe("navigation route ordering params", () => {
       pageSize: 20,
     })).toBe("#/library");
   });
+
+  it("serializes and parses settings tabs", () => {
+    expect(routeToHash({ kind: "settings" })).toBe("#/settings?tab=appearance");
+    expect(routeToHash({ kind: "settings", tab: "appearance" })).toBe("#/settings?tab=appearance");
+    expect(routeToHash({ kind: "settings", tab: "library-server" })).toBe("#/settings?tab=library-server");
+    expect(routeToHash({ kind: "settings", tab: "tools" })).toBe("#/settings?tab=tools");
+
+    vi.stubGlobal("window", { location: { hash: "#/settings?tab=tools" } });
+    expect(parseCurrentRoute()).toEqual({ kind: "settings", tab: "tools" });
+
+    vi.stubGlobal("window", { location: { hash: "#/settings?tab=bogus" } });
+    expect(parseCurrentRoute()).toEqual({ kind: "settings" });
+  });
 });

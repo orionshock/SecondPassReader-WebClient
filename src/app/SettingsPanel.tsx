@@ -6,8 +6,7 @@ import { getConnectionStatus, getConnectionStatusLabel } from "../features/conne
 import { discoverSecondPass } from "../features/connection/connectionUtils";
 import { applyCurrentAccountToProfile } from "../features/connection/accountProfile";
 import { createSplClientFromProfile } from "./createSplClient";
-import type { AppWorkflowStep } from "./appWorkflow";
-import { navigateTo } from "./navigation";
+import { navigateTo, type AppRoute, type SettingsTab } from "./navigation";
 import {
   formatMarginaliaBookLabel,
   formatMarginaliaSessionLabel,
@@ -21,7 +20,7 @@ type Props = {
   onForgetServer: () => void;
   appTheme: AppTheme;
   onAppThemeChange: (theme: AppTheme) => void;
-  workflowStep: AppWorkflowStep;
+  route: Extract<AppRoute, { kind: "settings" }>;
 };
 
 type ActionState =
@@ -42,7 +41,7 @@ export function SettingsPanel({
   onForgetServer,
   appTheme,
   onAppThemeChange,
-  workflowStep,
+  route,
 }: Props) {
   const [state, setState] = useState<ActionState>({ phase: "idle" });
   const [marginaliaState, setMarginaliaState] = useState<MarginaliaToolState>({ phase: "idle" });
@@ -150,6 +149,7 @@ export function SettingsPanel({
   const status = getConnectionStatus(profile);
   const busy = state.phase === "checking" || state.phase === "logging_out";
   const marginaliaGroups = marginaliaState.phase === "loaded" ? groupMarginaliaSplitItems(marginaliaState.result.items) : [];
+  const activeTab = route.tab ?? "appearance";
 
   return (
     <div className="settingsLayout">
@@ -157,7 +157,27 @@ export function SettingsPanel({
         <h1 className="settingsTitle">Settings</h1>
       </section>
 
-      <section className="panel settingsCard">
+      <div className="segmentedControl settingsTabs" role="tablist" aria-label="Settings sections">
+        {([
+          { value: "appearance", label: "Appearance" },
+          { value: "library-server", label: "Library Server" },
+          { value: "tools", label: "Tools" },
+        ] as Array<{ value: SettingsTab; label: string }>).map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            className={`segmentedButton${activeTab === tab.value ? " segmentedButtonActive" : ""}`}
+            role="tab"
+            aria-selected={activeTab === tab.value}
+            onClick={() => navigateTo({ kind: "settings", tab: tab.value })}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "appearance" ? (
+      <section className="panel settingsCard" role="tabpanel" aria-label="Appearance settings">
         <div className="settingsSectionHeader">
           <h2 className="panelTitle">Appearance</h2>
         </div>
@@ -181,148 +201,140 @@ export function SettingsPanel({
           </div>
         </div>
       </section>
+      ) : null}
 
-      <section className="panel settingsCard">
-        <div className="settingsSectionHeader">
-          <h2 className="panelTitle">Connected library</h2>
-          <span className={`pill ${status === "verified" ? "pillOk" : status === "not_configured" ? "pillIdle" : "pillWarn"}`}>
-            {getConnectionStatusLabel(status)}
-          </span>
-        </div>
-
-        {!profile ? (
-          <div className="settingsEmpty">
-            <p className="muted">No library is connected in this browser.</p>
-            <button type="button" className="button buttonPrimary" onClick={() => navigateTo({ kind: "connect" })}>
-              Connect library
-            </button>
+      {activeTab === "library-server" ? (
+      <div className="settingsTabPanel" role="tabpanel" aria-label="Library Server settings">
+        <section className="panel settingsCard">
+          <div className="settingsSectionHeader">
+            <h2 className="panelTitle">Connected Library</h2>
+            <span className={`pill ${status === "verified" ? "pillOk" : status === "not_configured" ? "pillIdle" : "pillWarn"}`}>
+              {getConnectionStatusLabel(status)}
+            </span>
           </div>
-        ) : (
-          <>
-            <div className="settingsGrid">
-              <Detail label="Library" value={profile.serverName ?? profile.label} />
-              {profile.serverDescription ? <Detail label="Description" value={profile.serverDescription} /> : null}
-              <Detail label="Server URL" value={profile.serverBaseUrl} mono />
-              <Detail label="Signed-in user" value={formatUser(profile)} />
-              <Detail label="Client session" value={profile.clientSessionName ?? "Unknown"} />
-              <Detail label="Last checked" value={formatTimestamp(profile.lastCheckedAt ?? profile.verifiedAt)} />
-            </div>
-            <div className="settingsActions">
-              <button type="button" className="button" onClick={() => void checkConnection()} disabled={busy}>
-                {state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
+
+          {!profile ? (
+            <div className="settingsEmpty">
+              <p className="muted">No library is connected in this browser.</p>
+              <button type="button" className="button buttonPrimary" onClick={() => navigateTo({ kind: "connect" })}>
+                Connect library
               </button>
             </div>
-          </>
-        )}
-      </section>
+          ) : (
+            <>
+              <div className="settingsGrid">
+                <Detail label="Library" value={profile.serverName ?? profile.label} />
+                {profile.serverDescription ? <Detail label="Description" value={profile.serverDescription} /> : null}
+                <Detail label="Server URL" value={profile.serverBaseUrl} mono />
+                <Detail label="Signed-in user" value={formatUser(profile)} />
+                <Detail label="This device" value={profile.clientSessionName ?? "Unknown"} />
+                <Detail label="Last checked" value={formatTimestamp(profile.lastCheckedAt ?? profile.verifiedAt)} />
+              </div>
+              <div className="settingsActions">
+                <button type="button" className="button" onClick={() => void checkConnection()} disabled={busy}>
+                  {state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
 
-      <section className="panel settingsCard">
-        <div className="settingsSectionHeader">
-          <h2 className="panelTitle">Session</h2>
-        </div>
-        <p className="muted">
-          Log out revokes this client session on the server and removes the local connection from this browser. Server
-          books and annotations are not deleted.
-        </p>
-        <div className="settingsActions">
-          <button type="button" className="button buttonDanger" onClick={() => void logOut()} disabled={!profile || busy}>
-            {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}
-          </button>
-        </div>
-        {profile ? (
-          <div className="settingsLocalFallback">
-            <span className="muted">If logout fails, you can forget this connection locally.</span>
-            <button
-              type="button"
-              className="settingsLinkButton"
-              onClick={forgetLocally}
-              disabled={state.phase === "logging_out"}
-            >
-              Forget locally
+        <section className="panel settingsCard">
+          <div className="settingsSectionHeader">
+            <h2 className="panelTitle">This Device</h2>
+          </div>
+          <p className="muted">
+            Log out revokes this device session on the server and removes the local connection from this browser. Server
+            books and annotations are not deleted.
+          </p>
+          <div className="settingsActions">
+            <button type="button" className="button buttonDanger" onClick={() => void logOut()} disabled={!profile || busy}>
+              {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}
             </button>
           </div>
-        ) : null}
-      </section>
-
-      {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
-      {state.phase === "error" ? <p className="errorText">{state.message}</p> : null}
-
-      <section className="panel settingsCard settingsMaintenance">
-        <div className="settingsSectionHeader">
-          <h2 className="panelTitle">Marginalia import tools</h2>
-          <span className="pill pillIdle">Advanced</span>
-        </div>
-        <p className="muted">
-          Upload an unmatched SecondPassMarginaliaExport JSON file and split it into one book/session file at a time.
-          This only prepares files for recovery. It does not repair selectors, match quotes, or write annotations.
-        </p>
-        <div className="settingsFileRow">
-          <label className="button" htmlFor="marginaliaExportFile">
-            Upload unmatched export
-          </label>
-          <input
-            id="marginaliaExportFile"
-            className="settingsHiddenFileInput"
-            type="file"
-            accept="application/json,.json"
-            onChange={(event) => void handleMarginaliaFile(event.currentTarget.files?.[0] ?? null)}
-          />
-          <span className="muted">Split into book/session files</span>
-        </div>
-
-        {marginaliaState.phase === "error" ? <p className="errorText">{marginaliaState.message}</p> : null}
-        {marginaliaState.phase === "loaded" ? (
-          <div className="marginaliaSplitPanel">
-            <div className="settingsGrid">
-              <Detail label="File" value={marginaliaState.fileName} />
-              <Detail label="Books" value={String(marginaliaState.result.summary.bookCount)} />
-              <Detail label="Sessions" value={String(marginaliaState.result.summary.sessionCount)} />
-              <Detail label="Annotations" value={String(marginaliaState.result.summary.annotationCount)} />
+          {profile ? (
+            <div className="settingsLocalFallback">
+              <span className="muted">If logout fails, you can forget this connection locally.</span>
+              <button
+                type="button"
+                className="settingsLinkButton"
+                onClick={forgetLocally}
+                disabled={state.phase === "logging_out"}
+              >
+                Forget locally
+              </button>
             </div>
-            {marginaliaState.result.items.length === 0 ? (
-              <p className="muted">No sessions were found to split.</p>
-            ) : (
-              <div className="marginaliaSplitList">
-                {marginaliaGroups.map((group) => (
-                  <div className="marginaliaSplitGroup" key={group.bookLabel}>
-                    <div className="settingsLabel">{group.bookLabel}</div>
-                    <div className="marginaliaSplitGroupItems">
-                      {group.items.map((item) => (
-                        <div className="marginaliaSplitItem" key={item.id}>
-                          <div className="marginaliaSplitText">
-                            <div className="muted">{formatMarginaliaSessionLabel(item.session)}</div>
-                            <div className="muted">{item.annotationCount} annotation{item.annotationCount === 1 ? "" : "s"}</div>
-                          </div>
-                          <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
-                            Download JSON
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
-      </section>
+          ) : null}
+        </section>
 
-      <details className="panel settingsDiagnostics">
-        <summary className="panelTitle">Diagnostics</summary>
-        <div className="settingsGrid settingsDiagnosticsBody">
-          <Detail label="Current workflow step" value={workflowStep} mono />
-          <Detail label="Server URL" value={profile?.serverBaseUrl ?? "None"} mono />
-          <Detail label="API base URL" value={profile?.apiBaseUrl ?? "None"} mono />
-          <Detail label="Client session id" value={profile?.clientSessionId ?? "None"} mono />
-          <Detail label="Token type" value={profile?.accessToken ? profile.tokenType ?? "Bearer" : "None"} mono />
-          <Detail label="Advanced groups" value={profile?.advancedLibraryGroupsEnabled === undefined ? "Unknown" : profile.advancedLibraryGroupsEnabled ? "Enabled" : "Disabled"} mono />
-          <Detail label="Banner text" value={profile?.bannerText ?? "None"} />
-          <Detail label="Linked at" value={profile?.linkedAt ?? "None"} mono />
-          <Detail label="Verified at" value={profile?.verifiedAt ?? "None"} mono />
-          <Detail label="Last checked at" value={profile?.lastCheckedAt ?? "None"} mono />
-          <Detail label="Last error" value={state.phase === "error" ? state.message : "None"} />
-        </div>
-      </details>
+        {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
+        {state.phase === "error" ? <p className="errorText">{state.message}</p> : null}
+      </div>
+      ) : null}
+
+      {activeTab === "tools" ? (
+      <div className="settingsTabPanel" role="tabpanel" aria-label="Tools settings">
+        <section className="panel settingsCard settingsMaintenance">
+          <div className="settingsSectionHeader">
+            <h2 className="panelTitle">Marginalia import tools</h2>
+            <span className="pill pillIdle">Recovery</span>
+          </div>
+          <p className="muted">
+            Upload an unmatched SecondPassMarginaliaExport JSON file and split it into one book/session file at a time.
+            This only prepares files for recovery. It does not repair selectors, match quotes, or write annotations.
+          </p>
+          <div className="settingsFileRow">
+            <label className="button" htmlFor="marginaliaExportFile">
+              Upload unmatched export
+            </label>
+            <input
+              id="marginaliaExportFile"
+              className="settingsHiddenFileInput"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => void handleMarginaliaFile(event.currentTarget.files?.[0] ?? null)}
+            />
+            <span className="muted">Split into book/session files</span>
+          </div>
+
+          {marginaliaState.phase === "error" ? <p className="errorText">{marginaliaState.message}</p> : null}
+          {marginaliaState.phase === "loaded" ? (
+            <div className="marginaliaSplitPanel">
+              <div className="settingsGrid">
+                <Detail label="File" value={marginaliaState.fileName} />
+                <Detail label="Books" value={String(marginaliaState.result.summary.bookCount)} />
+                <Detail label="Sessions" value={String(marginaliaState.result.summary.sessionCount)} />
+                <Detail label="Annotations" value={String(marginaliaState.result.summary.annotationCount)} />
+              </div>
+              {marginaliaState.result.items.length === 0 ? (
+                <p className="muted">No sessions were found to split.</p>
+              ) : (
+                <div className="marginaliaSplitList">
+                  {marginaliaGroups.map((group) => (
+                    <div className="marginaliaSplitGroup" key={group.bookLabel}>
+                      <div className="settingsLabel">{group.bookLabel}</div>
+                      <div className="marginaliaSplitGroupItems">
+                        {group.items.map((item) => (
+                          <div className="marginaliaSplitItem" key={item.id}>
+                            <div className="marginaliaSplitText">
+                              <div className="muted">{formatMarginaliaSessionLabel(item.session)}</div>
+                              <div className="muted">{item.annotationCount} annotation{item.annotationCount === 1 ? "" : "s"}</div>
+                            </div>
+                            <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
+                              Download JSON
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </section>
+      </div>
+      ) : null}
     </div>
   );
 }

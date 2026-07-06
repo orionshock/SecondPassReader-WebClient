@@ -146,18 +146,6 @@
   min-width: 0;
 }
 
-.settingsDiagnostics {
-  color: var(--sp-muted);
-}
-
-.settingsDiagnostics > summary {
-  cursor: pointer;
-}
-
-.settingsDiagnosticsBody {
-  margin-top: 12px;
-}
-
 .segmentedControl {
   display: inline-grid;
   grid-auto-flow: column;
@@ -187,12 +175,22 @@
   color: var(--sp-segment-active-text);
 }
 
+.settingsTabs {
+  justify-self: start;
+}
+
+.settingsTabPanel {
+  display: grid;
+  gap: 14px;
+}
+
 @media (max-width: 560px) {
   .settingsRow {
     align-items: stretch;
   }
 
-  .segmentedControl {
+  .segmentedControl,
+  .settingsTabs {
     width: 100%;
     grid-auto-columns: 1fr;
   }

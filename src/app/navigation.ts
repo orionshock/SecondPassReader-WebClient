@@ -21,9 +21,11 @@ export type AppRoute =
   | { kind: "shelves"; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelf"; shelfId: string; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelfEdit"; shelfId: string }
-  | { kind: "settings" }
+  | { kind: "settings"; tab?: SettingsTab }
   | { kind: "reader"; bookId: string; search?: string }
   | { kind: "unknown"; raw: string };
+
+export type SettingsTab = "appearance" | "library-server" | "tools";
 
 function normalizeHash(hash: string): string {
   const h = (hash ?? "").trim();
@@ -114,7 +116,7 @@ export function routeToHash(route: AppRoute): string {
     case "shelfEdit":
       return `#/shelves/${encodeURIComponent(route.shelfId)}/edit`;
     case "settings":
-      return "#/settings";
+      return `#/settings${buildQuery({ tab: route.tab ?? "appearance" })}`;
     case "reader":
       return `#/reader/${encodeURIComponent(route.bookId)}${buildQuery({ search: route.search })}`;
     case "unknown":
@@ -239,7 +241,12 @@ export function parseCurrentRoute(): AppRoute | null {
     }
     return bookId ? { kind: "shelves", ordering, page, pageSize, bookId } : { kind: "shelves", ordering, page, pageSize };
   }
-  if (head === "settings") return { kind: "settings" };
+  if (head === "settings") {
+    const tabRaw = queryParams.get("tab")?.trim() ?? "";
+    const tab: SettingsTab | undefined =
+      tabRaw === "appearance" || tabRaw === "library-server" || tabRaw === "tools" ? tabRaw : undefined;
+    return tab ? { kind: "settings", tab } : { kind: "settings" };
+  }
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {
     const search = queryParams.get("search")?.trim() ?? "";
     try {

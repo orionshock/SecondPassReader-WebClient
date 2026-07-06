@@ -410,8 +410,8 @@ export default function App() {
             handleCloseReader();
           }}
           onShowSettings={() => {
-            if (view === "settings") navigateTo({ kind: "home" });
-            else navigateTo({ kind: "settings" });
+            navigateTo({ kind: "settings", tab: "appearance" });
+            handleCloseReader();
           }}
         />
       )}
@@ -425,7 +425,7 @@ export default function App() {
               onForgetServer={handleForgetServer}
               appTheme={appTheme}
               onAppThemeChange={setAppTheme}
-              workflowStep={workflowStep}
+              route={route?.kind === "settings" ? route : { kind: "settings" }}
             />
           </>
         ) : (
