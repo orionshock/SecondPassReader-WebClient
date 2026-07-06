@@ -1,34 +1,20 @@
 import { useCallback, useMemo, useState } from "react";
-import { parseGlaspCsv } from "./glaspCsvParser";
-import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
-import { parseSplMarginaliaSessionImport } from "./splMarginaliaSessionImport";
+import "./handlers/registerBuiltInReaderImportHandlers";
+import { getReaderImportFormat } from "./readerImportFormats";
+import type { ReaderImportFormat, ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
   const [job, setJob] = useState<ReaderImportJob | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const startGlaspCsvImport = useCallback(async (file: File) => {
-    const parsed = parseGlaspCsv(await file.text());
-    const nextJob: ReaderImportJob = {
-      id: `import-${Date.now()}`,
-      format: "glasp-csv",
-      fileName: file.name,
-      createdAt: new Date().toISOString(),
-      rows: parsed.rows,
-      activeRowId: parsed.rows[0]?.id,
-      warnings: parsed.warnings,
-    };
+  const startImport = useCallback(async (format: ReaderImportFormat, file: File) => {
+    const nextJob = await getReaderImportFormat(format).importFile(file);
     setJob(nextJob);
     setDrawerOpen(true);
     return nextJob;
   }, []);
 
-  const startSplSessionJsonImport = useCallback(async (file: File) => {
-    const parsed = parseSplMarginaliaSessionImport(await file.text(), file.name);
-    setJob(parsed.job);
-    setDrawerOpen(true);
-    return parsed.job;
-  }, []);
+  const startGlaspCsvImport = useCallback((file: File) => startImport("glasp-csv", file), [startImport]);
 
   const setRowStatus = useCallback((rowId: string, status: ReaderImportRowStatus) => {
     setJob((prev) => prev ? { ...prev, rows: prev.rows.map((row) => row.id === rowId ? { ...row, status } : row) } : prev);
@@ -66,8 +52,8 @@ export function useReaderImportJob() {
     drawerOpen,
     setDrawerOpen,
     counts,
+    startImport,
     startGlaspCsvImport,
-    startSplSessionJsonImport,
     clearJob,
     selectRow,
     setRowStatus,

@@ -2,14 +2,14 @@ import {
   formatMarginaliaBookLabel,
   formatMarginaliaSessionLabel,
   parseAndSplitMarginaliaExport,
-  type MarginaliaSplitItem,
-} from "../../settings/marginaliaSplitExport";
-import { normalizeImportedHighlightColor } from "./readerImportColors";
-import type { ReaderImportJob, ReaderImportRow } from "./readerImportTypes";
+} from "../../../settings/marginaliaSplitExport";
+import { normalizeImportedHighlightColor } from "../readerImportColors";
+import { ReaderImportParseError, registerReaderImportHandler } from "../readerImportFormats";
+import type { ReaderImportJob, ReaderImportRow } from "../readerImportTypes";
 
-export const SPL_EXPORT_SPLITTER_ROUTE = "#/settings?tab=tools";
+const SPL_EXPORT_SPLITTER_ROUTE = "#/settings?tab=tools";
 
-export class SplMarginaliaSessionCountError extends Error {
+class SplMarginaliaSessionCountError extends Error {
   readonly sessionCount: number;
 
   constructor(sessionCount: number) {
@@ -23,12 +23,36 @@ export class SplMarginaliaSessionCountError extends Error {
   }
 }
 
-export type ParsedSplMarginaliaSessionImport = {
-  item: MarginaliaSplitItem;
-  job: ReaderImportJob;
+export const splSessionJsonImportHandler = {
+  kind: "spl-session-json" as const,
+  displayName: "SecondPassMarginaliaExport session JSON",
+  description: "Stage one split SecondPass marginalia session export.",
+  accept: "application/json,.json",
+  importFile: async (file: File) => {
+    try {
+      return parseSplMarginaliaSessionImport(await file.text(), file.name).job;
+    } catch (error) {
+      if (error instanceof SplMarginaliaSessionCountError) {
+        throw new ReaderImportParseError(error.message, {
+          code: error.sessionCount === 0 ? "spl-session-empty" : "spl-session-multiple",
+          detail: { sessionCount: error.sessionCount },
+          action:
+            error.sessionCount > 1
+              ? {
+                  label: "Open export splitter",
+                  href: SPL_EXPORT_SPLITTER_ROUTE,
+                }
+              : undefined,
+        });
+      }
+      throw error;
+    }
+  },
 };
 
-export function parseSplMarginaliaSessionImport(text: string, fileName: string, now = new Date()): ParsedSplMarginaliaSessionImport {
+registerReaderImportHandler(splSessionJsonImportHandler);
+
+function parseSplMarginaliaSessionImport(text: string, fileName: string, now = new Date()): { job: ReaderImportJob } {
   const split = parseAndSplitMarginaliaExport(text);
   if (split.items.length !== 1) throw new SplMarginaliaSessionCountError(split.items.length);
 
@@ -39,7 +63,6 @@ export function parseSplMarginaliaSessionImport(text: string, fileName: string, 
   const sessionLabel = formatMarginaliaSessionLabel(item.session);
 
   return {
-    item,
     job: {
       id: `spl-session-${now.getTime()}`,
       format: "spl-session-json",

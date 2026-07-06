@@ -345,11 +345,11 @@ function ReaderActivityContent({
         }}
         importModalOpen={importModalOpen}
         onCloseImportModal={() => setImportModalOpen(false)}
-        onStartImport={readerImport.startGlaspCsvImport}
-        onStartSplSessionJsonImport={readerImport.startSplSessionJsonImport}
-        onOpenExportSplitter={() => {
+        onStartImport={readerImport.startImport}
+        onParseImportAction={(action) => {
           setImportModalOpen(false);
-          navigateTo({ kind: "settings", tab: "tools" });
+          if (action.href === "#/settings?tab=tools") navigateTo({ kind: "settings", tab: "tools" });
+          else window.location.hash = action.href;
         }}
         closeDialogOpen={closeDialogOpen}
         closeInitialName={annotations.currentSessionMeta.name ?? ""}

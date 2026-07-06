@@ -1,43 +1,44 @@
 import { useState } from "react";
-import { SplMarginaliaSessionCountError } from "./splMarginaliaSessionImport";
-
-type ReaderImportModalFormat = "glasp-csv" | "spl-session-json";
+import "./handlers/registerBuiltInReaderImportHandlers";
+import { getReaderImportHandlers, ReaderImportParseError, type ReaderImportFailureAction } from "./readerImportFormats";
+import type { ReaderImportFormat } from "./readerImportTypes";
 
 export function ReaderImportModal({
   open,
   onClose,
   onStartImport,
-  onStartSplSessionJsonImport,
-  onOpenExportSplitter,
+  onParseAction,
 }: {
   open: boolean;
   onClose: () => void;
-  onStartImport: (file: File) => Promise<{ warnings?: string[] }>;
-  onStartSplSessionJsonImport: (file: File) => Promise<{ warnings?: string[] }>;
-  onOpenExportSplitter: () => void;
+  onStartImport: (format: ReaderImportFormat, file: File) => Promise<{ warnings?: string[] }>;
+  onParseAction: (action: ReaderImportFailureAction) => void;
 }) {
-  const [format, setFormat] = useState<ReaderImportModalFormat>("glasp-csv");
+  const [format, setFormat] = useState<ReaderImportFormat>("glasp-csv");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [multiSessionError, setMultiSessionError] = useState(false);
+  const [failureAction, setFailureAction] = useState<ReaderImportFailureAction | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   if (!open) return null;
+
+  const formats = getReaderImportHandlers();
+  const selectedFormat = formats.find((item) => item.kind === format) ?? formats[0]!;
 
   const startImport = async () => {
     if (!file) return;
     setBusy(true);
     setError(null);
-    setMultiSessionError(false);
+    setFailureAction(null);
     setWarnings([]);
     try {
-      const job = format === "spl-session-json" ? await onStartSplSessionJsonImport(file) : await onStartImport(file);
+      const job = await onStartImport(format, file);
       setWarnings(job.warnings ?? []);
       setFile(null);
       onClose();
     } catch (err) {
-      if (err instanceof SplMarginaliaSessionCountError) setMultiSessionError(err.sessionCount > 1);
+      if (err instanceof ReaderImportParseError) setFailureAction(err.action ?? null);
       setError(err instanceof Error ? err.message : "Failed to parse import file.");
     } finally {
       setBusy(false);
@@ -65,27 +66,29 @@ export function ReaderImportModal({
               className="input"
               value={format}
               onChange={(e) => {
-                setFormat(e.currentTarget.value as ReaderImportModalFormat);
+                setFormat(e.currentTarget.value as ReaderImportFormat);
                 setError(null);
-                setMultiSessionError(false);
+                setFailureAction(null);
                 setWarnings([]);
                 setFile(null);
               }}
             >
-              <option value="glasp-csv">Glasp CSV</option>
-              <option value="spl-session-json">SecondPassMarginaliaExport session JSON</option>
+              {formats.map((item) => (
+                <option key={item.kind} value={item.kind}>{item.displayName}</option>
+              ))}
             </select>
           </label>
+          <div className="muted spReaderImportWarnings">{selectedFormat.description}</div>
 
           <label className="fieldLabel">
-            {format === "spl-session-json" ? "Session JSON file" : "CSV file"}
+            Import file
             <input
               className="input"
               type="file"
-              accept={format === "spl-session-json" ? "application/json,.json" : ".csv,text/csv"}
+              accept={selectedFormat.accept}
               onChange={(e) => {
                 setError(null);
-                setMultiSessionError(false);
+                setFailureAction(null);
                 setWarnings([]);
                 setFile(e.target.files?.[0] ?? null);
               }}
@@ -93,9 +96,9 @@ export function ReaderImportModal({
           </label>
 
           {error ? <div className="errorText">{error}</div> : null}
-          {multiSessionError ? (
-            <button type="button" className="button buttonCompact" onClick={onOpenExportSplitter}>
-              Open export splitter
+          {failureAction ? (
+            <button type="button" className="button buttonCompact" onClick={() => onParseAction(failureAction)}>
+              {failureAction.label}
             </button>
           ) : null}
           {warnings.length > 0 ? (
@@ -106,7 +109,7 @@ export function ReaderImportModal({
         <div className="spReaderImportModalActions">
           <button type="button" className="button buttonCompact" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="button buttonPrimary" onClick={startImport} disabled={!file || busy}>
-            {busy ? "Parsing..." : format === "spl-session-json" ? "Stage session" : "Start import"}
+            {busy ? "Parsing..." : "Start import"}
           </button>
         </div>
       </section>

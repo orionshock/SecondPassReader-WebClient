@@ -1,11 +1,34 @@
 import Papa from "papaparse";
-import { normalizeImportedHighlightColor } from "./readerImportColors";
-import type { ParsedReaderImport, ReaderImportRow } from "./readerImportTypes";
+import { normalizeImportedHighlightColor } from "../readerImportColors";
+import { registerReaderImportHandler } from "../readerImportFormats";
+import type { ReaderImportRow } from "../readerImportTypes";
 
 const HIGHLIGHT_TEXT_COLUMNS = ["highlight text", "highlight", "text"];
+
 type GlaspCsvRecord = Record<string, unknown>;
 
-export function parseGlaspCsv(text: string): ParsedReaderImport {
+export const glaspCsvImportHandler = {
+  kind: "glasp-csv" as const,
+  displayName: "Glasp CSV",
+  description: "Stage highlights from a Glasp CSV export.",
+  accept: ".csv,text/csv",
+  importFile: async (file: File) => {
+    const parsed = parseGlaspCsv(await file.text());
+    return {
+      id: `import-${Date.now()}`,
+      format: "glasp-csv" as const,
+      fileName: file.name,
+      createdAt: new Date().toISOString(),
+      rows: parsed.rows,
+      activeRowId: parsed.rows[0]?.id,
+      warnings: parsed.warnings,
+    };
+  },
+};
+
+registerReaderImportHandler(glaspCsvImportHandler);
+
+function parseGlaspCsv(text: string): { rows: ReaderImportRow[]; warnings: string[] } {
   const warnings: string[] = [];
   const parsed = Papa.parse<GlaspCsvRecord>(text, {
     header: true,

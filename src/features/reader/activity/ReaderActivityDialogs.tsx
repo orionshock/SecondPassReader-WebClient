@@ -2,6 +2,8 @@ import type { LibraryBook } from "@secondpass/client";
 import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSessionDialog";
 import { EndOfBookDialog } from "../EndOfBookDialog";
 import { ReaderImportModal } from "../imports/ReaderImportModal";
+import type { ReaderImportFailureAction } from "../imports/readerImportFormats";
+import type { ReaderImportFormat } from "../imports/readerImportTypes";
 import { BookSearchDrawer } from "../shell/bookSearch/BookSearchDrawer";
 import type { ReaderActivityRenderState } from "./readerActivityTypes";
 
@@ -15,8 +17,7 @@ export function ReaderActivityDialogs({
   importModalOpen,
   onCloseImportModal,
   onStartImport,
-  onStartSplSessionJsonImport,
-  onOpenExportSplitter,
+  onParseImportAction,
   closeDialogOpen,
   closeInitialName,
   closeInitialNotes,
@@ -43,9 +44,8 @@ export function ReaderActivityDialogs({
   onCloseSearch: () => void;
   importModalOpen: boolean;
   onCloseImportModal: () => void;
-  onStartImport: (file: File) => Promise<{ warnings?: string[] }>;
-  onStartSplSessionJsonImport: (file: File) => Promise<{ warnings?: string[] }>;
-  onOpenExportSplitter: () => void;
+  onStartImport: (format: ReaderImportFormat, file: File) => Promise<{ warnings?: string[] }>;
+  onParseImportAction: (action: ReaderImportFailureAction) => void;
   closeDialogOpen: boolean;
   closeInitialName: string;
   closeInitialNotes: string;
@@ -83,8 +83,7 @@ export function ReaderActivityDialogs({
         open={importModalOpen}
         onClose={onCloseImportModal}
         onStartImport={onStartImport}
-        onStartSplSessionJsonImport={onStartSplSessionJsonImport}
-        onOpenExportSplitter={onOpenExportSplitter}
+        onParseAction={onParseImportAction}
       />
 
       {closeDialogOpen ? (

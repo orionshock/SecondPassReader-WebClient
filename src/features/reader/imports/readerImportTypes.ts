@@ -34,8 +34,3 @@ export type ReaderImportJob = {
     deletedCount: number;
   };
 };
-
-export type ParsedReaderImport = {
-  rows: ReaderImportRow[];
-  warnings: string[];
-};
