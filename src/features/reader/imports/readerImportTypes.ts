@@ -21,12 +21,6 @@ export type ReaderImportRow = {
   rawAnnotation?: Record<string, unknown>;
 };
 
-export type ReaderImportSummaryDisplay = {
-  eyebrow?: string;
-  title?: string;
-  metadata?: Array<{ label: string; value: string }>;
-};
-
 export type ReaderImportJob = {
   id: string;
   format: ReaderImportFormat;
@@ -35,5 +29,5 @@ export type ReaderImportJob = {
   rows: ReaderImportRow[];
   activeRowId?: string;
   warnings?: string[];
-  summaryDisplay?: ReaderImportSummaryDisplay;
+  summaryDisplay?: string;
 };

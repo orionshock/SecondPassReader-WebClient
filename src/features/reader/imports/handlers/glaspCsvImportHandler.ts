@@ -22,11 +22,7 @@ export const glaspCsvImportHandler = {
       rows: parsed.rows,
       activeRowId: parsed.rows[0]?.id,
       warnings: parsed.warnings,
-      summaryDisplay: {
-        eyebrow: "Import file",
-        title: file.name,
-        metadata: [{ label: "Highlights", value: String(parsed.rows.length) }],
-      },
+      summaryDisplay: file.name,
     };
   },
 };

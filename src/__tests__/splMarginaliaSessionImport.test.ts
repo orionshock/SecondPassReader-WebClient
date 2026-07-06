@@ -33,11 +33,7 @@ describe("reader import handlers", () => {
     expect(job).toMatchObject({
       format: "glasp-csv",
       fileName: "glasp.csv",
-      summaryDisplay: {
-        eyebrow: "Import file",
-        title: "glasp.csv",
-        metadata: [{ label: "Highlights", value: "1" }],
-      },
+      summaryDisplay: "glasp.csv",
       rows: [{ importedText: "Quote", importedNote: "Note", importedColor: "yellow", status: "pending" }],
     });
     expect(job.rows[0]?.kind).toBe("highlight");
@@ -73,11 +69,7 @@ describe("reader import handlers", () => {
 
     expect(job.format).toBe("spl-session-json");
     expect(job.fileName).toBe("session.json");
-    expect(job.summaryDisplay).toEqual({
-      eyebrow: "Session",
-      title: "Session label",
-      metadata: [{ label: "Annotations", value: "1" }],
-    });
+    expect(job.summaryDisplay).toBe("Session label");
     expect(job.rows).toHaveLength(1);
     expect(job.rows[0]).toMatchObject({
       id: "ann-1",
@@ -251,7 +243,7 @@ describe("reader import handlers", () => {
       annotation_unknown: { keep: true },
       target: { selector: selectorArray },
     });
-    expect(job.summaryDisplay?.title).toBe("session");
+    expect(job.summaryDisplay).toBe("session");
   });
 
   it("reads SPL highlight color from body color through the handler boundary", async () => {

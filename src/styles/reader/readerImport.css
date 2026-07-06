@@ -100,15 +100,12 @@
   gap: 3px;
 }
 
-.spReaderImportSourceLabel {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .spReaderImportSourceTitle {
   font-weight: 700;
+}
+
+.spReaderImportCountSummary {
+  font-size: 12px;
 }
 
 .spReaderImportIconButton {

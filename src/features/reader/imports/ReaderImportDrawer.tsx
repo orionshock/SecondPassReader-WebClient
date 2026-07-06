@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
-import { InlineMeta } from "../../../components/MetaSeparator";
 import type { ReaderImportJob } from "./readerImportTypes";
 import { ReaderImportRowList } from "./ReaderImportRowList";
 
@@ -36,12 +35,13 @@ export function ReaderImportDrawer({
 
   if (!open || !job) return null;
 
-  const summaryDisplay = job.summaryDisplay ?? {
-    eyebrow: "Import file",
-    title: job.fileName,
-    metadata: [{ label: "Rows", value: String(job.rows.length) }],
-  };
-  const summaryMetadata = summaryDisplay.metadata?.map((item) => `${item.value} ${item.label.toLowerCase()}`) ?? [];
+  const summaryTitle = job.summaryDisplay ?? job.fileName;
+  const countSummary = [
+    `${counts.pending} pending`,
+    `${counts.accepted} accepted`,
+    `${counts.skipped} skipped`,
+    `${counts.notFound} not found`,
+  ].join(" / ");
 
   return (
     <aside
@@ -62,18 +62,9 @@ export function ReaderImportDrawer({
 
       <div className="spReaderImportSummary">
         <div className="spReaderImportSourceSummary">
-          {summaryDisplay.eyebrow ? <div className="muted spReaderImportSourceLabel">{summaryDisplay.eyebrow}</div> : null}
-          {summaryDisplay.title ? <div className="spReaderImportSourceTitle">{summaryDisplay.title}</div> : null}
-          {summaryMetadata.length > 0 ? <InlineMeta items={summaryMetadata} /> : null}
+          <div className="spReaderImportSourceTitle">{summaryTitle}</div>
+          <div className="muted spReaderImportCountSummary">{countSummary}</div>
         </div>
-        <InlineMeta
-          items={[
-            `${counts.pending} pending`,
-            `${counts.accepted} accepted`,
-            `${counts.skipped} skipped`,
-            `${counts.notFound} not found`,
-          ]}
-        />
         {job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
       </div>
 
