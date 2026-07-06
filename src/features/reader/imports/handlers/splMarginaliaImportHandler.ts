@@ -68,14 +68,11 @@ function parseSplMarginaliaSessionImport(text: string, fileName: string, now = n
       createdAt: now.toISOString(),
       rows,
       activeRowId: rows[0]?.id,
-      readOnly: true,
       summaryDisplay: {
         eyebrow: "Session",
         title: sessionLabel || fileName,
         metadata: [{ label: "Annotations", value: String(annotations.length) }],
       },
-      sourceBook: item.book,
-      sourceSession: item.session,
     },
   };
 }

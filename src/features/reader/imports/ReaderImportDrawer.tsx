@@ -66,26 +66,22 @@ export function ReaderImportDrawer({
           {summaryDisplay.title ? <div className="spReaderImportSourceTitle">{summaryDisplay.title}</div> : null}
           {summaryMetadata.length > 0 ? <InlineMeta items={summaryMetadata} /> : null}
         </div>
-        {job.readOnly ? (
-          null
-        ) : (
-          <InlineMeta
-            items={[
-              `${counts.pending} pending`,
-              `${counts.accepted} accepted`,
-              `${counts.skipped} skipped`,
-              `${counts.notFound} not found`,
-            ]}
-          />
-        )}
-        {!job.readOnly && job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
+        <InlineMeta
+          items={[
+            `${counts.pending} pending`,
+            `${counts.accepted} accepted`,
+            `${counts.skipped} skipped`,
+            `${counts.notFound} not found`,
+          ]}
+        />
+        {job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
       </div>
 
       <ReaderImportRowList
         job={job}
         onSelectRow={onSelectRow}
-        onSkipRow={job.readOnly ? undefined : onSkipRow}
-        onUnskipRow={job.readOnly ? undefined : onUnskipRow}
+        onSkipRow={onSkipRow}
+        onUnskipRow={onUnskipRow}
       />
 
       <div className="spReaderImportDrawerFooter">

@@ -35,8 +35,5 @@ export type ReaderImportJob = {
   rows: ReaderImportRow[];
   activeRowId?: string;
   warnings?: string[];
-  readOnly?: boolean;
   summaryDisplay?: ReaderImportSummaryDisplay;
-  sourceBook?: Record<string, unknown>;
-  sourceSession?: Record<string, unknown>;
 };

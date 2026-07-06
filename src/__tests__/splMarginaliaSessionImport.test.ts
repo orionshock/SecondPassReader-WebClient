@@ -38,7 +38,7 @@ describe("reader import handlers", () => {
         title: "glasp.csv",
         metadata: [{ label: "Highlights", value: "1" }],
       },
-      rows: [{ importedText: "Quote", importedNote: "Note", importedColor: "yellow" }],
+      rows: [{ importedText: "Quote", importedNote: "Note", importedColor: "yellow", status: "pending" }],
     });
     expect(job.rows[0]?.kind).toBe("highlight");
   });
@@ -73,7 +73,6 @@ describe("reader import handlers", () => {
 
     expect(job.format).toBe("spl-session-json");
     expect(job.fileName).toBe("session.json");
-    expect(job.readOnly).toBe(true);
     expect(job.summaryDisplay).toEqual({
       eyebrow: "Session",
       title: "Session label",
@@ -252,7 +251,7 @@ describe("reader import handlers", () => {
       annotation_unknown: { keep: true },
       target: { selector: selectorArray },
     });
-    expect(job.sourceSession).toMatchObject({ id: "session", session_unknown: true });
+    expect(job.summaryDisplay?.title).toBe("session");
   });
 
   it("reads SPL highlight color from body color through the handler boundary", async () => {
