@@ -472,8 +472,8 @@ export function LibraryBrowsePage({
                 </select>
               </label>
 
-              <button className="button buttonPrimary" type="button" onClick={handleCommitSearch} disabled={booksBusy}>
-                {booksBusy ? "Searching..." : "Search"}
+              <button className="button buttonPrimary librarySearchButton" type="button" onClick={handleCommitSearch}>
+                Search
               </button>
             </div>
           </div>

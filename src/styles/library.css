@@ -41,6 +41,10 @@
   min-width: 0;
 }
 
+.librarySearchButton {
+  min-width: 92px;
+}
+
 .libraryMetaRow {
   margin-top: 8px;
   display: flex;
