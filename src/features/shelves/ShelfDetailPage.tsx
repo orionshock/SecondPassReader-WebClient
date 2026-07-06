@@ -120,11 +120,6 @@ export function ShelfDetailPage({
   }, []);
 
   const shelfBooks = useMemo(() => items.map((item) => item.book as LibraryBook), [items]);
-  const shelfItemByBookId = useMemo(() => {
-    const next = new Map<string, ShelfItem>();
-    for (const item of items) next.set(String(item.book.id), item);
-    return next;
-  }, [items]);
 
   const canEditCurrentShelf = canEditShelf(shelf);
 
@@ -167,10 +162,6 @@ export function ShelfDetailPage({
           serverBaseUrl={profile?.serverBaseUrl}
           selectedBookId={selectedBookId ? String(selectedBookId) : null}
           onViewBook={(book) => openBookDetails(book.id)}
-          getMetaLines={(book) => {
-            const item = shelfItemByBookId.get(String(book.id));
-            return typeof item?.position === "number" ? [`Position: ${item.position}`] : [];
-          }}
           renderActions={(book) => (
             <div className="shelfBookActions">
               <button

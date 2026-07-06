@@ -8,14 +8,12 @@ export function BookCard({
   serverBaseUrl,
   selected,
   onView,
-  metaLines,
   actions,
 }: {
   book: LibraryBook;
   serverBaseUrl?: string;
   selected: boolean;
   onView: () => void;
-  metaLines?: ReactNode[];
   actions?: ReactNode;
 }) {
   const authors = formatBookAuthors(book);
@@ -29,12 +27,6 @@ export function BookCard({
   const mainContent = (
     <>
       <BookCover book={book} serverBaseUrl={serverBaseUrl} size="large" />
-
-      <div className="bookGridCardMain">
-        <div className="bookTitle">{book.title}</div>
-        {authors ? <div className="bookLine">{authors}</div> : null}
-        {metaLines?.map((line, index) => (line ? <div key={index} className="bookLine muted">{line}</div> : null))}
-      </div>
     </>
   );
 

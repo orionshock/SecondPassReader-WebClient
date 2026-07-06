@@ -21,14 +21,22 @@ export function BookResultsView({
   getMetaLines?: (book: LibraryBook) => ReactNode[];
   renderActions?: (book: LibraryBook) => ReactNode;
 }) {
-  const commonProps = {
-    books,
-    selectedBookId,
-    onViewBook,
-    serverBaseUrl,
-    getMetaLines,
-    renderActions,
-  };
-
-  return viewMode === "grid" ? <BookGrid {...commonProps} /> : <BookList {...commonProps} />;
+  return viewMode === "grid" ? (
+    <BookGrid
+      books={books}
+      selectedBookId={selectedBookId}
+      onViewBook={onViewBook}
+      serverBaseUrl={serverBaseUrl}
+      renderActions={renderActions}
+    />
+  ) : (
+    <BookList
+      books={books}
+      selectedBookId={selectedBookId}
+      onViewBook={onViewBook}
+      serverBaseUrl={serverBaseUrl}
+      getMetaLines={getMetaLines}
+      renderActions={renderActions}
+    />
+  );
 }

@@ -7,14 +7,12 @@ export function BookGrid({
   selectedBookId,
   onViewBook,
   serverBaseUrl,
-  getMetaLines,
   renderActions,
 }: {
   books: LibraryBook[];
   selectedBookId: string | null;
   onViewBook: (book: LibraryBook) => void;
   serverBaseUrl?: string;
-  getMetaLines?: (book: LibraryBook) => ReactNode[];
   renderActions?: (book: LibraryBook) => ReactNode;
 }) {
   if (books.length === 0) return <p className="muted">No books found.</p>;
@@ -27,7 +25,6 @@ export function BookGrid({
           serverBaseUrl={serverBaseUrl}
           selected={String(b.id) === selectedBookId}
           onView={() => onViewBook(b)}
-          metaLines={getMetaLines?.(b)}
           actions={renderActions?.(b)}
         />
       ))}
