@@ -19,7 +19,7 @@ export function DebugDetails({
         </div>
         <div className="detailRow">
           <span className="muted">selected profile id:</span>{" "}
-          <span className="mono">{selectedProfileId ?? "—"}</span>
+          <span className="mono">{selectedProfileId ?? "-"}</span>
         </div>
         {profile ? (
           <>
@@ -27,7 +27,7 @@ export function DebugDetails({
               <span className="muted">serverBaseUrl:</span> <span className="mono">{profile.serverBaseUrl}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">apiBaseUrl:</span> <span className="mono">{profile.apiBaseUrl ?? "—"}</span>
+              <span className="muted">apiBaseUrl:</span> <span className="mono">{profile.apiBaseUrl ?? "-"}</span>
             </div>
             <div className="detailRow">
               <span className="muted">discovery:</span> {profile.clientApi ? "stored" : "missing"}
@@ -36,20 +36,20 @@ export function DebugDetails({
               <span className="muted">access token:</span> {profile.accessToken ? "stored" : "missing"}
             </div>
             <div className="detailRow">
-              <span className="muted">clientSessionId:</span> <span className="mono">{profile.clientSessionId ?? "—"}</span>
+              <span className="muted">clientSessionId:</span> <span className="mono">{profile.clientSessionId ?? "-"}</span>
             </div>
             <div className="detailRow">
               <span className="muted">clientSessionName:</span>{" "}
-              <span className="mono">{profile.clientSessionName ?? "—"}</span>
+              <span className="mono">{profile.clientSessionName ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">linkedAt:</span> <span className="mono">{profile.linkedAt ?? "—"}</span>
+              <span className="muted">linkedAt:</span> <span className="mono">{profile.linkedAt ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">verifiedAt:</span> <span className="mono">{profile.verifiedAt ?? "—"}</span>
+              <span className="muted">verifiedAt:</span> <span className="mono">{profile.verifiedAt ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">verified user:</span> <span className="mono">{profile.verifiedUser?.username ?? "—"}</span>
+              <span className="muted">verified user:</span> <span className="mono">{profile.verifiedUser?.username ?? "-"}</span>
             </div>
           </>
         ) : null}

@@ -126,7 +126,7 @@ export function CurrentSessionMetadataEditor(props: {
           {notesPreview ? (
             <span className="spCurrentSessionMetaSummaryNotes" title={notesPreview}>
               {" "}
-              — {notesPreview}
+              - {notesPreview}
             </span>
           ) : null}
         </div>

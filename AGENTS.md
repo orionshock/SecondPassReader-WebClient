@@ -13,12 +13,12 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 
 - Isolate all server calls behind a `ServerBridge` / API client layer.
 - Isolate renderer-specific code behind a `ReaderBridge` abstraction.
-- Renderer state must **not** become the app’s canonical data model.
+- Renderer state must **not** become the app's canonical data model.
 - Canonical annotation/session data is **W3C Web Annotation JSON-LD** (with EPUB CFI selectors), not epub.js internal state.
 
 ## Auth/linking
 
-- Use the server’s PIN/code based Client API linking flow:
+- Use the server's PIN/code based Client API linking flow:
   - Discover via `/.well-known/secondpass`
   - Create login request
   - Display `code` and `authorize_url`
@@ -29,7 +29,7 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 ## Coding style
 
 - Prefer simple, boring, understandable code.
-- Keep layers explicit; avoid “magic” abstractions.
+- Keep layers explicit; avoid "magic" abstractions.
 - If a change would introduce a large new dependency or framework, ask first and explain why.
 
 ## Refactor conventions
@@ -41,7 +41,7 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
   - hooks own interaction/lifecycle state
   - helpers own pure mapping/formatting/sorting
   - adapters own API/schema translation
-  - orchestrators wire behavior together; avoid “dumping ground” growth
+  - orchestrators wire behavior together; avoid "dumping ground" growth
 - When extracting, avoid broad rewrites; make small focused modules with explicit boundaries.
 
 ## Folders and file size
@@ -180,13 +180,13 @@ When editing repository files, prefer plain ASCII characters unless the file alr
 
 Use ASCII equivalents by default:
 
-* Use `...` instead of `…`
+* Use `...` instead of `...`
 * Use `'` and `"` instead of smart quotes
 * Use `-` or `--` instead of en/em dashes
 * Use `(c)`, `(r)`, `->`, `<-`, `=>`, etc. instead of symbol substitutions unless the project already uses the Unicode form
 
 Do not introduce non-ASCII punctuation, invisible characters, non-breaking spaces, or typographic substitutions into source code, JSX, Markdown, JSON, YAML, SQL, shell scripts, or config files unless there is a clear functional or localization requirement.
 
-Before producing a patch, preserve the file’s existing character style. If the surrounding text uses ASCII punctuation, continue using ASCII punctuation. If a non-ASCII character is needed, mention it explicitly in the final summary.
+Before producing a patch, preserve the file's existing character style. If the surrounding text uses ASCII punctuation, continue using ASCII punctuation. If a non-ASCII character is needed, mention it explicitly in the final summary.
 
 Patch anchors should avoid non-ASCII text when possible. Prefer stable ASCII-only surrounding code, identifiers, class names, props, or structural JSX.

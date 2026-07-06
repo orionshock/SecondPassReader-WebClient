@@ -70,7 +70,7 @@ export function BookSearchResultList({
 }
 
 function getResultCountText(input: { status: BookSearchStatus; loadedCount: number; visibleCount: number }): string | null {
-  const showingText = input.loadedCount > input.visibleCount ? ` · showing ${input.visibleCount}` : "";
+  const showingText = input.loadedCount > input.visibleCount ? ` - showing ${input.visibleCount}` : "";
   if (input.status === "searching") return `Searching... ${input.loadedCount} found${showingText}`;
   if (input.status !== "ready") return null;
   if (input.loadedCount >= SEARCH_RESULT_SAFETY_LIMIT) return `Showing first ${SEARCH_RESULT_SAFETY_LIMIT} results${showingText}`;

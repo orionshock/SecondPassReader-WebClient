@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { ReadingSessionBookSummary, ReadingSessionsListResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -164,7 +164,7 @@ export function SessionsPage({
             className="input sessionsSearchInput"
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
-            placeholder="Search sessions, books, authors, series…"
+            placeholder="Search sessions, books, authors, series..."
             disabled={!canLoad}
           />
         </label>
