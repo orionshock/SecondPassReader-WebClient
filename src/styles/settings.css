@@ -1,6 +1,6 @@
 .settingsLayout {
-  width: min(920px, 100%);
-  margin: 0 auto;
+  width: min(1080px, 100%);
+  margin: 0;
   display: grid;
   gap: 14px;
 }
@@ -100,11 +100,50 @@
   flex-wrap: wrap;
 }
 
+.settingsCopyBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.settingsCopyBlock p,
+.settingsControlBlock p {
+  margin: 0;
+}
+
+.settingsControlBlock {
+  display: grid;
+  gap: 6px;
+}
+
 .settingsCheckboxRow {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--sp-text);
+}
+
+.settingsCheckboxRow input {
+  margin: 0;
+}
+
+.settingsStatFilter {
+  min-height: 0;
+}
+
+.settingsStatRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settingsStatChip {
+  padding: 4px 8px;
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  background: var(--sp-panel);
+  color: var(--sp-text);
+  font-size: 0.88rem;
 }
 
 .settingsHiddenFileInput {
@@ -119,6 +158,10 @@
 .marginaliaSplitPanel {
   display: grid;
   gap: 12px;
+}
+
+.marginaliaSplitSummary {
+  gap: 10px;
 }
 
 .marginaliaSplitList {
