@@ -30,6 +30,10 @@ export function useReaderImportActivation({
     const row = job?.rows.find((r) => r.id === rowId);
     if (!job || !row || row.status === "accepted" || row.status === "skipped") return;
     selectRow(rowId);
+    if (row.kind === "bookmark") {
+      setDrawerOpen(true);
+      return;
+    }
     if (!searchBook || !stagedSelectionHandle) return;
 
     abortRef.current?.abort();

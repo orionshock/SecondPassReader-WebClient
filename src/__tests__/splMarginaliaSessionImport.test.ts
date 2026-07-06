@@ -40,6 +40,7 @@ describe("reader import handlers", () => {
       },
       rows: [{ importedText: "Quote", importedNote: "Note", importedColor: "yellow" }],
     });
+    expect(job.rows[0]?.kind).toBe("highlight");
   });
 
   it("accepts exactly one SPL session through the handler boundary", async () => {
@@ -81,14 +82,67 @@ describe("reader import handlers", () => {
     expect(job.rows).toHaveLength(1);
     expect(job.rows[0]).toMatchObject({
       id: "ann-1",
+      kind: "highlight",
       index: 1,
       importedText: "Selected text",
       importedNote: "Note",
       importedColor: "green",
       normalizedColor: "green",
       importedLocation: "Location hint: /6/2",
+      selectorHint: { kind: "epub_cfi", value: "/6/2" },
       status: "staged",
     });
+  });
+
+  it("maps SPL bookmarks to bookmark rows with selector hints and no quote requirement", async () => {
+    const file = jsonFile({
+      schema_version: "0.1.0",
+      books: [
+        {
+          title: "Book",
+          sessions: [
+            {
+              id: "session",
+              annotations: [
+                {
+                  id: "bookmark-1",
+                  motivation: ["bookmarking"],
+                  target: {
+                    selector: [{ type: "FragmentSelector", value: "epubcfi(/6/2)" }],
+                  },
+                },
+                {
+                  id: "bookmark-2",
+                  kind: "bookmark",
+                  selector: { kind: "epub_cfi", value: "/6/4" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const job = await getReaderImportFormat("spl-session-json").importFile(file);
+
+    expect(job.rows).toEqual([
+      expect.objectContaining({
+        id: "bookmark-1",
+        kind: "bookmark",
+        importedText: "Bookmark",
+        importedLocation: "Location hint: epubcfi(/6/2)",
+        selectorHint: { kind: "epub_cfi", value: "epubcfi(/6/2)" },
+        status: "staged",
+      }),
+      expect.objectContaining({
+        id: "bookmark-2",
+        kind: "bookmark",
+        importedText: "Bookmark",
+        importedLocation: "Location hint: /6/4",
+        selectorHint: { kind: "epub_cfi", value: "/6/4" },
+        status: "staged",
+      }),
+    ]);
   });
 
   it("rejects zero SPL sessions through the shared parse error contract", async () => {

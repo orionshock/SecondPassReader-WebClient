@@ -68,6 +68,7 @@ function parseGlaspCsv(text: string): { rows: ReaderImportRow[]; warnings: strin
     const importedLocation = cell(record, locationColumn);
     rows.push({
       id: `glasp-row-${rowOffset + 1}`,
+      kind: "highlight",
       index: rows.length + 1,
       importedText,
       importedNote: importedNote || undefined,

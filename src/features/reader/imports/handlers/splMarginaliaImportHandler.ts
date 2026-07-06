@@ -81,23 +81,34 @@ function parseSplMarginaliaSessionImport(text: string, fileName: string, now = n
 }
 
 function toImportRow(annotation: Record<string, unknown>, index: number): ReaderImportRow {
+  const kind = isBookmarkAnnotation(annotation) ? "bookmark" : "highlight";
   const quote = readQuote(annotation);
-  const text = getString(annotation.highlight_text) ?? quote ?? getString(annotation.text) ?? "(No highlight text)";
+  const selectorHint = readSelectorHint(annotation);
+  const text = kind === "bookmark" ? "Bookmark" : getString(annotation.highlight_text) ?? quote ?? getString(annotation.text) ?? "(No highlight text)";
   const note = getString(annotation.comment_text) ?? getString(annotation.note) ?? getString(annotation.comment);
   const color = readColor(annotation);
-  const location = readLocationHint(annotation);
+  const location = selectorHint ? `Location hint: ${selectorHint.value}` : undefined;
 
   return {
     id: getString(annotation.id) ?? `annotation-${index}`,
+    kind,
     index,
     importedText: text,
     importedNote: note,
     importedColor: color,
     normalizedColor: normalizeImportedHighlightColor(color),
     importedLocation: location,
+    selectorHint,
     status: "staged",
     rawAnnotation: annotation,
   };
+}
+
+function isBookmarkAnnotation(annotation: Record<string, unknown>): boolean {
+  if (getString(annotation.kind) === "bookmark") return true;
+  const motivation = annotation.motivation;
+  const motivations = Array.isArray(motivation) ? motivation : [motivation];
+  return motivations.some((item) => getString(item) === "bookmarking");
 }
 
 function readColor(annotation: Record<string, unknown>): string | undefined {
@@ -130,14 +141,14 @@ function readQuote(annotation: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-function readLocationHint(annotation: Record<string, unknown>): string | undefined {
+function readSelectorHint(annotation: Record<string, unknown>): ReaderImportRow["selectorHint"] | undefined {
   const selector = annotation.selector ?? (isRecord(annotation.target) ? annotation.target.selector : undefined);
   const selectors = Array.isArray(selector) ? selector : [selector];
   for (const item of selectors) {
     if (!isRecord(item)) continue;
     const kind = getString(item.kind) ?? getString(item.type);
     const value = getString(item.value);
-    if (value && (kind === "epub_cfi" || kind === "FragmentSelector")) return `Location hint: ${value}`;
+    if (value && (kind === "epub_cfi" || kind === "FragmentSelector")) return { kind: "epub_cfi", value };
   }
   return undefined;
 }

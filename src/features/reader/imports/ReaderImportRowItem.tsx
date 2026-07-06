@@ -24,10 +24,11 @@ export function ReaderImportRowItem({
       <button type="button" className="spReaderImportRowMain" onClick={onSelect} aria-current={selected ? "true" : undefined}>
         <span className="spReaderImportRowMeta">
           <span>#{row.index}</span>
+          {row.kind === "bookmark" ? <span>Bookmark</span> : null}
           <span className={`spReaderImportStatus spReaderImportStatus-${row.status}`}>{statusLabel(row.status)}</span>
           {row.normalizedColor ? <span className={`spReaderImportColor spReaderImportColor-${row.normalizedColor}`} /> : null}
         </span>
-        <span className="spAnnotationQuote spReaderImportQuote">{row.importedText}</span>
+        {row.kind === "bookmark" ? null : <span className="spAnnotationQuote spReaderImportQuote">{row.importedText}</span>}
         {row.importedNote ? <span className="spAnnotationNote spReaderImportNote">{row.importedNote}</span> : null}
         {row.importedLocation ? <span className="muted spReaderImportLocation">{row.importedLocation}</span> : null}
       </button>
