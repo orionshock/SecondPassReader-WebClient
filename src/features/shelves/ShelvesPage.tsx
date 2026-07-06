@@ -80,14 +80,12 @@ export function ShelvesPage({
             ? e.message
             : "Failed to load shelves.";
       setError(message);
-      setData(null);
     } finally {
       if (requestSeq === loadRequestSeq.current) setBusy(false);
     }
   }, [ordering, page, pageSize, spl]);
 
   useEffect(() => {
-    setData(null);
     setError(null);
     setBusy(false);
     setCreateOpen(false);
@@ -257,7 +255,7 @@ export function ShelvesPage({
       </div>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
+      {busy && !data ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? (
         <div className="errorText">
           {error}{" "}

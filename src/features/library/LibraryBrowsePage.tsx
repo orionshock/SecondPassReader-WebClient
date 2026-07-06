@@ -221,6 +221,10 @@ export function LibraryBrowsePage({
         setBooksPage(input.page);
       } catch (e) {
         if (requestSeq !== booksRequestSeq.current) return;
+        setBooksData((current) => {
+          if (current) return current;
+          return null;
+        });
         if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
           setBooksError(
             "Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.",
@@ -228,7 +232,6 @@ export function LibraryBrowsePage({
         } else {
           setBooksError(e instanceof Error ? e.message : "Failed to load library.");
         }
-        setBooksData(null);
       } finally {
         if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
       }
@@ -249,7 +252,6 @@ export function LibraryBrowsePage({
         setSeriesPage(page);
       } catch (e) {
         if (requestSeq !== seriesRequestSeq.current) return;
-        setSeriesData(null);
         setSeriesError(e instanceof Error ? e.message : "Failed to load series.");
       } finally {
         if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
@@ -271,7 +273,6 @@ export function LibraryBrowsePage({
         setAuthorsPage(page);
       } catch (e) {
         if (requestSeq !== authorsRequestSeq.current) return;
-        setAuthorsData(null);
         setAuthorsError(e instanceof Error ? e.message : "Failed to load authors.");
       } finally {
         if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
@@ -293,7 +294,6 @@ export function LibraryBrowsePage({
         setGroupsPage(page);
       } catch (e) {
         if (requestSeq !== groupsRequestSeq.current) return;
-        setGroupsData(null);
         setGroupsError(e instanceof Error ? e.message : "Failed to load groups.");
       } finally {
         if (requestSeq === groupsRequestSeq.current) setGroupsBusy(false);
@@ -303,10 +303,8 @@ export function LibraryBrowsePage({
   );
 
   useEffect(() => {
-    setBooksData(null);
     setBooksError(null);
     setBooksBusy(false);
-    setBooksPage(1);
   }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize, bookOrdering, routePage]);
 
   useEffect(() => {
@@ -658,7 +656,7 @@ export function LibraryBrowsePage({
           ) : browseMode === "series" ? (
             <>
               {seriesError ? <p className="errorText">{seriesError}</p> : null}
-              {seriesBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
+              {seriesBusy && !seriesData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
 
               {seriesData?.results?.length ? (
                 <div className="libraryEntityList">
@@ -715,7 +713,7 @@ export function LibraryBrowsePage({
           ) : browseMode === "authors" ? (
             <>
               {authorsError ? <p className="errorText">{authorsError}</p> : null}
-              {authorsBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
+              {authorsBusy && !authorsData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
 
               {authorsData?.results?.length ? (
                 <div className="libraryEntityList">
@@ -772,7 +770,7 @@ export function LibraryBrowsePage({
           ) : (
             <>
               {groupsError ? <p className="errorText">{groupsError}</p> : null}
-              {groupsBusy ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
+              {groupsBusy && !groupsData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
 
               {groupsData?.results?.length ? (
                 <div className="libraryEntityList">

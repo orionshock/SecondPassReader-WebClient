@@ -75,18 +75,12 @@ export function ShelfDetailPage({
               ? e.message
               : "Failed to load shelf.";
       setError(message);
-      setShelf(null);
-      setItems([]);
-      setNextUrl(null);
     } finally {
       if (requestSeq === loadFirstRequestSeq.current) setBusy(false);
     }
   }, [ordering, routePage, pageSize, shelfId, spl]);
 
   useEffect(() => {
-    setShelf(null);
-    setItems([]);
-    setNextUrl(null);
     setError(null);
     setBusy(false);
     if (!canLoad) return;
@@ -168,7 +162,7 @@ export function ShelfDetailPage({
       </div>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
+      {busy && !shelf && items.length === 0 ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 
       {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
