@@ -6,6 +6,7 @@ import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookResultsView } from "./display/BookResultsView";
 import { BookViewModeToggle } from "./display/BookViewModeToggle";
 import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
+import { ExpandableText } from "./display/ExpandableText";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
@@ -555,7 +556,13 @@ export function LibraryBrowsePage({
                     <div className="panelTitle" style={{ margin: 0 }}>
                       {selectedSeries.name}
                     </div>
-                    {selectedSeriesSummary ? <div className="libraryBrowseHeaderText">{selectedSeriesSummary}</div> : null}
+                    <ExpandableText
+                      key={`series-${String(selectedSeries.id)}`}
+                      text={selectedSeriesSummary}
+                      collapsedLines={1}
+                      className="libraryBrowseHeaderText"
+                      label="series summary"
+                    />
                   </div>
                 </div>
               ) : null}
@@ -566,7 +573,13 @@ export function LibraryBrowsePage({
                     <div className="panelTitle" style={{ margin: 0 }}>
                       {selectedAuthor.name}
                     </div>
-                    {selectedAuthorBiography ? <div className="libraryBrowseHeaderText">{selectedAuthorBiography}</div> : null}
+                    <ExpandableText
+                      key={`author-${String(selectedAuthor.id)}`}
+                      text={selectedAuthorBiography}
+                      collapsedLines={1}
+                      className="libraryBrowseHeaderText"
+                      label="author biography"
+                    />
                   </div>
                 </div>
               ) : null}

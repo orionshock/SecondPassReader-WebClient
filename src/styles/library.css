@@ -313,10 +313,48 @@
 
 .libraryBrowseHeaderText {
   margin-top: 6px;
-  max-width: 72ch;
+  width: 100%;
+  max-width: none;
   color: var(--color-text);
   line-height: 1.45;
+}
+
+.expandableText {
+  display: grid;
+  gap: 4px;
+}
+
+.expandableTextBody {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.expandableTextBodyCollapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.expandableTextToggle {
+  justify-self: start;
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 0;
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.expandableTextToggle:hover {
+  text-decoration: underline;
+}
+
+.expandableTextToggle:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: 2px;
 }
 
 .libraryGroupTitleLine {
