@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, createSecondPassClient } from "../index";
 import type { LibraryBook } from "../index";
+import { buildAuthHeaders, requestBlob, requestJsonUrl, resolveUrl, tryParseFilename } from "../apiHttp";
+import { updateReadingProgress } from "../readingProgressApi";
 
 function jsonResponse(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
   return new Response(JSON.stringify(body), {
@@ -46,6 +48,72 @@ describe("@secondpass/client high-level workflows", () => {
     globalThis.fetch = vi.fn() as unknown as typeof fetch;
   });
 
+  it("api HTTP helpers use bearer auth and never synthesize Basic auth", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
+
+    expect(buildAuthHeaders({ accessToken: undefined })).toEqual({});
+    expect(buildAuthHeaders({ accessToken: "token" })).toEqual({ Authorization: "Bearer token" });
+    expect(resolveUrl("https://api.example/root/", "relative/path")).toBe("https://api.example/root/relative/path");
+    expect(resolveUrl("https://api.example/root/", "https://files.example/book.epub")).toBe("https://files.example/book.epub");
+
+    await requestJsonUrl({
+      url: "https://api.example/direct/",
+      method: "POST",
+      defaultAccessToken: "token",
+      body: { hello: "world" },
+    });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    const headers = init?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer token");
+    expect(headers.Authorization).not.toMatch(/^Basic /i);
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(String(init?.body))).toEqual({ hello: "world" });
+  });
+
+  it("api HTTP helpers surface specific error kinds and parse download filenames", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(new Response("missing", { status: 404, statusText: "Not Found" }))
+      .mockResolvedValueOnce(new Response("nope", { status: 403, statusText: "Forbidden" }));
+
+    await expect(
+      requestJsonUrl({ url: "https://api.example/missing/", errorMessages: { 404: "Custom not found." } }),
+    ).rejects.toMatchObject({ kind: "http_error", status: 404, message: "Custom not found." });
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    await expect(spl.library.books.download({ id: 1, title: "T", file: { id: 10, download_url: "https://files.example/book.epub" } })).rejects.toMatchObject({
+      kind: "forbidden",
+      status: 403,
+    });
+
+    expect(tryParseFilename("attachment; filename*=UTF-8''My%20Book.epub")).toBe("My Book.epub");
+    expect(tryParseFilename("attachment; filename*=UTF-8''bad%ZZ.epub")).toBe("bad%ZZ.epub");
+    expect(tryParseFilename("attachment; filename=\"plain.epub\"")).toBe("plain.epub");
+    expect(tryParseFilename("attachment")).toBeUndefined();
+  });
+
+  it("client config requires apiBaseUrl and requestBlob uses the default accept header", async () => {
+    const fetchMock = asMockFetch();
+    expect(() => createSecondPassClient({ apiBaseUrl: "" })).toThrowError(/apiBaseUrl is required/i);
+
+    fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["x"])));
+    const result = await requestBlob({
+      apiBaseUrl: "https://api.example",
+      accessToken: "token",
+      endpointOrUrl: "/files/book.epub",
+    });
+
+    expect(result.blob.size).toBe(1);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/files/book.epub");
+    const headers = init?.headers as Record<string, string>;
+    expect(headers.Accept).toBe("application/octet-stream, */*");
+    expect(headers.Authorization).toBe("Bearer token");
+  });
+
+
   it("reading.progress.save maps app-friendly input to wire payload and PATCHes the progress endpoint", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(
@@ -79,6 +147,39 @@ describe("@secondpass/client high-level workflows", () => {
         href: "OEBPS/ch01.xhtml",
       },
       progression: 0.34,
+    });
+  });
+
+  it("reading progress rejects empty CFI and supports explicit PUT payloads", async () => {
+    const fetchMock = asMockFetch();
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+
+    await expect(
+      spl.reading.progress.save("sess-1", { profileVersion: "pv1", cfi: "   " }),
+    ).rejects.toThrowError(/without a CFI/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "p1" }));
+    await updateReadingProgress(
+      { apiBaseUrl: "https://api.example", accessToken: "t", tokenType: "Bearer" },
+      {
+        sessionId: "sess-1",
+        method: "PUT",
+        payload: {
+          profile_version: "pv1",
+          current_location: { format: "epub", cfi: "epubcfi(/6/2)" },
+          progression: 0.5,
+        },
+      },
+    );
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/reading/sessions/sess-1/progress/");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      profile_version: "pv1",
+      current_location: { format: "epub", cfi: "epubcfi(/6/2)" },
+      progression: 0.5,
     });
   });
 
@@ -237,6 +338,33 @@ describe("@secondpass/client high-level workflows", () => {
     expect(u.searchParams.has("motivation")).toBe(false);
   });
 
+  it("reading.annotations.list supports single kind filters and include_deleted=false", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.list({
+      kind: "bookmark",
+      includeDeleted: false,
+    });
+
+    const u = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(u.searchParams.getAll("kind")).toEqual(["bookmark"]);
+    expect(u.searchParams.get("include_deleted")).toBe("false");
+    expect(u.searchParams.has("motivation")).toBe(false);
+  });
+
+  it("reading annotation create helpers reject empty selectors before sending requests", async () => {
+    const fetchMock = asMockFetch();
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+
+    await expect(spl.reading.annotations.createBookmark({ sessionId: "sess-1", cfi: "   " })).rejects.toThrowError(/requires a cfi/i);
+    await expect(
+      spl.reading.annotations.createHighlight({ sessionId: "sess-1", cfiRange: "   ", text: "Selected" }),
+    ).rejects.toThrowError(/requires a cfiRange/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("reading.annotations.batchCreate posts one-session SPL annotation batches", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ results: [{ id: "a1", client_id: "row-1" }] }));
@@ -385,6 +513,17 @@ describe("@secondpass/client high-level workflows", () => {
     expect(url.searchParams.get("page_size")).toBe("20");
   });
 
+  it("library.books.get fetches an encoded book detail URL", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "book 1", title: "T" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const book = await spl.library.books.get("book 1");
+
+    expect(book.id).toBe("book 1");
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/library/books/book%201/");
+  });
+
   it("library authors and series optionally request preview books and ordering", async () => {
     const fetchMock = asMockFetch();
     fetchMock
@@ -450,6 +589,55 @@ describe("@secondpass/client high-level workflows", () => {
     expect(groupBooksUrl.searchParams.get("has_files")).toBe("true");
   });
 
+  it("library entity book routes add author/series filters and book downloads preserve metadata", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: 42, title: "T", file: { download_url: "https://files.example/book.epub" } }))
+      .mockResolvedValueOnce(jsonResponse({ id: 42, title: "T", file: { download_url: "https://files.example/book.epub" } }))
+      .mockResolvedValueOnce(
+        blobResponse(new Blob(["epub"], { type: "application/epub+zip" }), {
+          headers: {
+            "content-type": "application/epub+zip",
+            "content-length": "4",
+            "content-disposition": "attachment; filename*=UTF-8''Encoded%20Book.epub",
+          },
+        }),
+      );
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.library.series.books("series-1", { page: 2, pageSize: 25, ordering: "series_index", hasFiles: false });
+    await spl.library.authors.books("author-1", { page: 3, pageSize: 50, ordering: "title", hasFiles: true });
+    expect(await spl.library.books.getDownloadUrl(42)).toBe("https://files.example/book.epub");
+    const blob = await spl.library.books.download(42);
+
+    const seriesBooksUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(seriesBooksUrl.origin + seriesBooksUrl.pathname).toBe("https://api.example/library/books/");
+    expect(seriesBooksUrl.searchParams.get("series")).toBe("series-1");
+    expect(seriesBooksUrl.searchParams.get("has_files")).toBe("false");
+    expect(seriesBooksUrl.searchParams.get("ordering")).toBe("series_index");
+
+    const authorBooksUrl = new URL(String(fetchMock.mock.calls[1]![0]));
+    expect(authorBooksUrl.origin + authorBooksUrl.pathname).toBe("https://api.example/library/books/");
+    expect(authorBooksUrl.searchParams.get("author")).toBe("author-1");
+    expect(authorBooksUrl.searchParams.get("has_files")).toBe("true");
+    expect(authorBooksUrl.searchParams.get("ordering")).toBe("title");
+
+    expect(blob.size).toBe(4);
+    const downloadHeaders = fetchMock.mock.calls[4]![1]?.headers as Record<string, string>;
+    expect(String(fetchMock.mock.calls[4]![0])).toBe("https://files.example/book.epub");
+    expect(downloadHeaders.Accept).toBe("application/epub+zip, application/octet-stream, */*");
+  });
+
+  it("library download URL helper rejects books without a file download URL", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 42, title: "No File" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await expect(spl.library.books.getDownloadUrl(42)).rejects.toThrowError(/without a file download URL/i);
+  });
+
   it("shelf items list sends server ordering", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
@@ -462,6 +650,18 @@ describe("@secondpass/client high-level workflows", () => {
     expect(url.searchParams.get("page")).toBe("2");
     expect(url.searchParams.get("page_size")).toBe("50");
     expect(url.searchParams.get("ordering")).toBe("author");
+  });
+
+  it("shelves.get fetches shelf detail with optional preview books", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "shelf 1", name: "Shelf" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.get("shelf 1", { includePreviewBooks: true });
+
+    const url = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(url.origin + url.pathname).toBe("https://api.example/shelves/shelf%201/");
+    expect(url.searchParams.get("include_preview_books")).toBe("true");
   });
 
   it("shelf items list supports position, title, and author ordering without mutating shelf positions", async () => {
@@ -499,6 +699,54 @@ describe("@secondpass/client high-level workflows", () => {
       spl.shelves.list({ scope: "personal", ownerGroup: "group-1" } as never),
     ).rejects.toThrowError(/cannot be combined/i);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shelf create/update/delete and item mutations use reader-safe payloads", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ id: "shelf-1", name: "Later", owner_type: "user" }))
+      .mockResolvedValueOnce(jsonResponse({ id: "shelf-1", name: "Renamed" }))
+      .mockResolvedValueOnce(jsonResponse({ id: "item-1", book: 10, position: 0 }))
+      .mockResolvedValueOnce(jsonResponse({ id: "item-1", position: 2 }))
+      .mockResolvedValueOnce(emptyResponse())
+      .mockResolvedValueOnce(emptyResponse());
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.create({ name: "Later", description: "To read", visibility: "private", owner_type: "user" });
+    await spl.shelves.update("shelf-1", { name: "Renamed", description: "Updated" });
+    await spl.shelves.addItem("shelf-1", { book: "10" });
+    await spl.shelves.updateItem("shelf-1", "item-1", { position: 2 });
+    await spl.shelves.removeItem("shelf-1", "item-1");
+    await spl.shelves.remove("shelf-1");
+
+    const createPayload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/shelves/");
+    expect(fetchMock.mock.calls[0]![1]?.method).toBe("POST");
+    expect(createPayload).toEqual({
+      name: "Later",
+      description: "To read",
+      visibility: "private",
+      owner_type: "user",
+    });
+    expect(createPayload).not.toHaveProperty("owner_group");
+    expect(createPayload).not.toHaveProperty("group");
+
+    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/shelves/shelf-1/");
+    expect(fetchMock.mock.calls[1]![1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toEqual({ name: "Renamed", description: "Updated" });
+
+    expect(String(fetchMock.mock.calls[2]![0])).toBe("https://api.example/shelves/shelf-1/items/");
+    expect(fetchMock.mock.calls[2]![1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetchMock.mock.calls[2]![1]?.body))).toEqual({ book: "10" });
+
+    expect(String(fetchMock.mock.calls[3]![0])).toBe("https://api.example/shelves/shelf-1/items/item-1/");
+    expect(fetchMock.mock.calls[3]![1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetchMock.mock.calls[3]![1]?.body))).toEqual({ position: 2 });
+
+    expect(String(fetchMock.mock.calls[4]![0])).toBe("https://api.example/shelves/shelf-1/items/item-1/");
+    expect(fetchMock.mock.calls[4]![1]?.method).toBe("DELETE");
+    expect(String(fetchMock.mock.calls[5]![0])).toBe("https://api.example/shelves/shelf-1/");
+    expect(fetchMock.mock.calls[5]![1]?.method).toBe("DELETE");
   });
 
   it("reading.annotations.updateNote PATCHes only comment_text/highlight_color", async () => {
@@ -714,6 +962,30 @@ describe("@secondpass/client high-level workflows", () => {
     expectNoStaleLiveAnnotationFields(updatePayload);
   });
 
+  it("reading recent, close, and activity summary endpoints use expected URLs and payloads", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: "sess-1", status: "closed" }))
+      .mockResolvedValueOnce(jsonResponse({ results: [{ book: "1", session_count: 2 }] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.sessions.recent({ limit: 5 });
+    await spl.reading.sessions.close("sess-1");
+    await spl.reading.books.activitySummary({ books: [1, "2"] });
+
+    const recentUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(recentUrl.origin + recentUrl.pathname).toBe("https://api.example/reading/sessions/recent/");
+    expect(recentUrl.searchParams.get("limit")).toBe("5");
+
+    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/reading/sessions/sess-1/close/");
+    expect(fetchMock.mock.calls[1]![1]?.method).toBe("POST");
+
+    expect(String(fetchMock.mock.calls[2]![0])).toBe("https://api.example/reading/books/activity-summary/");
+    expect(fetchMock.mock.calls[2]![1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetchMock.mock.calls[2]![1]?.body))).toEqual({ books: ["1", "2"] });
+  });
+
   it("server.discover works without access token, while auth-required namespaces throw without access token", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(
@@ -733,6 +1005,63 @@ describe("@secondpass/client high-level workflows", () => {
     expect(discovery.server_release_date).toBe("2026-07-06");
 
     expect(() => spl.library.books.list()).toThrowError(ApiError);
+  });
+
+  it("server discovery and pairing use compact well-known shape and bearer-only optional auth", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          server_name: "S",
+          server_description: "D",
+          server_version: "1.2.3",
+          server_release: "r1",
+          server_release_date: "2026-07-06",
+          api_base_url: "https://api.example",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          id: "request-1",
+          code: "ABCD",
+          authorize_url: "https://server.example/authorize",
+          poll_url: "https://api.example/client-api/login-requests/request-1/poll/",
+          expires_at: "2026-06-21T12:00:00Z",
+          interval: 3,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ status: "approved", access_token: "new-token", token_type: "Bearer" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "pairing-token" });
+    const discovery = await spl.server.discover("https://server.example/");
+    expect(discovery).toEqual({
+      server_name: "S",
+      server_description: "D",
+      server_version: "1.2.3",
+      server_release: "r1",
+      server_release_date: "2026-07-06",
+      api_base_url: "https://api.example",
+    });
+
+    await spl.server.createLoginRequest(discovery);
+    await spl.server.pollLoginRequest("https://api.example/client-api/login-requests/request-1/poll/");
+
+    const discoverHeaders = fetchMock.mock.calls[0]![1]?.headers as Record<string, string>;
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("https://server.example/.well-known/secondpass");
+    expect(discoverHeaders.Authorization).toBeUndefined();
+
+    const createHeaders = fetchMock.mock.calls[1]![1]?.headers as Record<string, string>;
+    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/client-api/login-requests/");
+    expect(createHeaders.Authorization).toBe("Bearer pairing-token");
+    expect(createHeaders.Authorization).not.toMatch(/^Basic /i);
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toEqual({
+      client_name: "Second Pass Reader",
+      client_type: "reader",
+    });
+
+    const pollHeaders = fetchMock.mock.calls[2]![1]?.headers as Record<string, string>;
+    expect(pollHeaders.Authorization).toBe("Bearer pairing-token");
+    expect(pollHeaders.Authorization).not.toMatch(/^Basic /i);
   });
 
   it("server.createLoginRequest submits the caller-provided editable client name", async () => {
@@ -768,21 +1097,49 @@ describe("@secondpass/client high-level workflows", () => {
     });
   });
 
-  it("account.getCurrent preserves banner and advanced group context", async () => {
+  it("account.getCurrent preserves identity, groups, banner, and advanced group context without capabilities", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         username: "ada",
+        email: "ada@example.test",
+        first_name: "Ada",
+        last_name: "Lovelace",
+        profile_id: "profile-1",
+        role: "reader",
+        must_change_password: false,
+        is_owner: true,
         advanced_library_groups_enabled: true,
         banner_text: "Maintenance tonight",
+        groups: [
+          { id: "public", name: "Common Room", is_public_group: true, is_curator: false },
+          { id: "club", name: "Fantasy Club", is_public_group: false, is_curator: true },
+        ],
       }),
     );
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     const me = await spl.account.getCurrent();
 
+    expect(me.username).toBe("ada");
+    expect(me.email).toBe("ada@example.test");
+    expect(me.first_name).toBe("Ada");
+    expect(me.last_name).toBe("Lovelace");
+    expect(me.profile_id).toBe("profile-1");
+    expect(me.role).toBe("reader");
+    expect(me.must_change_password).toBe(false);
+    expect(me.is_owner).toBe(true);
     expect(me.advanced_library_groups_enabled).toBe(true);
     expect(me.banner_text).toBe("Maintenance tonight");
+    expect(me.groups).toEqual([
+      { id: "public", name: "Common Room", is_public_group: true, is_curator: false },
+      { id: "club", name: "Fantasy Club", is_public_group: false, is_curator: true },
+    ]);
+    expect(me).not.toHaveProperty("capabilities");
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/accounts/me/");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer t");
   });
 
   it("401 responses surface as ApiError(kind=unauthorized) and 204 JSON responses are handled", async () => {
