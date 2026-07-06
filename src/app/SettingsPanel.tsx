@@ -299,16 +299,16 @@ export function SettingsPanel({
       <div className="settingsTabPanel" role="tabpanel" aria-label="Tools settings">
         <section className="panel settingsCard settingsMaintenance">
           <div className="settingsSectionHeader">
-            <h2 className="panelTitle">Marginalia import tools</h2>
-            <span className="pill pillIdle">Recovery</span>
+            <h2 className="panelTitle">Marginalia export splitter</h2>
           </div>
           <p className="muted">
-            Upload an unmatched SecondPassMarginaliaExport JSON file and split it into one session file at a time.
-            This only prepares files for recovery. It does not repair selectors, match quotes, or write annotations.
+            Upload a SecondPassMarginaliaExport JSON file and split it into session-level files. This tool only
+            repackages the export. It does not repair selectors, match quotes, import annotations, or contact the
+            library server.
           </p>
           <div className="settingsFileRow">
             <label className="button" htmlFor="marginaliaExportFile">
-              Upload unmatched export
+              Upload export JSON
             </label>
             <input
               id="marginaliaExportFile"
@@ -342,6 +342,7 @@ export function SettingsPanel({
                     <button type="button" className="button" onClick={() => downloadAllMarginaliaZip(marginaliaGroups)}>
                       Download all ZIP
                     </button>
+                    <span className="muted">Downloads a ZIP with one folder per book and one JSON file per session.</span>
                   </div>
                   <div className="marginaliaSplitList">
                     {marginaliaGroups.map((group) => (
@@ -360,7 +361,7 @@ export function SettingsPanel({
                                 <div className="muted">{item.annotationCount} annotation{item.annotationCount === 1 ? "" : "s"}</div>
                               </div>
                               <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
-                                Download JSON
+                                Download session JSON
                               </button>
                             </div>
                           ))}
