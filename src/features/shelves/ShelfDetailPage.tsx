@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
@@ -99,6 +99,22 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
     }
   }, [loadMoreBusy, nextUrl, parseNextPage, shelfId, spl]);
 
+  const openBookDetails = useCallback(
+    (bookId: string | number) => {
+      navigateTo({ kind: "shelf", shelfId, bookId: String(bookId) });
+    },
+    [shelfId],
+  );
+
+  const handleBookRowKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, bookId: string | number) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openBookDetails(bookId);
+    },
+    [openBookDetails],
+  );
+
   const canEditCurrentShelf = canEditShelf(shelf);
 
   return (
@@ -117,9 +133,6 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
               Edit shelf
             </button>
           ) : null}
-          <button type="button" className="button buttonCompact" onClick={() => navigateTo({ kind: "shelves" })}>
-            All shelves
-          </button>
         </div>
       </div>
 
@@ -138,7 +151,15 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
             it.book.series?.name && it.book.series ? it.book.series.name : null;
 
           return (
-            <div key={it.id} className="shelfBookCard">
+            <div
+              key={it.id}
+              className="shelfBookCard shelfBookCardButton"
+              role="button"
+              tabIndex={0}
+              aria-label={`View details for ${it.book.title}`}
+              onClick={() => openBookDetails(it.book.id)}
+              onKeyDown={(event) => handleBookRowKeyDown(event, it.book.id)}
+            >
               <div className="shelfBookCover">
                 {coverSrc ? (
                   <img
@@ -162,15 +183,9 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
               <div className="shelfBookActions">
                 <button
                   type="button"
-                  className="button buttonCompact"
-                  onClick={() => navigateTo({ kind: "shelf", shelfId, bookId: String(it.book.id) })}
-                >
-                  View details
-                </button>
-                <button
-                  type="button"
                   className="button buttonPrimary buttonCompact"
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.stopPropagation();
                     saveReaderReturnTarget(it.book.id, {
                       kind: "shelf",
                       label: shelf?.name ?? "Shelf",
@@ -179,6 +194,7 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
                     });
                     navigateTo({ kind: "reader", bookId: String(it.book.id) });
                   }}
+                  onKeyDown={(event) => event.stopPropagation()}
                 >
                   Read
                 </button>
