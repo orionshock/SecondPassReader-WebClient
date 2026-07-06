@@ -581,7 +581,7 @@ describe("@secondpass/client high-level workflows", () => {
         id: "request-1",
         code: "ABCD",
         authorize_url: "https://server.example/authorize",
-        poll_url: "https://api.example/client-api/login-request/request-1/poll/",
+        poll_url: "https://api.example/client-api/login-requests/request-1/poll/",
         expires_at: "2026-06-21T12:00:00Z",
         interval: 3,
       }),
@@ -600,7 +600,7 @@ describe("@secondpass/client high-level workflows", () => {
     );
 
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toBe("https://api.example/client-api/login-request/");
+    expect(String(url)).toBe("https://api.example/client-api/login-requests/");
     expect(JSON.parse(String(init?.body))).toEqual({
       client_name: "SecondPass Reader \u00b7 Firefox on Linux",
       client_type: "reader",

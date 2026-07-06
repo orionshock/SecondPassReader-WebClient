@@ -7,7 +7,7 @@ import type {
 import { authErrorMessages, requestJson, requestJsonUrl, resolveUrl } from "./apiHttp";
 import type { AuthenticatedClientContext } from "./clientContext";
 
-const CLIENT_API_LOGIN_REQUEST_ENDPOINT = "/client-api/login-request/";
+const CLIENT_API_LOGIN_REQUEST_ENDPOINT = "/client-api/login-requests/";
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   const url = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
