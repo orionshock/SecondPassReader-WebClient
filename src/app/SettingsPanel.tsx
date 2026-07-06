@@ -48,10 +48,14 @@ export function SettingsPanel({
 }: Props) {
   const [state, setState] = useState<ActionState>({ phase: "idle" });
   const [marginaliaState, setMarginaliaState] = useState<MarginaliaToolState>({ phase: "idle" });
+  const [hideEmptyMarginaliaSessions, setHideEmptyMarginaliaSessions] = useState(false);
   const activeTab = route.tab ?? "appearance";
 
   useEffect(() => {
-    if (activeTab !== "tools") setMarginaliaState({ phase: "idle" });
+    if (activeTab !== "tools") {
+      setMarginaliaState({ phase: "idle" });
+      setHideEmptyMarginaliaSessions(false);
+    }
   }, [activeTab]);
 
   async function checkConnection() {
@@ -129,6 +133,7 @@ export function SettingsPanel({
   async function handleMarginaliaFile(file: File | null) {
     if (!file) {
       setMarginaliaState({ phase: "idle" });
+      setHideEmptyMarginaliaSessions(false);
       return;
     }
 
@@ -146,6 +151,7 @@ export function SettingsPanel({
 
   function clearMarginaliaFile() {
     setMarginaliaState({ phase: "idle" });
+    setHideEmptyMarginaliaSessions(false);
   }
 
   function downloadBlob(blob: Blob, filename: string) {
@@ -173,6 +179,15 @@ export function SettingsPanel({
   const status = getConnectionStatus(profile);
   const busy = state.phase === "checking" || state.phase === "logging_out";
   const marginaliaGroups = marginaliaState.phase === "loaded" ? groupMarginaliaSplitItems(marginaliaState.result.items) : [];
+  const visibleMarginaliaGroups = hideEmptyMarginaliaSessions
+    ? marginaliaGroups
+        .map((group) => ({ ...group, items: group.items.filter((item) => item.annotationCount > 0) }))
+        .filter((group) => group.items.length > 0)
+    : marginaliaGroups;
+  const hiddenEmptySessionCount =
+    marginaliaState.phase === "loaded" && hideEmptyMarginaliaSessions
+      ? marginaliaState.result.items.filter((item) => item.annotationCount === 0).length
+      : 0;
 
   return (
     <div className="settingsLayout">
@@ -334,18 +349,31 @@ export function SettingsPanel({
                 <Detail label="Sessions" value={String(marginaliaState.result.summary.sessionCount)} />
                 <Detail label="Annotations" value={String(marginaliaState.result.summary.annotationCount)} />
               </div>
+              <label className="settingsCheckboxRow">
+                <input
+                  type="checkbox"
+                  checked={hideEmptyMarginaliaSessions}
+                  onChange={(event) => setHideEmptyMarginaliaSessions(event.currentTarget.checked)}
+                />
+                <span>Hide sessions and books with zero annotations</span>
+              </label>
+              {hiddenEmptySessionCount > 0 ? (
+                <p className="muted">{hiddenEmptySessionCount} empty session{hiddenEmptySessionCount === 1 ? "" : "s"} hidden.</p>
+              ) : null}
               {marginaliaState.result.items.length === 0 ? (
                 <p className="muted">No sessions were found to split.</p>
+              ) : visibleMarginaliaGroups.length === 0 ? (
+                <p className="muted">No sessions with annotations are visible.</p>
               ) : (
                 <>
                   <div className="settingsActions">
-                    <button type="button" className="button" onClick={() => downloadAllMarginaliaZip(marginaliaGroups)}>
+                    <button type="button" className="button" onClick={() => downloadAllMarginaliaZip(visibleMarginaliaGroups)}>
                       Download all ZIP
                     </button>
                     <span className="muted">Downloads a ZIP with one folder per book and one JSON file per session.</span>
                   </div>
                   <div className="marginaliaSplitList">
-                    {marginaliaGroups.map((group) => (
+                    {visibleMarginaliaGroups.map((group) => (
                       <div className="marginaliaSplitGroup" key={group.id}>
                         <div className="marginaliaSplitGroupHeader">
                           <div className="settingsLabel">{group.bookLabel}</div>

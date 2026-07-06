@@ -100,6 +100,13 @@
   flex-wrap: wrap;
 }
 
+.settingsCheckboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sp-text);
+}
+
 .settingsHiddenFileInput {
   position: absolute;
   width: 1px;
