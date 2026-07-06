@@ -335,6 +335,18 @@
   gap: 8px;
   align-content: start;
   justify-items: center;
+  border-color: transparent;
+  padding: 6px;
+  background: transparent;
+}
+
+.bookGridCard:hover {
+  background: var(--color-surface-muted);
+}
+
+.bookGridCard.bookDisplaySelected {
+  border-color: var(--sp-primary-border);
+  background: var(--color-primary-bg);
 }
 
 .bookDisplayActions {

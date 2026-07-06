@@ -27,7 +27,6 @@ export function BookResultsView({
       selectedBookId={selectedBookId}
       onViewBook={onViewBook}
       serverBaseUrl={serverBaseUrl}
-      renderActions={renderActions}
     />
   ) : (
     <BookList

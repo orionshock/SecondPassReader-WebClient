@@ -7,7 +7,6 @@ import { BookResultsView } from "../library/display/BookResultsView";
 import { BookViewModeToggle } from "../library/display/BookViewModeToggle";
 import { getLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
-import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 
 export function ShelfDetailPage({
   profile,
@@ -162,27 +161,6 @@ export function ShelfDetailPage({
           serverBaseUrl={profile?.serverBaseUrl}
           selectedBookId={selectedBookId ? String(selectedBookId) : null}
           onViewBook={(book) => openBookDetails(book.id)}
-          renderActions={(book) => (
-            <div className="shelfBookActions">
-              <button
-                type="button"
-                className="button buttonPrimary buttonCompact"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  saveReaderReturnTarget(book.id, {
-                    kind: "shelf",
-                    label: shelf?.name ?? "Shelf",
-                    route: `#/shelves/${encodeURIComponent(shelfId)}`,
-                    shelfId,
-                  });
-                  navigateTo({ kind: "reader", bookId: String(book.id) });
-                }}
-                onKeyDown={(event) => event.stopPropagation()}
-              >
-                Read
-              </button>
-            </div>
-          )}
         />
       ) : !busy && canLoad && !error ? (
         <p className="muted">No books on this shelf.</p>
