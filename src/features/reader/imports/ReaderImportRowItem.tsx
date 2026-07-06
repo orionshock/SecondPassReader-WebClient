@@ -34,7 +34,9 @@ export function ReaderImportRowItem({
           <span className="muted spReaderImportLocation">No highlight text</span>
         )}
         {row.importedNote ? <span className="spAnnotationNote spReaderImportNote">{row.importedNote}</span> : null}
-        {row.importedLocation ? <span className="muted spReaderImportLocation">{row.importedLocation}</span> : null}
+        {row.kind === "bookmark" && row.importedLocation ? (
+          <span className="muted spReaderImportLocation">{row.importedLocation}</span>
+        ) : null}
       </button>
       <div className="spReaderImportRowActions">
         {row.status === "accepted" ? null : row.status === "skipped" ? (
