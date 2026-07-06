@@ -3,8 +3,8 @@ import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibraryGroup, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
-import { BookGrid } from "./display/BookGrid";
-import { BookList } from "./display/BookList";
+import { BookResultsView } from "./display/BookResultsView";
+import { BookViewModeToggle } from "./display/BookViewModeToggle";
 import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
@@ -423,24 +423,7 @@ export function LibraryBrowsePage({
               ) : null}
             </div>
 
-            {browseMode === "books" ? (
-              <div className="libraryViewToggle" role="group" aria-label="Book display">
-                <button
-                  type="button"
-                  className={`libraryViewToggleButton ${bookViewMode === "list" ? "libraryViewToggleButtonActive" : ""}`}
-                  onClick={() => handleBookViewChange("list")}
-                >
-                  List
-                </button>
-                <button
-                  type="button"
-                  className={`libraryViewToggleButton ${bookViewMode === "grid" ? "libraryViewToggleButtonActive" : ""}`}
-                  onClick={() => handleBookViewChange("grid")}
-                >
-                  Grid
-                </button>
-              </div>
-            ) : null}
+            {showBookList ? <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} /> : null}
           </div>
 
           {booksError ? <p className="errorText">{booksError}</p> : null}
@@ -531,21 +514,13 @@ export function LibraryBrowsePage({
                     </div>
                   </div>
 
-                  {browseMode === "books" && bookViewMode === "grid" ? (
-                    <BookGrid
-                      books={booksData.results}
-                      serverBaseUrl={profile?.serverBaseUrl}
-                      selectedBookId={selectedBookId ? String(selectedBookId) : null}
-                      onViewBook={(b) => onViewBook?.(String(b.id))}
-                    />
-                  ) : (
-                    <BookList
-                      books={booksData.results}
-                      serverBaseUrl={profile?.serverBaseUrl}
-                      selectedBookId={selectedBookId ? String(selectedBookId) : null}
-                      onViewBook={(b) => onViewBook?.(String(b.id))}
-                    />
-                  )}
+                  <BookResultsView
+                    books={booksData.results}
+                    viewMode={bookViewMode}
+                    serverBaseUrl={profile?.serverBaseUrl}
+                    selectedBookId={selectedBookId ? String(selectedBookId) : null}
+                    onViewBook={(b) => onViewBook?.(String(b.id))}
+                  />
 
                   <div className="libraryMetaRow libraryMetaRowBottom">
                     <div className="muted">

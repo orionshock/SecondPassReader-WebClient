@@ -508,7 +508,7 @@ export default function App() {
                 </div>
               ) : route?.kind === "shelf" ? (
                 <div className="libraryScreen">
-                  <ShelfDetailPage profile={selectedProfile} spl={splClient} shelfId={route.shelfId} />
+                  <ShelfDetailPage profile={selectedProfile} spl={splClient} shelfId={route.shelfId} selectedBookId={route.bookId ?? null} />
                 </div>
               ) : route?.kind === "shelfEdit" ? (
                 <div className="libraryScreen">

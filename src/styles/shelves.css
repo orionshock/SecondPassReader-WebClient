@@ -276,6 +276,12 @@
   gap: 10px;
 }
 
+.shelfBookControls {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .shelfBookCard {
   border: 1px solid var(--sp-border);
   border-radius: 12px;

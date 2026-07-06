@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
-import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
+import type { LibraryBook, SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { resolveCoverUrl } from "../library/coverUtils";
+import { BookResultsView } from "../library/display/BookResultsView";
+import { BookViewModeToggle } from "../library/display/BookViewModeToggle";
+import { getLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 
-function formatAuthors(item: ShelfItem): string {
-  const authors = item.book.authors ?? [];
-  return authors.map((a) => a.name).filter(Boolean).join(", ");
-}
-
-export function ShelfDetailPage({ profile, spl, shelfId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; shelfId: string }) {
+export function ShelfDetailPage({
+  profile,
+  spl,
+  shelfId,
+  selectedBookId,
+}: {
+  profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
+  shelfId: string;
+  selectedBookId?: string | null;
+}) {
   const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +27,7 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
   const [items, setItems] = useState<ShelfItem[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
+  const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => getLibraryBooksView());
 
   const loadFirst = useCallback(async () => {
     if (!spl) return;
@@ -106,14 +114,17 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
     [shelfId],
   );
 
-  const handleBookRowKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>, bookId: string | number) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      openBookDetails(bookId);
-    },
-    [openBookDetails],
-  );
+  const handleBookViewChange = useCallback((viewMode: LibraryBooksView) => {
+    setBookViewMode(viewMode);
+    saveLibraryBooksView(viewMode);
+  }, []);
+
+  const shelfBooks = useMemo(() => items.map((item) => item.book as LibraryBook), [items]);
+  const shelfItemByBookId = useMemo(() => {
+    const next = new Map<string, ShelfItem>();
+    for (const item of items) next.set(String(item.book.id), item);
+    return next;
+  }, [items]);
 
   const canEditCurrentShelf = canEditShelf(shelf);
 
@@ -143,66 +154,48 @@ export function ShelfDetailPage({ profile, spl, shelfId }: { profile: Connection
       {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
       {shelf ? <div className="muted"><ShelfMetaLine shelf={shelf} /></div> : null}
 
-      <div className="shelfBookList">
-        {items.map((it) => {
-          const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
-          const authors = formatAuthors(it);
-          const series =
-            it.book.series?.name && it.book.series ? it.book.series.name : null;
+      {items.length > 0 ? (
+        <div className="shelfBookControls">
+          <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} />
+        </div>
+      ) : null}
 
-          return (
-            <div
-              key={it.id}
-              className="shelfBookCard shelfBookCardButton"
-              role="button"
-              tabIndex={0}
-              aria-label={`View details for ${it.book.title}`}
-              onClick={() => openBookDetails(it.book.id)}
-              onKeyDown={(event) => handleBookRowKeyDown(event, it.book.id)}
-            >
-              <div className="shelfBookCover">
-                {coverSrc ? (
-                  <img
-                    className="shelfBookCoverImg"
-                    src={coverSrc}
-                    alt={`${it.book.title} cover`}
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="bookCoverPlaceholderText">No cover</div>
-                )}
-              </div>
-
-              <div className="shelfBookMain">
-                <div className="bookTitle">{it.book.title}</div>
-                {authors ? <div className="bookLine">{authors}</div> : null}
-                {series ? <div className="bookLine muted">{series}</div> : null}
-                {typeof it.position === "number" ? <div className="muted">Position: {it.position}</div> : null}
-              </div>
-
-              <div className="shelfBookActions">
-                <button
-                  type="button"
-                  className="button buttonPrimary buttonCompact"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    saveReaderReturnTarget(it.book.id, {
-                      kind: "shelf",
-                      label: shelf?.name ?? "Shelf",
-                      route: `#/shelves/${encodeURIComponent(shelfId)}`,
-                      shelfId,
-                    });
-                    navigateTo({ kind: "reader", bookId: String(it.book.id) });
-                  }}
-                  onKeyDown={(event) => event.stopPropagation()}
-                >
-                  Read
-                </button>
-              </div>
+      {items.length > 0 ? (
+        <BookResultsView
+          books={shelfBooks}
+          viewMode={bookViewMode}
+          serverBaseUrl={profile?.serverBaseUrl}
+          selectedBookId={selectedBookId ? String(selectedBookId) : null}
+          onViewBook={(book) => openBookDetails(book.id)}
+          getMetaLines={(book) => {
+            const item = shelfItemByBookId.get(String(book.id));
+            return typeof item?.position === "number" ? [`Position: ${item.position}`] : [];
+          }}
+          renderActions={(book) => (
+            <div className="shelfBookActions">
+              <button
+                type="button"
+                className="button buttonPrimary buttonCompact"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  saveReaderReturnTarget(book.id, {
+                    kind: "shelf",
+                    label: shelf?.name ?? "Shelf",
+                    route: `#/shelves/${encodeURIComponent(shelfId)}`,
+                    shelfId,
+                  });
+                  navigateTo({ kind: "reader", bookId: String(book.id) });
+                }}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                Read
+              </button>
             </div>
-          );
-        })}
-      </div>
+          )}
+        />
+      ) : !busy && canLoad && !error ? (
+        <p className="muted">No books on this shelf.</p>
+      ) : null}
 
       {nextUrl ? (
         <div style={{ marginTop: 12 }}>

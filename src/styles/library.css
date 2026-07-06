@@ -337,6 +337,14 @@
   justify-items: center;
 }
 
+.bookDisplayActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .bookCover {
   width: 44px;
   aspect-ratio: 2 / 3;
@@ -375,6 +383,12 @@
   display: grid;
   gap: 3px;
   text-align: center;
+}
+
+.bookGridCard .bookDisplayActions {
+  justify-content: center;
+  width: 100%;
+  margin-top: auto;
 }
 
 .bookDisplaySelected {
