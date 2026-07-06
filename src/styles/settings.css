@@ -89,6 +89,63 @@
   opacity: 0.6;
 }
 
+.settingsMaintenance {
+  border-style: dashed;
+}
+
+.settingsFileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settingsHiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.marginaliaSplitPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.marginaliaSplitList {
+  display: grid;
+  gap: 8px;
+}
+
+.marginaliaSplitGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.marginaliaSplitGroupItems {
+  display: grid;
+  gap: 8px;
+}
+
+.marginaliaSplitItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  background: var(--sp-panel);
+}
+
+.marginaliaSplitText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
 .settingsDiagnostics {
   color: var(--sp-muted);
 }
@@ -142,5 +199,10 @@
 
   .segmentedButton {
     min-width: 0;
+  }
+
+  .marginaliaSplitItem {
+    grid-template-columns: 1fr;
+    justify-items: start;
   }
 }

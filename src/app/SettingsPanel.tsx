@@ -8,6 +8,12 @@ import { applyCurrentAccountToProfile } from "../features/connection/accountProf
 import { createSplClientFromProfile } from "./createSplClient";
 import type { AppWorkflowStep } from "./appWorkflow";
 import { navigateTo } from "./navigation";
+import {
+  formatMarginaliaBookLabel,
+  formatMarginaliaSessionLabel,
+  parseAndSplitMarginaliaExport,
+  type MarginaliaSplitResult,
+} from "../features/settings/marginaliaSplitExport";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -25,6 +31,11 @@ type ActionState =
   | { phase: "success"; message: string }
   | { phase: "error"; message: string; action: "check" | "logout" };
 
+type MarginaliaToolState =
+  | { phase: "idle" }
+  | { phase: "loaded"; fileName: string; result: MarginaliaSplitResult }
+  | { phase: "error"; message: string };
+
 export function SettingsPanel({
   profile,
   onProfilesChanged,
@@ -34,6 +45,7 @@ export function SettingsPanel({
   workflowStep,
 }: Props) {
   const [state, setState] = useState<ActionState>({ phase: "idle" });
+  const [marginaliaState, setMarginaliaState] = useState<MarginaliaToolState>({ phase: "idle" });
 
   async function checkConnection() {
     if (!profile) return;
@@ -107,8 +119,37 @@ export function SettingsPanel({
     onForgetServer();
   }
 
+  async function handleMarginaliaFile(file: File | null) {
+    if (!file) {
+      setMarginaliaState({ phase: "idle" });
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const result = parseAndSplitMarginaliaExport(text);
+      setMarginaliaState({ phase: "loaded", fileName: file.name, result });
+    } catch (error) {
+      setMarginaliaState({
+        phase: "error",
+        message: error instanceof Error ? error.message : "Failed to parse marginalia export.",
+      });
+    }
+  }
+
+  function downloadMarginaliaSplit(item: MarginaliaSplitResult["items"][number]) {
+    const blob = new Blob([`${JSON.stringify(item.exportJson, null, 2)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = item.filename;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
   const status = getConnectionStatus(profile);
   const busy = state.phase === "checking" || state.phase === "logging_out";
+  const marginaliaGroups = marginaliaState.phase === "loaded" ? groupMarginaliaSplitItems(marginaliaState.result.items) : [];
 
   return (
     <div className="settingsLayout">
@@ -206,6 +247,66 @@ export function SettingsPanel({
       {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
       {state.phase === "error" ? <p className="errorText">{state.message}</p> : null}
 
+      <section className="panel settingsCard settingsMaintenance">
+        <div className="settingsSectionHeader">
+          <h2 className="panelTitle">Marginalia import tools</h2>
+          <span className="pill pillIdle">Advanced</span>
+        </div>
+        <p className="muted">
+          Upload an unmatched SecondPassMarginaliaExport JSON file and split it into one book/session file at a time.
+          This only prepares files for recovery. It does not repair selectors, match quotes, or write annotations.
+        </p>
+        <div className="settingsFileRow">
+          <label className="button" htmlFor="marginaliaExportFile">
+            Upload unmatched export
+          </label>
+          <input
+            id="marginaliaExportFile"
+            className="settingsHiddenFileInput"
+            type="file"
+            accept="application/json,.json"
+            onChange={(event) => void handleMarginaliaFile(event.currentTarget.files?.[0] ?? null)}
+          />
+          <span className="muted">Split into book/session files</span>
+        </div>
+
+        {marginaliaState.phase === "error" ? <p className="errorText">{marginaliaState.message}</p> : null}
+        {marginaliaState.phase === "loaded" ? (
+          <div className="marginaliaSplitPanel">
+            <div className="settingsGrid">
+              <Detail label="File" value={marginaliaState.fileName} />
+              <Detail label="Books" value={String(marginaliaState.result.summary.bookCount)} />
+              <Detail label="Sessions" value={String(marginaliaState.result.summary.sessionCount)} />
+              <Detail label="Annotations" value={String(marginaliaState.result.summary.annotationCount)} />
+            </div>
+            {marginaliaState.result.items.length === 0 ? (
+              <p className="muted">No sessions were found to split.</p>
+            ) : (
+              <div className="marginaliaSplitList">
+                {marginaliaGroups.map((group) => (
+                  <div className="marginaliaSplitGroup" key={group.bookLabel}>
+                    <div className="settingsLabel">{group.bookLabel}</div>
+                    <div className="marginaliaSplitGroupItems">
+                      {group.items.map((item) => (
+                        <div className="marginaliaSplitItem" key={item.id}>
+                          <div className="marginaliaSplitText">
+                            <div className="muted">{formatMarginaliaSessionLabel(item.session)}</div>
+                            <div className="muted">{item.annotationCount} annotation{item.annotationCount === 1 ? "" : "s"}</div>
+                          </div>
+                          <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
+                            Download JSON
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </section>
+
       <details className="panel settingsDiagnostics">
         <summary className="panelTitle">Diagnostics</summary>
         <div className="settingsGrid settingsDiagnosticsBody">
@@ -232,6 +333,23 @@ function Detail({ label, value, mono = false }: { label: string; value: string; 
       <span className="muted">{label}:</span> <span className={mono ? "mono" : undefined}>{value}</span>
     </div>
   );
+}
+
+function groupMarginaliaSplitItems(items: MarginaliaSplitResult["items"]): Array<{
+  bookLabel: string;
+  items: MarginaliaSplitResult["items"];
+}> {
+  const groups: Array<{ bookLabel: string; items: MarginaliaSplitResult["items"] }> = [];
+  for (const item of items) {
+    const bookLabel = formatMarginaliaBookLabel(item.book);
+    const existing = groups.find((group) => group.bookLabel === bookLabel);
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      groups.push({ bookLabel, items: [item] });
+    }
+  }
+  return groups;
 }
 
 function formatUser(profile: ConnectionProfile): string {
