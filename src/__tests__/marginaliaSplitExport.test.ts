@@ -5,6 +5,7 @@ import {
   buildBookFolderName,
   buildBookZipFilename,
   buildSplitFilename,
+  filterMarginaliaBookGroups,
   groupMarginaliaSplitItems,
   parseAndSplitMarginaliaExport,
   splitMarginaliaExport,
@@ -162,6 +163,94 @@ describe("marginalia split export", () => {
     expect(book.reading_sessions).toHaveLength(1);
     expect(book.reading_sessions[0].items).toEqual([{ id: "ann" }]);
     expect(book.sessions).toBeUndefined();
+  });
+
+  it("preserves unknown top-level, session, annotation, and selector fields mechanically", () => {
+    const selectorObject = {
+      type: "FragmentSelector",
+      value: "epubcfi(/old/hint)",
+      unknown_selector_field: { keep: true },
+    };
+    const selectorArray = [
+      selectorObject,
+      {
+        type: "TextQuoteSelector",
+        exact: "selected",
+        prefix: "before",
+        suffix: "after",
+        custom_quote_field: 42,
+      },
+    ];
+    const exportJson = {
+      schema_version: "0.1.0",
+      export_unknown: { keep: "top" },
+      books: [
+        {
+          id: "book",
+          book_unknown: ["keep"],
+          sessions: [
+            {
+              id: "session-object",
+              progress: null,
+              session_unknown: { keep: "session" },
+              annotations: [
+                {
+                  id: "annotation-object",
+                  annotation_unknown: { keep: "annotation" },
+                  target: { selector: selectorObject },
+                },
+              ],
+            },
+            {
+              id: "session-array",
+              annotations: [{ id: "annotation-array", target: { selector: selectorArray } }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = splitMarginaliaExport(exportJson);
+
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]!.exportJson.export_unknown).toEqual({ keep: "top" });
+
+    const objectBook = (result.items[0]!.exportJson.books as any[])[0];
+    expect(objectBook.book_unknown).toEqual(["keep"]);
+    expect(objectBook.sessions).toHaveLength(1);
+    expect(objectBook.sessions[0].session_unknown).toEqual({ keep: "session" });
+    expect(objectBook.sessions[0].progress).toBeNull();
+    expect(objectBook.sessions[0].annotations[0].annotation_unknown).toEqual({ keep: "annotation" });
+    expect(objectBook.sessions[0].annotations[0].target.selector).toEqual(selectorObject);
+
+    const arrayBook = (result.items[1]!.exportJson.books as any[])[0];
+    expect(arrayBook.sessions[0].annotations[0].target.selector).toEqual(selectorArray);
+  });
+
+  it("keeps the base split result unchanged when filtering zero-annotation groups", () => {
+    const result = splitMarginaliaExport({
+      schema_version: "0.1.0",
+      books: [
+        {
+          id: "book-with-mixed",
+          sessions: [
+            { id: "empty", annotations: [] },
+            { id: "non-empty", annotations: [{ id: "ann" }] },
+          ],
+        },
+        {
+          id: "book-with-empty-only",
+          sessions: [{ id: "empty-only", annotations: [] }],
+        },
+      ],
+    });
+    const groups = groupMarginaliaSplitItems(result.items);
+    const visibleGroups = filterMarginaliaBookGroups(groups, true);
+
+    expect(result.items.map((item) => item.session.id)).toEqual(["empty", "non-empty", "empty-only"]);
+    expect(groups.map((group) => group.items.map((item) => item.session.id))).toEqual([["empty", "non-empty"], ["empty-only"]]);
+    expect(visibleGroups.map((group) => group.items.map((item) => item.session.id))).toEqual([["non-empty"]]);
+    expect(filterMarginaliaBookGroups(groups, false)).toBe(groups);
   });
 
   it("generates safe ASCII filenames", () => {

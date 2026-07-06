@@ -9,6 +9,7 @@ import { createSplClientFromProfile } from "./createSplClient";
 import { navigateTo, type AppRoute, type SettingsTab } from "./navigation";
 import {
   buildAllZipEntries,
+  filterMarginaliaBookGroups,
   formatMarginaliaSessionLabel,
   groupMarginaliaSplitItems,
   type MarginaliaBookGroup,
@@ -179,11 +180,7 @@ export function SettingsPanel({
   const status = getConnectionStatus(profile);
   const busy = state.phase === "checking" || state.phase === "logging_out";
   const marginaliaGroups = marginaliaState.phase === "loaded" ? groupMarginaliaSplitItems(marginaliaState.result.items) : [];
-  const visibleMarginaliaGroups = hideEmptyMarginaliaSessions
-    ? marginaliaGroups
-        .map((group) => ({ ...group, items: group.items.filter((item) => item.annotationCount > 0) }))
-        .filter((group) => group.items.length > 0)
-    : marginaliaGroups;
+  const visibleMarginaliaGroups = filterMarginaliaBookGroups(marginaliaGroups, hideEmptyMarginaliaSessions);
   const hiddenEmptySessionCount =
     marginaliaState.phase === "loaded" && hideEmptyMarginaliaSessions
       ? marginaliaState.result.items.filter((item) => item.annotationCount === 0).length

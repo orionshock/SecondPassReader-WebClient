@@ -161,6 +161,13 @@ export function groupMarginaliaSplitItems(items: MarginaliaSplitItem[]): Margina
   }));
 }
 
+export function filterMarginaliaBookGroups(groups: MarginaliaBookGroup[], hideEmptySessions: boolean): MarginaliaBookGroup[] {
+  if (!hideEmptySessions) return groups;
+  return groups
+    .map((group) => ({ ...group, items: group.items.filter((item) => item.annotationCount > 0) }))
+    .filter((group) => group.items.length > 0);
+}
+
 export function buildAllZipEntries(groups: MarginaliaBookGroup[]): Array<{ path: string; item: MarginaliaSplitItem }> {
   const folderNames = groups.map((group, index) => makeUniqueName(group.folderName, index, groups.map((candidate) => candidate.folderName)));
   const entries: Array<{ path: string; item: MarginaliaSplitItem }> = [];
