@@ -88,6 +88,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const location = locationEntry?.bookKey === activeBookKey ? locationEntry.location : null;
   const profileVersion = props.openedBook.readingOpen?.profile_version ?? null;
   const sessionId = props.openedBook.readingOpen?.session?.id ?? null;
+  const canMutateSession = props.openedBook.readingOpen?.session?.can_open !== false;
   const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
     spl: props.spl,
     sessionId,
@@ -166,7 +167,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [annotationsRaw, location, props.openedBook.book.id, sessionId, toc]);
 
   const { autosave } = useReadingProgressAutosave({
-    enabled: true,
+    enabled: canMutateSession,
     autosaveDelayMs: 5000,
     spl: props.spl,
     sessionId: state.sessionId,
@@ -358,6 +359,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     annotationsRaw,
     setAnnotationsRaw,
     setAnnotationError,
+    canMutate: canMutateSession,
   });
 
   return props.children({

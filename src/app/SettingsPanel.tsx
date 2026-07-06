@@ -50,14 +50,10 @@ export function SettingsPanel({
         ...profile,
         serverName: discovery.server_name,
         serverDescription: discovery.server_description,
+        serverVersion: discovery.server_version,
+        serverRelease: discovery.server_release,
+        serverReleaseDate: discovery.server_release_date,
         apiBaseUrl: discovery.api_base_url,
-        clientApi: {
-          discoveryVersion: discovery.client_api.discovery_version,
-          discoveryEndpoint: discovery.client_api.discovery_endpoint,
-          loginRequestEndpoint: discovery.client_api.login_request_endpoint,
-          authorizeUrl: discovery.client_api.authorize_url,
-          pollEndpointTemplate: discovery.client_api.poll_endpoint_template,
-        },
         lastCheckedAt: now,
       };
 
@@ -218,13 +214,11 @@ export function SettingsPanel({
           <Detail label="API base URL" value={profile?.apiBaseUrl ?? "None"} mono />
           <Detail label="Client session id" value={profile?.clientSessionId ?? "None"} mono />
           <Detail label="Token type" value={profile?.accessToken ? profile.tokenType ?? "Bearer" : "None"} mono />
+          <Detail label="Advanced groups" value={profile?.advancedLibraryGroupsEnabled === undefined ? "Unknown" : profile.advancedLibraryGroupsEnabled ? "Enabled" : "Disabled"} mono />
+          <Detail label="Banner text" value={profile?.bannerText ?? "None"} />
           <Detail label="Linked at" value={profile?.linkedAt ?? "None"} mono />
           <Detail label="Verified at" value={profile?.verifiedAt ?? "None"} mono />
           <Detail label="Last checked at" value={profile?.lastCheckedAt ?? "None"} mono />
-          <Detail label="Discovery endpoint" value={profile?.clientApi?.discoveryEndpoint ?? "None"} mono />
-          <Detail label="Login request endpoint" value={profile?.clientApi?.loginRequestEndpoint ?? "None"} mono />
-          <Detail label="Authorize URL" value={profile?.clientApi?.authorizeUrl ?? "None"} mono />
-          <Detail label="Poll endpoint template" value={profile?.clientApi?.pollEndpointTemplate ?? "None"} mono />
           <Detail label="Last error" value={state.phase === "error" ? state.message : "None"} />
         </div>
       </details>

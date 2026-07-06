@@ -46,7 +46,7 @@ async function fetchAllAnnotationsForSession(args: {
     // eslint-disable-next-line no-await-in-loop
     const resp = await args.spl.reading.annotations.list({
       sessionId: args.sessionId,
-      motivation: ["bookmarking", "highlighting"],
+      kind: ["bookmark", "highlight"],
       ordering: "-created",
       page,
     });

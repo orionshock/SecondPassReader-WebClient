@@ -5,6 +5,11 @@ import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation }
 export { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
 
 export function getAnnotationDescribingText(annotation: ReadingAnnotation): string | null {
+  const highlightText = typeof annotation.highlight_text === "string" ? annotation.highlight_text.trim() : "";
+  if (highlightText) return highlightText;
+  const quote = typeof annotation.quote === "string" ? annotation.quote.trim() : "";
+  if (quote) return quote;
+
   const body = (annotation as unknown as { body?: unknown }).body;
   if (!Array.isArray(body)) return null;
   for (const b of body) {
@@ -20,6 +25,9 @@ export function getAnnotationDescribingText(annotation: ReadingAnnotation): stri
 }
 
 export function getAnnotationNoteText(annotation: ReadingAnnotation): string | null {
+  const comment = typeof annotation.comment_text === "string" ? annotation.comment_text.trim() : "";
+  if (comment) return comment;
+
   const body = (annotation as unknown as { body?: unknown }).body;
   if (!Array.isArray(body)) return null;
   for (const b of body) {
@@ -48,6 +56,9 @@ export function getAnnotationNoteText(annotation: ReadingAnnotation): string | n
 }
 
 export function getAnnotationColor(annotation: ReadingAnnotation): string | null {
+  const directColor = typeof annotation.highlight_color === "string" ? annotation.highlight_color.trim() : "";
+  if (directColor) return directColor;
+
   const body = (annotation as unknown as { body?: unknown }).body;
   if (!Array.isArray(body)) return null;
   for (const b of body) {

@@ -96,13 +96,9 @@ The client maps app-friendly input into the server wire payload:
 
 High-level helpers for common workflows:
 
-- `spl.reading.annotations.list({ sessionId, page?, motivation?, ordering? })`
-  - `motivation` may be a single value or an array; arrays are sent as **repeatable** query params:
-    - `motivation=highlighting&motivation=bookmarking`
-  - Motivation output from the server is represented as an array:
-    - Bookmark: `["bookmarking"]`
-    - Highlight: `["highlighting"]`
-    - Highlight with note: `["highlighting", "commenting"]`
+- `spl.reading.annotations.list({ sessionId, page?, kind?, ordering? })`
+  - `kind` may be a single value or an array; arrays are sent as **repeatable** query params:
+    - `kind=highlight&kind=bookmark`
   - `ordering` may be:
     - `"created" | "-created" | "modified" | "-modified"`
 - `spl.reading.annotations.createHighlight(input, { idempotencyKey? }?)`
@@ -119,7 +115,7 @@ The client throws normal JavaScript errors. For server failures, the package exp
 
 Callers should catch errors and render user-friendly messages. Never log or persist bearer tokens.
 
-## Highlight quote context (TextQuoteSelector)
+## Highlight quote context
 
 `createHighlight` accepts optional quote context fields:
 
@@ -128,12 +124,8 @@ Callers should catch errors and render user-friendly messages. Never log or pers
 
 Behavior:
 
-- CFI (from `cfiRange`) remains the primary anchor (`FragmentSelector`).
-- If `quotePrefix` or `quoteSuffix` is provided, the client sends `target.selector` as:
-  - `[FragmentSelector, TextQuoteSelector]`
-- `TextQuoteSelector.exact` is the highlight `text` (must match the describing body text).
-- `prefix` / `suffix` are optional anchoring/repair/export metadata (not display text).
-- The client clamps `quotePrefix`/`quoteSuffix` to **500 chars max** to satisfy server limits.
+- CFI (from `cfiRange`) remains the primary anchor in the SPL `selector` field.
+- `quotePrefix` / `quoteSuffix` are accepted for compatibility with reader/import code, but they are not sent to the live annotation endpoint.
 - Selection heuristics (how much context to capture) belong to the reader/selection layer.
 
 ## Annotation updates (PATCH immutability)
@@ -141,24 +133,19 @@ Behavior:
 The server treats anchor fields as immutable after creation:
 
 - CFI / CFI range selectors are immutable.
-- `TextQuoteSelector` exact/prefix/suffix are immutable.
+- `highlight_text` is immutable.
 - To change a highlight range: delete the old annotation and create a new one.
 
 Client update helpers reflect this:
 
-- `spl.reading.annotations.updateNote(id, { profileVersion?, note?, color?, text? })`
-  - sends **PATCH** with **body updates only** (+ optional `profile_version`)
-  - does **not** send `target`, `selector`, `session`, `book`, or `motivation`
-  - if `color` is provided, `text` (describing body value) is required because the server stores highlight color on the describing body
+- `spl.reading.annotations.updateNote(id, { note?, color? })`
+  - sends **PATCH** with only `comment_text` and/or `highlight_color`
+  - does **not** send `selector`, `session`, `book`, `kind`, `quote`, or `highlight_text`
 
 ## Server limits (reader-relevant)
 
-- `target` JSON max size: 16 KB
-- `body` JSON max size: 64 KB
-- `target.selector.value` (EPUB CFI) max length: 8192 chars
-- `body[].value` max length: 65536 chars
-- `TextQuoteSelector.prefix` max length: 500 chars
-- `TextQuoteSelector.suffix` max length: 500 chars
-- `TextQuoteSelector.exact` required, non-empty, max 65536 chars
-- `body[].color` max length: 64 chars (must be an allowed token)
+- `selector` (EPUB CFI) max length: 8192 chars
+- `highlight_text` max length: 65536 chars
+- `comment_text` max length: 65536 chars
+- `highlight_color` max length: 64 chars (must be an allowed token)
 - `Idempotency-Key` header max length: 128 chars

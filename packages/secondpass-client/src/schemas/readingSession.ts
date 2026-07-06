@@ -1,6 +1,4 @@
 import type { PaginatedResponse } from "./library";
-import type { W3CAnnotationMotivation, W3CAnnotationTarget, W3CTextualBody } from "./w3cAnnotation";
-
 export type ReadingCurrentLocation = {
   format: "epub" | string;
   cfi?: string;
@@ -16,6 +14,7 @@ export type ReadingCurrentLocation = {
 export type ReadingSession = {
   id: string;
   status?: string;
+  can_open?: boolean;
   book?: string | number | { id: string | number };
   created?: string;
   updated?: string;
@@ -45,6 +44,7 @@ export type ReadingSessionSummary = {
   name?: string | null;
   status?: string | null;
   is_active?: boolean | null;
+  can_open?: boolean | null;
   started_at?: string | null;
   completed_at?: string | null;
   created_at?: string | null;
@@ -71,17 +71,14 @@ export type ReadingAnnotation = {
   id: string;
   profile_version?: string;
   session?: string;
-  /**
-   * Server contract: motivations are always represented as an array.
-   *
-   * Examples:
-   * - Bookmark: ["bookmarking"]
-   * - Highlight: ["highlighting"]
-   * - Highlight with note: ["highlighting", "commenting"]
-   */
-  motivation?: W3CAnnotationMotivation[];
-  target?: Partial<W3CAnnotationTarget> | unknown;
-  body?: Array<Partial<W3CTextualBody> & Record<string, unknown>> | unknown;
+  book?: string | number | { id: string | number } | null;
+  kind?: "highlight" | "bookmark" | string;
+  selector?: string | { type?: string; value?: string; [k: string]: unknown } | unknown;
+  quote?: string | null;
+  highlight_text?: string | null;
+  highlight_color?: string | null;
+  comment_text?: string | null;
+  has_comment?: boolean;
   is_deleted?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -131,59 +128,32 @@ export type ReadingProgressUpdatePayload = {
 export type ReadingAnnotationCreatePayload = {
   profile_version: string;
   session: string;
-  motivation: Array<"highlighting" | "bookmarking" | "commenting" | string>;
-  target: {
-    /**
-     * Primary anchor is an EPUB CFI FragmentSelector.
-     *
-     * The server also accepts optional TextQuoteSelector context as a second selector:
-     * - `[FragmentSelector, TextQuoteSelector]`
-     *
-     * Quote prefix/suffix are repair/export metadata (not display text).
-     */
-    selector:
-      | {
-          type: "FragmentSelector";
-          conformsTo: "http://www.idpf.org/epub/linking/cfi/epub-cfi.html" | string;
-          value: string;
-        }
-      | [
-          {
-            type: "FragmentSelector";
-            conformsTo: "http://www.idpf.org/epub/linking/cfi/epub-cfi.html" | string;
-            value: string;
-          },
-          {
-            type: "TextQuoteSelector";
-            exact: string;
-            prefix?: string;
-            suffix?: string;
-          },
-        ];
-  };
-  body?: Array<
-    | (W3CTextualBody & { color?: string })
-    | {
-        type: "TextualBody";
-        purpose: string;
-        value: string;
-        color?: string;
-        [k: string]: unknown;
-      }
-  >;
+  kind: "highlight" | "bookmark";
+  selector: string;
+  quote?: string;
+  highlight_text?: string;
+  highlight_color?: string;
+  comment_text?: string;
 };
 
-/**
- * PATCH payload for updating an existing annotation.
- *
- * Server rules (api/v1/reading/annotations/<id>/):
- * - Only body updates are accepted.
- * - Anchor fields (target/selector/CFI/TextQuoteSelector) are immutable after creation.
- * - session/book/motivation are not accepted on PATCH.
- */
 export type ReadingAnnotationUpdatePayload = {
-  profile_version?: string;
-  body?: ReadingAnnotationCreatePayload["body"];
+  comment_text?: string | null;
+  highlight_color?: string | null;
+};
+
+export type ReadingAnnotationBatchCreateItem = Omit<ReadingAnnotationCreatePayload, "session" | "profile_version"> & {
+  client_id?: string;
+};
+
+export type ReadingAnnotationBatchCreatePayload = {
+  profile_version: string;
+  session: string;
+  items: ReadingAnnotationBatchCreateItem[];
+};
+
+export type ReadingAnnotationBatchCreateResponse = {
+  results: Array<ReadingAnnotation & { client_id?: string }>;
+  [k: string]: unknown;
 };
 
 export type ReadingBookActivitySummaryRow = {

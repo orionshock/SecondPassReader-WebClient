@@ -14,6 +14,7 @@ export function useCurrentSessionAnnotationActions(args: {
   annotationsRaw: ReadingAnnotation[];
   setAnnotationsRaw: Dispatch<SetStateAction<ReadingAnnotation[]>>;
   setAnnotationError: (value: string | null) => void;
+  canMutate?: boolean;
 }) {
   const [annotationBusy, setAnnotationBusy] = useState(false);
   const profileVersion = args.profileVersion == null ? "" : String(args.profileVersion);
@@ -21,6 +22,7 @@ export function useCurrentSessionAnnotationActions(args: {
   const removeById = useCallback(
     async (annotationId: string) => {
       if (!args.spl) return;
+      if (args.canMutate === false) return;
       if (!annotationId) return;
       setAnnotationBusy(true);
       args.setAnnotationError(null);
@@ -33,12 +35,13 @@ export function useCurrentSessionAnnotationActions(args: {
         setAnnotationBusy(false);
       }
     },
-    [args.spl, args.setAnnotationError, args.setAnnotationsRaw],
+    [args.canMutate, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
   );
 
   const updateHighlight = useCallback(
     async (annotationId: string, update: { note: string; color: string }) => {
       if (!args.spl) throw new Error("Not connected.");
+      if (args.canMutate === false) throw new Error("This session cannot be modified.");
       if (!annotationId) return;
       if (!profileVersion) throw new Error("Missing profile version.");
 
@@ -68,11 +71,12 @@ export function useCurrentSessionAnnotationActions(args: {
         setAnnotationBusy(false);
       }
     },
-    [args.annotationsRaw, args.spl, args.setAnnotationError, args.setAnnotationsRaw, profileVersion],
+    [args.annotationsRaw, args.canMutate, args.spl, args.setAnnotationError, args.setAnnotationsRaw, profileVersion],
   );
 
   const toggleBookmarkAtCurrentLocation = useCallback(async () => {
     if (!args.spl) return;
+    if (args.canMutate === false) return;
     if (!args.sessionId) return;
     if (!profileVersion) return;
     const cfi = args.location?.cfi?.trim() ?? "";
@@ -102,6 +106,7 @@ export function useCurrentSessionAnnotationActions(args: {
     }
   }, [
     args.currentBookmark,
+    args.canMutate,
     args.location?.cfi,
     args.sessionId,
     args.spl,
@@ -114,6 +119,7 @@ export function useCurrentSessionAnnotationActions(args: {
   const createHighlight = useCallback(
     async (input: { selection: ReaderSelection; color: string; note?: string }) => {
       if (!args.spl) throw new Error("Not connected.");
+      if (args.canMutate === false) throw new Error("This session cannot be modified.");
       if (!args.sessionId) throw new Error("Missing session.");
       if (!profileVersion) throw new Error("Missing profile version.");
       const sel = input.selection;
@@ -140,7 +146,7 @@ export function useCurrentSessionAnnotationActions(args: {
         setAnnotationBusy(false);
       }
     },
-    [args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw, profileVersion],
+    [args.canMutate, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw, profileVersion],
   );
 
   return {

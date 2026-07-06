@@ -5,6 +5,11 @@ export type ConnectionProfile = {
   apiBaseUrl?: string;
   serverName?: string;
   serverDescription?: string;
+  serverVersion?: string;
+  serverRelease?: string;
+  serverReleaseDate?: string;
+  advancedLibraryGroupsEnabled?: boolean;
+  bannerText?: string | null;
   accessToken?: string;
   tokenType?: string;
   clientSessionId?: string;

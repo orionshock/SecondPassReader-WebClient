@@ -4,7 +4,7 @@ The app talks to a Second Pass server through the workspace package `@secondpass
 
 ## Boundary Rule
 
-Feature code should use `createSecondPassClient(...)` and the client facade. Normal app code should not construct endpoint URLs, auth headers, pagination details, download URLs, or W3C annotation payloads directly.
+Feature code should use `createSecondPassClient(...)` and the client facade. Normal app code should not construct endpoint URLs, auth headers, pagination details, download URLs, or live annotation payloads directly.
 
 Package-owned API docs:
 
@@ -32,7 +32,7 @@ Verification stores current user display metadata on the connection profile.
 - `spl.reading.openForReading(book)` opens or creates reading session state and downloads the backing book blob.
 - Reading progress persists EPUB CFI as the meaningful restore anchor.
 - Approximate `bookProgress` may be sent as presentation metadata, but it is not the restore source of truth.
-- Reading annotations are W3C Web Annotation JSON-LD with EPUB CFI selectors.
+- Live reading annotations use the SPL Marginalia Profile shape with EPUB CFI selectors.
 - Highlight anchor fields are immutable after creation; changing a range means delete and create.
 
 ## Package Shape
@@ -50,4 +50,3 @@ Endpoint modules inside `packages/secondpass-client/src/` are implementation det
 ## Spec Reference
 
 If present, `docs/specs/reading-session-annotation-profile` is a read-only Windows junction to a server-owned spec. It is reference material only. Runtime TypeScript types belong in app or package source, not in `docs/`.
-

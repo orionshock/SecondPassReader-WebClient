@@ -71,7 +71,7 @@ describe("@secondpass/client high-level workflows", () => {
     });
   });
 
-  it("reading.annotations.createBookmark builds bookmark motivation + CFI selector payload", async () => {
+  it("reading.annotations.createBookmark builds SPL bookmark payload", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
@@ -97,12 +97,14 @@ describe("@secondpass/client high-level workflows", () => {
     const payload = JSON.parse(String(init?.body));
     expect(payload.profile_version).toBe("pv1");
     expect(payload.session).toBe("sess-1");
-    expect(payload.motivation).toEqual(["bookmarking"]);
-    expect(payload.target?.selector?.type).toBe("FragmentSelector");
-    expect(payload.target?.selector?.value).toBe("epubcfi(/6/2[chap01]!/4/1:0)");
+    expect(payload.kind).toBe("bookmark");
+    expect(payload.selector).toBe("epubcfi(/6/2[chap01]!/4/1:0)");
+    expect(payload).not.toHaveProperty("motivation");
+    expect(payload).not.toHaveProperty("target");
+    expect(payload).not.toHaveProperty("body");
   });
 
-  it("reading.annotations.createBookmark does not add TextQuoteSelector context", async () => {
+  it("reading.annotations.createBookmark does not send highlight-only fields", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
@@ -110,11 +112,14 @@ describe("@secondpass/client high-level workflows", () => {
     await spl.reading.annotations.createBookmark({ sessionId: "sess-1", profileVersion: "pv1", cfi: "epubcfi(/6/2[chap01]!/4/1:0)" });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.target.selector.type).toBe("FragmentSelector");
-    expect(Array.isArray(payload.target.selector)).toBe(false);
+    expect(payload.kind).toBe("bookmark");
+    expect(payload).not.toHaveProperty("quote");
+    expect(payload).not.toHaveProperty("highlight_text");
+    expect(payload).not.toHaveProperty("highlight_color");
+    expect(payload).not.toHaveProperty("comment_text");
   });
 
-  it("reading.annotations.createHighlight builds highlight payload including text/color and note bodies", async () => {
+  it("reading.annotations.createHighlight builds SPL highlight payload including text/color and note", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
@@ -133,16 +138,19 @@ describe("@secondpass/client high-level workflows", () => {
     expect(init?.method).toBe("POST");
 
     const payload = JSON.parse(String(init?.body));
-    expect(payload.motivation).toEqual(["highlighting", "commenting"]);
-    expect(payload.target?.selector?.type).toBe("FragmentSelector");
-    expect(payload.target?.selector?.value).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
-    expect(payload.body).toEqual([
-      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "#ff0" },
-      { type: "TextualBody", purpose: "commenting", value: "A note" },
-    ]);
+    expect(payload).toEqual({
+      profile_version: "pv1",
+      session: "sess-1",
+      kind: "highlight",
+      selector: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)",
+      highlight_text: "Selected text",
+      quote: "Selected text",
+      highlight_color: "#ff0",
+      comment_text: "A note",
+    });
   });
 
-  it("reading.annotations.createHighlight without quote context uses a single FragmentSelector", async () => {
+  it("reading.annotations.createHighlight defaults missing color to yellow", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
@@ -155,10 +163,11 @@ describe("@secondpass/client high-level workflows", () => {
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.target.selector).toMatchObject({ type: "FragmentSelector", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
+    expect(payload.selector).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
+    expect(payload.highlight_color).toBe("yellow");
   });
 
-  it("reading.annotations.createHighlight with quotePrefix/suffix uses selector array with TextQuoteSelector and clamps context to 500 chars", async () => {
+  it("reading.annotations.createHighlight ignores quotePrefix/suffix for live SPL payloads", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "a1" }));
 
@@ -174,17 +183,13 @@ describe("@secondpass/client high-level workflows", () => {
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.motivation).toEqual(["highlighting"]);
-    expect(Array.isArray(payload.target.selector)).toBe(true);
-    expect(payload.target.selector[0]).toMatchObject({ type: "FragmentSelector", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
-    expect(payload.target.selector[1]).toMatchObject({ type: "TextQuoteSelector", exact: "Selected text" });
-    expect(payload.target.selector[1].prefix.length).toBe(500);
-    expect(payload.target.selector[1].suffix.length).toBe(500);
-    // Selected text is not clamped
-    expect(payload.target.selector[1].exact).toBe("Selected text");
+    expect(payload.kind).toBe("highlight");
+    expect(payload.selector).toBe("epubcfi(/6/2[chap01]!/4/1:0,/1:10)");
+    expect(payload).not.toHaveProperty("target");
+    expect(payload.quote).toBe("Selected text");
   });
 
-  it("reading.annotations.list supports repeatable motivation filters and ordering", async () => {
+  it("reading.annotations.list supports repeatable kind filters and ordering", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
@@ -192,7 +197,7 @@ describe("@secondpass/client high-level workflows", () => {
     await spl.reading.annotations.list({
       sessionId: "sess-1",
       ordering: "-created",
-      motivation: ["highlighting", "bookmarking"],
+      kind: ["highlight", "bookmark"],
       page: 2,
     });
 
@@ -205,7 +210,68 @@ describe("@secondpass/client high-level workflows", () => {
     expect(u.searchParams.get("session_id")).toBe("sess-1");
     expect(u.searchParams.get("ordering")).toBe("-created");
     expect(u.searchParams.get("page")).toBe("2");
-    expect(u.searchParams.getAll("motivation").sort()).toEqual(["bookmarking", "highlighting"]);
+    expect(u.searchParams.getAll("kind").sort()).toEqual(["bookmark", "highlight"]);
+    expect(u.searchParams.has("motivation")).toBe(false);
+  });
+
+  it("reading.annotations.batchCreate posts one-session SPL annotation batches", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ results: [{ id: "a1", client_id: "row-1" }] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.annotations.batchCreate(
+      {
+        profile_version: "pv1",
+        session: "sess-1",
+        items: [
+          {
+            client_id: "row-1",
+            kind: "highlight",
+            selector: "epubcfi(/6/2,/4/2,/4/8)",
+            highlight_text: "Selected text",
+            highlight_color: "yellow",
+            comment_text: "Note",
+          },
+        ],
+      },
+      { idempotencyKey: "batch-1" },
+    );
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/reading/annotations/batch/");
+    expect(init?.method).toBe("POST");
+    expect((init?.headers as Record<string, string>)["Idempotency-Key"]).toBe("batch-1");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      profile_version: "pv1",
+      session: "sess-1",
+      items: [
+        {
+          client_id: "row-1",
+          kind: "highlight",
+          selector: "epubcfi(/6/2,/4/2,/4/8)",
+          highlight_text: "Selected text",
+          highlight_color: "yellow",
+          comment_text: "Note",
+        },
+      ],
+    });
+  });
+
+  it("reading.annotations.batchCreate rejects more than 100 items client-side", async () => {
+    const fetchMock = asMockFetch();
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+
+    await expect(
+      spl.reading.annotations.batchCreate({
+        profile_version: "pv1",
+        session: "sess-1",
+        items: Array.from({ length: 101 }, () => ({
+          kind: "bookmark" as const,
+          selector: "epubcfi(/6/2)",
+        })),
+      }),
+    ).rejects.toThrowError(/at most 100/i);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("reading.sessions.list sends q with existing filters and ignores whitespace-only q", async () => {
@@ -321,7 +387,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("reading.annotations.updateNote PATCHes body updates only (no anchors/session/motivation)", async () => {
+  it("reading.annotations.updateNote PATCHes only comment_text/highlight_color", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
 
@@ -334,37 +400,29 @@ describe("@secondpass/client high-level workflows", () => {
     expect(init?.method).toBe("PATCH");
 
     const payload = JSON.parse(String(init?.body));
-    expect(Object.keys(payload).sort()).toEqual(["body", "profile_version"]);
-    expect(payload.profile_version).toBe("pv1");
-    expect(payload.body).toEqual([{ type: "TextualBody", purpose: "commenting", value: "Hello" }]);
+    expect(payload).toEqual({ comment_text: "Hello" });
     expect(payload).not.toHaveProperty("target");
     expect(payload).not.toHaveProperty("session");
     expect(payload).not.toHaveProperty("motivation");
+    expect(payload).not.toHaveProperty("body");
+    expect(payload).not.toHaveProperty("profile_version");
   });
 
-  it("reading.annotations.updateNote can update highlight color but requires describing text", async () => {
+  it("reading.annotations.updateNote can update highlight color without resending text", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     await spl.reading.annotations.updateNote("ann-1", {
       color: "#ff0",
-      text: "Selected text",
       note: null,
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.body).toEqual([
-      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "#ff0" },
-      { type: "TextualBody", purpose: "commenting", value: "" },
-    ]);
-
-    await expect(
-      spl.reading.annotations.updateNote("ann-1", { color: "#ff0" }),
-    ).rejects.toThrowError(/requires `text`/i);
+    expect(payload).toEqual({ highlight_color: "#ff0", comment_text: "" });
   });
 
-  it("reading.annotations.updateNote can clear note while still sending describing body updates", async () => {
+  it("reading.annotations.updateNote can clear note", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
 
@@ -381,12 +439,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(init?.method).toBe("PATCH");
 
     const payload = JSON.parse(String(init?.body));
-    expect(Object.keys(payload).sort()).toEqual(["body", "profile_version"]);
-    expect(payload.profile_version).toBe("pv1");
-    expect(payload.body).toEqual([
-      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "yellow" },
-      { type: "TextualBody", purpose: "commenting", value: "" },
-    ]);
+    expect(payload).toEqual({ highlight_color: "yellow", comment_text: "" });
     expect(payload).not.toHaveProperty("target");
     expect(payload).not.toHaveProperty("selector");
     expect(payload).not.toHaveProperty("session");
@@ -394,7 +447,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload).not.toHaveProperty("motivation");
   });
 
-  it("reading.annotations.updateNote includes both describing + commenting bodies when note is non-empty", async () => {
+  it("reading.annotations.updateNote includes color and comment when note is non-empty", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "ann-1" }));
 
@@ -407,10 +460,7 @@ describe("@secondpass/client high-level workflows", () => {
     });
 
     const payload = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(payload.body).toEqual([
-      { type: "TextualBody", purpose: "describing", value: "Selected text", color: "green" },
-      { type: "TextualBody", purpose: "commenting", value: "Note text" },
-    ]);
+    expect(payload).toEqual({ highlight_color: "green", comment_text: "Note text" });
     expect(payload).not.toHaveProperty("target");
     expect(payload).not.toHaveProperty("session");
     expect(payload).not.toHaveProperty("motivation");
@@ -491,26 +541,33 @@ describe("@secondpass/client high-level workflows", () => {
     expect(String(fetchMock.mock.calls[1]![0])).toBe("https://files.example/book.epub");
   });
 
+  it("reading sessions preserve can_open from server payloads", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "sess-1", can_open: false, is_active: true }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const session = await spl.reading.sessions.get("sess-1");
+
+    expect(session.can_open).toBe(false);
+  });
+
   it("server.discover works without access token, while auth-required namespaces throw without access token", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         server_name: "S",
+        server_description: "D",
+        server_version: "1.2.3",
+        server_release: "r1",
+        server_release_date: "2026-07-06",
         api_base_url: "https://api.example",
-        client_api: {
-          discovery_version: "1",
-          discovery_endpoint: "/.well-known/secondpass",
-          login_request_endpoint: "/client-api/login-request/",
-          authorize_url: "https://example/auth",
-          poll_endpoint_template: "/client-api/login-request/{id}/poll/",
-          token_type: "Bearer",
-        },
       }),
     );
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
     const discovery = await spl.server.discover("https://server.example");
     expect(discovery.api_base_url).toBe("https://api.example");
+    expect(discovery.server_release_date).toBe("2026-07-06");
 
     expect(() => spl.library.books.list()).toThrowError(ApiError);
   });
@@ -533,14 +590,6 @@ describe("@secondpass/client high-level workflows", () => {
       {
         server_name: "Library Server",
         api_base_url: "https://api.example",
-        client_api: {
-          discovery_version: "1",
-          discovery_endpoint: "/.well-known/secondpass",
-          login_request_endpoint: "/client-api/login-request/",
-          authorize_url: "https://server.example/authorize",
-          poll_endpoint_template: "/client-api/login-request/{id}/poll/",
-          token_type: "Bearer",
-        },
       },
       {
         clientName: "SecondPass Reader \u00b7 Firefox on Linux",
@@ -554,6 +603,23 @@ describe("@secondpass/client high-level workflows", () => {
       client_name: "SecondPass Reader \u00b7 Firefox on Linux",
       client_type: "reader",
     });
+  });
+
+  it("account.getCurrent preserves banner and advanced group context", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        username: "ada",
+        advanced_library_groups_enabled: true,
+        banner_text: "Maintenance tonight",
+      }),
+    );
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const me = await spl.account.getCurrent();
+
+    expect(me.advanced_library_groups_enabled).toBe(true);
+    expect(me.banner_text).toBe("Maintenance tonight");
   });
 
   it("401 responses surface as ApiError(kind=unauthorized) and 204 JSON responses are handled", async () => {

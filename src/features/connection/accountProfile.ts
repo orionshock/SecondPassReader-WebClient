@@ -14,6 +14,8 @@ export function applyCurrentAccountToProfile(
     verifiedAt: options.markVerified === false ? profile.verifiedAt : isoNow,
     verifiedUser: pickVerifiedUser(me),
     mustChangePassword: me.must_change_password ?? false,
+    advancedLibraryGroupsEnabled: me.advanced_library_groups_enabled,
+    bannerText: me.banner_text ?? null,
     lastUsedAt: isoNow,
   };
 }
@@ -22,6 +24,8 @@ export function hasCurrentAccountProfileChanged(profile: ConnectionProfile, next
   return (
     profile.verifiedAt !== next.verifiedAt ||
     profile.mustChangePassword !== next.mustChangePassword ||
+    profile.advancedLibraryGroupsEnabled !== next.advancedLibraryGroupsEnabled ||
+    profile.bannerText !== next.bannerText ||
     !verifiedUsersEqual(profile.verifiedUser, next.verifiedUser)
   );
 }

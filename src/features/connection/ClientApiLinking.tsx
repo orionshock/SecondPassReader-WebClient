@@ -21,18 +21,14 @@ type LinkingState =
   | { phase: "error"; message: string };
 
 function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
-  if (!profile.apiBaseUrl || !profile.serverName || !profile.clientApi) return null;
+  if (!profile.apiBaseUrl || !profile.serverName) return null;
   return {
     server_name: profile.serverName,
+    server_description: profile.serverDescription,
+    server_version: profile.serverVersion,
+    server_release: profile.serverRelease,
+    server_release_date: profile.serverReleaseDate,
     api_base_url: profile.apiBaseUrl,
-    client_api: {
-      discovery_version: profile.clientApi.discoveryVersion,
-      discovery_endpoint: profile.clientApi.discoveryEndpoint,
-      login_request_endpoint: profile.clientApi.loginRequestEndpoint,
-      authorize_url: profile.clientApi.authorizeUrl,
-      poll_endpoint_template: profile.clientApi.pollEndpointTemplate,
-      token_type: "Bearer",
-    },
   };
 }
 
@@ -72,7 +68,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   async function startLinking() {
     if (!profile) return;
     if (!discovery) {
-      setState({ phase: "error", message: "Connect a library first so client API endpoints are known." });
+      setState({ phase: "error", message: "Connect a library first so the API base URL is known." });
       return;
     }
 
@@ -161,7 +157,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       </div>
 
       {!discovery ? (
-        <p className="muted">Client API endpoints are unknown for this library. Connect the library again.</p>
+        <p className="muted">The API base URL is unknown for this library. Connect the library again.</p>
       ) : null}
 
       <div className="pairDivider" />

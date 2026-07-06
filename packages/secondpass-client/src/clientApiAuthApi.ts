@@ -7,6 +7,8 @@ import type {
 import { authErrorMessages, requestJson, requestJsonUrl, resolveUrl } from "./apiHttp";
 import type { AuthenticatedClientContext } from "./clientContext";
 
+const CLIENT_API_LOGIN_REQUEST_ENDPOINT = "/client-api/login-request/";
+
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   const url = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
   return requestJsonUrl<SecondPassDiscovery>({ url, method: "GET" });
@@ -17,7 +19,7 @@ export async function createLoginRequest(
   input?: { clientName?: string; clientType?: string },
   defaultAccessToken?: string | null,
 ): Promise<ClientApiLoginRequestResponse> {
-  const url = resolveUrl(discovery.api_base_url, discovery.client_api.login_request_endpoint);
+  const url = resolveUrl(discovery.api_base_url, discovery.client_api?.login_request_endpoint ?? CLIENT_API_LOGIN_REQUEST_ENDPOINT);
   return requestJsonUrl<ClientApiLoginRequestResponse>({
     url,
     method: "POST",

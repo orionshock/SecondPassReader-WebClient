@@ -9,7 +9,7 @@ export type {
   CreateHighlightInput,
   CreateBookmarkInput,
   ListReadingAnnotationsInput,
-  ReadingAnnotationMotivation,
+  ReadingAnnotationKind,
   ReadingAnnotationsOrdering,
   UpdateNoteInput,
 } from "./client";
@@ -26,6 +26,8 @@ export type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, Prev
 
 export type {
   ReadingAnnotation,
+  ReadingAnnotationBatchCreatePayload,
+  ReadingAnnotationBatchCreateResponse,
   ReadingAnnotationPage,
   ReadingBookActivitySummaryResponse,
   ReadingBookActivitySummaryRow,

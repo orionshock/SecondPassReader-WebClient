@@ -31,11 +31,11 @@ export function getRawAnnotationDisplay(annotation: unknown, note: string | null
   const motivations = getAnnotationMotivations(rawAnnotation);
   const cfi = getAnnotationFragmentCfi(rawAnnotation);
 
-  if (motivations.includes("bookmarking") || (cfi && !isRangeCfi(cfi) && !motivations.includes("highlighting"))) {
+  if (rawAnnotation.kind === "bookmark" || motivations.includes("bookmarking") || (cfi && !isRangeCfi(cfi) && !motivations.includes("highlighting") && rawAnnotation.kind !== "highlight")) {
     return BOOKMARK_DISPLAY;
   }
 
-  if (motivations.includes("highlighting") || isRangeCfi(cfi)) {
+  if (rawAnnotation.kind === "highlight" || motivations.includes("highlighting") || isRangeCfi(cfi)) {
     return getHighlightAnnotationDisplay(note);
   }
 

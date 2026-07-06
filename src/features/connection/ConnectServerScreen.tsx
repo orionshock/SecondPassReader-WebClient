@@ -30,14 +30,10 @@ function formatDiscoverySummary(discovery: SecondPassDiscovery) {
   return {
     serverName: discovery.server_name,
     serverDescription: discovery.server_description,
+    serverVersion: discovery.server_version,
+    serverRelease: discovery.server_release,
+    serverReleaseDate: discovery.server_release_date,
     apiBaseUrl: discovery.api_base_url,
-    clientApi: {
-      discoveryVersion: discovery.client_api.discovery_version,
-      discoveryEndpoint: discovery.client_api.discovery_endpoint,
-      loginRequestEndpoint: discovery.client_api.login_request_endpoint,
-      authorizeUrl: discovery.client_api.authorize_url,
-      pollEndpointTemplate: discovery.client_api.poll_endpoint_template,
-    },
   };
 }
 
@@ -66,8 +62,10 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
         serverBaseUrl,
         serverName: summary.serverName,
         serverDescription: summary.serverDescription,
+        serverVersion: summary.serverVersion,
+        serverRelease: summary.serverRelease,
+        serverReleaseDate: summary.serverReleaseDate,
         apiBaseUrl: summary.apiBaseUrl,
-        clientApi: summary.clientApi,
         lastUsedAt: now,
       };
 

@@ -7,8 +7,6 @@ type AnySelector =
   | unknown;
 
 export function getAnnotationMotivations(annotation: ReadingAnnotation): string[] {
-  // Server contract: motivations are represented as an array.
-  // Keep a small amount of defensive handling for unexpected shapes.
   const motivation = (annotation as unknown as { motivation?: unknown }).motivation;
   if (Array.isArray(motivation)) return motivation.filter((m) => typeof m === "string").map((m) => m.toLowerCase());
   if (typeof motivation === "string") return [motivation.toLowerCase()];
@@ -22,14 +20,17 @@ export function hasAnnotationMotivation(annotation: ReadingAnnotation, motivatio
 }
 
 export function isBookmarkAnnotation(annotation: ReadingAnnotation): boolean {
+  if (annotation.kind === "bookmark") return true;
   return hasAnnotationMotivation(annotation, "bookmarking");
 }
 
 export function isHighlightAnnotation(annotation: ReadingAnnotation): boolean {
+  if (annotation.kind === "highlight") return true;
   return hasAnnotationMotivation(annotation, "highlighting");
 }
 
 export function isCommentAnnotation(annotation: ReadingAnnotation): boolean {
+  if (annotation.has_comment === true) return true;
   return hasAnnotationMotivation(annotation, "commenting");
 }
 
@@ -44,6 +45,14 @@ function getFragmentSelectorValue(selector: AnySelector): string | null {
 }
 
 export function getAnnotationFragmentCfi(annotation: ReadingAnnotation): string | null {
+  const directSelector = (annotation as unknown as { selector?: unknown }).selector;
+  if (typeof directSelector === "string") {
+    const cfi = directSelector.trim();
+    if (cfi) return cfi;
+  }
+  const directSelectorValue = getFragmentSelectorValue(directSelector);
+  if (directSelectorValue) return directSelectorValue;
+
   const target = (annotation as unknown as { target?: unknown }).target as { selector?: unknown } | undefined;
   const selector = (target as any)?.selector;
   if (!selector) return null;

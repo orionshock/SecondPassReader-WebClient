@@ -30,6 +30,13 @@ export function formatAnnotationCount(n?: number | null): string | null {
 }
 
 export function getAnnotationTexts(annotation: unknown): { quote: string | null; note: string | null } {
+  const highlightText = typeof (annotation as any)?.highlight_text === "string" ? (annotation as any).highlight_text.replace(/\s+/g, " ").trim() : "";
+  const quoteText = typeof (annotation as any)?.quote === "string" ? (annotation as any).quote.replace(/\s+/g, " ").trim() : "";
+  const commentText = typeof (annotation as any)?.comment_text === "string" ? (annotation as any).comment_text.replace(/\s+/g, " ").trim() : "";
+  if (highlightText || quoteText || commentText) {
+    return { quote: highlightText || quoteText || null, note: commentText || null };
+  }
+
   const bodies = (annotation as any)?.body;
   if (!Array.isArray(bodies)) return { quote: null, note: null };
 

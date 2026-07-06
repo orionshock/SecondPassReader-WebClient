@@ -23,6 +23,8 @@ import type {
 } from "./schemas/shelves";
 import type {
   ReadingAnnotation,
+  ReadingAnnotationBatchCreatePayload,
+  ReadingAnnotationBatchCreateResponse,
   ReadingAnnotationPage,
   ReadingOpenResponse,
   ReadingBookActivitySummaryResponse,
@@ -46,6 +48,7 @@ import {
   updateReadingSession,
 } from "./readingSessionsApi";
 import {
+  batchCreateReadingAnnotations,
   createBookmarkAnnotation,
   createHighlightAnnotation,
   deleteReadingAnnotation,
@@ -65,10 +68,11 @@ export type {
   CreateBookmarkInput,
   CreateHighlightInput,
   ListReadingAnnotationsInput,
-  ReadingAnnotationMotivation,
   ReadingAnnotationsOrdering,
+  ReadingAnnotationKind,
   UpdateNoteInput,
 } from "./readingAnnotationsApi";
+export type { ReadingAnnotationBatchCreatePayload, ReadingAnnotationBatchCreateResponse } from "./schemas/readingSession";
 export type { SaveReadingProgressInput } from "./readingProgressApi";
 import {
   addShelfItem,
@@ -198,6 +202,10 @@ export type SecondPassClient = {
       list(params: ListReadingAnnotationsInput): Promise<ReadingAnnotationPage>;
       createHighlight(input: CreateHighlightInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
       createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
+      batchCreate(
+        input: ReadingAnnotationBatchCreatePayload,
+        options?: { idempotencyKey?: string },
+      ): Promise<ReadingAnnotationBatchCreateResponse>;
       updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
       remove(annotationId: string): Promise<void>;
     };
@@ -406,6 +414,10 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         createBookmark: (input, options) => {
           const auth = requireAuth(ctx);
           return createBookmarkAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
+        },
+        batchCreate: (input, options) => {
+          const auth = requireAuth(ctx);
+          return batchCreateReadingAnnotations(auth, { payload: input, idempotencyKey: options?.idempotencyKey });
         },
         updateNote: (annotationId, input) => {
           const auth = requireAuth(ctx);

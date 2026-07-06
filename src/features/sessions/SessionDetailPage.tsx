@@ -207,7 +207,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
     return [authors || null, series || null].filter((item): item is string => Boolean(item));
   }, [session?.book?.authors, session?.book?.series?.name, session?.book?.series_index]);
 
-  const canOpenReader = Boolean(session?.book?.id);
+  const canOpenReader = Boolean(session?.book?.id) && session?.can_open !== false;
 
   return (
     <section className="panel sessionDetailPage">
@@ -233,6 +233,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
             isActive={isActive}
             canOpenReader={canOpenReader}
             onOpenReader={() => {
+              if (session.can_open === false) return;
               const bookId = String(session.book?.id ?? "");
               saveReaderReturnTarget(bookId, {
                 kind: "sessions",

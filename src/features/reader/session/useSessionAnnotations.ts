@@ -155,9 +155,7 @@ export function useSessionAnnotations(args: {
           const res = await args.spl!.reading.annotations.list({
             sessionId,
             page,
-            // Standalone comment-only annotations are not supported. Highlights with notes
-            // are still returned when filtering by "highlighting".
-            motivation: ["bookmarking", "highlighting"],
+            kind: ["bookmark", "highlight"],
             ordering: "-created",
           });
           all.push(...(res.results as unknown as ReadingAnnotation[]));

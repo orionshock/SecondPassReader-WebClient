@@ -31,7 +31,7 @@ The workflow gate in `src/app/App.tsx` prevents unauthenticated or unverified pr
 - The server is canonical for library data, reading sessions, progress, and annotations.
 - Browser storage keeps local connection profiles, app theme, reader settings, library display preference, return targets, and marginalia layer preferences.
 - Renderer state is not canonical app data.
-- Annotation/session data uses W3C Web Annotation JSON-LD with EPUB CFI selectors.
+- Live annotation/session data uses the SPL Marginalia Profile shape with EPUB CFI selectors.
 - `@likecoin/epub-ts` details stay behind the reader engine boundary.
 
 ## Source Layout
@@ -94,4 +94,3 @@ The workflow gate in `src/app/App.tsx` prevents unauthenticated or unverified pr
 The EPUB engine is expensive and stateful. Opening menus, drawers, modals, tabs, or tool panels must not recreate it. Callback identity and effect dependencies near `ReadingShell` and `EpubTsBookEngine` should be treated as lifecycle-sensitive.
 
 Temporary state must be resolved by the layer that creates it before handing off to another layer. Search flashes, staged highlight previews, and durable annotation marks should not be layered casually.
-

@@ -24,6 +24,8 @@ describe("accountProfile", () => {
       role: "manager",
       must_change_password: false,
       is_owner: true,
+      advanced_library_groups_enabled: true,
+      banner_text: "Maintenance tonight",
       groups: [
         {
           id: "8ad00b1e-e108-4ad2-a0b4-1d5c465083c7",
@@ -42,6 +44,8 @@ describe("accountProfile", () => {
 
     expect(next.verifiedAt).toBe("2026-06-25T12:00:00.000Z");
     expect(next.mustChangePassword).toBe(false);
+    expect(next.advancedLibraryGroupsEnabled).toBe(true);
+    expect(next.bannerText).toBe("Maintenance tonight");
     expect(next.verifiedUser).toEqual({
       profileId: "f241b2c7-414e-4fc0-9623-dbea4a1cf449",
       username: "orionshock",
@@ -83,6 +87,22 @@ describe("accountProfile", () => {
       must_change_password: false,
       is_owner: true,
       groups: [],
+    }, "2026-06-25T13:00:00.000Z", { markVerified: false });
+
+    expect(hasCurrentAccountProfileChanged(profile, next)).toBe(true);
+  });
+
+  it("detects dynamic /me context changes during the background refresh", () => {
+    const profile = applyCurrentAccountToProfile(baseProfile(), {
+      username: "reader",
+      advanced_library_groups_enabled: false,
+      banner_text: null,
+    }, "2026-06-25T12:00:00.000Z");
+
+    const next = applyCurrentAccountToProfile(profile, {
+      username: "reader",
+      advanced_library_groups_enabled: true,
+      banner_text: "Maintenance tonight",
     }, "2026-06-25T13:00:00.000Z", { markVerified: false });
 
     expect(hasCurrentAccountProfileChanged(profile, next)).toBe(true);

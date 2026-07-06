@@ -10,8 +10,11 @@ export type SecondPassWellKnown = {
 export type SecondPassDiscovery = {
   server_name: string;
   server_description?: string;
+  server_version?: string;
+  server_release?: string;
+  server_release_date?: string;
   api_base_url: string;
-  client_api: {
+  client_api?: {
     discovery_version: string;
     discovery_endpoint: string;
     login_request_endpoint: string;
@@ -64,6 +67,8 @@ export type MePayload = {
   role?: string;
   must_change_password?: boolean;
   is_owner?: boolean;
+  advanced_library_groups_enabled?: boolean;
+  banner_text?: string | null;
   groups?: MeGroup[];
   raw?: unknown;
 };
