@@ -13,6 +13,15 @@ export type MarginaliaSplitItem = {
   exportJson: Record<string, unknown>;
 };
 
+export type MarginaliaBookGroup = {
+  id: string;
+  book: Record<string, unknown>;
+  bookLabel: string;
+  folderName: string;
+  zipFilename: string;
+  items: MarginaliaSplitItem[];
+};
+
 export type MarginaliaSplitResult = {
   summary: MarginaliaSplitSummary;
   items: MarginaliaSplitItem[];
@@ -108,6 +117,61 @@ export function buildSplitFilename(input: {
   return `${prefix}-${slugPart(bookPart)}-${slugPart(sessionPart)}.json`;
 }
 
+export function buildBookFolderName(input: { book: Record<string, unknown>; bookIndex: number }): string {
+  const bookPart =
+    getString(input.book.id) ??
+    getString(input.book.book_id) ??
+    getString(input.book.title) ??
+    `book-${input.bookIndex + 1}`;
+  const prefix = String(input.bookIndex + 1).padStart(2, "0");
+  return `${prefix}-${slugPart(bookPart)}`;
+}
+
+export function buildBookZipFilename(input: { book: Record<string, unknown>; bookIndex: number }): string {
+  return `${buildBookFolderName(input)}.zip`;
+}
+
+export function groupMarginaliaSplitItems(items: MarginaliaSplitItem[]): MarginaliaBookGroup[] {
+  const groups: MarginaliaBookGroup[] = [];
+  const groupIndexes = new Map<string, number>();
+
+  for (const item of items) {
+    const bookIndex = getBookIndexFromSplitId(item.id) ?? groups.length;
+    const groupId = `book-${bookIndex + 1}`;
+    let group = groups.find((candidate) => candidate.id === groupId);
+    if (!group) {
+      groupIndexes.set(groupId, bookIndex);
+      group = {
+        id: groupId,
+        book: item.book,
+        bookLabel: formatMarginaliaBookLabel(item.book),
+        folderName: buildBookFolderName({ book: item.book, bookIndex }),
+        zipFilename: buildBookZipFilename({ book: item.book, bookIndex }),
+        items: [],
+      };
+      groups.push(group);
+    }
+    group.items.push(item);
+  }
+
+  return groups.map((group) => ({
+    ...group,
+    items: group.items,
+    folderName: makeUniqueName(group.folderName, groupIndexes.get(group.id) ?? 0, groups.map((candidate) => candidate.folderName)),
+  }));
+}
+
+export function buildAllZipEntries(groups: MarginaliaBookGroup[]): Array<{ path: string; item: MarginaliaSplitItem }> {
+  const folderNames = groups.map((group, index) => makeUniqueName(group.folderName, index, groups.map((candidate) => candidate.folderName)));
+  const entries: Array<{ path: string; item: MarginaliaSplitItem }> = [];
+  groups.forEach((group, groupIndex) => {
+    for (const item of group.items) {
+      entries.push({ path: `${folderNames[groupIndex]}/${item.filename}`, item });
+    }
+  });
+  return entries;
+}
+
 export function formatMarginaliaBookLabel(book: Record<string, unknown>): string {
   const title = getString(book.title) ?? getString(book.name) ?? "Untitled book";
   const author = formatAuthor(book.author ?? book.authors);
@@ -151,6 +215,17 @@ function slugPart(value: string): string {
     .replace(/^[._-]+|[._-]+$/g, "")
     .slice(0, 60);
   return ascii || "untitled";
+}
+
+function getBookIndexFromSplitId(id: string): number | null {
+  const raw = id.split("-", 1)[0];
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed - 1 : null;
+}
+
+function makeUniqueName(value: string, index: number, allValues: string[]): string {
+  const firstIndex = allValues.indexOf(value);
+  return firstIndex === index ? value : `${value}-${String(index + 1).padStart(2, "0")}`;
 }
 
 function formatAuthor(value: unknown): string | null {

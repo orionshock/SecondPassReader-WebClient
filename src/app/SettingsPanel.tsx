@@ -8,11 +8,14 @@ import { applyCurrentAccountToProfile } from "../features/connection/accountProf
 import { createSplClientFromProfile } from "./createSplClient";
 import { navigateTo, type AppRoute, type SettingsTab } from "./navigation";
 import {
-  formatMarginaliaBookLabel,
+  buildAllZipEntries,
   formatMarginaliaSessionLabel,
+  groupMarginaliaSplitItems,
+  type MarginaliaBookGroup,
   parseAndSplitMarginaliaExport,
   type MarginaliaSplitResult,
 } from "../features/settings/marginaliaSplitExport";
+import { createMarginaliaZipBlob } from "../features/settings/marginaliaZipExport";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -145,14 +148,26 @@ export function SettingsPanel({
     setMarginaliaState({ phase: "idle" });
   }
 
-  function downloadMarginaliaSplit(item: MarginaliaSplitResult["items"][number]) {
-    const blob = new Blob([`${JSON.stringify(item.exportJson, null, 2)}\n`], { type: "application/json" });
+  function downloadBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = item.filename;
+    anchor.download = filename;
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function downloadMarginaliaSplit(item: MarginaliaSplitResult["items"][number]) {
+    downloadBlob(new Blob([`${JSON.stringify(item.exportJson, null, 2)}\n`], { type: "application/json" }), item.filename);
+  }
+
+  function downloadMarginaliaBookZip(group: MarginaliaBookGroup) {
+    const entries = group.items.map((item) => ({ path: item.filename, item }));
+    downloadBlob(createMarginaliaZipBlob(entries), group.zipFilename);
+  }
+
+  function downloadAllMarginaliaZip(groups: MarginaliaBookGroup[]) {
+    downloadBlob(createMarginaliaZipBlob(buildAllZipEntries(groups)), "secondpass-marginalia-sessions.zip");
   }
 
   const status = getConnectionStatus(profile);
@@ -288,7 +303,7 @@ export function SettingsPanel({
             <span className="pill pillIdle">Recovery</span>
           </div>
           <p className="muted">
-            Upload an unmatched SecondPassMarginaliaExport JSON file and split it into one book/session file at a time.
+            Upload an unmatched SecondPassMarginaliaExport JSON file and split it into one session file at a time.
             This only prepares files for recovery. It does not repair selectors, match quotes, or write annotations.
           </p>
           <div className="settingsFileRow">
@@ -302,7 +317,7 @@ export function SettingsPanel({
               accept="application/json,.json"
               onChange={(event) => void handleMarginaliaFile(event.currentTarget.files?.[0] ?? null)}
             />
-            <span className="muted">Split into book/session files</span>
+            <span className="muted">Split into session files</span>
             {marginaliaState.phase !== "idle" ? (
               <button type="button" className="button" onClick={clearMarginaliaFile}>
                 Clear
@@ -322,26 +337,38 @@ export function SettingsPanel({
               {marginaliaState.result.items.length === 0 ? (
                 <p className="muted">No sessions were found to split.</p>
               ) : (
-                <div className="marginaliaSplitList">
-                  {marginaliaGroups.map((group) => (
-                    <div className="marginaliaSplitGroup" key={group.bookLabel}>
-                      <div className="settingsLabel">{group.bookLabel}</div>
-                      <div className="marginaliaSplitGroupItems">
-                        {group.items.map((item) => (
-                          <div className="marginaliaSplitItem" key={item.id}>
-                            <div className="marginaliaSplitText">
-                              <div className="muted">{formatMarginaliaSessionLabel(item.session)}</div>
-                              <div className="muted">{item.annotationCount} annotation{item.annotationCount === 1 ? "" : "s"}</div>
+                <>
+                  <div className="settingsActions">
+                    <button type="button" className="button" onClick={() => downloadAllMarginaliaZip(marginaliaGroups)}>
+                      Download all ZIP
+                    </button>
+                  </div>
+                  <div className="marginaliaSplitList">
+                    {marginaliaGroups.map((group) => (
+                      <div className="marginaliaSplitGroup" key={group.id}>
+                        <div className="marginaliaSplitGroupHeader">
+                          <div className="settingsLabel">{group.bookLabel}</div>
+                          <button type="button" className="button" onClick={() => downloadMarginaliaBookZip(group)}>
+                            Download book ZIP
+                          </button>
+                        </div>
+                        <div className="marginaliaSplitGroupItems">
+                          {group.items.map((item) => (
+                            <div className="marginaliaSplitItem" key={item.id}>
+                              <div className="marginaliaSplitText">
+                                <div className="muted">{formatMarginaliaSessionLabel(item.session)}</div>
+                                <div className="muted">{item.annotationCount} annotation{item.annotationCount === 1 ? "" : "s"}</div>
+                              </div>
+                              <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
+                                Download JSON
+                              </button>
                             </div>
-                            <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
-                              Download JSON
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           ) : null}
@@ -358,23 +385,6 @@ function Detail({ label, value, mono = false }: { label: string; value: string; 
       <span className="muted">{label}:</span> <span className={mono ? "mono" : undefined}>{value}</span>
     </div>
   );
-}
-
-function groupMarginaliaSplitItems(items: MarginaliaSplitResult["items"]): Array<{
-  bookLabel: string;
-  items: MarginaliaSplitResult["items"];
-}> {
-  const groups: Array<{ bookLabel: string; items: MarginaliaSplitResult["items"] }> = [];
-  for (const item of items) {
-    const bookLabel = formatMarginaliaBookLabel(item.book);
-    const existing = groups.find((group) => group.bookLabel === bookLabel);
-    if (existing) {
-      existing.items.push(item);
-    } else {
-      groups.push({ bookLabel, items: [item] });
-    }
-  }
-  return groups;
 }
 
 function formatUser(profile: ConnectionProfile): string {

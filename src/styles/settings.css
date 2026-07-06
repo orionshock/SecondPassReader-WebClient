@@ -124,6 +124,14 @@
   gap: 6px;
 }
 
+.marginaliaSplitGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .marginaliaSplitGroupItems {
   display: grid;
   gap: 8px;

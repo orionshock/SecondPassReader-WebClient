@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSplitFilename, parseAndSplitMarginaliaExport, splitMarginaliaExport } from "../features/settings/marginaliaSplitExport";
+import {
+  buildAllZipEntries,
+  buildBookFolderName,
+  buildBookZipFilename,
+  buildSplitFilename,
+  groupMarginaliaSplitItems,
+  parseAndSplitMarginaliaExport,
+  splitMarginaliaExport,
+} from "../features/settings/marginaliaSplitExport";
 
 describe("marginalia split export", () => {
   it("splits multiple books and sessions into mini exports", () => {
@@ -165,6 +173,64 @@ describe("marginalia split export", () => {
         sessionIndex: 0,
       }),
     ).toBe("01-01-Dresden-Files-Storm-Front-session-one.json");
+  });
+
+  it("generates collision-safe session filenames", () => {
+    const first = buildSplitFilename({
+      book: { title: "Same Book" },
+      session: { id: "same-session" },
+      bookIndex: 0,
+      sessionIndex: 0,
+    });
+    const second = buildSplitFilename({
+      book: { title: "Same Book" },
+      session: { id: "same-session" },
+      bookIndex: 0,
+      sessionIndex: 1,
+    });
+
+    expect(first).toBe("01-01-Same-Book-same-session.json");
+    expect(second).toBe("01-02-Same-Book-same-session.json");
+  });
+
+  it("builds safe book folder and zip names", () => {
+    expect(buildBookFolderName({ book: { title: "Dresden: Files/Storm Front" }, bookIndex: 0 })).toBe(
+      "01-Dresden-Files-Storm-Front",
+    );
+    expect(buildBookZipFilename({ book: { title: "Dresden: Files/Storm Front" }, bookIndex: 0 })).toBe(
+      "01-Dresden-Files-Storm-Front.zip",
+    );
+  });
+
+  it("groups session split files by book and builds all-zip paths", () => {
+    const result = splitMarginaliaExport({
+      schema_version: "0.1.0",
+      books: [
+        {
+          title: "Same/Book",
+          sessions: [
+            { id: "session-1", annotations: [] },
+            { id: "session-2", annotations: [] },
+          ],
+        },
+        {
+          title: "Same/Book",
+          sessions: [{ id: "session-3", annotations: [] }],
+        },
+      ],
+    });
+
+    const groups = groupMarginaliaSplitItems(result.items);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]!.folderName).toBe("01-Same-Book");
+    expect(groups[1]!.folderName).toBe("02-Same-Book");
+    expect(groups[0]!.zipFilename).toBe("01-Same-Book.zip");
+
+    expect(buildAllZipEntries(groups).map((entry) => entry.path)).toEqual([
+      "01-Same-Book/01-01-Same-Book-session-1.json",
+      "01-Same-Book/01-02-Same-Book-session-2.json",
+      "02-Same-Book/02-01-Same-Book-session-3.json",
+    ]);
   });
 
   it("parses JSON and rejects unsupported shapes", () => {
