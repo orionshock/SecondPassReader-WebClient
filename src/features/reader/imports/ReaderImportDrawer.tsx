@@ -36,6 +36,13 @@ export function ReaderImportDrawer({
 
   if (!open || !job) return null;
 
+  const summaryDisplay = job.summaryDisplay ?? {
+    eyebrow: "Import file",
+    title: job.fileName,
+    metadata: [{ label: "Rows", value: String(job.rows.length) }],
+  };
+  const summaryMetadata = summaryDisplay.metadata?.map((item) => `${item.value} ${item.label.toLowerCase()}`) ?? [];
+
   return (
     <aside
       className="spReaderImportDrawer"
@@ -54,22 +61,13 @@ export function ReaderImportDrawer({
       </div>
 
       <div className="spReaderImportSummary">
-        {job.sourceSummary ? (
-          <div className="spReaderImportSourceSummary">
-            <div className="spReaderImportSourceTitle">{job.sourceSummary.bookLabel}</div>
-            <div className="muted spReaderImportSourceSubtitle">{job.sourceSummary.sessionLabel}</div>
-            <InlineMeta
-              items={[
-                `${job.sourceSummary.annotationCount} annotations`,
-                `${job.sourceSummary.commentCount} comments`,
-                `${job.sourceSummary.colorCount} colors`,
-                `${job.sourceSummary.deletedCount} deleted`,
-              ]}
-            />
-          </div>
-        ) : null}
+        <div className="spReaderImportSourceSummary">
+          {summaryDisplay.eyebrow ? <div className="muted spReaderImportSourceLabel">{summaryDisplay.eyebrow}</div> : null}
+          {summaryDisplay.title ? <div className="spReaderImportSourceTitle">{summaryDisplay.title}</div> : null}
+          {summaryMetadata.length > 0 ? <InlineMeta items={summaryMetadata} /> : null}
+        </div>
         {job.readOnly ? (
-          <div className="muted spReaderImportWarnings">Read-only staging. Matching comes next.</div>
+          null
         ) : (
           <InlineMeta
             items={[
@@ -80,7 +78,7 @@ export function ReaderImportDrawer({
             ]}
           />
         )}
-        {job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
+        {!job.readOnly && job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
       </div>
 
       <ReaderImportRowList

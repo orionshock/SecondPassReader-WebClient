@@ -32,6 +32,11 @@ describe("reader import handlers", () => {
     expect(job).toMatchObject({
       format: "glasp-csv",
       fileName: "glasp.csv",
+      summaryDisplay: {
+        eyebrow: "Import file",
+        title: "glasp.csv",
+        metadata: [{ label: "Highlights", value: "1" }],
+      },
       rows: [{ importedText: "Quote", importedNote: "Note", importedColor: "yellow" }],
     });
   });
@@ -67,13 +72,10 @@ describe("reader import handlers", () => {
     expect(job.format).toBe("spl-session-json");
     expect(job.fileName).toBe("session.json");
     expect(job.readOnly).toBe(true);
-    expect(job.sourceSummary).toEqual({
-      bookLabel: "Book - Author",
-      sessionLabel: "Session label",
-      annotationCount: 1,
-      commentCount: 1,
-      colorCount: 1,
-      deletedCount: 0,
+    expect(job.summaryDisplay).toEqual({
+      eyebrow: "Session",
+      title: "Session label",
+      metadata: [{ label: "Annotations", value: "1" }],
     });
     expect(job.rows).toHaveLength(1);
     expect(job.rows[0]).toMatchObject({
@@ -163,7 +165,6 @@ describe("reader import handlers", () => {
       target: { selector: selectorArray },
     });
     expect(job.sourceSession).toMatchObject({ id: "session", session_unknown: true });
-    expect(job.sourceSummary?.deletedCount).toBe(1);
   });
 });
 

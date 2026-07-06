@@ -1,5 +1,4 @@
 import {
-  formatMarginaliaBookLabel,
   formatMarginaliaSessionLabel,
   parseAndSplitMarginaliaExport,
 } from "../../../settings/marginaliaSplitExport";
@@ -59,7 +58,6 @@ function parseSplMarginaliaSessionImport(text: string, fileName: string, now = n
   const item = split.items[0]!;
   const annotations = readAnnotations(item.session);
   const rows = annotations.map((annotation, index) => toImportRow(annotation, index + 1));
-  const bookLabel = formatMarginaliaBookLabel(item.book);
   const sessionLabel = formatMarginaliaSessionLabel(item.session);
 
   return {
@@ -71,17 +69,13 @@ function parseSplMarginaliaSessionImport(text: string, fileName: string, now = n
       rows,
       activeRowId: rows[0]?.id,
       readOnly: true,
+      summaryDisplay: {
+        eyebrow: "Session",
+        title: sessionLabel || fileName,
+        metadata: [{ label: "Annotations", value: String(annotations.length) }],
+      },
       sourceBook: item.book,
       sourceSession: item.session,
-      sourceSummary: {
-        bookLabel,
-        sessionLabel,
-        annotationCount: annotations.length,
-        commentCount: annotations.filter(hasComment).length,
-        colorCount: annotations.filter(hasColor).length,
-        deletedCount: annotations.filter(isDeleted).length,
-      },
-      warnings: ["Matching comes next. No annotations have been imported."],
     },
   };
 }
@@ -135,18 +129,6 @@ function readLocationHint(annotation: Record<string, unknown>): string | undefin
     if (value && (kind === "epub_cfi" || kind === "FragmentSelector")) return `Location hint: ${value}`;
   }
   return undefined;
-}
-
-function hasComment(annotation: Record<string, unknown>): boolean {
-  return Boolean(getString(annotation.comment_text) ?? getString(annotation.note) ?? getString(annotation.comment));
-}
-
-function hasColor(annotation: Record<string, unknown>): boolean {
-  return Boolean(getString(annotation.highlight_color) ?? getString(annotation.color));
-}
-
-function isDeleted(annotation: Record<string, unknown>): boolean {
-  return annotation.is_deleted === true || annotation.deleted === true;
 }
 
 function getString(value: unknown): string | undefined {

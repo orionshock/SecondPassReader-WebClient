@@ -14,6 +14,12 @@ export type ReaderImportRow = {
   rawAnnotation?: Record<string, unknown>;
 };
 
+export type ReaderImportSummaryDisplay = {
+  eyebrow?: string;
+  title?: string;
+  metadata?: Array<{ label: string; value: string }>;
+};
+
 export type ReaderImportJob = {
   id: string;
   format: ReaderImportFormat;
@@ -23,14 +29,7 @@ export type ReaderImportJob = {
   activeRowId?: string;
   warnings?: string[];
   readOnly?: boolean;
+  summaryDisplay?: ReaderImportSummaryDisplay;
   sourceBook?: Record<string, unknown>;
   sourceSession?: Record<string, unknown>;
-  sourceSummary?: {
-    bookLabel: string;
-    sessionLabel: string;
-    annotationCount: number;
-    commentCount: number;
-    colorCount: number;
-    deletedCount: number;
-  };
 };
