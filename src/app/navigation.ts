@@ -43,6 +43,31 @@ function buildQuery(params: Record<string, string | number | undefined>): string
   return s ? `?${s}` : "";
 }
 
+const DEFAULT_PAGE_SIZE = 20;
+
+function nonDefaultPage(page?: number): number | undefined {
+  return typeof page === "number" && page > 1 ? page : undefined;
+}
+
+function nonDefaultPageSize(pageSize?: number): number | undefined {
+  return typeof pageSize === "number" && pageSize !== DEFAULT_PAGE_SIZE ? pageSize : undefined;
+}
+
+function getDefaultLibraryOrdering(route: Extract<AppRoute, { kind: "library" }>): string {
+  if (route.q) return "title";
+  if (route.browse === "series" && route.seriesId) return "series_index";
+  if (route.browse === "series") return "name";
+  if (route.browse === "authors" && route.authorId) return "title";
+  if (route.browse === "authors") return "name";
+  if (route.browse === "groups" && route.groupId) return "title";
+  if (route.browse === "groups") return "name";
+  return "title";
+}
+
+function nonDefaultOrdering(ordering: string | undefined, defaultOrdering: string): string | undefined {
+  return ordering && ordering !== defaultOrdering ? ordering : undefined;
+}
+
 export function routeToHash(route: AppRoute): string {
   switch (route.kind) {
     case "connect":
@@ -53,30 +78,37 @@ export function routeToHash(route: AppRoute): string {
       return "#/verify";
     case "home":
       return `#/home${buildQuery({ book: route.bookId })}`;
-    case "library":
+    case "library": {
+      const browse = route.browse ?? "books";
       return `#/library${buildQuery({
         q: route.q,
-        browse: !route.q && route.browse ? route.browse : undefined,
-        series: !route.q && route.browse === "series" ? route.seriesId : undefined,
-        author: !route.q && route.browse === "authors" ? route.authorId : undefined,
-        group: !route.q && route.browse === "groups" ? route.groupId : undefined,
-        ordering: route.ordering,
-        page: route.page,
-        page_size: route.pageSize,
+        browse: !route.q && browse !== "books" ? browse : undefined,
+        series: !route.q && browse === "series" ? route.seriesId : undefined,
+        author: !route.q && browse === "authors" ? route.authorId : undefined,
+        group: !route.q && browse === "groups" ? route.groupId : undefined,
+        ordering: nonDefaultOrdering(route.ordering, getDefaultLibraryOrdering(route)),
+        page: nonDefaultPage(route.page),
+        page_size: nonDefaultPageSize(route.pageSize),
         view: route.view,
         book: route.bookId,
       })}`;
+    }
     case "sessions":
       return `#/sessions${buildQuery({ book: route.bookId, q: route.q })}`;
     case "session":
       return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
-      return `#/shelves${buildQuery({ ordering: route.ordering, page: route.page, page_size: route.pageSize, book: route.bookId })}`;
+      return `#/shelves${buildQuery({
+        ordering: nonDefaultOrdering(route.ordering, "name"),
+        page: nonDefaultPage(route.page),
+        page_size: nonDefaultPageSize(route.pageSize),
+        book: route.bookId,
+      })}`;
     case "shelf":
       return `#/shelves/${encodeURIComponent(route.shelfId)}${buildQuery({
-        ordering: route.ordering,
-        page: route.page,
-        page_size: route.pageSize,
+        ordering: nonDefaultOrdering(route.ordering, "position"),
+        page: nonDefaultPage(route.page),
+        page_size: nonDefaultPageSize(route.pageSize),
         book: route.bookId,
       })}`;
     case "shelfEdit":
