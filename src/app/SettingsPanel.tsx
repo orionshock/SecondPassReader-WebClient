@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ConnectionProfile } from "../storage/connectionProfiles";
 import { saveConnectionProfile } from "../storage/connectionProfiles";
 import type { AppTheme } from "../storage/appTheme";
@@ -45,6 +45,11 @@ export function SettingsPanel({
 }: Props) {
   const [state, setState] = useState<ActionState>({ phase: "idle" });
   const [marginaliaState, setMarginaliaState] = useState<MarginaliaToolState>({ phase: "idle" });
+  const activeTab = route.tab ?? "appearance";
+
+  useEffect(() => {
+    if (activeTab !== "tools") setMarginaliaState({ phase: "idle" });
+  }, [activeTab]);
 
   async function checkConnection() {
     if (!profile) return;
@@ -136,6 +141,10 @@ export function SettingsPanel({
     }
   }
 
+  function clearMarginaliaFile() {
+    setMarginaliaState({ phase: "idle" });
+  }
+
   function downloadMarginaliaSplit(item: MarginaliaSplitResult["items"][number]) {
     const blob = new Blob([`${JSON.stringify(item.exportJson, null, 2)}\n`], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -149,7 +158,6 @@ export function SettingsPanel({
   const status = getConnectionStatus(profile);
   const busy = state.phase === "checking" || state.phase === "logging_out";
   const marginaliaGroups = marginaliaState.phase === "loaded" ? groupMarginaliaSplitItems(marginaliaState.result.items) : [];
-  const activeTab = route.tab ?? "appearance";
 
   return (
     <div className="settingsLayout">
@@ -295,6 +303,11 @@ export function SettingsPanel({
               onChange={(event) => void handleMarginaliaFile(event.currentTarget.files?.[0] ?? null)}
             />
             <span className="muted">Split into book/session files</span>
+            {marginaliaState.phase !== "idle" ? (
+              <button type="button" className="button" onClick={clearMarginaliaFile}>
+                Clear
+              </button>
+            ) : null}
           </div>
 
           {marginaliaState.phase === "error" ? <p className="errorText">{marginaliaState.message}</p> : null}
