@@ -32,6 +32,24 @@ describe("navigation route ordering params", () => {
       page: 1,
       pageSize: 20,
     })).toBe("#/library?browse=series&series=s1");
+
+    expect(routeToHash({
+      kind: "library",
+      browse: "authors",
+      authorId: "a1",
+      ordering: "title",
+      page: 1,
+      pageSize: 20,
+    })).toBe("#/library?browse=authors&author=a1");
+
+    expect(routeToHash({
+      kind: "library",
+      browse: "groups",
+      groupId: "g1",
+      ordering: "title",
+      page: 1,
+      pageSize: 20,
+    })).toBe("#/library?browse=groups&group=g1");
   });
 
   it("keeps non-default library params", () => {
@@ -106,5 +124,46 @@ describe("navigation route ordering params", () => {
       page: 2,
       pageSize: 50,
     });
+  });
+
+  it("round trips shelf detail ordering, page, and page_size", () => {
+    const hash = routeToHash({
+      kind: "shelf",
+      shelfId: "staff picks",
+      ordering: "title",
+      page: 4,
+      pageSize: 100,
+    });
+
+    expect(hash).toBe("#/shelves/staff%20picks?ordering=title&page=4&page_size=100");
+
+    vi.stubGlobal("window", { location: { hash } });
+    expect(parseCurrentRoute()).toEqual({
+      kind: "shelf",
+      shelfId: "staff picks",
+      ordering: "title",
+      page: 4,
+      pageSize: 100,
+    });
+  });
+
+  it("preserves unknown ordering from parsed URLs but omits default serialization", () => {
+    vi.stubGlobal("window", { location: { hash: "#/library?ordering=definitely-not-supported&page=0&page_size=-1" } });
+    expect(parseCurrentRoute()).toEqual({
+      kind: "library",
+      browse: "books",
+      ordering: "definitely-not-supported",
+      page: undefined,
+      pageSize: undefined,
+      view: undefined,
+    });
+
+    expect(routeToHash({
+      kind: "library",
+      browse: "books",
+      ordering: "title",
+      page: 1,
+      pageSize: 20,
+    })).toBe("#/library");
   });
 });

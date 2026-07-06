@@ -30,6 +30,17 @@ function asMockFetch() {
   return vi.mocked(globalThis.fetch);
 }
 
+function expectNoStaleLiveAnnotationFields(payload: unknown) {
+  const text = JSON.stringify(payload);
+  expect(text).not.toContain("profile_version");
+  expect(text).not.toContain("motivation");
+  expect(text).not.toContain("target");
+  expect(text).not.toContain("body");
+  expect(text).not.toContain("TextualBody");
+  expect(text).not.toContain("FragmentSelector");
+  expect(text).not.toContain("TextQuoteSelector");
+}
+
 describe("@secondpass/client high-level workflows", () => {
   beforeEach(() => {
     globalThis.fetch = vi.fn() as unknown as typeof fetch;
@@ -103,6 +114,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload).not.toHaveProperty("motivation");
     expect(payload).not.toHaveProperty("target");
     expect(payload).not.toHaveProperty("body");
+    expectNoStaleLiveAnnotationFields(payload);
   });
 
   it("reading.annotations.createBookmark does not send highlight-only fields", async () => {
@@ -119,6 +131,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload).not.toHaveProperty("highlight_text");
     expect(payload).not.toHaveProperty("highlight_color");
     expect(payload).not.toHaveProperty("comment_text");
+    expectNoStaleLiveAnnotationFields(payload);
   });
 
   it("reading.annotations.createHighlight builds SPL highlight payload including text/color and note", async () => {
@@ -149,6 +162,7 @@ describe("@secondpass/client high-level workflows", () => {
       comment_text: "A note",
     });
     expect(payload).not.toHaveProperty("profile_version");
+    expectNoStaleLiveAnnotationFields(payload);
   });
 
   it("reading.annotations.createHighlight defaults missing color to yellow", async () => {
@@ -166,6 +180,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload.selector).toEqual({ kind: "epub_cfi", value: "epubcfi(/6/2[chap01]!/4/1:0,/1:10)" });
     expect(payload.highlight_color).toBe("yellow");
     expect(payload).not.toHaveProperty("profile_version");
+    expectNoStaleLiveAnnotationFields(payload);
   });
 
   it("reading.annotations.createHighlight sends quotePrefix/suffix in SPL quote object", async () => {
@@ -188,6 +203,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(payload).not.toHaveProperty("target");
     expect(payload.quote).toEqual({ exact: "Selected text", prefix: long, suffix: long });
     expect(payload).not.toHaveProperty("profile_version");
+    expectNoStaleLiveAnnotationFields(payload);
   });
 
   it("reading.annotations.list supports repeatable kind filters and ordering", async () => {
@@ -262,6 +278,8 @@ describe("@secondpass/client high-level workflows", () => {
     });
     expect(payload).not.toHaveProperty("profile_version");
     expect(payload).not.toHaveProperty("items");
+    expect(payload.annotations[0]).not.toHaveProperty("session");
+    expectNoStaleLiveAnnotationFields(payload);
   });
 
   it("reading.annotations.batchCreate rejects more than 100 items client-side", async () => {
@@ -446,6 +464,26 @@ describe("@secondpass/client high-level workflows", () => {
     expect(url.searchParams.get("ordering")).toBe("author");
   });
 
+  it("shelf items list supports position, title, and author ordering without mutating shelf positions", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.items("shelf-1", { ordering: "position" });
+    await spl.shelves.items("shelf-1", { ordering: "title" });
+    await spl.shelves.items("shelf-1", { ordering: "author" });
+
+    const orderings = fetchMock.mock.calls.map(([url]) => new URL(String(url)).searchParams.get("ordering"));
+    expect(orderings).toEqual(["position", "title", "author"]);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init?.method ?? "GET").toBe("GET");
+      expect(init?.body).toBeUndefined();
+    }
+  });
+
   it("shelves.list preserves unscoped behavior and rejects personal owner-group filters", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
@@ -621,6 +659,59 @@ describe("@secondpass/client high-level workflows", () => {
     const session = await spl.reading.sessions.get("sess-1");
 
     expect(session.can_open).toBe(false);
+  });
+
+  it("reading sessions list preserves can_open from paginated server payloads", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          { id: "sess-1", can_open: false, is_active: true },
+          { id: "sess-2", can_open: true, is_active: false },
+        ],
+      }),
+    );
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const sessions = await spl.reading.sessions.list();
+
+    expect(sessions.results.map((session) => session.can_open)).toEqual([false, true]);
+  });
+
+  it("reading session open/start/update payloads stay scoped to session fields", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ session: { id: "sess-1" }, profile_version: "pv1", progress: {}, annotations: { results: [] } }))
+      .mockResolvedValueOnce(jsonResponse({ session: { id: "sess-2" }, profile_version: "pv2", progress: {}, annotations: { results: [] } }))
+      .mockResolvedValueOnce(jsonResponse({ id: "sess-1", name: "Evening", notes: "Chapter 3" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.reading.sessions.open(123);
+    await spl.reading.sessions.startOver(123);
+    await spl.reading.sessions.updateDetails("sess-1", { name: "Evening", notes: "Chapter 3" });
+
+    const [openUrl, openInit] = fetchMock.mock.calls[0]!;
+    expect(String(openUrl)).toBe("https://api.example/reading/books/123/open/");
+    expect(openInit?.method).toBe("POST");
+    expect(JSON.parse(String(openInit?.body))).toEqual({});
+    expectNoStaleLiveAnnotationFields(JSON.parse(String(openInit?.body)));
+
+    const [startOverUrl, startOverInit] = fetchMock.mock.calls[1]!;
+    expect(String(startOverUrl)).toBe("https://api.example/reading/books/123/start-over/");
+    expect(startOverInit?.method).toBe("POST");
+    expect(startOverInit?.body).toBeUndefined();
+
+    const [updateUrl, updateInit] = fetchMock.mock.calls[2]!;
+    expect(String(updateUrl)).toBe("https://api.example/reading/sessions/sess-1/");
+    expect(updateInit?.method).toBe("PATCH");
+    const updatePayload = JSON.parse(String(updateInit?.body));
+    expect(updatePayload).toEqual({ name: "Evening", notes: "Chapter 3" });
+    expect(updatePayload).not.toHaveProperty("profile_version");
+    expect(updatePayload).not.toHaveProperty("current_location");
+    expectNoStaleLiveAnnotationFields(updatePayload);
   });
 
   it("server.discover works without access token, while auth-required namespaces throw without access token", async () => {

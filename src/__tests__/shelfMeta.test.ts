@@ -45,6 +45,11 @@ describe("shelfMeta public group detection", () => {
     });
 
     expect(isCanonicalPublicShelfGroup(shelf)).toBe(false);
+    expect(formatShelfOwnerParts(shelf)).toEqual({
+      kind: "group",
+      name: "Public",
+      isPublicGroup: false,
+    });
   });
 
   it("does not confuse listed shelf visibility with public group ownership", () => {
@@ -57,5 +62,41 @@ describe("shelfMeta public group detection", () => {
     });
 
     expect(isCanonicalPublicShelfGroup(shelf)).toBe(false);
+  });
+
+  it("keeps user-owned shelf metadata distinct from group ownership", () => {
+    const shelf = makeShelf({
+      owner_type: "user",
+      owner_group: null,
+      owner_user: {
+        id: "u1",
+        profile_id: "p1",
+        username: "ada",
+        first_name: "Ada",
+        last_name: "Lovelace",
+      },
+    });
+
+    expect(formatShelfOwnerParts(shelf)).toEqual({
+      kind: "user",
+      displayName: "Ada Lovelace",
+      handle: "<@ada>",
+    });
+  });
+
+  it("does not require advanced library groups context to expose owner group labels", () => {
+    const shelf = makeShelf({
+      owner_group: {
+        id: "club-1",
+        name: "Fantasy Club",
+        is_public_group: false,
+      },
+    });
+
+    expect(formatShelfOwnerParts(shelf)).toEqual({
+      kind: "group",
+      name: "Fantasy Club",
+      isPublicGroup: false,
+    });
   });
 });
