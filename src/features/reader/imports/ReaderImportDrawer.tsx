@@ -54,22 +54,40 @@ export function ReaderImportDrawer({
       </div>
 
       <div className="spReaderImportSummary">
-        <InlineMeta
-          items={[
-            `${counts.pending} pending`,
-            `${counts.accepted} accepted`,
-            `${counts.skipped} skipped`,
-            `${counts.notFound} not found`,
-          ]}
-        />
+        {job.sourceSummary ? (
+          <div className="spReaderImportSourceSummary">
+            <div className="spReaderImportSourceTitle">{job.sourceSummary.bookLabel}</div>
+            <InlineMeta
+              items={[
+                job.sourceSummary.sessionLabel,
+                `${job.sourceSummary.annotationCount} annotations`,
+                `${job.sourceSummary.commentCount} with comments`,
+                `${job.sourceSummary.colorCount} with colors`,
+                `${job.sourceSummary.deletedCount} deleted`,
+              ]}
+            />
+          </div>
+        ) : null}
+        {job.readOnly ? (
+          <div className="muted spReaderImportWarnings">Read-only staging. Matching comes next.</div>
+        ) : (
+          <InlineMeta
+            items={[
+              `${counts.pending} pending`,
+              `${counts.accepted} accepted`,
+              `${counts.skipped} skipped`,
+              `${counts.notFound} not found`,
+            ]}
+          />
+        )}
         {job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
       </div>
 
       <ReaderImportRowList
         job={job}
         onSelectRow={onSelectRow}
-        onSkipRow={onSkipRow}
-        onUnskipRow={onUnskipRow}
+        onSkipRow={job.readOnly ? undefined : onSkipRow}
+        onUnskipRow={job.readOnly ? undefined : onUnskipRow}
       />
 
       <div className="spReaderImportDrawerFooter">

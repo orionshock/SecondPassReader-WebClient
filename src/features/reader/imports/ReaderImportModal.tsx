@@ -1,17 +1,26 @@
 import { useState } from "react";
+import { SplMarginaliaSessionCountError } from "./splMarginaliaSessionImport";
+
+type ReaderImportModalFormat = "glasp-csv" | "spl-session-json";
 
 export function ReaderImportModal({
   open,
   onClose,
   onStartImport,
+  onStartSplSessionJsonImport,
+  onOpenExportSplitter,
 }: {
   open: boolean;
   onClose: () => void;
   onStartImport: (file: File) => Promise<{ warnings?: string[] }>;
+  onStartSplSessionJsonImport: (file: File) => Promise<{ warnings?: string[] }>;
+  onOpenExportSplitter: () => void;
 }) {
+  const [format, setFormat] = useState<ReaderImportModalFormat>("glasp-csv");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [multiSessionError, setMultiSessionError] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   if (!open) return null;
@@ -20,13 +29,15 @@ export function ReaderImportModal({
     if (!file) return;
     setBusy(true);
     setError(null);
+    setMultiSessionError(false);
     setWarnings([]);
     try {
-      const job = await onStartImport(file);
+      const job = format === "spl-session-json" ? await onStartSplSessionJsonImport(file) : await onStartImport(file);
       setWarnings(job.warnings ?? []);
       setFile(null);
       onClose();
     } catch (err) {
+      if (err instanceof SplMarginaliaSessionCountError) setMultiSessionError(err.sessionCount > 1);
       setError(err instanceof Error ? err.message : "Failed to parse import file.");
     } finally {
       setBusy(false);
@@ -50,19 +61,31 @@ export function ReaderImportModal({
         <div className="spReaderImportModalBody">
           <label className="fieldLabel">
             Format
-            <select className="input" value="glasp-csv" disabled>
+            <select
+              className="input"
+              value={format}
+              onChange={(e) => {
+                setFormat(e.currentTarget.value as ReaderImportModalFormat);
+                setError(null);
+                setMultiSessionError(false);
+                setWarnings([]);
+                setFile(null);
+              }}
+            >
               <option value="glasp-csv">Glasp CSV</option>
+              <option value="spl-session-json">SecondPassMarginaliaExport session JSON</option>
             </select>
           </label>
 
           <label className="fieldLabel">
-            CSV file
+            {format === "spl-session-json" ? "Session JSON file" : "CSV file"}
             <input
               className="input"
               type="file"
-              accept=".csv,text/csv"
+              accept={format === "spl-session-json" ? "application/json,.json" : ".csv,text/csv"}
               onChange={(e) => {
                 setError(null);
+                setMultiSessionError(false);
                 setWarnings([]);
                 setFile(e.target.files?.[0] ?? null);
               }}
@@ -70,6 +93,11 @@ export function ReaderImportModal({
           </label>
 
           {error ? <div className="errorText">{error}</div> : null}
+          {multiSessionError ? (
+            <button type="button" className="button buttonCompact" onClick={onOpenExportSplitter}>
+              Open export splitter
+            </button>
+          ) : null}
           {warnings.length > 0 ? (
             <div className="muted spReaderImportWarnings">{warnings.join(" ")}</div>
           ) : null}
@@ -78,7 +106,7 @@ export function ReaderImportModal({
         <div className="spReaderImportModalActions">
           <button type="button" className="button buttonCompact" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="button buttonPrimary" onClick={startImport} disabled={!file || busy}>
-            {busy ? "Parsing..." : "Start import"}
+            {busy ? "Parsing..." : format === "spl-session-json" ? "Stage session" : "Start import"}
           </button>
         </div>
       </section>

@@ -9,8 +9,8 @@ export function ReaderImportRowList({
 }: {
   job: ReaderImportJob;
   onSelectRow: (rowId: string) => void;
-  onSkipRow: (rowId: string) => void;
-  onUnskipRow: (rowId: string) => void;
+  onSkipRow?: (rowId: string) => void;
+  onUnskipRow?: (rowId: string) => void;
 }) {
   return (
     <div className="spReaderImportRows">
@@ -21,8 +21,8 @@ export function ReaderImportRowList({
           row={row}
           selected={job.activeRowId === row.id}
           onSelect={() => onSelectRow(row.id)}
-          onSkip={() => onSkipRow(row.id)}
-          onUnskip={() => onUnskipRow(row.id)}
+          onSkip={onSkipRow ? () => onSkipRow(row.id) : undefined}
+          onUnskip={onUnskipRow ? () => onUnskipRow(row.id) : undefined}
         />
       ))}
     </div>

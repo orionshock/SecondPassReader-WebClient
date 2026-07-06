@@ -11,8 +11,8 @@ export function ReaderImportRowItem({
   row: ReaderImportRow;
   selected: boolean;
   onSelect: () => void;
-  onSkip: () => void;
-  onUnskip: () => void;
+  onSkip?: () => void;
+  onUnskip?: () => void;
 }) {
   const colorVars = toAnnotationCssVars(row.normalizedColor ?? "yellow");
 
@@ -31,13 +31,15 @@ export function ReaderImportRowItem({
         {row.importedNote ? <span className="spAnnotationNote spReaderImportNote">{row.importedNote}</span> : null}
         {row.importedLocation ? <span className="muted spReaderImportLocation">{row.importedLocation}</span> : null}
       </button>
-      <div className="spReaderImportRowActions">
-        {row.status === "accepted" ? null : row.status === "skipped" ? (
-          <button type="button" className="button buttonCompact" onClick={onUnskip}>Unskip</button>
-        ) : (
-          <button type="button" className="button buttonCompact" onClick={onSkip}>Skip</button>
-        )}
-      </div>
+      {onSkip || onUnskip ? (
+        <div className="spReaderImportRowActions">
+          {row.status === "accepted" ? null : row.status === "skipped" ? (
+            <button type="button" className="button buttonCompact" onClick={onUnskip}>Unskip</button>
+          ) : (
+            <button type="button" className="button buttonCompact" onClick={onSkip}>Skip</button>
+          )}
+        </div>
+      ) : null}
     </article>
   );
 }

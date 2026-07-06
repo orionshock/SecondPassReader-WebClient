@@ -1,4 +1,4 @@
-export type ReaderImportFormat = "glasp-csv";
+export type ReaderImportFormat = "glasp-csv" | "spl-session-json";
 export type ReaderHighlightColor = "yellow" | "green" | "blue" | "pink" | "purple";
 export type ReaderImportRowStatus = "pending" | "searching" | "staged" | "accepted" | "skipped" | "not-found";
 
@@ -11,6 +11,7 @@ export type ReaderImportRow = {
   normalizedColor?: ReaderHighlightColor;
   importedLocation?: string;
   status: ReaderImportRowStatus;
+  rawAnnotation?: Record<string, unknown>;
 };
 
 export type ReaderImportJob = {
@@ -21,6 +22,17 @@ export type ReaderImportJob = {
   rows: ReaderImportRow[];
   activeRowId?: string;
   warnings?: string[];
+  readOnly?: boolean;
+  sourceBook?: Record<string, unknown>;
+  sourceSession?: Record<string, unknown>;
+  sourceSummary?: {
+    bookLabel: string;
+    sessionLabel: string;
+    annotationCount: number;
+    commentCount: number;
+    colorCount: number;
+    deletedCount: number;
+  };
 };
 
 export type ParsedReaderImport = {

@@ -15,6 +15,8 @@ export function ReaderActivityDialogs({
   importModalOpen,
   onCloseImportModal,
   onStartImport,
+  onStartSplSessionJsonImport,
+  onOpenExportSplitter,
   closeDialogOpen,
   closeInitialName,
   closeInitialNotes,
@@ -42,6 +44,8 @@ export function ReaderActivityDialogs({
   importModalOpen: boolean;
   onCloseImportModal: () => void;
   onStartImport: (file: File) => Promise<{ warnings?: string[] }>;
+  onStartSplSessionJsonImport: (file: File) => Promise<{ warnings?: string[] }>;
+  onOpenExportSplitter: () => void;
   closeDialogOpen: boolean;
   closeInitialName: string;
   closeInitialNotes: string;
@@ -79,6 +83,8 @@ export function ReaderActivityDialogs({
         open={importModalOpen}
         onClose={onCloseImportModal}
         onStartImport={onStartImport}
+        onStartSplSessionJsonImport={onStartSplSessionJsonImport}
+        onOpenExportSplitter={onOpenExportSplitter}
       />
 
       {closeDialogOpen ? (

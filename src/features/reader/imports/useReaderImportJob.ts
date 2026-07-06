@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { parseGlaspCsv } from "./glaspCsvParser";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
+import { parseSplMarginaliaSessionImport } from "./splMarginaliaSessionImport";
 
 export function useReaderImportJob() {
   const [job, setJob] = useState<ReaderImportJob | null>(null);
@@ -20,6 +21,13 @@ export function useReaderImportJob() {
     setJob(nextJob);
     setDrawerOpen(true);
     return nextJob;
+  }, []);
+
+  const startSplSessionJsonImport = useCallback(async (file: File) => {
+    const parsed = parseSplMarginaliaSessionImport(await file.text(), file.name);
+    setJob(parsed.job);
+    setDrawerOpen(true);
+    return parsed.job;
   }, []);
 
   const setRowStatus = useCallback((rowId: string, status: ReaderImportRowStatus) => {
@@ -59,6 +67,7 @@ export function useReaderImportJob() {
     setDrawerOpen,
     counts,
     startGlaspCsvImport,
+    startSplSessionJsonImport,
     clearJob,
     selectRow,
     setRowStatus,

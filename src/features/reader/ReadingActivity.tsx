@@ -346,6 +346,11 @@ function ReaderActivityContent({
         importModalOpen={importModalOpen}
         onCloseImportModal={() => setImportModalOpen(false)}
         onStartImport={readerImport.startGlaspCsvImport}
+        onStartSplSessionJsonImport={readerImport.startSplSessionJsonImport}
+        onOpenExportSplitter={() => {
+          setImportModalOpen(false);
+          navigateTo({ kind: "settings", tab: "tools" });
+        }}
         closeDialogOpen={closeDialogOpen}
         closeInitialName={annotations.currentSessionMeta.name ?? ""}
         closeInitialNotes={annotations.currentSessionMeta.notes ?? ""}
