@@ -8,9 +8,38 @@ import { BookViewModeToggle } from "./display/BookViewModeToggle";
 import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
+import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 
 type BrowseMode = "books" | "series" | "authors" | "groups";
+type BookOrdering = "title" | "author" | "series" | "series_index";
+type EntityOrdering = "name" | "-book_count";
+
+const BOOK_ORDERING_OPTIONS: Array<OrderingOption<BookOrdering>> = [
+  { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
+  { value: "author", label: "Author A-Z", icon: "person" },
+  { value: "series", label: "Series", icon: "auto_stories" },
+];
+
+const SERIES_BOOK_ORDERING_OPTIONS: Array<OrderingOption<BookOrdering>> = [
+  { value: "series_index", label: "Series order", icon: "format_list_numbered" },
+  { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
+  { value: "author", label: "Author A-Z", icon: "person" },
+];
+
+const AUTHOR_ORDERING_OPTIONS: Array<OrderingOption<EntityOrdering>> = [
+  { value: "name", label: "Author A-Z", icon: "sort_by_alpha" },
+  { value: "-book_count", label: "Most books", icon: "format_list_numbered" },
+];
+
+const SERIES_ORDERING_OPTIONS: Array<OrderingOption<EntityOrdering>> = [
+  { value: "name", label: "Series A-Z", icon: "sort_by_alpha" },
+  { value: "-book_count", label: "Most books", icon: "format_list_numbered" },
+];
+
+function getDefaultBookOrdering(browseMode: BrowseMode, seriesId?: string): BookOrdering {
+  return browseMode === "series" && seriesId ? "series_index" : "title";
+}
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -63,10 +92,24 @@ export function LibraryBrowsePage({
     : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "groups" || browseFromRoute === "books"
       ? browseFromRoute
       : "books";
+  const bookOrderingContextKey = [
+    qFromRoute ? "search" : browseMode,
+    route.seriesId ?? "",
+    route.authorId ?? "",
+    route.groupId ?? "",
+  ].join(":");
+  const defaultBookOrdering = getDefaultBookOrdering(browseMode, route.seriesId);
 
   const [qDraft, setQDraft] = useState(qFromRoute);
   const [pageSize, setPageSize] = useState(20);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
+  const [bookOrderingState, setBookOrderingState] = useState<{ contextKey: string; value: BookOrdering }>(() => ({
+    contextKey: bookOrderingContextKey,
+    value: defaultBookOrdering,
+  }));
+  const [seriesOrdering, setSeriesOrdering] = useState<EntityOrdering>("name");
+  const [authorsOrdering, setAuthorsOrdering] = useState<EntityOrdering>("name");
+  const bookOrdering = bookOrderingState.contextKey === bookOrderingContextKey ? bookOrderingState.value : defaultBookOrdering;
 
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksError, setBooksError] = useState<string | null>(null);
@@ -108,6 +151,13 @@ export function LibraryBrowsePage({
     saveLibraryBooksView(view);
   }, []);
 
+  const handleBookOrderingChange = useCallback(
+    (ordering: BookOrdering) => {
+      setBookOrderingState({ contextKey: bookOrderingContextKey, value: ordering });
+    },
+    [bookOrderingContextKey],
+  );
+
   const loadBooks = useCallback(
     async (input: {
       page: number;
@@ -115,7 +165,7 @@ export function LibraryBrowsePage({
       seriesId?: string;
       authorId?: string;
       groupId?: string;
-      ordering: "title" | "series_index";
+      ordering: BookOrdering;
     }) => {
       if (!spl) return;
 
@@ -160,7 +210,7 @@ export function LibraryBrowsePage({
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const r = await spl.library.series.list({ page, includePreviewBooks: true });
+        const r = await spl.library.series.list({ page, includePreviewBooks: true, ordering: seriesOrdering });
         setSeriesData(r);
         setSeriesPage(page);
       } catch (e) {
@@ -170,7 +220,7 @@ export function LibraryBrowsePage({
         setSeriesBusy(false);
       }
     },
-    [spl],
+    [seriesOrdering, spl],
   );
 
   const loadAuthors = useCallback(
@@ -179,7 +229,7 @@ export function LibraryBrowsePage({
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const r = await spl.library.authors.list({ page, includePreviewBooks: true });
+        const r = await spl.library.authors.list({ page, includePreviewBooks: true, ordering: authorsOrdering });
         setAuthorsData(r);
         setAuthorsPage(page);
       } catch (e) {
@@ -189,7 +239,7 @@ export function LibraryBrowsePage({
         setAuthorsBusy(false);
       }
     },
-    [spl],
+    [authorsOrdering, spl],
   );
 
   const loadGroups = useCallback(
@@ -198,7 +248,7 @@ export function LibraryBrowsePage({
       setGroupsBusy(true);
       setGroupsError(null);
       try {
-        const r = await spl.library.groups.list({ page, includePreviewBooks: true });
+        const r = await spl.library.groups.list({ page, includePreviewBooks: true, ordering: "name" });
         setGroupsData(r);
         setGroupsPage(page);
       } catch (e) {
@@ -216,7 +266,21 @@ export function LibraryBrowsePage({
     setBooksError(null);
     setBooksBusy(false);
     setBooksPage(1);
-  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize]);
+  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize, bookOrdering]);
+
+  useEffect(() => {
+    setSeriesData(null);
+    setSeriesError(null);
+    setSeriesBusy(false);
+    setSeriesPage(1);
+  }, [seriesOrdering]);
+
+  useEffect(() => {
+    setAuthorsData(null);
+    setAuthorsError(null);
+    setAuthorsBusy(false);
+    setAuthorsPage(1);
+  }, [authorsOrdering]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -224,27 +288,27 @@ export function LibraryBrowsePage({
 
     // Global search wins over browse.
     if (qFromRoute) {
-      void loadBooks({ page: 1, q: qFromRoute, ordering: "title" });
+      void loadBooks({ page: 1, q: qFromRoute, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "series" && route.seriesId) {
-      void loadBooks({ page: 1, seriesId: route.seriesId, ordering: "series_index" });
+      void loadBooks({ page: 1, seriesId: route.seriesId, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "authors" && route.authorId) {
-      void loadBooks({ page: 1, authorId: route.authorId, ordering: "title" });
+      void loadBooks({ page: 1, authorId: route.authorId, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "groups" && route.groupId) {
-      void loadBooks({ page: 1, groupId: route.groupId, ordering: "title" });
+      void loadBooks({ page: 1, groupId: route.groupId, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "books") {
-      void loadBooks({ page: 1, ordering: "title" });
+      void loadBooks({ page: 1, ordering: bookOrdering });
       return;
     }
 
@@ -252,7 +316,7 @@ export function LibraryBrowsePage({
     if (browseMode === "authors" && !route.authorId && !authorsData && !authorsBusy) void loadAuthors(1);
     if (browseMode === "groups" && groupsEnabled && !route.groupId && !groupsData && !groupsBusy) void loadGroups(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -338,6 +402,7 @@ export function LibraryBrowsePage({
       (browseMode === "authors" && route.authorId) ||
       (browseMode === "groups" && route.groupId && groupsEnabled),
   );
+  const bookOrderingOptions = browseMode === "series" && route.seriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
 
   return (
     <section className="panel">
@@ -423,7 +488,33 @@ export function LibraryBrowsePage({
               ) : null}
             </div>
 
-            {showBookList ? <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} /> : null}
+            <div className="libraryControlsRight">
+              {showBookList ? (
+                <>
+                  <OrderingControl
+                    options={bookOrderingOptions}
+                    value={bookOrdering}
+                    onChange={handleBookOrderingChange}
+                    ariaLabel="Sort books"
+                  />
+                  <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} />
+                </>
+              ) : browseMode === "series" && !route.seriesId ? (
+                <OrderingControl
+                  options={SERIES_ORDERING_OPTIONS}
+                  value={seriesOrdering}
+                  onChange={setSeriesOrdering}
+                  ariaLabel="Sort series"
+                />
+              ) : browseMode === "authors" && !route.authorId ? (
+                <OrderingControl
+                  options={AUTHOR_ORDERING_OPTIONS}
+                  value={authorsOrdering}
+                  onChange={setAuthorsOrdering}
+                  ariaLabel="Sort authors"
+                />
+              ) : null}
+            </div>
           </div>
 
           {booksError ? <p className="errorText">{booksError}</p> : null}
@@ -487,7 +578,7 @@ export function LibraryBrowsePage({
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
                             groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: browseMode === "series" ? "series_index" : "title",
+                            ordering: bookOrdering,
                           })
                         }
                         disabled={booksBusy || !booksData.previous}
@@ -504,7 +595,7 @@ export function LibraryBrowsePage({
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
                             groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: browseMode === "series" ? "series_index" : "title",
+                            ordering: bookOrdering,
                           })
                         }
                         disabled={booksBusy || !booksData.next}
@@ -537,7 +628,7 @@ export function LibraryBrowsePage({
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
                             groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: browseMode === "series" ? "series_index" : "title",
+                            ordering: bookOrdering,
                           })
                         }
                         disabled={booksBusy || !booksData.previous}
@@ -554,7 +645,7 @@ export function LibraryBrowsePage({
                             seriesId: browseMode === "series" ? route.seriesId : undefined,
                             authorId: browseMode === "authors" ? route.authorId : undefined,
                             groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: browseMode === "series" ? "series_index" : "title",
+                            ordering: bookOrdering,
                           })
                         }
                         disabled={booksBusy || !booksData.next}

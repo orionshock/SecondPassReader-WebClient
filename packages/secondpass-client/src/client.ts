@@ -107,6 +107,7 @@ export type LibraryBookListParams = {
 export type LibraryEntityListParams = {
   page?: number;
   includePreviewBooks?: boolean;
+  ordering?: string;
 };
 
 export type SecondPassClient = {
@@ -165,7 +166,7 @@ export type SecondPassClient = {
     get(shelfId: string, params?: { includePreviewBooks?: boolean }): Promise<Shelf>;
     update(shelfId: string, input: UpdateShelfInput): Promise<Shelf>;
     remove(shelfId: string): Promise<void>;
-    items(shelfId: string, params?: { page?: number }): Promise<PaginatedShelfItemResponse>;
+    items(shelfId: string, params?: { page?: number; ordering?: string }): Promise<PaginatedShelfItemResponse>;
     addItem(shelfId: string, input: AddShelfItemInput): Promise<ShelfItem>;
     updateItem(shelfId: string, itemId: string, input: UpdateShelfItemInput): Promise<ShelfItem>;
     removeItem(shelfId: string, itemId: string): Promise<void>;
@@ -280,6 +281,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           return listSeries(auth, {
             page: params?.page,
             includePreviewBooks: params?.includePreviewBooks,
+            ordering: params?.ordering,
           });
         },
         get: (seriesId, params) => {
@@ -298,6 +300,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           return listAuthors(auth, {
             page: params?.page,
             includePreviewBooks: params?.includePreviewBooks,
+            ordering: params?.ordering,
           });
         },
         get: (authorId, params) => {
@@ -316,6 +319,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           return listGroups(auth, {
             page: params?.page,
             includePreviewBooks: params?.includePreviewBooks,
+            ordering: params?.ordering,
           });
         },
         get: (groupId, params) => {
@@ -352,7 +356,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       },
       items: (shelfId, params) => {
         const auth = requireAuth(ctx);
-        return listShelfItems(auth, { shelfId, page: params?.page });
+        return listShelfItems(auth, { shelfId, page: params?.page, ordering: params?.ordering });
       },
       addItem: (shelfId, input) => {
         const auth = requireAuth(ctx);

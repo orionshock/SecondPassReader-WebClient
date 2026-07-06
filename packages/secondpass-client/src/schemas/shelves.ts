@@ -66,6 +66,7 @@ type ShelfListBaseParams = {
   page?: number;
   pageSize?: number;
   includePreviewBooks?: boolean;
+  ordering?: string;
 };
 
 export type ShelfListParams =

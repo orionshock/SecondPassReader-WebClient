@@ -324,6 +324,7 @@ describe("@secondpass/client high-level workflows", () => {
       page: 2,
       pageSize: 25,
       includePreviewBooks: true,
+      ordering: "-item_count",
     });
     await spl.shelves.list({ scope: "personal", book: 7, includePreviewBooks: false });
 
@@ -335,6 +336,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(sharedUrl.searchParams.get("page")).toBe("2");
     expect(sharedUrl.searchParams.get("page_size")).toBe("25");
     expect(sharedUrl.searchParams.get("include_preview_books")).toBe("true");
+    expect(sharedUrl.searchParams.get("ordering")).toBe("-item_count");
 
     const personalUrl = new URL(String(fetchMock.mock.calls[1]![0]));
     expect(personalUrl.searchParams.get("scope")).toBe("personal");
@@ -343,7 +345,29 @@ describe("@secondpass/client high-level workflows", () => {
     expect(personalUrl.searchParams.has("include_preview_books")).toBe(false);
   });
 
-  it("library authors and series optionally request preview books", async () => {
+  it("library books sends server ordering with existing filters", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.library.books.list({
+      author: "a1",
+      series: "s1",
+      ordering: "author",
+      page: 2,
+      pageSize: 20,
+    });
+
+    const url = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(url.origin + url.pathname).toBe("https://api.example/library/books/");
+    expect(url.searchParams.get("author")).toBe("a1");
+    expect(url.searchParams.get("series")).toBe("s1");
+    expect(url.searchParams.get("ordering")).toBe("author");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("page_size")).toBe("20");
+  });
+
+  it("library authors and series optionally request preview books and ordering", async () => {
     const fetchMock = asMockFetch();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
@@ -352,8 +376,8 @@ describe("@secondpass/client high-level workflows", () => {
       .mockResolvedValueOnce(jsonResponse({ id: "a1", name: "Author" }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.library.series.list({ page: 3, includePreviewBooks: true });
-    await spl.library.authors.list({ page: 4, includePreviewBooks: false });
+    await spl.library.series.list({ page: 3, includePreviewBooks: true, ordering: "-book_count" });
+    await spl.library.authors.list({ page: 4, includePreviewBooks: false, ordering: "name" });
     await spl.library.series.get("s1", { includePreviewBooks: true });
     await spl.library.authors.get("a1");
 
@@ -361,10 +385,12 @@ describe("@secondpass/client high-level workflows", () => {
     expect(seriesListUrl.origin + seriesListUrl.pathname).toBe("https://api.example/library/series/");
     expect(seriesListUrl.searchParams.get("page")).toBe("3");
     expect(seriesListUrl.searchParams.get("include_preview_books")).toBe("true");
+    expect(seriesListUrl.searchParams.get("ordering")).toBe("-book_count");
 
     const authorsListUrl = new URL(String(fetchMock.mock.calls[1]![0]));
     expect(authorsListUrl.origin + authorsListUrl.pathname).toBe("https://api.example/library/authors/");
     expect(authorsListUrl.searchParams.get("page")).toBe("4");
+    expect(authorsListUrl.searchParams.get("ordering")).toBe("name");
     expect(authorsListUrl.searchParams.has("include_preview_books")).toBe(false);
 
     const seriesDetailUrl = new URL(String(fetchMock.mock.calls[2]![0]));
@@ -376,7 +402,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(authorDetailUrl.searchParams.has("include_preview_books")).toBe(false);
   });
 
-  it("library groups list/detail optionally request preview books and group books", async () => {
+  it("library groups list/detail optionally request preview books and group books ordering", async () => {
     const fetchMock = asMockFetch();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
@@ -384,7 +410,7 @@ describe("@secondpass/client high-level workflows", () => {
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.library.groups.list({ page: 2, includePreviewBooks: true });
+    await spl.library.groups.list({ page: 2, includePreviewBooks: true, ordering: "name" });
     await spl.library.groups.get("g1", { includePreviewBooks: true });
     await spl.library.groups.books("g1", { page: 3, pageSize: 50, ordering: "title", hasFiles: true });
 
@@ -392,6 +418,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(groupListUrl.origin + groupListUrl.pathname).toBe("https://api.example/library/groups/");
     expect(groupListUrl.searchParams.get("page")).toBe("2");
     expect(groupListUrl.searchParams.get("include_preview_books")).toBe("true");
+    expect(groupListUrl.searchParams.get("ordering")).toBe("name");
 
     const groupDetailUrl = new URL(String(fetchMock.mock.calls[1]![0]));
     expect(groupDetailUrl.origin + groupDetailUrl.pathname).toBe("https://api.example/library/groups/g1/");
@@ -403,6 +430,19 @@ describe("@secondpass/client high-level workflows", () => {
     expect(groupBooksUrl.searchParams.get("page_size")).toBe("50");
     expect(groupBooksUrl.searchParams.get("ordering")).toBe("title");
     expect(groupBooksUrl.searchParams.get("has_files")).toBe("true");
+  });
+
+  it("shelf items list sends server ordering", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.items("shelf-1", { page: 2, ordering: "author" });
+
+    const url = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(url.origin + url.pathname).toBe("https://api.example/shelves/shelf-1/items/");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("ordering")).toBe("author");
   });
 
   it("shelves.list preserves unscoped behavior and rejects personal owner-group filters", async () => {

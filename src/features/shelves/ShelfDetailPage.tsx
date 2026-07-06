@@ -5,8 +5,17 @@ import type { LibraryBook, SecondPassClient, Shelf, ShelfItem } from "@secondpas
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookResultsView } from "../library/display/BookResultsView";
 import { BookViewModeToggle } from "../library/display/BookViewModeToggle";
+import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
+
+type ShelfItemOrdering = "position" | "title" | "author";
+
+const SHELF_ITEM_ORDERING_OPTIONS: Array<OrderingOption<ShelfItemOrdering>> = [
+  { value: "position", label: "Shelf order", icon: "format_list_numbered" },
+  { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
+  { value: "author", label: "Author A-Z", icon: "person" },
+];
 
 export function ShelfDetailPage({
   profile,
@@ -27,6 +36,7 @@ export function ShelfDetailPage({
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => getLibraryBooksView());
+  const [ordering, setOrdering] = useState<ShelfItemOrdering>("position");
 
   const loadFirst = useCallback(async () => {
     if (!spl) return;
@@ -35,11 +45,11 @@ export function ShelfDetailPage({
     try {
       const [s, page] = await Promise.all([
         spl.shelves.get(shelfId),
-        spl.shelves.items(shelfId, { page: 1 }),
+        spl.shelves.items(shelfId, { page: 1, ordering }),
       ]);
       setShelf(s);
       const results = page.results ?? [];
-      setItems(results.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)));
+      setItems(results);
       setNextUrl(page.next ?? null);
     } catch (e) {
       const message =
@@ -57,7 +67,7 @@ export function ShelfDetailPage({
     } finally {
       setBusy(false);
     }
-  }, [shelfId, spl]);
+  }, [ordering, shelfId, spl]);
 
   useEffect(() => {
     setShelf(null);
@@ -92,11 +102,10 @@ export function ShelfDetailPage({
     setLoadMoreBusy(true);
     setError(null);
     try {
-      const page = await spl.shelves.items(shelfId, { page: nextPage });
+      const page = await spl.shelves.items(shelfId, { page: nextPage, ordering });
       const results = page.results ?? [];
       setItems((prev) => {
-        const merged = [...prev, ...results];
-        return merged.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        return [...prev, ...results];
       });
       setNextUrl(page.next ?? null);
     } catch (e) {
@@ -104,7 +113,7 @@ export function ShelfDetailPage({
     } finally {
       setLoadMoreBusy(false);
     }
-  }, [loadMoreBusy, nextUrl, parseNextPage, shelfId, spl]);
+  }, [loadMoreBusy, nextUrl, ordering, parseNextPage, shelfId, spl]);
 
   const openBookDetails = useCallback(
     (bookId: string | number) => {
@@ -150,6 +159,12 @@ export function ShelfDetailPage({
 
       {items.length > 0 ? (
         <div className="shelfBookControls">
+          <OrderingControl
+            options={SHELF_ITEM_ORDERING_OPTIONS}
+            value={ordering}
+            onChange={setOrdering}
+            ariaLabel="Sort shelf books"
+          />
           <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} />
         </div>
       ) : null}

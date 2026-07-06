@@ -233,6 +233,14 @@
   align-items: center;
 }
 
+.shelfHeaderControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .shelfDetailHeaderActions .button {
   display: inline-flex;
   gap: 6px;
@@ -279,6 +287,8 @@
 .shelfBookControls {
   margin-top: 12px;
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
 }
 

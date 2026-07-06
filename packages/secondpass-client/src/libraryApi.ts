@@ -50,11 +50,12 @@ export async function listBooks(
 
 export async function listSeries(
   ctx: AuthenticatedClientContext,
-  input?: { page?: number; includePreviewBooks?: boolean },
+  input?: { page?: number; includePreviewBooks?: boolean; ordering?: string },
 ): Promise<PaginatedResponse<LibrarySeries>> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/series/"));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+  if (input?.ordering) url.searchParams.set("ordering", input.ordering);
 
   return requestJson<PaginatedResponse<LibrarySeries>>({
     apiBaseUrl: ctx.apiBaseUrl,
@@ -89,11 +90,12 @@ export async function getSeries(
 
 export async function listAuthors(
   ctx: AuthenticatedClientContext,
-  input?: { page?: number; includePreviewBooks?: boolean },
+  input?: { page?: number; includePreviewBooks?: boolean; ordering?: string },
 ): Promise<PaginatedResponse<LibraryAuthor>> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/authors/"));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+  if (input?.ordering) url.searchParams.set("ordering", input.ordering);
 
   return requestJson<PaginatedResponse<LibraryAuthor>>({
     apiBaseUrl: ctx.apiBaseUrl,
@@ -128,11 +130,12 @@ export async function getAuthor(
 
 export async function listGroups(
   ctx: AuthenticatedClientContext,
-  input?: { page?: number; includePreviewBooks?: boolean },
+  input?: { page?: number; includePreviewBooks?: boolean; ordering?: string },
 ): Promise<PaginatedResponse<LibraryGroup>> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, "/library/groups/"));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+  if (input?.ordering) url.searchParams.set("ordering", input.ordering);
 
   return requestJson<PaginatedResponse<LibraryGroup>>({
     apiBaseUrl: ctx.apiBaseUrl,

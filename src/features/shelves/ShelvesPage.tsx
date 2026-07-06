@@ -4,9 +4,17 @@ import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
+import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
 import { CoverPreviewStrip } from "../library/display/CoverPreviewStrip";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
+
+type ShelfOrdering = "name" | "-item_count";
+
+const SHELF_ORDERING_OPTIONS: Array<OrderingOption<ShelfOrdering>> = [
+  { value: "name", label: "Shelf A-Z", icon: "sort_by_alpha" },
+  { value: "-item_count", label: "Most books", icon: "format_list_numbered" },
+];
 
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
@@ -31,6 +39,7 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
   const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [ordering, setOrdering] = useState<ShelfOrdering>("name");
 
   const load = useCallback(async () => {
     if (!spl) return;
@@ -38,8 +47,8 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     setError(null);
     try {
       const [personal, shared] = await Promise.all([
-        spl.shelves.list({ scope: "personal", includePreviewBooks: true }),
-        spl.shelves.list({ scope: "shared", includePreviewBooks: true }),
+        spl.shelves.list({ scope: "personal", includePreviewBooks: true, ordering }),
+        spl.shelves.list({ scope: "shared", includePreviewBooks: true, ordering }),
       ]);
       setData({
         personal: personal.results ?? [],
@@ -57,7 +66,7 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     } finally {
       setBusy(false);
     }
-  }, [spl]);
+  }, [ordering, spl]);
 
   useEffect(() => {
     setData(null);
@@ -202,21 +211,31 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     <section className="panel shelvesSection">
       <div className="panelHeaderRow">
         <h2 className="panelTitle">Shelves</h2>
-        {canLoad ? (
-          <button
-            type="button"
-            className="button buttonPrimary buttonCompact"
-            onClick={() => {
-              setCreateOpen(true);
-              setCreateDraft(shelfToFormValues());
-              setMenuShelfId(null);
-              setMutationError(null);
-            }}
-            disabled={busy || mutationBusy || formOpen}
-          >
-            Create personal shelf
-          </button>
-        ) : null}
+        <div className="shelfHeaderControls">
+          {canLoad ? (
+            <>
+              <OrderingControl
+                options={SHELF_ORDERING_OPTIONS}
+                value={ordering}
+                onChange={setOrdering}
+                ariaLabel="Sort shelves"
+              />
+              <button
+                type="button"
+                className="button buttonPrimary buttonCompact"
+                onClick={() => {
+                  setCreateOpen(true);
+                  setCreateDraft(shelfToFormValues());
+                  setMenuShelfId(null);
+                  setMutationError(null);
+                }}
+                disabled={busy || mutationBusy || formOpen}
+              >
+                Create personal shelf
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
