@@ -11,12 +11,15 @@ export type AppRoute =
       authorId?: string;
       groupId?: string;
       view?: "list" | "grid";
+      ordering?: string;
+      page?: number;
+      pageSize?: number;
       bookId?: string;
     }
   | { kind: "sessions"; bookId?: string; q?: string }
   | { kind: "session"; sessionId: string }
-  | { kind: "shelves"; bookId?: string }
-  | { kind: "shelf"; shelfId: string; bookId?: string }
+  | { kind: "shelves"; bookId?: string; ordering?: string; page?: number; pageSize?: number }
+  | { kind: "shelf"; shelfId: string; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelfEdit"; shelfId: string }
   | { kind: "settings" }
   | { kind: "reader"; bookId: string; search?: string }
@@ -28,11 +31,11 @@ function normalizeHash(hash: string): string {
   return h.startsWith("#") ? h.slice(1) : h;
 }
 
-function buildQuery(params: Record<string, string | undefined>): string {
+function buildQuery(params: Record<string, string | number | undefined>): string {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
-    if (!v) continue;
-    const trimmed = v.trim();
+    if (v === undefined || v === "") continue;
+    const trimmed = String(v).trim();
     if (!trimmed) continue;
     qs.set(k, trimmed);
   }
@@ -53,10 +56,13 @@ export function routeToHash(route: AppRoute): string {
     case "library":
       return `#/library${buildQuery({
         q: route.q,
-        browse: !route.q && route.browse && route.browse !== "books" ? route.browse : undefined,
+        browse: !route.q && route.browse ? route.browse : undefined,
         series: !route.q && route.browse === "series" ? route.seriesId : undefined,
         author: !route.q && route.browse === "authors" ? route.authorId : undefined,
         group: !route.q && route.browse === "groups" ? route.groupId : undefined,
+        ordering: route.ordering,
+        page: route.page,
+        page_size: route.pageSize,
         view: route.view,
         book: route.bookId,
       })}`;
@@ -65,9 +71,14 @@ export function routeToHash(route: AppRoute): string {
     case "session":
       return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
-      return `#/shelves${buildQuery({ book: route.bookId })}`;
+      return `#/shelves${buildQuery({ ordering: route.ordering, page: route.page, page_size: route.pageSize, book: route.bookId })}`;
     case "shelf":
-      return `#/shelves/${encodeURIComponent(route.shelfId)}${buildQuery({ book: route.bookId })}`;
+      return `#/shelves/${encodeURIComponent(route.shelfId)}${buildQuery({
+        ordering: route.ordering,
+        page: route.page,
+        page_size: route.pageSize,
+        book: route.bookId,
+      })}`;
     case "shelfEdit":
       return `#/shelves/${encodeURIComponent(route.shelfId)}/edit`;
     case "settings":
@@ -90,6 +101,13 @@ export function parseCurrentRoute(): AppRoute | null {
 
   const queryParams = new URLSearchParams(queryPart ?? "");
   const bookId = queryParams.get("book")?.trim() ?? "";
+  const ordering = queryParams.get("ordering")?.trim() || undefined;
+  const pageRaw = queryParams.get("page")?.trim() ?? "";
+  const pageSizeRaw = queryParams.get("page_size")?.trim() ?? "";
+  const pageParsed = Number(pageRaw);
+  const pageSizeParsed = Number(pageSizeRaw);
+  const page = Number.isInteger(pageParsed) && pageParsed > 0 ? pageParsed : undefined;
+  const pageSize = Number.isInteger(pageSizeParsed) && pageSizeParsed > 0 ? pageSizeParsed : undefined;
 
   const head = parts[0];
   if (head === "connect") return { kind: "connect" };
@@ -109,7 +127,7 @@ export function parseCurrentRoute(): AppRoute | null {
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
 
     if (q) {
-      return bookId ? { kind: "library", q, view, bookId } : { kind: "library", q, view };
+      return bookId ? { kind: "library", q, view, ordering, page, pageSize, bookId } : { kind: "library", q, view, ordering, page, pageSize };
     }
 
     const effectiveBrowse: "books" | "series" | "authors" | "groups" =
@@ -121,6 +139,9 @@ export function parseCurrentRoute(): AppRoute | null {
         browse: "series",
         seriesId: seriesId || undefined,
         view,
+        ordering,
+        page,
+        pageSize,
         bookId: bookId || undefined,
       };
     }
@@ -130,6 +151,9 @@ export function parseCurrentRoute(): AppRoute | null {
         browse: "authors",
         authorId: authorId || undefined,
         view,
+        ordering,
+        page,
+        pageSize,
         bookId: bookId || undefined,
       };
     }
@@ -139,10 +163,15 @@ export function parseCurrentRoute(): AppRoute | null {
         browse: "groups",
         groupId: groupId || undefined,
         view,
+        ordering,
+        page,
+        pageSize,
         bookId: bookId || undefined,
       };
     }
-    return bookId ? { kind: "library", browse: "books", view, bookId } : { kind: "library", browse: "books", view };
+    return bookId
+      ? { kind: "library", browse: "books", view, ordering, page, pageSize, bookId }
+      : { kind: "library", browse: "books", view, ordering, page, pageSize };
   }
   if (head === "sessions") {
     if (typeof parts[1] === "string" && parts[1]) {
@@ -167,12 +196,16 @@ export function parseCurrentRoute(): AppRoute | null {
       })();
       if (parts[2] === "edit") return { kind: "shelfEdit", shelfId };
       try {
-        return bookId ? { kind: "shelf", shelfId: decodeURIComponent(parts[1]), bookId } : { kind: "shelf", shelfId: decodeURIComponent(parts[1]) };
+        return bookId
+          ? { kind: "shelf", shelfId: decodeURIComponent(parts[1]), ordering, page, pageSize, bookId }
+          : { kind: "shelf", shelfId: decodeURIComponent(parts[1]), ordering, page, pageSize };
       } catch {
-        return bookId ? { kind: "shelf", shelfId: parts[1], bookId } : { kind: "shelf", shelfId: parts[1] };
+        return bookId
+          ? { kind: "shelf", shelfId: parts[1], ordering, page, pageSize, bookId }
+          : { kind: "shelf", shelfId: parts[1], ordering, page, pageSize };
       }
     }
-    return bookId ? { kind: "shelves", bookId } : { kind: "shelves" };
+    return bookId ? { kind: "shelves", ordering, page, pageSize, bookId } : { kind: "shelves", ordering, page, pageSize };
   }
   if (head === "settings") return { kind: "settings" };
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {

@@ -29,8 +29,23 @@ type ScopedShelves = {
   shared: Shelf[];
 };
 
-export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | null; spl: SecondPassClient | null }) {
+export function ShelvesPage({
+  profile,
+  spl,
+  ordering: routeOrdering,
+  page = 1,
+  pageSize = 20,
+  onUpdateRoute,
+}: {
+  profile: ConnectionProfile | null;
+  spl: SecondPassClient | null;
+  ordering?: string;
+  page?: number;
+  pageSize?: number;
+  onUpdateRoute?: (patch: { ordering?: string; page?: number; pageSize?: number }) => void;
+}) {
   const canLoad = Boolean(spl);
+  const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ScopedShelves | null>(null);
@@ -39,7 +54,6 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
   const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const [ordering, setOrdering] = useState<ShelfOrdering>("name");
   const loadRequestSeq = useRef(0);
 
   const load = useCallback(async () => {
@@ -49,8 +63,8 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     setError(null);
     try {
       const [personal, shared] = await Promise.all([
-        spl.shelves.list({ scope: "personal", includePreviewBooks: true, ordering }),
-        spl.shelves.list({ scope: "shared", includePreviewBooks: true, ordering }),
+        spl.shelves.list({ scope: "personal", includePreviewBooks: true, ordering, page, pageSize }),
+        spl.shelves.list({ scope: "shared", includePreviewBooks: true, ordering, page, pageSize }),
       ]);
       if (requestSeq !== loadRequestSeq.current) return;
       setData({
@@ -70,7 +84,7 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
     } finally {
       if (requestSeq === loadRequestSeq.current) setBusy(false);
     }
-  }, [ordering, spl]);
+  }, [ordering, page, pageSize, spl]);
 
   useEffect(() => {
     setData(null);
@@ -221,7 +235,7 @@ export function ShelvesPage({ profile, spl }: { profile: ConnectionProfile | nul
               <OrderingControl
                 options={SHELF_ORDERING_OPTIONS}
                 value={ordering}
-                onChange={setOrdering}
+                onChange={(nextOrdering) => onUpdateRoute?.({ ordering: nextOrdering, page: 1, pageSize })}
                 ariaLabel="Sort shelves"
               />
               <button

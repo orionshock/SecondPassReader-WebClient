@@ -504,11 +504,44 @@ export default function App() {
                 </section>
               ) : route?.kind === "shelves" ? (
                 <div className="libraryScreen">
-                  <ShelvesPage profile={selectedProfile} spl={splClient} />
+                  <ShelvesPage
+                    profile={selectedProfile}
+                    spl={splClient}
+                    ordering={route.ordering}
+                    page={route.page ?? 1}
+                    pageSize={route.pageSize ?? 20}
+                    onUpdateRoute={(patch) => {
+                      navigateTo({
+                        kind: "shelves",
+                        ordering: patch.ordering ?? route.ordering ?? "name",
+                        page: patch.page ?? route.page ?? 1,
+                        pageSize: patch.pageSize ?? route.pageSize ?? 20,
+                        bookId: route.bookId,
+                      });
+                    }}
+                  />
                 </div>
               ) : route?.kind === "shelf" ? (
                 <div className="libraryScreen">
-                  <ShelfDetailPage profile={selectedProfile} spl={splClient} shelfId={route.shelfId} selectedBookId={route.bookId ?? null} />
+                  <ShelfDetailPage
+                    profile={selectedProfile}
+                    spl={splClient}
+                    shelfId={route.shelfId}
+                    selectedBookId={route.bookId ?? null}
+                    ordering={route.ordering}
+                    page={route.page ?? 1}
+                    pageSize={route.pageSize ?? 20}
+                    onUpdateRoute={(patch) => {
+                      navigateTo({
+                        kind: "shelf",
+                        shelfId: route.shelfId,
+                        ordering: patch.ordering ?? route.ordering ?? "position",
+                        page: patch.page ?? route.page ?? 1,
+                        pageSize: patch.pageSize ?? route.pageSize ?? 20,
+                        bookId: route.bookId,
+                      });
+                    }}
+                  />
                 </div>
               ) : route?.kind === "shelfEdit" ? (
                 <div className="libraryScreen">
@@ -534,6 +567,9 @@ export default function App() {
                       authorId: route.authorId,
                       groupId: route.groupId,
                       view: route.view,
+                      ordering: route.ordering,
+                      page: route.page,
+                      pageSize: route.pageSize,
                     }}
                     selectedBookId={route.bookId ?? null}
                     onViewBook={(bookId) => {
@@ -542,28 +578,45 @@ export default function App() {
                     onCommitSearch={(q) => {
                       const next = q.trim();
                       // Committing search clears browse/series/author.
-                      navigateTo(next ? { kind: "library", q: next, bookId: route.bookId } : { kind: "library", bookId: route.bookId });
+                      navigateTo(next
+                        ? { kind: "library", q: next, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId }
+                        : { kind: "library", browse: "books", ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowBooks={() => {
-                      navigateTo({ kind: "library", bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "books", ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowSeries={() => {
-                      navigateTo({ kind: "library", browse: "series", bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "series", ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowAuthors={() => {
-                      navigateTo({ kind: "library", browse: "authors", bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "authors", ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowGroups={() => {
-                      navigateTo({ kind: "library", browse: "groups", bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "groups", ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowSeriesBooks={(seriesId) => {
-                      navigateTo({ kind: "library", browse: "series", seriesId, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "series", seriesId, ordering: "series_index", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowAuthorBooks={(authorId) => {
-                      navigateTo({ kind: "library", browse: "authors", authorId, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "authors", authorId, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowGroupBooks={(groupId) => {
-                      navigateTo({ kind: "library", browse: "groups", groupId, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "groups", groupId, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                    }}
+                    onUpdateRoute={(patch) => {
+                      navigateTo({
+                        kind: "library",
+                        q: route.q,
+                        browse: route.browse ?? "books",
+                        seriesId: route.seriesId,
+                        authorId: route.authorId,
+                        groupId: route.groupId,
+                        view: route.view,
+                        ordering: patch.ordering ?? route.ordering,
+                        page: patch.page ?? route.page ?? 1,
+                        pageSize: patch.pageSize ?? route.pageSize ?? 20,
+                        bookId: route.bookId,
+                      });
                     }}
                   />
                 </div>

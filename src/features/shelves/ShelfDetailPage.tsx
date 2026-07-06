@@ -22,13 +22,22 @@ export function ShelfDetailPage({
   spl,
   shelfId,
   selectedBookId,
+  ordering: routeOrdering,
+  page: routePage = 1,
+  pageSize = 20,
+  onUpdateRoute,
 }: {
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
   shelfId: string;
   selectedBookId?: string | null;
+  ordering?: string;
+  page?: number;
+  pageSize?: number;
+  onUpdateRoute?: (patch: { ordering?: string; page?: number; pageSize?: number }) => void;
 }) {
   const canLoad = Boolean(spl);
+  const ordering = SHELF_ITEM_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfItemOrdering) : "position";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shelf, setShelf] = useState<Shelf | null>(null);
@@ -36,7 +45,6 @@ export function ShelfDetailPage({
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [loadMoreBusy, setLoadMoreBusy] = useState(false);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => getLibraryBooksView());
-  const [ordering, setOrdering] = useState<ShelfItemOrdering>("position");
   const loadFirstRequestSeq = useRef(0);
   const loadMoreRequestSeq = useRef(0);
 
@@ -49,7 +57,7 @@ export function ShelfDetailPage({
     try {
       const [s, page] = await Promise.all([
         spl.shelves.get(shelfId),
-        spl.shelves.items(shelfId, { page: 1, ordering }),
+        spl.shelves.items(shelfId, { page: routePage, pageSize, ordering }),
       ]);
       if (requestSeq !== loadFirstRequestSeq.current) return;
       setShelf(s);
@@ -73,7 +81,7 @@ export function ShelfDetailPage({
     } finally {
       if (requestSeq === loadFirstRequestSeq.current) setBusy(false);
     }
-  }, [ordering, shelfId, spl]);
+  }, [ordering, routePage, pageSize, shelfId, spl]);
 
   useEffect(() => {
     setShelf(null);
@@ -109,20 +117,20 @@ export function ShelfDetailPage({
     setLoadMoreBusy(true);
     setError(null);
     try {
-      const page = await spl.shelves.items(shelfId, { page: nextPage, ordering });
+      const pageResult = await spl.shelves.items(shelfId, { page: nextPage, pageSize, ordering });
       if (requestSeq !== loadMoreRequestSeq.current) return;
-      const results = page.results ?? [];
+      const results = pageResult.results ?? [];
       setItems((prev) => {
         return [...prev, ...results];
       });
-      setNextUrl(page.next ?? null);
+      setNextUrl(pageResult.next ?? null);
     } catch (e) {
       if (requestSeq !== loadMoreRequestSeq.current) return;
       setError(e instanceof Error ? e.message : "Failed to load more items.");
     } finally {
       if (requestSeq === loadMoreRequestSeq.current) setLoadMoreBusy(false);
     }
-  }, [loadMoreBusy, nextUrl, ordering, parseNextPage, shelfId, spl]);
+  }, [loadMoreBusy, nextUrl, ordering, pageSize, parseNextPage, shelfId, spl]);
 
   const openBookDetails = useCallback(
     (bookId: string | number) => {
@@ -171,7 +179,7 @@ export function ShelfDetailPage({
           <OrderingControl
             options={SHELF_ITEM_ORDERING_OPTIONS}
             value={ordering}
-            onChange={setOrdering}
+            onChange={(nextOrdering) => onUpdateRoute?.({ ordering: nextOrdering, page: 1, pageSize })}
             ariaLabel="Sort shelf books"
           />
           <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} />

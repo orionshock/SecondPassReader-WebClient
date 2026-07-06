@@ -437,11 +437,12 @@ describe("@secondpass/client high-level workflows", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.shelves.items("shelf-1", { page: 2, ordering: "author" });
+    await spl.shelves.items("shelf-1", { page: 2, pageSize: 50, ordering: "author" });
 
     const url = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(url.origin + url.pathname).toBe("https://api.example/shelves/shelf-1/items/");
     expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("page_size")).toBe("50");
     expect(url.searchParams.get("ordering")).toBe("author");
   });
 

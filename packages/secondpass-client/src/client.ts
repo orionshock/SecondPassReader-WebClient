@@ -166,7 +166,7 @@ export type SecondPassClient = {
     get(shelfId: string, params?: { includePreviewBooks?: boolean }): Promise<Shelf>;
     update(shelfId: string, input: UpdateShelfInput): Promise<Shelf>;
     remove(shelfId: string): Promise<void>;
-    items(shelfId: string, params?: { page?: number; ordering?: string }): Promise<PaginatedShelfItemResponse>;
+    items(shelfId: string, params?: { page?: number; pageSize?: number; ordering?: string }): Promise<PaginatedShelfItemResponse>;
     addItem(shelfId: string, input: AddShelfItemInput): Promise<ShelfItem>;
     updateItem(shelfId: string, itemId: string, input: UpdateShelfItemInput): Promise<ShelfItem>;
     removeItem(shelfId: string, itemId: string): Promise<void>;
@@ -356,7 +356,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       },
       items: (shelfId, params) => {
         const auth = requireAuth(ctx);
-        return listShelfItems(auth, { shelfId, page: params?.page, ordering: params?.ordering });
+        return listShelfItems(auth, { shelfId, page: params?.page, pageSize: params?.pageSize, ordering: params?.ordering });
       },
       addItem: (shelfId, input) => {
         const auth = requireAuth(ctx);

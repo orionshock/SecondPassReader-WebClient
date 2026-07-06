@@ -50,7 +50,10 @@ type Props = {
     seriesId?: string;
     authorId?: string;
     groupId?: string;
-    view?: LibraryBooksView;
+      view?: LibraryBooksView;
+      ordering?: string;
+      page?: number;
+      pageSize?: number;
   };
   selectedBookId?: string | null;
   onViewBook?: (bookId: string) => void;
@@ -62,6 +65,7 @@ type Props = {
   onShowSeriesBooks?: (seriesId: string) => void;
   onShowAuthorBooks?: (authorId: string) => void;
   onShowGroupBooks?: (groupId: string) => void;
+  onUpdateRoute?: (patch: { ordering?: string; page?: number; pageSize?: number }) => void;
 };
 
 export function LibraryBrowsePage({
@@ -78,6 +82,7 @@ export function LibraryBrowsePage({
   onShowSeriesBooks,
   onShowAuthorBooks,
   onShowGroupBooks,
+  onUpdateRoute,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const apiReady = Boolean(spl);
@@ -92,24 +97,24 @@ export function LibraryBrowsePage({
     : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "groups" || browseFromRoute === "books"
       ? browseFromRoute
       : "books";
-  const bookOrderingContextKey = [
-    qFromRoute ? "search" : browseMode,
-    route.seriesId ?? "",
-    route.authorId ?? "",
-    route.groupId ?? "",
-  ].join(":");
   const defaultBookOrdering = getDefaultBookOrdering(browseMode, route.seriesId);
+  const routePage = route.page ?? 1;
+  const pageSize = route.pageSize ?? 20;
+  const showBookList = Boolean(
+    qFromRoute ||
+      browseMode === "books" ||
+      (browseMode === "series" && route.seriesId) ||
+      (browseMode === "authors" && route.authorId) ||
+      (browseMode === "groups" && route.groupId && groupsEnabled),
+  );
+  const bookOrderingOptions = browseMode === "series" && route.seriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
+  const validBookOrderings = new Set(bookOrderingOptions.map((option) => option.value));
+  const bookOrdering = validBookOrderings.has(route.ordering as BookOrdering) ? (route.ordering as BookOrdering) : defaultBookOrdering;
+  const seriesOrdering = SERIES_ORDERING_OPTIONS.some((option) => option.value === route.ordering) ? (route.ordering as EntityOrdering) : "name";
+  const authorsOrdering = AUTHOR_ORDERING_OPTIONS.some((option) => option.value === route.ordering) ? (route.ordering as EntityOrdering) : "name";
 
   const [qDraft, setQDraft] = useState(qFromRoute);
-  const [pageSize, setPageSize] = useState(20);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
-  const [bookOrderingState, setBookOrderingState] = useState<{ contextKey: string; value: BookOrdering }>(() => ({
-    contextKey: bookOrderingContextKey,
-    value: defaultBookOrdering,
-  }));
-  const [seriesOrdering, setSeriesOrdering] = useState<EntityOrdering>("name");
-  const [authorsOrdering, setAuthorsOrdering] = useState<EntityOrdering>("name");
-  const bookOrdering = bookOrderingState.contextKey === bookOrderingContextKey ? bookOrderingState.value : defaultBookOrdering;
 
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksError, setBooksError] = useState<string | null>(null);
@@ -157,9 +162,29 @@ export function LibraryBrowsePage({
 
   const handleBookOrderingChange = useCallback(
     (ordering: BookOrdering) => {
-      setBookOrderingState({ contextKey: bookOrderingContextKey, value: ordering });
+      onUpdateRoute?.({ ordering, page: 1, pageSize });
     },
-    [bookOrderingContextKey],
+    [onUpdateRoute, pageSize],
+  );
+
+  const handleSeriesOrderingChange = useCallback(
+    (ordering: EntityOrdering) => onUpdateRoute?.({ ordering, page: 1, pageSize }),
+    [onUpdateRoute, pageSize],
+  );
+
+  const handleAuthorsOrderingChange = useCallback(
+    (ordering: EntityOrdering) => onUpdateRoute?.({ ordering, page: 1, pageSize }),
+    [onUpdateRoute, pageSize],
+  );
+
+  const handlePageSizeChange = useCallback(
+    (nextPageSize: number) => onUpdateRoute?.({ ordering: route.ordering, page: 1, pageSize: nextPageSize }),
+    [onUpdateRoute, route.ordering],
+  );
+
+  const handlePageChange = useCallback(
+    (page: number) => onUpdateRoute?.({ ordering: route.ordering, page, pageSize }),
+    [onUpdateRoute, pageSize, route.ordering],
   );
 
   const loadBooks = useCallback(
@@ -282,21 +307,7 @@ export function LibraryBrowsePage({
     setBooksError(null);
     setBooksBusy(false);
     setBooksPage(1);
-  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize, bookOrdering]);
-
-  useEffect(() => {
-    setSeriesData(null);
-    setSeriesError(null);
-    setSeriesBusy(false);
-    setSeriesPage(1);
-  }, [seriesOrdering]);
-
-  useEffect(() => {
-    setAuthorsData(null);
-    setAuthorsError(null);
-    setAuthorsBusy(false);
-    setAuthorsPage(1);
-  }, [authorsOrdering]);
+  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize, bookOrdering, routePage]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -304,43 +315,43 @@ export function LibraryBrowsePage({
 
     // Global search wins over browse.
     if (qFromRoute) {
-      void loadBooks({ page: 1, q: qFromRoute, ordering: bookOrdering });
+      void loadBooks({ page: routePage, q: qFromRoute, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "series" && route.seriesId) {
-      void loadBooks({ page: 1, seriesId: route.seriesId, ordering: bookOrdering });
+      void loadBooks({ page: routePage, seriesId: route.seriesId, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "authors" && route.authorId) {
-      void loadBooks({ page: 1, authorId: route.authorId, ordering: bookOrdering });
+      void loadBooks({ page: routePage, authorId: route.authorId, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "groups" && route.groupId) {
-      void loadBooks({ page: 1, groupId: route.groupId, ordering: bookOrdering });
+      void loadBooks({ page: routePage, groupId: route.groupId, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "books") {
-      void loadBooks({ page: 1, ordering: bookOrdering });
+      void loadBooks({ page: routePage, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "series" && !route.seriesId) {
-      void loadSeries(1);
+      void loadSeries(routePage);
       return;
     }
     if (browseMode === "authors" && !route.authorId) {
-      void loadAuthors(1);
+      void loadAuthors(routePage);
       return;
     }
     if (browseMode === "groups" && groupsEnabled && !route.groupId) {
-      void loadGroups(1);
+      void loadGroups(routePage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering, routePage]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -423,15 +434,6 @@ export function LibraryBrowsePage({
       ]
     : [];
 
-  const showBookList = Boolean(
-    qFromRoute ||
-      browseMode === "books" ||
-      (browseMode === "series" && route.seriesId) ||
-      (browseMode === "authors" && route.authorId) ||
-      (browseMode === "groups" && route.groupId && groupsEnabled),
-  );
-  const bookOrderingOptions = browseMode === "series" && route.seriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
-
   return (
     <section className="panel">
       {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
@@ -463,7 +465,7 @@ export function LibraryBrowsePage({
                   className="input inputCompact"
                   value={pageSize}
                   onChange={(e) => {
-                    setPageSize(Number(e.target.value));
+                    handlePageSizeChange(Number(e.target.value));
                   }}
                 >
                   <option value={20}>20</option>
@@ -531,14 +533,14 @@ export function LibraryBrowsePage({
                 <OrderingControl
                   options={SERIES_ORDERING_OPTIONS}
                   value={seriesOrdering}
-                  onChange={setSeriesOrdering}
+                  onChange={handleSeriesOrderingChange}
                   ariaLabel="Sort series"
                 />
               ) : browseMode === "authors" && !route.authorId ? (
                 <OrderingControl
                   options={AUTHOR_ORDERING_OPTIONS}
                   value={authorsOrdering}
-                  onChange={setAuthorsOrdering}
+                  onChange={handleAuthorsOrderingChange}
                   ariaLabel="Sort authors"
                 />
               ) : null}
@@ -599,16 +601,7 @@ export function LibraryBrowsePage({
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() =>
-                          void loadBooks({
-                            page: Math.max(1, booksPage - 1),
-                            q: qFromRoute || undefined,
-                            seriesId: browseMode === "series" ? route.seriesId : undefined,
-                            authorId: browseMode === "authors" ? route.authorId : undefined,
-                            groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: bookOrdering,
-                          })
-                        }
+                        onClick={() => handlePageChange(Math.max(1, booksPage - 1))}
                         disabled={booksBusy || !booksData.previous}
                       >
                         Previous
@@ -616,16 +609,7 @@ export function LibraryBrowsePage({
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() =>
-                          void loadBooks({
-                            page: booksPage + 1,
-                            q: qFromRoute || undefined,
-                            seriesId: browseMode === "series" ? route.seriesId : undefined,
-                            authorId: browseMode === "authors" ? route.authorId : undefined,
-                            groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: bookOrdering,
-                          })
-                        }
+                        onClick={() => handlePageChange(booksPage + 1)}
                         disabled={booksBusy || !booksData.next}
                       >
                         Next
@@ -649,16 +633,7 @@ export function LibraryBrowsePage({
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() =>
-                          void loadBooks({
-                            page: Math.max(1, booksPage - 1),
-                            q: qFromRoute || undefined,
-                            seriesId: browseMode === "series" ? route.seriesId : undefined,
-                            authorId: browseMode === "authors" ? route.authorId : undefined,
-                            groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: bookOrdering,
-                          })
-                        }
+                        onClick={() => handlePageChange(Math.max(1, booksPage - 1))}
                         disabled={booksBusy || !booksData.previous}
                       >
                         Previous
@@ -666,16 +641,7 @@ export function LibraryBrowsePage({
                       <button
                         className="button buttonCompact"
                         type="button"
-                        onClick={() =>
-                          void loadBooks({
-                            page: booksPage + 1,
-                            q: qFromRoute || undefined,
-                            seriesId: browseMode === "series" ? route.seriesId : undefined,
-                            authorId: browseMode === "authors" ? route.authorId : undefined,
-                            groupId: browseMode === "groups" ? route.groupId : undefined,
-                            ordering: bookOrdering,
-                          })
-                        }
+                        onClick={() => handlePageChange(booksPage + 1)}
                         disabled={booksBusy || !booksData.next}
                       >
                         Next
@@ -729,7 +695,7 @@ export function LibraryBrowsePage({
                     <button
                       className="button buttonCompact"
                       type="button"
-                      onClick={() => void loadSeries(Math.max(1, seriesPage - 1))}
+                      onClick={() => handlePageChange(Math.max(1, seriesPage - 1))}
                       disabled={seriesBusy || !seriesData.previous}
                     >
                       Previous
@@ -737,7 +703,7 @@ export function LibraryBrowsePage({
                     <button
                       className="button buttonCompact"
                       type="button"
-                      onClick={() => void loadSeries(seriesPage + 1)}
+                      onClick={() => handlePageChange(seriesPage + 1)}
                       disabled={seriesBusy || !seriesData.next}
                     >
                       Next
@@ -786,7 +752,7 @@ export function LibraryBrowsePage({
                     <button
                       className="button buttonCompact"
                       type="button"
-                      onClick={() => void loadAuthors(Math.max(1, authorsPage - 1))}
+                      onClick={() => handlePageChange(Math.max(1, authorsPage - 1))}
                       disabled={authorsBusy || !authorsData.previous}
                     >
                       Previous
@@ -794,7 +760,7 @@ export function LibraryBrowsePage({
                     <button
                       className="button buttonCompact"
                       type="button"
-                      onClick={() => void loadAuthors(authorsPage + 1)}
+                      onClick={() => handlePageChange(authorsPage + 1)}
                       disabled={authorsBusy || !authorsData.next}
                     >
                       Next
@@ -848,7 +814,7 @@ export function LibraryBrowsePage({
                     <button
                       className="button buttonCompact"
                       type="button"
-                      onClick={() => void loadGroups(Math.max(1, groupsPage - 1))}
+                      onClick={() => handlePageChange(Math.max(1, groupsPage - 1))}
                       disabled={groupsBusy || !groupsData.previous}
                     >
                       Previous
@@ -856,7 +822,7 @@ export function LibraryBrowsePage({
                     <button
                       className="button buttonCompact"
                       type="button"
-                      onClick={() => void loadGroups(groupsPage + 1)}
+                      onClick={() => handlePageChange(groupsPage + 1)}
                       disabled={groupsBusy || !groupsData.next}
                     >
                       Next
