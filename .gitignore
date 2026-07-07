@@ -4,6 +4,7 @@ dist
 .vscode
 .idea
 coverage
+.playwright-profile/
 .eslintcache
 .DS_Store
 .env
