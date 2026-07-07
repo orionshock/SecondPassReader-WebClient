@@ -4,8 +4,9 @@ import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
 import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./readerImportAttempts";
+import { getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
-import { findImportRowSearchMatch } from "./readerImportSearch";
+import { findImportRowSearchMatches } from "./readerImportSearch";
 
 export function useReaderImportActivation({
   job,
@@ -16,15 +17,17 @@ export function useReaderImportActivation({
   setRowActivationState,
   setDrawerOpen,
   jumpToResult,
+  clearTemporaryHighlight,
 }: {
   job: ReaderImportJob | null;
   searchBook: ReaderSearchBookHandle | null;
   stagedSelectionHandle: StagedSelectionHandle | null;
   selectRow: (rowId: string) => void;
   setRowStatus: (rowId: string, status: ReaderImportRowStatus) => void;
-  setRowActivationState: (rowId: string, status: ReaderImportRowStatus, attemptCursor?: number) => void;
+  setRowActivationState: (rowId: string, status: ReaderImportRowStatus, cycle?: { attemptCursor?: number; resultCursor?: number; hasMatched?: boolean }) => void;
   setDrawerOpen: (open: boolean) => void;
   jumpToResult: (cfi: string) => void;
+  clearTemporaryHighlight: () => void;
 }) {
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -34,33 +37,14 @@ export function useReaderImportActivation({
   return useCallback(async (rowId: string) => {
     const row = job?.rows.find((r) => r.id === rowId);
     if (!job || !row || row.status === "accepted" || row.status === "skipped" || row.status === "searching") return;
+    clearTemporaryHighlight();
     if (row.status === "staged" || hasOtherStagedRows(job.rows, rowId)) stagedSelectionHandle?.cancelStagedSelection();
     selectRow(rowId);
     const next = getNextReaderImportAttempt(row);
     if (!next) {
       setRowStatus(rowId, "not-found");
+      clearTemporaryHighlight();
       setDrawerOpen(true);
-      return;
-    }
-
-    if (next.attempt.kind === "selector-cfi") {
-      if (!stagedSelectionHandle) return;
-      try {
-        jumpToResult(next.attempt.cfi);
-        stagedSelectionHandle.stageSelectionFromCfiRange({
-          cfiRange: next.attempt.cfi,
-          text: row.quoteText ?? "",
-          quotePrefix: row.preQuoteText,
-          quoteSuffix: row.postQuoteText,
-          note: row.noteText,
-          color: normalizeImportedHighlightColor(row.color),
-          source: { kind: "import", importJobId: job.id, importRowId: row.id },
-        });
-        setRowActivationState(rowId, "staged", next.nextCursor);
-      } catch {
-        setRowActivationState(rowId, "not-found", next.nextCursor);
-        setDrawerOpen(true);
-      }
       return;
     }
 
@@ -75,14 +59,30 @@ export function useReaderImportActivation({
 
     try {
       const attempts = buildReaderImportAttemptQueue(row);
-      for (let cursor = next.cursor; cursor < attempts.length; cursor += 1) {
-        const attempt = attempts[cursor]!;
-        if (attempt.kind === "selector-cfi") continue;
-        const match = await findImportRowSearchMatch({ row, attempt, searchBook, signal: controller.signal });
-        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-        if (!match) continue;
+      const resultsByAttempt = await Promise.all(
+        attempts.map((attempt) => findImportRowSearchMatches({ row, attempt, searchBook, signal: controller.signal })),
+      );
+      if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+      const cycle = getNextImportCycleMatch(
+        {
+          attemptCursor: next.cursor,
+          resultCursor: next.resultCursor,
+          hasMatched: row.hasMatched,
+        },
+        resultsByAttempt,
+      );
 
+      if (!cycle) {
+        setRowActivationState(rowId, "not-found", { attemptCursor: attempts.length, resultCursor: 0, hasMatched: row.hasMatched });
+        clearTemporaryHighlight();
+        setDrawerOpen(true);
+        return;
+      }
+
+      const match = cycle.result;
+      try {
         jumpToResult(match.result.cfi);
+        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
         stagedSelectionHandle.stageSelectionFromCfiRange({
           cfiRange: match.result.cfi,
           text: match.matchedText || row.quoteText || "",
@@ -92,16 +92,25 @@ export function useReaderImportActivation({
           color: normalizeImportedHighlightColor(row.color),
           source: { kind: "import", importJobId: job.id, importRowId: row.id },
         });
-        setRowActivationState(rowId, "staged", cursor + 1);
-        return;
+        setRowActivationState(rowId, "staged", {
+          attemptCursor: cycle.nextAttemptCursor,
+          resultCursor: cycle.nextResultCursor,
+          hasMatched: true,
+        });
+      } catch {
+        setRowActivationState(rowId, "not-found", {
+          attemptCursor: cycle.nextAttemptCursor,
+          resultCursor: cycle.nextResultCursor,
+          hasMatched: row.hasMatched,
+        });
+        clearTemporaryHighlight();
+        setDrawerOpen(true);
       }
-
-      setRowActivationState(rowId, "not-found", attempts.length);
-      setDrawerOpen(true);
     } catch (err) {
       if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-      setRowActivationState(rowId, "not-found", next.nextCursor);
+      setRowActivationState(rowId, "not-found", { attemptCursor: next.cursor + 1, resultCursor: 0, hasMatched: row.hasMatched });
+      clearTemporaryHighlight();
       setDrawerOpen(true);
     }
-  }, [job, jumpToResult, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
+  }, [clearTemporaryHighlight, job, jumpToResult, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
 }

@@ -13,6 +13,8 @@ export type ReaderImportRow = {
   color?: string;
   status: ReaderImportRowStatus;
   attemptCursor?: number;
+  resultCursor?: number;
+  hasMatched?: boolean;
 };
 
 export type ReaderImportJob = {

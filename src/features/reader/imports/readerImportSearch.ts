@@ -23,35 +23,57 @@ export async function findImportRowSearchMatch({
   searchBook: ReaderSearchBookHandle;
   signal: AbortSignal;
 }): Promise<ReaderImportSearchMatch | null> {
+  const matches = await findImportRowSearchMatches({ row, attempt, searchBook, signal });
+  return matches[0] ?? null;
+}
+
+export async function findImportRowSearchMatches({
+  row,
+  attempt,
+  searchBook,
+  signal,
+}: {
+  row: ReaderImportRow;
+  attempt: ReaderImportSearchAttempt;
+  searchBook: ReaderSearchBookHandle;
+  signal: AbortSignal;
+}): Promise<ReaderImportSearchMatch[]> {
   if (attempt.kind === "quote-text") {
     const query = attempt.exact.trim();
-    if (!query) return null;
+    if (!query) return [];
     const results = await searchBook(query, {
       maxResults: 25,
       maxSeqEle: 8,
       signal,
     });
-    if (signal.aborted) return null;
-    const result = rankImportQuoteContextCandidates(results, { prefix: attempt.prefix, suffix: attempt.suffix })[0];
-    if (result?.cfi?.trim()) return { result, matchedText: result.repairedText ?? query, query };
-    return null;
+    if (signal.aborted) return [];
+    return rankImportQuoteContextCandidates(results, { prefix: attempt.prefix, suffix: attempt.suffix })
+      .filter((result) => Boolean(result.cfi?.trim()))
+      .map((result) => ({ result, matchedText: result.repairedText ?? query, query }));
   }
 
   const queries = buildImportSearchQueries(attempt.text);
   const fullQuery = queries[0] ?? "";
+  const matches: ReaderImportSearchMatch[] = [];
+  const seen = new Set<string>();
   for (const query of queries) {
-    if (signal.aborted) return null;
+    if (signal.aborted) return [];
     const results = await searchBook(query, {
       maxResults: 5,
       maxSeqEle: 8,
       repairFullText: query === fullQuery ? undefined : row.quoteText,
       signal,
     });
-    if (signal.aborted) return null;
-    const result = results[0];
-    if (result?.cfi?.trim()) return { result, matchedText: result.repairedText ?? query, query };
+    if (signal.aborted) return [];
+    for (const result of results) {
+      const key = result.cfi?.trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      matches.push({ result, matchedText: result.repairedText ?? query, query });
+    }
+    if (matches.length > 0) return matches;
   }
-  return null;
+  return matches;
 }
 
 export function buildImportSearchQueries(text: string): string[] {

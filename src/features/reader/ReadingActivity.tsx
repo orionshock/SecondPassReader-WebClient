@@ -175,16 +175,28 @@ function ReaderActivityContent({
     setRowActivationState: readerImport.setRowActivationState,
     setDrawerOpen: readerImport.setDrawerOpen,
     jumpToResult: readerState.search.jumpToCfi,
+    clearTemporaryHighlight: readerState.search.clearTemporaryHighlight,
   });
 
-  const clearImportJob = () => {
+  const cleanupImportTemporaryState = () => {
     readerState.stagedSelection.handle?.cancelStagedSelection();
+    readerState.search.clearTemporaryHighlight();
+  };
+
+  const clearImportJob = () => {
+    cleanupImportTemporaryState();
     readerImport.clearJob();
+  };
+
+  const closeImportDrawer = () => {
+    cleanupImportTemporaryState();
+    readerImport.setDrawerOpen(false);
   };
 
   const skipImportRow = (rowId: string) => {
     const row = readerImport.job?.rows.find((item) => item.id === rowId);
     if (row?.status === "staged") readerState.stagedSelection.handle?.cancelStagedSelection();
+    readerState.search.clearTemporaryHighlight();
     readerImport.skipRow(rowId);
   };
 
@@ -328,6 +340,7 @@ function ReaderActivityContent({
         onJumpToCfiRange={readerState.search.jumpToCfiRange}
         readerImport={readerImport}
         onClearImport={clearImportJob}
+        onCloseImport={closeImportDrawer}
         onSelectImportRow={(rowId) => {
           void activateImportRow(rowId);
         }}

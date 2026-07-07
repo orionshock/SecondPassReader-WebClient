@@ -10,7 +10,7 @@ describe("reader import attempts", () => {
     ]);
   });
 
-  it("orders selector hints before plain text search", () => {
+  it("does not enqueue CFI hints without a safe resolver", () => {
     expect(
       buildReaderImportAttemptQueue(
         row({
@@ -19,7 +19,6 @@ describe("reader import attempts", () => {
         }),
       ),
     ).toEqual([
-      { kind: "selector-cfi", cfi: "epubcfi(/6/2)" },
       { kind: "text-search", text: "Selected text" },
     ]);
   });
@@ -54,26 +53,26 @@ describe("reader import attempts", () => {
     expect(getNextReaderImportAttempt(row({ quoteText: "Selected text" }))).toMatchObject({
       attempt: { kind: "text-search", text: "Selected text" },
       cursor: 0,
-      nextCursor: 1,
+      resultCursor: 0,
     });
   });
 
   it("advances staged and not-found rows by cursor", () => {
     const base = row({
       quoteText: "Selected text",
-      cfiHint: "epubcfi(/6/2)",
       attemptCursor: 1,
+      preQuoteText: "before",
     });
 
     expect(getNextReaderImportAttempt({ ...base, status: "staged" })).toMatchObject({
       attempt: { kind: "text-search", text: "Selected text" },
       cursor: 1,
-      nextCursor: 2,
+      resultCursor: 0,
     });
     expect(getNextReaderImportAttempt({ ...base, status: "not-found" })).toMatchObject({
       attempt: { kind: "text-search", text: "Selected text" },
       cursor: 1,
-      nextCursor: 2,
+      resultCursor: 0,
     });
   });
 
@@ -85,6 +84,16 @@ describe("reader import attempts", () => {
 
   it("returns no attempt after the cursor exhausts the queue", () => {
     expect(getNextReaderImportAttempt(row({ status: "not-found", quoteText: "Selected text", attemptCursor: 1 }))).toBeNull();
+  });
+
+  it("cycles back to the first attempt when the row has matched before", () => {
+    expect(
+      getNextReaderImportAttempt(row({ status: "staged", quoteText: "Selected text", attemptCursor: 1, hasMatched: true })),
+    ).toMatchObject({
+      attempt: { kind: "text-search", text: "Selected text" },
+      cursor: 0,
+      resultCursor: 0,
+    });
   });
 });
 

@@ -21,10 +21,10 @@ export function useReaderImportJob() {
     setJob((prev) => prev ? { ...prev, rows: prev.rows.map((row) => row.id === rowId ? { ...row, status } : row) } : prev);
   }, []);
 
-  const setRowActivationState = useCallback((rowId: string, status: ReaderImportRowStatus, attemptCursor?: number) => {
+  const setRowActivationState = useCallback((rowId: string, status: ReaderImportRowStatus, cycle?: { attemptCursor?: number; resultCursor?: number; hasMatched?: boolean }) => {
     setJob((prev) => prev ? {
       ...prev,
-      rows: prev.rows.map((row) => row.id === rowId ? { ...row, status, attemptCursor } : row),
+      rows: prev.rows.map((row) => row.id === rowId ? { ...row, status, ...cycle } : row),
     } : prev);
   }, []);
 

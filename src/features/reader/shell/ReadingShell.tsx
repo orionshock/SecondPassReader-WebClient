@@ -190,6 +190,11 @@ export function ReadingShell(props: ReadingShellProps) {
     [],
   );
 
+  const reportTransientCommandError = useCallback((err: unknown, generation: number) => {
+    if (engineGenerationRef.current !== generation) return;
+    onEventRef.current?.({ type: "displayError", error: err });
+  }, []);
+
   const runCommandOnEngine = useCallback(
     async (engine: EpubTsBookEngine, command: ReadingShellCommandValue, commandSeq?: number) => {
       switch (command.type) {
@@ -358,10 +363,10 @@ export function ReadingShell(props: ReadingShellProps) {
         }
         await runCommandOnEngine(engine, cmd.value, cmd.seq);
       } catch (err) {
-        reportCommandError(err, "Command failed.", generation);
+        reportTransientCommandError(err, generation);
       }
     })();
-  }, [props.command, reportCommandError, runCommandOnEngine]);
+  }, [props.command, reportTransientCommandError, runCommandOnEngine]);
 
   useEffect(() => {
     if (!props.settings) return;
@@ -414,7 +419,7 @@ export function ReadingShell(props: ReadingShellProps) {
       if (!engine) return;
       await runCommandOnEngine(engine, { type: "previous" });
     } catch (err) {
-      reportCommandError(err, "Previous failed.", generation);
+      reportTransientCommandError(err, generation);
     }
   };
 
@@ -425,7 +430,7 @@ export function ReadingShell(props: ReadingShellProps) {
       if (!engine) return;
       await runCommandOnEngine(engine, { type: "next" });
     } catch (err) {
-      reportCommandError(err, "Next failed.", generation);
+      reportTransientCommandError(err, generation);
     }
   };
 

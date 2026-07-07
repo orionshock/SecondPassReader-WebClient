@@ -14,6 +14,7 @@ export function ReaderActivitySidePanels({
   onJumpToCfiRange,
   readerImport,
   onClearImport,
+  onCloseImport,
   onSelectImportRow,
   onSkipImportRow,
 }: {
@@ -26,6 +27,7 @@ export function ReaderActivitySidePanels({
   onJumpToCfiRange: (cfiRange: string) => void;
   readerImport: ReturnType<typeof useReaderImportJob>;
   onClearImport: () => void;
+  onCloseImport: () => void;
   onSelectImportRow: (rowId: string) => void;
   onSkipImportRow: (rowId: string) => void;
 }) {
@@ -59,7 +61,7 @@ export function ReaderActivitySidePanels({
         open={readerImport.drawerOpen}
         job={readerImport.job}
         counts={readerImport.counts}
-        onClose={() => readerImport.setDrawerOpen(false)}
+        onClose={onCloseImport}
         onClear={onClearImport}
         onActivateRow={onSelectImportRow}
         onSkipRow={onSkipImportRow}

@@ -1,7 +1,6 @@
 import type { ReaderImportRow } from "./readerImportTypes";
 
 export type ReaderImportAttempt =
-  | { kind: "selector-cfi"; cfi: string }
   | { kind: "quote-text"; exact: string; prefix?: string; suffix?: string }
   | { kind: "text-search"; text: string };
 
@@ -10,8 +9,6 @@ export function buildReaderImportAttemptQueue(row: ReaderImportRow): ReaderImpor
 
   const attempts: ReaderImportAttempt[] = [];
   const text = row.quoteText?.trim() ?? "";
-  const cfi = row.cfiHint?.trim();
-  if (cfi && text) attempts.push({ kind: "selector-cfi", cfi });
 
   const prefix = trimOptional(row.preQuoteText);
   const suffix = trimOptional(row.postQuoteText);
@@ -28,12 +25,14 @@ export function buildReaderImportAttemptQueue(row: ReaderImportRow): ReaderImpor
   return attempts;
 }
 
-export function getNextReaderImportAttempt(row: ReaderImportRow): { attempt: ReaderImportAttempt; cursor: number; nextCursor: number } | null {
+export function getNextReaderImportAttempt(row: ReaderImportRow): { attempt: ReaderImportAttempt; cursor: number; resultCursor: number } | null {
   if (row.status === "accepted" || row.status === "skipped" || row.status === "searching") return null;
   const attempts = buildReaderImportAttemptQueue(row);
-  const cursor = Math.max(0, row.attemptCursor ?? 0);
+  if (attempts.length === 0) return null;
+  const rawCursor = Math.max(0, row.attemptCursor ?? 0);
+  const cursor = rawCursor >= attempts.length && row.hasMatched ? 0 : rawCursor;
   const attempt = attempts[cursor];
-  return attempt ? { attempt, cursor, nextCursor: cursor + 1 } : null;
+  return attempt ? { attempt, cursor, resultCursor: Math.max(0, row.resultCursor ?? 0) } : null;
 }
 
 function trimOptional(value: string | undefined): string | undefined {
