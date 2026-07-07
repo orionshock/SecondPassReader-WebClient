@@ -34,7 +34,7 @@ describe("reader import handlers", () => {
       format: "glasp-csv",
       fileName: "glasp.csv",
       summaryDisplay: "glasp.csv",
-      rows: [{ importedText: "Quote", importedNote: "Note", importedColor: "yellow", status: "pending" }],
+      rows: [{ quoteText: "Quote", noteText: "Note", color: "yellow", status: "pending" }],
     });
     expect(job.rows[0]?.kind).toBe("highlight");
   });
@@ -75,12 +75,10 @@ describe("reader import handlers", () => {
       id: "ann-1",
       kind: "highlight",
       index: 1,
-      importedText: "Selected text",
-      importedNote: "Note",
-      importedColor: "green",
-      normalizedColor: "green",
-      importedLocation: "Location hint: /6/2",
-      selectorHint: { kind: "epub_cfi", value: "/6/2" },
+      quoteText: "Selected text",
+      noteText: "Note",
+      color: "green",
+      cfiHint: "/6/2",
       status: "pending",
     });
   });
@@ -120,17 +118,13 @@ describe("reader import handlers", () => {
       expect.objectContaining({
         id: "bookmark-1",
         kind: "bookmark",
-        importedText: "Bookmark",
-        importedLocation: "Location hint: epubcfi(/6/2)",
-        selectorHint: { kind: "epub_cfi", value: "epubcfi(/6/2)" },
+        cfiHint: "epubcfi(/6/2)",
         status: "pending",
       }),
       expect.objectContaining({
         id: "bookmark-2",
         kind: "bookmark",
-        importedText: "Bookmark",
-        importedLocation: "Location hint: /6/4",
-        selectorHint: { kind: "epub_cfi", value: "/6/4" },
+        cfiHint: "/6/4",
         status: "pending",
       }),
     ]);
@@ -163,8 +157,7 @@ describe("reader import handlers", () => {
     expect(job.rows[0]).toMatchObject({
       id: "empty-highlight",
       kind: "highlight",
-      importedText: "",
-      selectorHint: { kind: "epub_cfi", value: "epubcfi(/6/8)" },
+      cfiHint: "epubcfi(/6/8)",
       status: "pending",
     });
   });
@@ -198,7 +191,7 @@ describe("reader import handlers", () => {
     });
   });
 
-  it("preserves SPL selectors, quotes, comments, colors, deleted flags, and unknown fields", async () => {
+  it("maps SPL selectors, quotes, comments, and colors into source-fact row fields", async () => {
     const selectorArray = [
       { type: "FragmentSelector", value: "epubcfi(/old/hint)", custom: "keep" },
       { type: "TextQuoteSelector", exact: "quoted text", prefix: "before", suffix: "after" },
@@ -232,21 +225,16 @@ describe("reader import handlers", () => {
     const job = await getReaderImportFormat("spl-session-json").importFile(file);
     const row = job.rows[0]!;
 
-    expect(row.importedText).toBe("quoted text");
-    expect(row.importedNote).toBe("Comment");
-    expect(row.importedColor).toBe("yellow");
-    expect(row.rawAnnotation).toEqual({
-      id: "ann",
-      comment_text: "Comment",
-      body: [{ type: "TextualBody", purpose: "describing", value: "quoted text", color: "yellow" }],
-      deleted: true,
-      annotation_unknown: { keep: true },
-      target: { selector: selectorArray },
-    });
+    expect(row.quoteText).toBe("quoted text");
+    expect(row.preQuoteText).toBe("before");
+    expect(row.postQuoteText).toBe("after");
+    expect(row.cfiHint).toBe("epubcfi(/old/hint)");
+    expect(row.noteText).toBe("Comment");
+    expect(row.color).toBe("yellow");
     expect(job.summaryDisplay).toBe("session");
   });
 
-  it("reads SPL highlight color from body color through the handler boundary", async () => {
+  it("reads SPL highlight color from direct and body color fields through the handler boundary", async () => {
     const file = jsonFile({
       schema_version: "0.1.0",
       books: [
@@ -256,6 +244,9 @@ describe("reader import handlers", () => {
             {
               id: "session",
               annotations: [
+                { id: "direct", highlight_text: "Direct", highlight_color: "blue" },
+                { id: "camel", highlight_text: "Camel", highlightColor: "purple" },
+                { id: "plain", highlight_text: "Plain", color: "orange" },
                 { id: "green", highlight_text: "Green", body: [{ type: "TextualBody", color: "green" }] },
                 { id: "pink", highlight_text: "Pink", body: [{ type: "TextualBody", color: "pink" }] },
               ],
@@ -267,9 +258,12 @@ describe("reader import handlers", () => {
 
     const job = await getReaderImportFormat("spl-session-json").importFile(file);
 
-    expect(job.rows.map((row) => [row.id, row.importedColor, row.normalizedColor])).toEqual([
-      ["green", "green", "green"],
-      ["pink", "pink", "pink"],
+    expect(job.rows.map((row) => [row.id, row.color])).toEqual([
+      ["direct", "blue"],
+      ["camel", "purple"],
+      ["plain", "orange"],
+      ["green", "green"],
+      ["pink", "pink"],
     ]);
   });
 });

@@ -1,5 +1,4 @@
 import Papa from "papaparse";
-import { normalizeImportedHighlightColor } from "../readerImportColors";
 import { registerReaderImportHandler } from "../readerImportFormats";
 import type { ReaderImportRow } from "../readerImportTypes";
 
@@ -54,23 +53,22 @@ function parseGlaspCsv(text: string): { rows: ReaderImportRow[]; warnings: strin
   let skippedBlankRows = 0;
 
   parsed.data.forEach((record, rowOffset) => {
-    const importedText = cell(record, textColumn);
-    if (!importedText) {
+    const quoteText = cell(record, textColumn);
+    if (!quoteText) {
       skippedBlankRows += 1;
       return;
     }
-    const importedColor = cell(record, colorColumn);
-    const importedNote = cell(record, noteColumn);
-    const importedLocation = cell(record, locationColumn);
+    const color = cell(record, colorColumn);
+    const noteText = cell(record, noteColumn);
+    const cfiHint = cell(record, locationColumn);
     rows.push({
       id: `glasp-row-${rowOffset + 1}`,
       kind: "highlight",
       index: rows.length + 1,
-      importedText,
-      importedNote: importedNote || undefined,
-      importedColor: importedColor || undefined,
-      normalizedColor: normalizeImportedHighlightColor(importedColor),
-      importedLocation: importedLocation || undefined,
+      quoteText,
+      noteText: noteText || undefined,
+      color: color || undefined,
+      cfiHint: cfiHint || undefined,
       status: "pending",
     });
   });

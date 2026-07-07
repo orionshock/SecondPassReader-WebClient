@@ -2,7 +2,6 @@ import {
   formatMarginaliaSessionLabel,
   parseAndSplitMarginaliaExport,
 } from "../../../settings/marginaliaSplitExport";
-import { normalizeImportedHighlightColor } from "../readerImportColors";
 import { ReaderImportParseError, registerReaderImportHandler } from "../readerImportFormats";
 import type { ReaderImportJob, ReaderImportRow } from "../readerImportTypes";
 
@@ -76,24 +75,22 @@ function parseSplMarginaliaSessionImport(text: string, fileName: string, now = n
 function toImportRow(annotation: Record<string, unknown>, index: number): ReaderImportRow {
   const kind = isBookmarkAnnotation(annotation) ? "bookmark" : "highlight";
   const quote = readQuote(annotation);
-  const selectorHint = readSelectorHint(annotation);
-  const text = kind === "bookmark" ? "Bookmark" : getString(annotation.highlight_text) ?? quote ?? getString(annotation.text) ?? "";
-  const note = getString(annotation.comment_text) ?? getString(annotation.note) ?? getString(annotation.comment);
+  const cfiHint = readCfiHint(annotation);
+  const quoteText = kind === "bookmark" ? undefined : getString(annotation.highlight_text) ?? quote?.exact ?? getString(annotation.text);
+  const noteText = getString(annotation.comment_text) ?? readBodyNote(annotation) ?? getString(annotation.note) ?? getString(annotation.comment);
   const color = readColor(annotation);
-  const location = selectorHint ? `Location hint: ${selectorHint.value}` : undefined;
 
   return {
     id: getString(annotation.id) ?? `annotation-${index}`,
     kind,
     index,
-    importedText: text,
-    importedNote: note,
-    importedColor: color,
-    normalizedColor: normalizeImportedHighlightColor(color),
-    importedLocation: location,
-    selectorHint,
+    quoteText,
+    preQuoteText: quote?.prefix,
+    postQuoteText: quote?.suffix,
+    cfiHint,
+    noteText,
+    color,
     status: "pending",
-    rawAnnotation: annotation,
   };
 }
 
@@ -105,6 +102,9 @@ function isBookmarkAnnotation(annotation: Record<string, unknown>): boolean {
 }
 
 function readColor(annotation: Record<string, unknown>): string | undefined {
+  const direct = getString(annotation.highlight_color) ?? getString(annotation.highlightColor) ?? getString(annotation.color);
+  if (direct) return direct;
+
   const body = annotation.body;
   const bodies = Array.isArray(body) ? body : [body];
   for (const item of bodies) {
@@ -120,28 +120,51 @@ function readAnnotations(session: Record<string, unknown>): Record<string, unkno
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
-function readQuote(annotation: Record<string, unknown>): string | undefined {
+function readQuote(annotation: Record<string, unknown>): { exact: string; prefix?: string; suffix?: string } | undefined {
   const quote = annotation.quote;
-  if (isRecord(quote)) return getString(quote.exact);
+  if (isRecord(quote)) return buildQuote(quote);
 
   const target = annotation.target;
   if (!isRecord(target)) return undefined;
   const selector = target.selector;
   const selectors = Array.isArray(selector) ? selector : [selector];
   for (const item of selectors) {
-    if (isRecord(item) && getString(item.type) === "TextQuoteSelector") return getString(item.exact) ?? undefined;
+    if (isRecord(item) && getString(item.type) === "TextQuoteSelector") return buildQuote(item);
   }
   return undefined;
 }
 
-function readSelectorHint(annotation: Record<string, unknown>): ReaderImportRow["selectorHint"] | undefined {
+function buildQuote(value: Record<string, unknown>): { exact: string; prefix?: string; suffix?: string } | undefined {
+  const exact = getString(value.exact);
+  if (!exact) return undefined;
+  return {
+    exact,
+    prefix: getString(value.prefix),
+    suffix: getString(value.suffix),
+  };
+}
+
+function readCfiHint(annotation: Record<string, unknown>): string | undefined {
   const selector = annotation.selector ?? (isRecord(annotation.target) ? annotation.target.selector : undefined);
   const selectors = Array.isArray(selector) ? selector : [selector];
   for (const item of selectors) {
     if (!isRecord(item)) continue;
     const kind = getString(item.kind) ?? getString(item.type);
     const value = getString(item.value);
-    if (value && (kind === "epub_cfi" || kind === "FragmentSelector")) return { kind: "epub_cfi", value };
+    if (value && (kind === "epub_cfi" || kind === "FragmentSelector")) return value;
+  }
+  return undefined;
+}
+
+function readBodyNote(annotation: Record<string, unknown>): string | undefined {
+  const body = annotation.body;
+  const bodies = Array.isArray(body) ? body : [body];
+  for (const item of bodies) {
+    if (!isRecord(item)) continue;
+    const purpose = getString(item.purpose);
+    if (purpose && purpose !== "commenting") continue;
+    const value = getString(item.value);
+    if (value) return value;
   }
   return undefined;
 }

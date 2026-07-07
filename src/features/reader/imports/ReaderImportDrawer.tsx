@@ -9,7 +9,7 @@ export function ReaderImportDrawer({
   counts,
   onClose,
   onClear,
-  onSelectRow,
+  onActivateRow,
   onSkipRow,
   onUnskipRow,
 }: {
@@ -18,7 +18,7 @@ export function ReaderImportDrawer({
   counts: { pending: number; accepted: number; skipped: number; notFound: number };
   onClose: () => void;
   onClear: () => void;
-  onSelectRow: (rowId: string) => void;
+  onActivateRow: (rowId: string) => void;
   onSkipRow: (rowId: string) => void;
   onUnskipRow: (rowId: string) => void;
 }) {
@@ -70,7 +70,7 @@ export function ReaderImportDrawer({
 
       <ReaderImportRowList
         job={job}
-        onSelectRow={onSelectRow}
+        onActivateRow={onActivateRow}
         onSkipRow={onSkipRow}
         onUnskipRow={onUnskipRow}
       />

@@ -172,6 +172,7 @@ function ReaderActivityContent({
     stagedSelectionHandle: readerState.stagedSelection.handle,
     selectRow: readerImport.selectRow,
     setRowStatus: readerImport.setRowStatus,
+    setRowActivationState: readerImport.setRowActivationState,
     setDrawerOpen: readerImport.setDrawerOpen,
     jumpToResult: readerState.search.jumpToCfi,
   });

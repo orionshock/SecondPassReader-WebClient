@@ -40,7 +40,7 @@ function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {
     id: "row",
     kind: "highlight",
     index: 1,
-    importedText: "Text",
+    quoteText: "Text",
     status: "pending",
     ...overrides,
   };

@@ -3,12 +3,12 @@ import { ReaderImportRowItem } from "./ReaderImportRowItem";
 
 export function ReaderImportRowList({
   job,
-  onSelectRow,
+  onActivateRow,
   onSkipRow,
   onUnskipRow,
 }: {
   job: ReaderImportJob;
-  onSelectRow: (rowId: string) => void;
+  onActivateRow: (rowId: string) => void;
   onSkipRow: (rowId: string) => void;
   onUnskipRow: (rowId: string) => void;
 }) {
@@ -20,7 +20,7 @@ export function ReaderImportRowList({
           key={row.id}
           row={row}
           selected={job.activeRowId === row.id}
-          onSelect={() => onSelectRow(row.id)}
+          onActivate={() => onActivateRow(row.id)}
           onSkip={() => onSkipRow(row.id)}
           onUnskip={() => onUnskipRow(row.id)}
         />

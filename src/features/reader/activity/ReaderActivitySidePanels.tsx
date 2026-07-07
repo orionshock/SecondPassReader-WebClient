@@ -61,7 +61,7 @@ export function ReaderActivitySidePanels({
         counts={readerImport.counts}
         onClose={() => readerImport.setDrawerOpen(false)}
         onClear={onClearImport}
-        onSelectRow={onSelectImportRow}
+        onActivateRow={onSelectImportRow}
         onSkipRow={onSkipImportRow}
         onUnskipRow={readerImport.unskipRow}
       />
