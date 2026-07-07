@@ -1,6 +1,6 @@
-import ePub, { EpubCFI, type Book, type Location, type Rendition } from "@likecoin/epub-ts";
+import ePub, { EpubCFI, type Book, type Location, type Rendition, type Section } from "@likecoin/epub-ts";
 import { normalizeReaderSettings, type ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderLocation, ReaderLocationTarget } from "../domain/types";
+import type { ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection } from "../domain/types";
@@ -46,6 +46,7 @@ export type EpubTsBookEngine = {
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   setTemporarySearchHighlight(cfiRange: string | null): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
+  probeCfi(cfi: string): Promise<ReaderCfiProbeResult>;
   searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]>;
   destroy(): void;
 };
@@ -368,6 +369,61 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
       return { cfi: trimmed, href, spineIndex, bookProgress };
     },
+    async probeCfi(cfi: string): Promise<ReaderCfiProbeResult> {
+      const trimmed = cfi.trim();
+      if (!trimmed) return { ok: false, code: "invalid", error: "CFI is required." };
+      if (destroyed) return { ok: false, code: "unsupported", error: "Engine is destroyed." };
+
+      let parsed: EpubCFI;
+      try {
+        parsed = new EpubCFI(trimmed);
+      } catch (error) {
+        return { ok: false, code: "invalid", error: error instanceof Error ? error.message : "Invalid CFI." };
+      }
+
+      const spineIndex = typeof parsed.spinePos === "number" ? parsed.spinePos : undefined;
+      if (spineIndex == null || spineIndex < 0) {
+        return { ok: false, code: "invalid", error: "CFI does not include a valid spine target." };
+      }
+
+      try {
+        const visibleRange = rendition.getRange(trimmed);
+        if (isUsableRange(visibleRange)) {
+          return { ok: true, code: "exists-visible", description: describeCfiSection(book.spine.get(spineIndex), spineIndex) };
+        }
+      } catch {
+        // Not visible or not resolvable in the current view; continue with book-level resolution.
+      }
+
+      const section = book.spine.get(spineIndex);
+      if (!section) {
+        return { ok: false, code: "missing-target", error: "CFI spine target was not found in this book." };
+      }
+
+      const wasLoaded = Boolean(section.document);
+      try {
+        await section.load(createSectionRequest(book));
+        const range = parsed.toRange(section.document);
+        if (!isUsableRange(range)) {
+          return {
+            ok: false,
+            code: "missing-target",
+            error: "CFI target was not found in the target section.",
+            description: describeCfiSection(section, spineIndex),
+          };
+        }
+        return { ok: true, code: "exists-in-book", description: describeCfiSection(section, spineIndex) };
+      } catch (error) {
+        return {
+          ok: false,
+          code: "resolution-failed",
+          error: error instanceof Error ? error.message : "CFI resolution failed.",
+          description: describeCfiSection(section, spineIndex),
+        };
+      } finally {
+        if (!wasLoaded) section.unload();
+      }
+    },
     async searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]> {
       if (destroyed) throw new Error("Engine is destroyed.");
       return searchEpubTsBook(book, query, readerToc, options);
@@ -396,4 +452,16 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       }
     },
   };
+}
+
+function createSectionRequest(book: Book) {
+  return async (url: string, type?: string) => book.load(url, type);
+}
+
+function isUsableRange(range: Range | null | undefined): range is Range {
+  return Boolean(range?.startContainer && range.endContainer);
+}
+
+function describeCfiSection(section: Section | null, spineIndex: number): string {
+  return section?.href || `Spine ${spineIndex}`;
 }

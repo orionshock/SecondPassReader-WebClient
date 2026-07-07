@@ -73,6 +73,10 @@ export type ReaderLocationDescription = {
   bookProgress?: number | null;
 };
 
+export type ReaderCfiProbeResult =
+  | { ok: true; code: "exists-visible" | "exists-in-book"; description?: string }
+  | { ok: false; code: "invalid" | "missing-target" | "unsupported" | "resolution-failed"; error: string; description?: string };
+
 export type ReaderSearchResult = {
   id: string;
   cfi: string;

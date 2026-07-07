@@ -290,9 +290,9 @@ export function ReadingShell(props: ReadingShellProps) {
         });
         props.onProbeCfiReady?.((cfi) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
-            return Promise.resolve({ ok: false, error: "Reader engine is not ready." });
+            return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
           }
-          return probeReaderCfi((candidate) => engine.describeCfi(candidate), cfi);
+          return probeReaderCfi((candidate) => engine.probeCfi(candidate), cfi);
         });
         props.onSearchReady?.((query, options) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {

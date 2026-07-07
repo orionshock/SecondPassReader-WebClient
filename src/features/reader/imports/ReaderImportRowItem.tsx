@@ -56,8 +56,16 @@ export function ReaderImportRowItem({
           </button>
         )}
         {row.noteText ? <span className="spAnnotationNote spReaderImportNote">{row.noteText}</span> : null}
-        {row.kind === "bookmark" && cfiHint ? (
-          <span className="muted spReaderImportLocation">Location hint: {cfiHint}</span>
+        {row.kind === "bookmark" ? (
+          <button
+            type="button"
+            className={`spReaderImportLocationButton${cfiHint ? "" : " spReaderImportLocationButtonEmpty"}`}
+            onClick={onActivate}
+            disabled={row.status === "accepted" || row.status === "skipped" || row.status === "searching"}
+          >
+            <span>{cfiHint ? `Location hint: ${cfiHint}` : "No location hint"}</span>
+            {row.status === "searching" ? null : <span className="spReaderImportLocationAction">Check location</span>}
+          </button>
         ) : null}
       </div>
     </article>

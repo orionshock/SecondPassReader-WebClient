@@ -4,14 +4,17 @@ import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
 import { debugReaderImport, previewImportText } from "./readerImportDebug";
+import { probeReaderImportBookmarkCfi } from "./readerImportBookmarkProbe";
 import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./readerImportAttempts";
 import { getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatches } from "./readerImportSearch";
+import type { ReaderProbeCfiHandle } from "../shell/types";
 
 export function useReaderImportActivation({
   job,
   searchBook,
+  probeCfi,
   stagedSelectionHandle,
   selectRow,
   setRowStatus,
@@ -22,6 +25,7 @@ export function useReaderImportActivation({
 }: {
   job: ReaderImportJob | null;
   searchBook: ReaderSearchBookHandle | null;
+  probeCfi: ReaderProbeCfiHandle | null;
   stagedSelectionHandle: StagedSelectionHandle | null;
   selectRow: (rowId: string) => void;
   setRowStatus: (rowId: string, status: ReaderImportRowStatus) => void;
@@ -48,6 +52,48 @@ export function useReaderImportActivation({
     clearTemporaryHighlight();
     if (row.status === "staged" || hasOtherStagedRows(job.rows, rowId)) stagedSelectionHandle?.cancelStagedSelection();
     selectRow(rowId);
+    if (row.kind === "bookmark") {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      setRowStatus(rowId, "searching");
+      debugReaderImport("bookmark CFI probe start", {
+        rowId,
+        hasCfiHint: Boolean(row.cfiHint?.trim()),
+        cfiPreview: previewImportText(row.cfiHint),
+      });
+      try {
+        const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi });
+        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+        if (outcome.result.ok) {
+          debugReaderImport("bookmark CFI probe success", {
+            rowId,
+            code: outcome.result.code,
+            description: outcome.result.description,
+          });
+        } else {
+          debugReaderImport("bookmark CFI probe failed", {
+            rowId,
+            code: outcome.result.code,
+            reason: outcome.result.error,
+          });
+        }
+        setRowActivationState(rowId, outcome.status, { attemptCursor: row.attemptCursor, resultCursor: row.resultCursor, hasMatched: outcome.result.ok || row.hasMatched });
+        setDrawerOpen(true);
+      } catch (error) {
+        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+        debugReaderImport("bookmark CFI probe error", {
+          rowId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        setRowActivationState(rowId, "not-found", { attemptCursor: row.attemptCursor, resultCursor: row.resultCursor, hasMatched: row.hasMatched });
+        setDrawerOpen(true);
+      }
+      return;
+    }
+
     const next = getNextReaderImportAttempt(row);
     if (!next) {
       debugReaderImport("no activation attempt", {
@@ -182,5 +228,5 @@ export function useReaderImportActivation({
       clearTemporaryHighlight();
       setDrawerOpen(true);
     }
-  }, [clearTemporaryHighlight, job, jumpToResult, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
+  }, [clearTemporaryHighlight, job, jumpToResult, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
 }

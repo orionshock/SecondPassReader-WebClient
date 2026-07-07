@@ -2,15 +2,14 @@ import { describe, expect, it } from "vitest";
 import { probeReaderCfi } from "../features/reader/shell/readerCfiProbe";
 
 describe("probeReaderCfi", () => {
-  it("maps a valid CFI description to ok", async () => {
+  it("returns ok probe results", async () => {
     const result = await probeReaderCfi(async (cfi) => ({
-      cfi,
-      href: "chapter-1.xhtml",
-      spineIndex: 2,
-      bookProgress: 0.25,
+      ok: true,
+      code: "exists-in-book",
+      description: cfi,
     }), " epubcfi(/6/2) ");
 
-    expect(result).toEqual({ ok: true, description: "chapter-1.xhtml" });
+    expect(result).toEqual({ ok: true, code: "exists-in-book", description: "epubcfi(/6/2)" });
   });
 
   it("maps probe failures to ok false instead of throwing", async () => {
@@ -18,7 +17,7 @@ describe("probeReaderCfi", () => {
       throw new Error("Invalid CFI");
     }, "bad-cfi");
 
-    expect(result).toEqual({ ok: false, error: "Invalid CFI" });
+    expect(result).toEqual({ ok: false, code: "resolution-failed", error: "Invalid CFI" });
   });
 
   it("rejects empty CFI input as a local probe result", async () => {
@@ -26,6 +25,6 @@ describe("probeReaderCfi", () => {
       throw new Error("should not be called");
     }, " ");
 
-    expect(result).toEqual({ ok: false, error: "CFI is required." });
+    expect(result).toEqual({ ok: false, code: "invalid", error: "CFI is required." });
   });
 });

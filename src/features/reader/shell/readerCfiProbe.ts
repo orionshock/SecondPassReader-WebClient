@@ -1,21 +1,12 @@
-import type { ReaderLocationDescription } from "../domain/types";
-import type { ReaderCfiProbeResult, ReaderDescribeCfiHandle } from "./types";
+import type { ReaderCfiProbeResult, ReaderProbeCfiHandle } from "./types";
 
-export async function probeReaderCfi(describeCfi: ReaderDescribeCfiHandle, cfi: string): Promise<ReaderCfiProbeResult> {
+export async function probeReaderCfi(probeCfi: ReaderProbeCfiHandle, cfi: string): Promise<ReaderCfiProbeResult> {
   const trimmed = cfi.trim();
-  if (!trimmed) return { ok: false, error: "CFI is required." };
+  if (!trimmed) return { ok: false, code: "invalid", error: "CFI is required." };
 
   try {
-    const description = await describeCfi(trimmed);
-    return { ok: true, description: formatCfiProbeDescription(description) };
+    return await probeCfi(trimmed);
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "CFI probe failed." };
+    return { ok: false, code: "resolution-failed", error: error instanceof Error ? error.message : "CFI probe failed." };
   }
-}
-
-function formatCfiProbeDescription(description: ReaderLocationDescription): string | undefined {
-  if (description.href) return description.href;
-  if (typeof description.spineIndex === "number") return `Spine ${description.spineIndex}`;
-  if (typeof description.bookProgress === "number") return `${Math.round(description.bookProgress * 100)}%`;
-  return undefined;
 }

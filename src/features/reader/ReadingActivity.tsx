@@ -169,6 +169,7 @@ function ReaderActivityContent({
   const activateImportRow = useReaderImportActivation({
     job: readerImport.job,
     searchBook: readerState.search.searchBook,
+    probeCfi: readerState.search.probeCfi,
     stagedSelectionHandle: readerState.stagedSelection.handle,
     selectRow: readerImport.selectRow,
     setRowStatus: readerImport.setRowStatus,
