@@ -93,6 +93,10 @@
   border-style: dashed;
 }
 
+.settingsDiagnostics {
+  gap: 10px;
+}
+
 .settingsFileRow {
   display: flex;
   align-items: center;

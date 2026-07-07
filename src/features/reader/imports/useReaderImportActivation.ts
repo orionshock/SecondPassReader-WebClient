@@ -3,6 +3,7 @@ import type { ReaderSearchBookHandle } from "../shell/types";
 import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
+import { debugReaderImport, previewImportText } from "./readerImportDebug";
 import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./readerImportAttempts";
 import { getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
@@ -36,19 +37,42 @@ export function useReaderImportActivation({
 
   return useCallback(async (rowId: string) => {
     const row = job?.rows.find((r) => r.id === rowId);
-    if (!job || !row || row.status === "accepted" || row.status === "skipped" || row.status === "searching") return;
+    if (!job || !row || row.status === "accepted" || row.status === "skipped" || row.status === "searching") {
+      debugReaderImport("activation skipped", {
+        rowId,
+        hasJob: Boolean(job),
+        rowStatus: row?.status,
+      });
+      return;
+    }
     clearTemporaryHighlight();
     if (row.status === "staged" || hasOtherStagedRows(job.rows, rowId)) stagedSelectionHandle?.cancelStagedSelection();
     selectRow(rowId);
     const next = getNextReaderImportAttempt(row);
     if (!next) {
+      debugReaderImport("no activation attempt", {
+        rowId,
+        kind: row.kind,
+        quotePreview: previewImportText(row.quoteText),
+        hasCfiHint: Boolean(row.cfiHint),
+        attemptCursor: row.attemptCursor,
+        resultCursor: row.resultCursor,
+        hasMatched: row.hasMatched,
+      });
       setRowStatus(rowId, "not-found");
       clearTemporaryHighlight();
       setDrawerOpen(true);
       return;
     }
 
-    if (!searchBook || !stagedSelectionHandle) return;
+    if (!searchBook || !stagedSelectionHandle) {
+      debugReaderImport("activation dependencies missing", {
+        rowId,
+        hasSearchBook: Boolean(searchBook),
+        hasStagedSelectionHandle: Boolean(stagedSelectionHandle),
+      });
+      return;
+    }
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -59,10 +83,29 @@ export function useReaderImportActivation({
 
     try {
       const attempts = buildReaderImportAttemptQueue(row);
+      debugReaderImport("activation start", {
+        rowId,
+        status: row.status,
+        next: { kind: next.attempt.kind, cursor: next.cursor, resultCursor: next.resultCursor },
+        attempts: attempts.map((attempt) => ({
+          kind: attempt.kind,
+          textPreview: previewImportText(attempt.kind === "quote-text" ? attempt.exact : attempt.text),
+          hasPrefix: attempt.kind === "quote-text" ? Boolean(attempt.prefix) : undefined,
+          hasSuffix: attempt.kind === "quote-text" ? Boolean(attempt.suffix) : undefined,
+        })),
+        quotePreview: previewImportText(row.quoteText),
+        preQuotePreview: previewImportText(row.preQuoteText),
+        postQuotePreview: previewImportText(row.postQuoteText),
+        hasCfiHint: Boolean(row.cfiHint),
+      });
       const resultsByAttempt = await Promise.all(
         attempts.map((attempt) => findImportRowSearchMatches({ row, attempt, searchBook, signal: controller.signal })),
       );
       if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+      debugReaderImport("activation search results", {
+        rowId,
+        counts: resultsByAttempt.map((results, index) => ({ attemptKind: attempts[index]?.kind, count: results.length })),
+      });
       const cycle = getNextImportCycleMatch(
         {
           attemptCursor: next.cursor,
@@ -73,6 +116,12 @@ export function useReaderImportActivation({
       );
 
       if (!cycle) {
+        debugReaderImport("activation no cycle match", {
+          rowId,
+          attemptKinds: attempts.map((attempt) => attempt.kind),
+          counts: resultsByAttempt.map((results) => results.length),
+          previousHasMatched: row.hasMatched,
+        });
         setRowActivationState(rowId, "not-found", { attemptCursor: attempts.length, resultCursor: 0, hasMatched: row.hasMatched });
         clearTemporaryHighlight();
         setDrawerOpen(true);
@@ -80,6 +129,20 @@ export function useReaderImportActivation({
       }
 
       const match = cycle.result;
+      debugReaderImport("activation staging match", {
+        rowId,
+        cycle: {
+          attemptIndex: cycle.attemptIndex,
+          resultIndex: cycle.resultIndex,
+          nextAttemptCursor: cycle.nextAttemptCursor,
+          nextResultCursor: cycle.nextResultCursor,
+        },
+        cfi: match.result.cfi,
+        queryPreview: previewImportText(match.query),
+        matchedPreview: previewImportText(match.matchedText),
+        hasQuotePrefix: Boolean(match.result.quotePrefix),
+        hasQuoteSuffix: Boolean(match.result.quoteSuffix),
+      });
       try {
         jumpToResult(match.result.cfi);
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
@@ -98,6 +161,12 @@ export function useReaderImportActivation({
           hasMatched: true,
         });
       } catch {
+        debugReaderImport("activation staging failed", {
+          rowId,
+          cfi: match.result.cfi,
+          attemptIndex: cycle.attemptIndex,
+          resultIndex: cycle.resultIndex,
+        });
         setRowActivationState(rowId, "not-found", {
           attemptCursor: cycle.nextAttemptCursor,
           resultCursor: cycle.nextResultCursor,
@@ -108,6 +177,7 @@ export function useReaderImportActivation({
       }
     } catch (err) {
       if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+      debugReaderImport("activation error", { rowId, error: err instanceof Error ? err.message : String(err) });
       setRowActivationState(rowId, "not-found", { attemptCursor: next.cursor + 1, resultCursor: 0, hasMatched: row.hasMatched });
       clearTemporaryHighlight();
       setDrawerOpen(true);

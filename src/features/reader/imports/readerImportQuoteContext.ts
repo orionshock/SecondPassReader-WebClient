@@ -1,4 +1,5 @@
 import type { ReaderSearchResult } from "../domain/types";
+import { debugReaderImport, previewImportText } from "./readerImportDebug";
 
 export type ReaderImportQuoteContextHint = {
   prefix?: string;
@@ -41,8 +42,25 @@ export function rankImportQuoteContextCandidates<T extends ReaderSearchResult>(
   results: T[],
   hint: ReaderImportQuoteContextHint,
 ): T[] {
-  return results
-    .map((result, index) => ({ result, index, score: scoreImportQuoteContextCandidate(result, hint).score }))
+  const scored = results
+    .map((result, index) => ({ result, index, score: scoreImportQuoteContextCandidate(result, hint) }));
+  debugReaderImport("quote-context candidate scores", {
+    hint: {
+      prefixPreview: previewImportText(normalizeImportQuoteContextText(hint.prefix)),
+      suffixPreview: previewImportText(normalizeImportQuoteContextText(hint.suffix)),
+    },
+    candidates: scored.map((item) => ({
+      index: item.index,
+      cfi: item.result.cfi,
+      score: item.score.score,
+      prefixScore: item.score.prefixScore,
+      suffixScore: item.score.suffixScore,
+      quotePrefixPreview: previewImportText(normalizeImportQuoteContextText(item.result.quotePrefix)),
+      quoteSuffixPreview: previewImportText(normalizeImportQuoteContextText(item.result.quoteSuffix)),
+    })),
+  });
+  return scored
+    .map((item) => ({ result: item.result, index: item.index, score: item.score.score }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map((item) => item.result);
