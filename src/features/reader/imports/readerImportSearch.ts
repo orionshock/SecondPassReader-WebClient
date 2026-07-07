@@ -2,6 +2,7 @@ import type { ReaderSearchBookHandle } from "../shell/types";
 import type { ReaderSearchResult } from "../domain/types";
 import type { ReaderImportRow } from "./readerImportTypes";
 import type { ReaderImportAttempt } from "./readerImportAttempts";
+import { rankImportQuoteContextCandidates } from "./readerImportQuoteContext";
 
 type ReaderImportSearchAttempt = Extract<ReaderImportAttempt, { kind: "quote-text" | "text-search" }>;
 
@@ -22,7 +23,21 @@ export async function findImportRowSearchMatch({
   searchBook: ReaderSearchBookHandle;
   signal: AbortSignal;
 }): Promise<ReaderImportSearchMatch | null> {
-  const queries = attempt.kind === "quote-text" ? [attempt.exact.trim()].filter(Boolean) : buildImportSearchQueries(attempt.text);
+  if (attempt.kind === "quote-text") {
+    const query = attempt.exact.trim();
+    if (!query) return null;
+    const results = await searchBook(query, {
+      maxResults: 25,
+      maxSeqEle: 8,
+      signal,
+    });
+    if (signal.aborted) return null;
+    const result = rankImportQuoteContextCandidates(results, { prefix: attempt.prefix, suffix: attempt.suffix })[0];
+    if (result?.cfi?.trim()) return { result, matchedText: result.repairedText ?? query, query };
+    return null;
+  }
+
+  const queries = buildImportSearchQueries(attempt.text);
   const fullQuery = queries[0] ?? "";
   for (const query of queries) {
     if (signal.aborted) return null;

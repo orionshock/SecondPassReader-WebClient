@@ -3,7 +3,7 @@ import type { ReaderSearchBookHandle } from "../shell/types";
 import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
-import { getNextReaderImportAttempt } from "./readerImportAttempts";
+import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./readerImportAttempts";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatch } from "./readerImportSearch";
 
@@ -74,25 +74,30 @@ export function useReaderImportActivation({
     setRowStatus(rowId, "searching");
 
     try {
-      const match = await findImportRowSearchMatch({ row, attempt: next.attempt, searchBook, signal: controller.signal });
-      if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-      if (!match) {
-        setRowActivationState(rowId, "not-found", next.nextCursor);
-        setDrawerOpen(true);
+      const attempts = buildReaderImportAttemptQueue(row);
+      for (let cursor = next.cursor; cursor < attempts.length; cursor += 1) {
+        const attempt = attempts[cursor]!;
+        if (attempt.kind === "selector-cfi") continue;
+        const match = await findImportRowSearchMatch({ row, attempt, searchBook, signal: controller.signal });
+        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+        if (!match) continue;
+
+        jumpToResult(match.result.cfi);
+        stagedSelectionHandle.stageSelectionFromCfiRange({
+          cfiRange: match.result.cfi,
+          text: match.matchedText || row.quoteText || "",
+          quotePrefix: match.result.quotePrefix,
+          quoteSuffix: match.result.quoteSuffix,
+          note: row.noteText,
+          color: normalizeImportedHighlightColor(row.color),
+          source: { kind: "import", importJobId: job.id, importRowId: row.id },
+        });
+        setRowActivationState(rowId, "staged", cursor + 1);
         return;
       }
 
-      jumpToResult(match.result.cfi);
-      stagedSelectionHandle.stageSelectionFromCfiRange({
-        cfiRange: match.result.cfi,
-        text: match.matchedText || row.quoteText || "",
-        quotePrefix: match.result.quotePrefix,
-        quoteSuffix: match.result.quoteSuffix,
-        note: row.noteText,
-        color: normalizeImportedHighlightColor(row.color),
-        source: { kind: "import", importJobId: job.id, importRowId: row.id },
-      });
-      setRowActivationState(rowId, "staged", next.nextCursor);
+      setRowActivationState(rowId, "not-found", attempts.length);
+      setDrawerOpen(true);
     } catch (err) {
       if (requestIdRef.current !== requestId || controller.signal.aborted) return;
       setRowActivationState(rowId, "not-found", next.nextCursor);
