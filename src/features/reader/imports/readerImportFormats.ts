@@ -1,4 +1,4 @@
-import type { ReaderImportFormat, ReaderImportJob } from "./readerImportTypes";
+import type { ReaderImportJob } from "./readerImportTypes";
 
 export type ReaderImportFailureAction = {
   label: string;
@@ -20,14 +20,14 @@ export class ReaderImportParseError extends Error {
 }
 
 export type ReaderImportFormatHandler = {
-  kind: ReaderImportFormat;
+  kind: string;
   displayName: string;
   description: string;
   accept: string;
   importFile: (file: File) => Promise<ReaderImportJob>;
 };
 
-const readerImportHandlers = new Map<ReaderImportFormat, ReaderImportFormatHandler>();
+const readerImportHandlers = new Map<string, ReaderImportFormatHandler>();
 
 export function registerReaderImportHandler(handler: ReaderImportFormatHandler): void {
   readerImportHandlers.set(handler.kind, handler);
@@ -37,7 +37,7 @@ export function getReaderImportHandlers(): ReaderImportFormatHandler[] {
   return Array.from(readerImportHandlers.values());
 }
 
-export function getReaderImportFormat(kind: ReaderImportFormat): ReaderImportFormatHandler {
+export function getReaderImportFormat(kind: string): ReaderImportFormatHandler {
   const format = readerImportHandlers.get(kind);
   if (!format) throw new ReaderImportParseError(`Unsupported import format: ${kind}.`, { code: "unsupported-format" });
   return format;

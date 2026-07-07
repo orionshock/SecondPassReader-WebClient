@@ -9,6 +9,7 @@ const NAMED_COLORS: Record<string, string> = {
 };
 
 export const ANNOTATION_COLOR_TOKENS = ["yellow", "green", "blue", "pink", "purple", "orange"] as const;
+export type AnnotationColorToken = (typeof ANNOTATION_COLOR_TOKENS)[number];
 
 function normalizeColor(input: string): string {
   return input.trim().toLowerCase();
@@ -50,4 +51,3 @@ export function toAnnotationCssVars(inputColor: string | null | undefined): { co
     bg: `rgba(${base.r}, ${base.g}, ${base.b}, 0.10)`,
   };
 }
-

@@ -1,5 +1,3 @@
-export type ReaderImportFormat = "glasp-csv" | "spl-session-json";
-export type ReaderHighlightColor = "yellow" | "green" | "blue" | "pink" | "purple";
 export type ReaderImportRowStatus = "pending" | "searching" | "staged" | "accepted" | "skipped" | "not-found";
 export type ReaderImportRowKind = "highlight" | "bookmark";
 
@@ -19,7 +17,7 @@ export type ReaderImportRow = {
 
 export type ReaderImportJob = {
   id: string;
-  format: ReaderImportFormat;
+  format: string;
   fileName: string;
   createdAt: string;
   rows: ReaderImportRow[];

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportHandlers, ReaderImportParseError, type ReaderImportFailureAction } from "./readerImportFormats";
-import type { ReaderImportFormat } from "./readerImportTypes";
 
 export function ReaderImportModal({
   open,
@@ -11,10 +10,11 @@ export function ReaderImportModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onStartImport: (format: ReaderImportFormat, file: File) => Promise<{ warnings?: string[] }>;
+  onStartImport: (format: string, file: File) => Promise<{ warnings?: string[] }>;
   onParseAction: (action: ReaderImportFailureAction) => void;
 }) {
-  const [format, setFormat] = useState<ReaderImportFormat>("glasp-csv");
+  const formats = getReaderImportHandlers();
+  const [format, setFormat] = useState<string>(() => formats[0]?.kind ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +23,22 @@ export function ReaderImportModal({
 
   if (!open) return null;
 
-  const formats = getReaderImportHandlers();
-  const selectedFormat = formats.find((item) => item.kind === format) ?? formats[0]!;
+  const selectedFormat = formats.find((item) => item.kind === format) ?? formats[0];
+  if (!selectedFormat) {
+    return (
+      <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
+        <section className="spReaderImportModal" role="dialog" aria-modal="true" aria-labelledby="sp-reader-import-title" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="spReaderImportModalHeader">
+            <h2 id="sp-reader-import-title">Import marginalia</h2>
+            <button type="button" className="button buttonCompact" onClick={onClose}>Close</button>
+          </div>
+          <div className="spReaderImportModalBody">
+            <div className="errorText">No import formats are available.</div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const startImport = async () => {
     if (!file) return;
@@ -66,7 +80,7 @@ export function ReaderImportModal({
               className="input"
               value={format}
               onChange={(e) => {
-                setFormat(e.currentTarget.value as ReaderImportFormat);
+                setFormat(e.currentTarget.value);
                 setError(null);
                 setFailureAction(null);
                 setWarnings([]);

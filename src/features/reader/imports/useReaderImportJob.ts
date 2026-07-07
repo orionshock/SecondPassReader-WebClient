@@ -2,13 +2,13 @@ import { useCallback, useMemo, useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportFormat } from "./readerImportFormats";
 import { resetOtherStagedRowsForActivation } from "./readerImportJobState";
-import type { ReaderImportFormat, ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
+import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
   const [job, setJob] = useState<ReaderImportJob | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const startImport = useCallback(async (format: ReaderImportFormat, file: File) => {
+  const startImport = useCallback(async (format: string, file: File) => {
     const nextJob = await getReaderImportFormat(format).importFile(file);
     setJob(nextJob);
     setDrawerOpen(true);
