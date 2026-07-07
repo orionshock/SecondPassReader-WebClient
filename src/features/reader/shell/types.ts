@@ -21,6 +21,10 @@ export type ReadingShellCommand = {
 };
 
 export type ReaderDescribeCfiHandle = (cfi: string) => Promise<ReaderLocationDescription>;
+export type ReaderCfiProbeResult =
+  | { ok: true; description?: string }
+  | { ok: false; error: string };
+export type ReaderProbeCfiHandle = (cfi: string) => Promise<ReaderCfiProbeResult>;
 export type ReaderSearchBookHandle = (query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>;
 
 export type ReadingShellEvent =

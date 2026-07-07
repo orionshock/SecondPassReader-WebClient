@@ -10,6 +10,8 @@ export function buildReaderImportAttemptQueue(row: ReaderImportRow): ReaderImpor
   const attempts: ReaderImportAttempt[] = [];
   const text = row.quoteText?.trim() ?? "";
 
+  // TODO: enqueue cfiHint for bookmarks/highlights only after import activation
+  // has safe row-local CFI navigation and range staging handles.
   const prefix = trimOptional(row.preQuoteText);
   const suffix = trimOptional(row.postQuoteText);
   if (text && (prefix || suffix)) {

@@ -5,6 +5,7 @@ import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
 import type {
   ReaderDescribeCfiHandle,
+  ReaderProbeCfiHandle,
   ReaderSearchBookHandle,
   ReadingShellCommand,
   ReadingShellCommandValue,
@@ -14,6 +15,7 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
+import { probeReaderCfi } from "./readerCfiProbe";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
@@ -36,6 +38,7 @@ export type ReadingShellProps = {
   onRemoveAnnotation?: (annotationId: string) => Promise<void>;
   onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
   onDescribeCfiReady?: (fn: ReaderDescribeCfiHandle | null) => void;
+  onProbeCfiReady?: (fn: ReaderProbeCfiHandle | null) => void;
   onSearchReady?: (fn: ReaderSearchBookHandle | null) => void;
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
@@ -285,6 +288,12 @@ export function ReadingShell(props: ReadingShellProps) {
           }
           return engine.describeCfi(cfi);
         });
+        props.onProbeCfiReady?.((cfi) => {
+          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
+            return Promise.resolve({ ok: false, error: "Reader engine is not ready." });
+          }
+          return probeReaderCfi((candidate) => engine.describeCfi(candidate), cfi);
+        });
         props.onSearchReady?.((query, options) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
             return Promise.reject(new Error("Reader engine is not ready."));
@@ -327,6 +336,7 @@ export function ReadingShell(props: ReadingShellProps) {
       const engine = engineRef.current;
       engineRef.current = null;
       props.onDescribeCfiReady?.(null);
+      props.onProbeCfiReady?.(null);
       props.onSearchReady?.(null);
       engine?.destroy();
     };
@@ -337,6 +347,7 @@ export function ReadingShell(props: ReadingShellProps) {
     onSelectionChanged,
     props.blob,
     props.onDescribeCfiReady,
+    props.onProbeCfiReady,
     props.onSearchReady,
     reportCommandError,
     runCommandOnEngine,

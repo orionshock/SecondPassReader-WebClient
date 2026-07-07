@@ -2,7 +2,7 @@ import type { ReaderSettings } from "../../../storage/readerSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
-import type { ReaderSearchBookHandle, ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/types";
+import type { ReaderProbeCfiHandle, ReaderSearchBookHandle, ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/types";
 import type { StagedSelectionHandle, StagedSelectionSource } from "../shell/stagedSelectionTypes";
 import type { DurableAnnotationToolbarItem } from "../shell/DurableAnnotationToolbar";
 import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderLocationTarget, ReaderSelection } from "../domain/types";
@@ -39,6 +39,7 @@ export type ReadingSessionOrchestratorProps = {
     search: {
       ready: boolean;
       searchBook: ReaderSearchBookHandle | null;
+      probeCfi: ReaderProbeCfiHandle | null;
       jumpToResult: (cfi: string) => void;
       jumpToCfi: (cfi: string) => void;
       jumpToCfiRange: (cfiRange: string) => void;
@@ -80,6 +81,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
+  const [probeCfi, setProbeCfi] = useState<ReaderProbeCfiHandle | null>(null);
   const [stagedSelectionHandle, setStagedSelectionHandle] = useState<StagedSelectionHandle | null>(null);
   const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
   const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
@@ -148,6 +150,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setToc(null);
     setPendingCommand(null);
     setSearchBook(null);
+    setProbeCfi(null);
     setStagedSelectionHandle(null);
     setDescribeCfi(null);
     setTemporarySearchHighlightCfi(null);
@@ -286,6 +289,10 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setSearchBook(() => fn);
   }, []);
 
+  const handleProbeCfiReady = useCallback((fn: ReaderProbeCfiHandle | null) => {
+    setProbeCfi(() => fn);
+  }, []);
+
   const handleStagedSelectionReady = useCallback((handle: StagedSelectionHandle | null) => {
     setStagedSelectionHandle(handle);
   }, []);
@@ -374,6 +381,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         toc={toc}
         temporarySearchHighlightCfi={temporarySearchHighlightCfi}
         onDescribeCfiReady={handleDescribeCfiReadyForReader}
+        onProbeCfiReady={handleProbeCfiReady}
         onSearchReady={handleSearchReady}
         onStagedSelectionReady={handleStagedSelectionReady}
         onStagedSelectionCommitted={handleStagedSelectionCommitted}
@@ -395,6 +403,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     search: {
       ready: Boolean(searchBook),
       searchBook,
+      probeCfi,
       jumpToResult: jumpToSearchResult,
       jumpToCfi,
       jumpToCfiRange,
