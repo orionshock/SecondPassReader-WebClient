@@ -9,6 +9,9 @@ coverage
 .DS_Store
 .env
 .env.*
+!.env.example
+!deploy/.env.example
+compose.yml
 *.local
 npm-debug.log*
 yarn-debug.log*

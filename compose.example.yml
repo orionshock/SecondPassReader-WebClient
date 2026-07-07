@@ -1,0 +1,10 @@
+services:
+  reader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${SECOND_PASS_READER_IMAGE:-secondpass-reader-client:local}
+    container_name: ${SECOND_PASS_READER_CONTAINER_NAME:-secondpass-reader-client}
+    ports:
+      - "${SECOND_PASS_READER_HOST_PORT:-8080}:80"
+    restart: unless-stopped
