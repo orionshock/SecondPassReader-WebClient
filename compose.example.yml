@@ -1,3 +1,5 @@
+name: secondpassreader
+
 services:
   reader:
     build:
@@ -5,5 +7,5 @@ services:
       dockerfile: Dockerfile
     image: secondpassreader:local
     expose:
-      - "8080"
+      - "8000"
     restart: unless-stopped

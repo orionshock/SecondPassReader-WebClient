@@ -17,11 +17,11 @@ Then build and run:
 docker compose up --build -d
 ```
 
-By default, compose maps `http://localhost:8080` on the host to port `80` in the nginx container. Change `SECOND_PASS_READER_HOST_PORT` in `.env` if that host port is already in use.
+By default, compose exposes the nginx service on port `8000` internally and can be reached from the reverse proxy on that same port. If you need to change the host-facing port, update the reverse proxy target rather than the container's internal listener.
 
 ## Reverse proxy
 
-For production, route your public reverse proxy to the reader container on internal port `80`. The nginx config inside this image only serves the static Vite build and falls back to `/index.html` for SPA routes.
+For production, route your public reverse proxy to the reader container on internal port `8000`. The nginx config inside this image only serves the static Vite build and falls back to `/index.html` for SPA routes.
 
 The Reader remains a standalone static app. Users still pair it to a SecondPass Library through the app UI using the PIN/code Client API linking flow. Do not bake a Library server URL, bearer token, or server API secret into this image.
 
@@ -29,5 +29,5 @@ The Reader remains a standalone static app. Users still pair it to a SecondPass 
 
 ```bash
 docker build -t secondpass-reader-client:local .
-docker run --rm -p 8080:80 secondpass-reader-client:local
+docker run --rm -p 8000:8000 secondpass-reader-client:local
 ```
