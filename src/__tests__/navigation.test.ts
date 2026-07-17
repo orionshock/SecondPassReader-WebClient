@@ -44,12 +44,12 @@ describe("navigation route ordering params", () => {
 
     expect(routeToHash({
       kind: "library",
-      browse: "groups",
+      browse: "books",
       groupId: "g1",
       ordering: "title",
       page: 1,
       pageSize: 20,
-    })).toBe("#/library?browse=groups&group=g1");
+    })).toBe("#/library?group=g1");
   });
 
   it("keeps non-default library params", () => {
@@ -91,6 +91,14 @@ describe("navigation route ordering params", () => {
     expect(routeToHash({ kind: "library", browse: "books", tag: "", page: 1 })).toBe("#/library");
   });
 
+  it("treats group as scope independently from the library axis", () => {
+    expect(routeToHash({ kind: "library", browse: "authors", groupId: "g1", ordering: "name" }))
+      .toBe("#/library?browse=authors&group=g1");
+
+    vi.stubGlobal("window", { location: { hash: "#/library?browse=groups&group=g1" } });
+    expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "books", groupId: "g1" });
+  });
+
   it("omits default shelf params and keeps non-default shelf params", () => {
     expect(routeToHash({
       kind: "shelves",
@@ -125,6 +133,7 @@ describe("navigation route ordering params", () => {
       kind: "library",
       browse: "authors",
       authorId: "a1",
+      groupId: undefined,
       tag: undefined,
       ordering: "title",
       page: 3,

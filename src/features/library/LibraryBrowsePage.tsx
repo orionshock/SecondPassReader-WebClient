@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryAuthor, LibraryBook, LibraryGroup, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookResultsView } from "./display/BookResultsView";
@@ -12,8 +12,9 @@ import { MaterialIcon } from "../../components/MaterialIcon";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
+import { LibraryScopeSelect } from "./libraryScope/LibraryScopeSelect";
 
-type BrowseMode = "books" | "series" | "authors" | "groups";
+type BrowseMode = "books" | "series" | "authors";
 type BookOrdering = "title" | "author" | "series" | "series_index";
 type EntityOrdering = "name" | "-book_count";
 
@@ -64,11 +65,9 @@ type Props = {
   onShowBooks?: () => void;
   onShowSeries?: () => void;
   onShowAuthors?: () => void;
-  onShowGroups?: () => void;
   onShowSeriesBooks?: (seriesId: string) => void;
   onShowAuthorBooks?: (authorId: string) => void;
-  onShowGroupBooks?: (groupId: string) => void;
-  onUpdateRoute?: (patch: { tag?: string | null; ordering?: string; page?: number; pageSize?: number }) => void;
+  onUpdateRoute?: (patch: { groupId?: string | null; tag?: string | null; ordering?: string; page?: number; pageSize?: number }) => void;
 };
 
 export function LibraryBrowsePage({
@@ -81,23 +80,17 @@ export function LibraryBrowsePage({
   onShowBooks,
   onShowSeries,
   onShowAuthors,
-  onShowGroups,
   onShowSeriesBooks,
   onShowAuthorBooks,
-  onShowGroupBooks,
   onUpdateRoute,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const apiReady = Boolean(spl);
-  const groupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
-
   const qFromRoute = (route.q ?? "").trim();
   const browseFromRoute = route.browse ?? "books";
   const browseMode: BrowseMode = qFromRoute
     ? "books"
-    : browseFromRoute === "groups" && !groupsEnabled
-      ? "books"
-    : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "groups" || browseFromRoute === "books"
+    : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "books"
       ? browseFromRoute
       : "books";
   const defaultBookOrdering = getDefaultBookOrdering(browseMode, route.seriesId);
@@ -108,8 +101,7 @@ export function LibraryBrowsePage({
     qFromRoute ||
       browseMode === "books" ||
       (browseMode === "series" && route.seriesId) ||
-      (browseMode === "authors" && route.authorId) ||
-      (browseMode === "groups" && route.groupId && groupsEnabled),
+      (browseMode === "authors" && route.authorId),
   );
   const bookOrderingOptions = browseMode === "series" && route.seriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
   const validBookOrderings = new Set(bookOrderingOptions.map((option) => option.value));
@@ -137,15 +129,9 @@ export function LibraryBrowsePage({
   const [authorsData, setAuthorsData] = useState<PaginatedResponse<LibraryAuthor> | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<LibraryAuthor | null>(null);
 
-  const [groupsBusy, setGroupsBusy] = useState(false);
-  const [groupsError, setGroupsError] = useState<string | null>(null);
-  const [groupsPage, setGroupsPage] = useState(1);
-  const [groupsData, setGroupsData] = useState<PaginatedResponse<LibraryGroup> | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<LibraryGroup | null>(null);
   const booksRequestSeq = useRef(0);
   const seriesRequestSeq = useRef(0);
   const authorsRequestSeq = useRef(0);
-  const groupsRequestSeq = useRef(0);
 
   useEffect(() => {
     setQDraft(qFromRoute);
@@ -253,7 +239,10 @@ export function LibraryBrowsePage({
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const r = await spl.library.series.list({ tag: tagSlug, page, pageSize, includePreviewBooks: true, ordering: seriesOrdering });
+        const params = { tag: tagSlug, page, pageSize, ordering: seriesOrdering } as const;
+        const r = route.groupId
+          ? await spl.library.groups.series(route.groupId, params)
+          : await spl.library.series.list({ ...params, includePreviewBooks: true });
         if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesData(r);
         setSeriesPage(page);
@@ -264,7 +253,7 @@ export function LibraryBrowsePage({
         if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
       }
     },
-    [pageSize, seriesOrdering, spl, tagSlug],
+    [pageSize, route.groupId, seriesOrdering, spl, tagSlug],
   );
 
   const loadAuthors = useCallback(
@@ -274,7 +263,10 @@ export function LibraryBrowsePage({
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const r = await spl.library.authors.list({ tag: tagSlug, page, pageSize, includePreviewBooks: true, ordering: authorsOrdering });
+        const params = { tag: tagSlug, page, pageSize, ordering: authorsOrdering } as const;
+        const r = route.groupId
+          ? await spl.library.groups.authors(route.groupId, params)
+          : await spl.library.authors.list({ ...params, includePreviewBooks: true });
         if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsData(r);
         setAuthorsPage(page);
@@ -285,28 +277,7 @@ export function LibraryBrowsePage({
         if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
       }
     },
-    [authorsOrdering, pageSize, spl, tagSlug],
-  );
-
-  const loadGroups = useCallback(
-    async (page: number) => {
-      if (!spl) return;
-      const requestSeq = ++groupsRequestSeq.current;
-      setGroupsBusy(true);
-      setGroupsError(null);
-      try {
-        const r = await spl.library.groups.list({ page, pageSize, includePreviewBooks: true, ordering: "name" });
-        if (requestSeq !== groupsRequestSeq.current) return;
-        setGroupsData(r);
-        setGroupsPage(page);
-      } catch (e) {
-        if (requestSeq !== groupsRequestSeq.current) return;
-        setGroupsError(e instanceof Error ? e.message : "Failed to load groups.");
-      } finally {
-        if (requestSeq === groupsRequestSeq.current) setGroupsBusy(false);
-      }
-    },
-    [pageSize, spl],
+    [authorsOrdering, pageSize, route.groupId, spl, tagSlug],
   );
 
   useEffect(() => {
@@ -320,27 +291,22 @@ export function LibraryBrowsePage({
 
     // Global search wins over browse.
     if (qFromRoute) {
-      void loadBooks({ page: routePage, q: qFromRoute, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, q: qFromRoute, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "series" && route.seriesId) {
-      void loadBooks({ page: routePage, seriesId: route.seriesId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, seriesId: route.seriesId, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "authors" && route.authorId) {
-      void loadBooks({ page: routePage, authorId: route.authorId, tag: tagSlug, ordering: bookOrdering });
-      return;
-    }
-
-    if (browseMode === "groups" && route.groupId) {
-      void loadBooks({ page: routePage, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, authorId: route.authorId, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "books") {
-      void loadBooks({ page: routePage, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
@@ -352,11 +318,8 @@ export function LibraryBrowsePage({
       void loadAuthors(routePage);
       return;
     }
-    if (browseMode === "groups" && groupsEnabled && !route.groupId) {
-      void loadGroups(routePage);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering, routePage, pageSize]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, bookOrdering, seriesOrdering, authorsOrdering, routePage, pageSize]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -364,7 +327,6 @@ export function LibraryBrowsePage({
     if (qFromRoute) {
       setSelectedSeries(null);
       setSelectedAuthor(null);
-      setSelectedGroup(null);
       return;
     }
     let cancelled = false;
@@ -395,23 +357,11 @@ export function LibraryBrowsePage({
       setSelectedAuthor(null);
     }
 
-    if (browseMode === "groups" && route.groupId && groupsEnabled) {
-      void (async () => {
-        try {
-          const g = await spl.library.groups.get(route.groupId!, { includePreviewBooks: true });
-          if (!cancelled) setSelectedGroup(g);
-        } catch {
-          if (!cancelled) setSelectedGroup(null);
-        }
-      })();
-    } else {
-      setSelectedGroup(null);
-    }
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, browseMode, route.seriesId, route.authorId, route.groupId, qFromRoute, spl, groupsEnabled]);
+  }, [status, apiReady, browseMode, route.seriesId, route.authorId, qFromRoute, spl]);
 
   const handleCommitSearch = useCallback(() => {
     const next = qDraft.trim();
@@ -511,15 +461,12 @@ export function LibraryBrowsePage({
                 <MaterialIcon name="person" />
                 Authors
               </button>
-              {groupsEnabled ? (
-                <button
-                  type="button"
-                  className={`libraryBrowseTab ${browseMode === "groups" ? "libraryBrowseTabActive" : ""}`}
-                  onClick={() => onShowGroups?.()}
-                >
-                  <MaterialIcon name="groups" />
-                  Library Groups
-                </button>
+              {spl ? (
+                <LibraryScopeSelect
+                  spl={spl}
+                  groupId={route.groupId}
+                  onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
+                />
               ) : null}
             </div>
 
@@ -556,7 +503,7 @@ export function LibraryBrowsePage({
             {spl ? (
               <CatalogTagRail
                 spl={spl}
-                groupId={browseMode === "groups" ? route.groupId : undefined}
+                groupId={route.groupId}
                 selectedSlug={tagSlug}
                 onSelect={(slug) => onUpdateRoute?.({ tag: slug ?? null, page: 1, pageSize })}
               />
@@ -596,24 +543,6 @@ export function LibraryBrowsePage({
                       className="libraryBrowseHeaderText"
                       label="author biography"
                     />
-                  </div>
-                </div>
-              ) : null}
-
-              {browseMode === "groups" && selectedGroup ? (
-                <div className="libraryBrowseHeader">
-                  <div className="libraryBrowseHeaderMain">
-                    <div className="libraryGroupTitleLine">
-                      <div className="panelTitle" style={{ margin: 0 }}>
-                        {selectedGroup.name}
-                      </div>
-                      {selectedGroup.is_public_group ? <span className="libraryGroupChip libraryGroupChipPublic">Public</span> : null}
-                      {selectedGroup.is_curator ? <span className="libraryGroupChip">Curator</span> : null}
-                    </div>
-                    {typeof selectedGroup.book_count === "number" ? (
-                      <div className="muted">{selectedGroup.book_count} books</div>
-                    ) : null}
-                    {selectedGroup.description ? <div className="muted">{selectedGroup.description}</div> : null}
                   </div>
                 </div>
               ) : null}
@@ -739,7 +668,7 @@ export function LibraryBrowsePage({
                 </div>
               ) : null}
             </>
-          ) : browseMode === "authors" ? (
+          ) : (
             <>
               {authorsError ? <p className="errorText">{authorsError}</p> : null}
               {authorsBusy && !authorsData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
@@ -789,68 +718,6 @@ export function LibraryBrowsePage({
                       type="button"
                       onClick={() => handlePageChange(authorsPage + 1)}
                       disabled={authorsBusy || !authorsData.next}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {groupsError ? <p className="errorText">{groupsError}</p> : null}
-              {groupsBusy && !groupsData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
-
-              {groupsData?.results?.length ? (
-                <div className="libraryEntityList">
-                  {groupsData.results.map((g) => {
-                    const openGroup = () => onShowGroupBooks?.(String(g.id));
-                    return (
-                    <div
-                      key={String(g.id)}
-                      className="libraryEntityCard libraryEntityCardButton"
-                      role="button"
-                      tabIndex={0}
-                      onClick={openGroup}
-                      onKeyDown={(event) => handleCardKeyDown(event, openGroup)}
-                      aria-label={`View books in ${g.name}`}
-                      title={`View books in ${g.name}`}
-                    >
-                      <div className="libraryEntityMain">
-                        <div className="libraryGroupTitleLine">
-                          <div className="libraryEntityTitle">{g.name}</div>
-                          {g.is_public_group ? <span className="libraryGroupChip libraryGroupChipPublic">Public</span> : null}
-                          {g.is_curator ? <span className="libraryGroupChip">Curator</span> : null}
-                        </div>
-                        {typeof g.book_count === "number" ? <div className="muted">{g.book_count} books</div> : null}
-                        {g.description ? <div className="muted">{g.description}</div> : null}
-                      </div>
-                      <CoverPreviewStrip books={g.preview_books} baseUrl={profile} onBookClick={onViewBook} />
-                    </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              {groupsData ? (
-                <div className="libraryMetaRow">
-                  <div className="muted">
-                    <InlineMeta items={[`Page ${groupsPage}`, `${groupsData.count} groups`]} />
-                  </div>
-                  <div className="pagerButtons">
-                    <button
-                      className="button buttonCompact"
-                      type="button"
-                      onClick={() => handlePageChange(Math.max(1, groupsPage - 1))}
-                      disabled={groupsBusy || !groupsData.previous}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      className="button buttonCompact"
-                      type="button"
-                      onClick={() => handlePageChange(groupsPage + 1)}
-                      disabled={groupsBusy || !groupsData.next}
                     >
                       Next
                     </button>

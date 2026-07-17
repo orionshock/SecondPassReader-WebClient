@@ -157,6 +157,23 @@
   flex-wrap: wrap;
 }
 
+.libraryScopeControl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.libraryScopeLabel {
+  color: var(--sp-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.libraryScopeControl select {
+  max-width: 220px;
+}
+
 .libraryControlsRight {
   display: flex;
   gap: 8px;

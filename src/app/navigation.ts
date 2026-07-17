@@ -6,7 +6,7 @@ export type AppRoute =
   | {
       kind: "library";
       q?: string;
-      browse?: "books" | "series" | "authors" | "groups";
+      browse?: "books" | "series" | "authors";
       seriesId?: string;
       authorId?: string;
       groupId?: string;
@@ -62,8 +62,6 @@ function getDefaultLibraryOrdering(route: Extract<AppRoute, { kind: "library" }>
   if (route.browse === "series") return "name";
   if (route.browse === "authors" && route.authorId) return "title";
   if (route.browse === "authors") return "name";
-  if (route.browse === "groups" && route.groupId) return "title";
-  if (route.browse === "groups") return "name";
   return "title";
 }
 
@@ -88,7 +86,7 @@ export function routeToHash(route: AppRoute): string {
         browse: !route.q && browse !== "books" ? browse : undefined,
         series: !route.q && browse === "series" ? route.seriesId : undefined,
         author: !route.q && browse === "authors" ? route.authorId : undefined,
-        group: !route.q && browse === "groups" ? route.groupId : undefined,
+        group: route.groupId,
         tag: route.tag,
         ordering: nonDefaultOrdering(route.ordering, getDefaultLibraryOrdering(route)),
         page: nonDefaultPage(route.page),
@@ -153,7 +151,7 @@ export function parseCurrentRoute(): AppRoute | null {
   if (head === "library") {
     const q = queryParams.get("q")?.trim() ?? "";
     const browseRaw = queryParams.get("browse")?.trim() ?? "";
-    const browse = browseRaw === "series" || browseRaw === "authors" || browseRaw === "groups" || browseRaw === "books" ? browseRaw : "";
+    const browse = browseRaw === "series" || browseRaw === "authors" || browseRaw === "books" ? browseRaw : "";
     const viewRaw = queryParams.get("view")?.trim() ?? "";
     const view = viewRaw === "list" || viewRaw === "grid" ? viewRaw : undefined;
     const seriesId = queryParams.get("series")?.trim() ?? "";
@@ -164,17 +162,18 @@ export function parseCurrentRoute(): AppRoute | null {
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
 
     if (q) {
-      return bookId ? { kind: "library", q, tag, view, ordering, page, pageSize, bookId } : { kind: "library", q, tag, view, ordering, page, pageSize };
+      return bookId ? { kind: "library", q, groupId: groupId || undefined, tag, view, ordering, page, pageSize, bookId } : { kind: "library", q, groupId: groupId || undefined, tag, view, ordering, page, pageSize };
     }
 
-    const effectiveBrowse: "books" | "series" | "authors" | "groups" =
-      browse === "series" || browse === "authors" || browse === "groups" || browse === "books" ? (browse as any) : "books";
+    const effectiveBrowse: "books" | "series" | "authors" =
+      browse === "series" || browse === "authors" || browse === "books" ? browse : "books";
 
     if (effectiveBrowse === "series") {
       return {
         kind: "library",
         browse: "series",
         seriesId: seriesId || undefined,
+        groupId: groupId || undefined,
         tag,
         view,
         ordering,
@@ -188,18 +187,6 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "authors",
         authorId: authorId || undefined,
-        tag,
-        view,
-        ordering,
-        page,
-        pageSize,
-        bookId: bookId || undefined,
-      };
-    }
-    if (effectiveBrowse === "groups") {
-      return {
-        kind: "library",
-        browse: "groups",
         groupId: groupId || undefined,
         tag,
         view,
@@ -210,8 +197,8 @@ export function parseCurrentRoute(): AppRoute | null {
       };
     }
     return bookId
-      ? { kind: "library", browse: "books", tag, view, ordering, page, pageSize, bookId }
-      : { kind: "library", browse: "books", tag, view, ordering, page, pageSize };
+      ? { kind: "library", browse: "books", groupId: groupId || undefined, tag, view, ordering, page, pageSize, bookId }
+      : { kind: "library", browse: "books", groupId: groupId || undefined, tag, view, ordering, page, pageSize };
   }
   if (head === "sessions") {
     if (typeof parts[1] === "string" && parts[1]) {

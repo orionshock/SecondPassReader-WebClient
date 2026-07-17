@@ -580,29 +580,23 @@ export default function App() {
                       const next = q.trim();
                       // Committing search clears browse/series/author.
                       navigateTo(next
-                        ? { kind: "library", q: next, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId }
-                        : { kind: "library", browse: "books", tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                        ? { kind: "library", q: next, groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId }
+                        : { kind: "library", browse: "books", groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowBooks={() => {
-                      navigateTo({ kind: "library", browse: "books", tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "books", groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowSeries={() => {
-                      navigateTo({ kind: "library", browse: "series", tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "series", groupId: route.groupId, tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowAuthors={() => {
-                      navigateTo({ kind: "library", browse: "authors", tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowGroups={() => {
-                      navigateTo({ kind: "library", browse: "groups", tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "authors", groupId: route.groupId, tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowSeriesBooks={(seriesId) => {
-                      navigateTo({ kind: "library", browse: "series", seriesId, tag: route.tag, ordering: "series_index", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "series", seriesId, groupId: route.groupId, tag: route.tag, ordering: "series_index", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowAuthorBooks={(authorId) => {
-                      navigateTo({ kind: "library", browse: "authors", authorId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowGroupBooks={(groupId) => {
-                      navigateTo({ kind: "library", browse: "groups", groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                      navigateTo({ kind: "library", browse: "authors", authorId, groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onUpdateRoute={(patch) => {
                       navigateTo({
@@ -611,7 +605,7 @@ export default function App() {
                         browse: route.browse ?? "books",
                         seriesId: route.seriesId,
                         authorId: route.authorId,
-                        groupId: route.groupId,
+                        groupId: patch.groupId === null ? undefined : patch.groupId ?? route.groupId,
                         tag: patch.tag === null ? undefined : patch.tag ?? route.tag,
                         view: route.view,
                         ordering: patch.ordering ?? route.ordering,
