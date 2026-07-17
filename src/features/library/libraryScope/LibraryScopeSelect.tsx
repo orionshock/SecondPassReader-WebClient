@@ -1,24 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LibraryGroup, SecondPassClient } from "@secondpass/client";
+import { MaterialIcon } from "../../../components/MaterialIcon";
 
-type Props = {
-  spl: SecondPassClient;
-  groupId?: string;
-  onChange: (groupId?: string) => void;
-};
-
+type Props = { spl: SecondPassClient; groupId?: string; onChange: (groupId?: string) => void };
 const GROUP_PAGE_SIZE = 100;
 
 export function LibraryScopeSelect({ spl, groupId, onChange }: Props) {
   const [groups, setGroups] = useState<LibraryGroup[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     setBusy(true);
     setError(null);
-
     void (async () => {
       try {
         const loaded: LibraryGroup[] = [];
@@ -37,23 +33,48 @@ export function LibraryScopeSelect({ spl, groupId, onChange }: Props) {
         if (!cancelled) setBusy(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [spl]);
 
-  const selectedGroupIsMissing = Boolean(groupId && !groups.some((group) => String(group.id) === groupId));
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) detailsRef.current.open = false;
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, []);
+
+  const selectedGroup = groups.find((group) => String(group.id) === groupId);
+  const selectedName = selectedGroup?.name ?? (groupId ? "Selected Library Group" : "All Library");
+  const selectedIcon = selectedGroup?.is_public_group === true ? "public" : groupId ? "groups" : "library_books";
+  const select = (nextGroupId?: string) => {
+    if (detailsRef.current) detailsRef.current.open = false;
+    onChange(nextGroupId);
+  };
 
   return (
-    <label className="libraryScopeControl">
-      <span className="libraryScopeLabel">Scope</span>
-      <select className="input inputCompact" value={groupId ?? ""} onChange={(event) => onChange(event.target.value || undefined)} disabled={busy && groups.length === 0}>
-        <option value="">All Library</option>
-        {selectedGroupIsMissing ? <option value={groupId}>Selected Library Group</option> : null}
-        {groups.map((group) => <option key={String(group.id)} value={String(group.id)}>{group.name}</option>)}
-      </select>
-      {error ? <span className="srOnly">{error}</span> : null}
-    </label>
+    <details className="libraryScopeControl" ref={detailsRef}>
+      <summary className="libraryScopeTrigger" aria-label="Library scope" title="Library scope">
+        <MaterialIcon name={selectedIcon} className={selectedGroup?.is_public_group === true ? "libraryScopePublicIcon" : undefined} />
+        <span>{selectedName}</span>
+        <MaterialIcon name="expand_more" className="libraryScopeChevron" />
+      </summary>
+      <div className="libraryScopeMenu" role="menu" aria-label="Library scope">
+        <button type="button" role="menuitemradio" aria-checked={!groupId} className="libraryScopeOption" onClick={() => select(undefined)}>
+          <MaterialIcon name="library_books" /><span>All Library</span>
+        </button>
+        {groups.map((group) => {
+          const isPublic = group.is_public_group === true;
+          return (
+            <button key={String(group.id)} type="button" role="menuitemradio" aria-checked={String(group.id) === groupId} className="libraryScopeOption" onClick={() => select(String(group.id))}>
+              <MaterialIcon name={isPublic ? "public" : "groups"} className={isPublic ? "libraryScopePublicIcon" : undefined} />
+              <span>{group.name}</span>
+            </button>
+          );
+        })}
+        {busy ? <div className="libraryScopeStatus muted">Loading...</div> : null}
+        {error ? <div className="libraryScopeStatus errorText">{error}</div> : null}
+      </div>
+    </details>
   );
 }

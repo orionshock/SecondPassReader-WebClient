@@ -158,20 +158,92 @@
 }
 
 .libraryScopeControl {
-  display: flex;
-  align-items: center;
+  position: relative;
+}
+
+.libraryScopeTrigger {
+  display: inline-flex;
   gap: 6px;
-  margin-left: 4px;
+  align-items: center;
+  min-height: 34px;
+  max-width: 240px;
+  border: 1px solid var(--sp-border);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 650;
+  list-style: none;
 }
 
-.libraryScopeLabel {
+.libraryScopeTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.libraryScopeTrigger > span:not(.material-symbols-outlined) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.libraryScopeTrigger .material-symbols-outlined,
+.libraryScopeOption .material-symbols-outlined {
+  flex: 0 0 auto;
   color: var(--sp-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 17px;
+  line-height: 1;
 }
 
-.libraryScopeControl select {
-  max-width: 220px;
+.libraryScopeTrigger .libraryScopeChevron {
+  font-size: 16px;
+}
+
+.libraryScopePublicIcon {
+  color: #16a34a !important;
+}
+
+.libraryScopeMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 5px;
+  background: var(--color-surface-raised);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+}
+
+.libraryScopeOption {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 8px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.libraryScopeOption:hover,
+.libraryScopeOption[aria-checked="true"] {
+  background: var(--color-hover-bg);
+}
+
+.libraryScopeStatus {
+  padding: 7px 8px;
+  font-size: 0.82rem;
 }
 
 .libraryControlsRight {

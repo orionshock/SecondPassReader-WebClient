@@ -437,6 +437,13 @@ export function LibraryBrowsePage({
 
           <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
             <div className="libraryBrowseTabGroup">
+              {spl ? (
+                <LibraryScopeSelect
+                  spl={spl}
+                  groupId={route.groupId}
+                  onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
+                />
+              ) : null}
               <button
                 type="button"
                 className={`libraryBrowseTab ${browseMode === "books" ? "libraryBrowseTabActive" : ""}`}
@@ -461,13 +468,6 @@ export function LibraryBrowsePage({
                 <MaterialIcon name="person" />
                 Authors
               </button>
-              {spl ? (
-                <LibraryScopeSelect
-                  spl={spl}
-                  groupId={route.groupId}
-                  onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
-                />
-              ) : null}
             </div>
 
             <div className="libraryControlsRight">
