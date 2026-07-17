@@ -11,6 +11,7 @@ import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
+import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
 
 type BrowseMode = "books" | "series" | "authors" | "groups";
 type BookOrdering = "title" | "author" | "series" | "series_index";
@@ -51,6 +52,7 @@ type Props = {
     seriesId?: string;
     authorId?: string;
     groupId?: string;
+      tag?: string;
       view?: LibraryBooksView;
       ordering?: string;
       page?: number;
@@ -66,7 +68,7 @@ type Props = {
   onShowSeriesBooks?: (seriesId: string) => void;
   onShowAuthorBooks?: (authorId: string) => void;
   onShowGroupBooks?: (groupId: string) => void;
-  onUpdateRoute?: (patch: { ordering?: string; page?: number; pageSize?: number }) => void;
+  onUpdateRoute?: (patch: { tag?: string | null; ordering?: string; page?: number; pageSize?: number }) => void;
 };
 
 export function LibraryBrowsePage({
@@ -101,6 +103,7 @@ export function LibraryBrowsePage({
   const defaultBookOrdering = getDefaultBookOrdering(browseMode, route.seriesId);
   const routePage = route.page ?? 1;
   const pageSize = route.pageSize ?? 20;
+  const tagSlug = route.tag?.trim() || undefined;
   const showBookList = Boolean(
     qFromRoute ||
       browseMode === "books" ||
@@ -195,6 +198,7 @@ export function LibraryBrowsePage({
       seriesId?: string;
       authorId?: string;
       groupId?: string;
+      tag?: string;
       ordering: BookOrdering;
     }) => {
       if (!spl) return;
@@ -206,6 +210,7 @@ export function LibraryBrowsePage({
         const result = input.groupId
           ? await spl.library.groups.books(input.groupId, {
               ordering: input.ordering,
+              tag: input.tag,
               page: input.page,
               pageSize,
             })
@@ -213,6 +218,7 @@ export function LibraryBrowsePage({
               q: input.q?.trim() ? input.q.trim() : undefined,
               series: input.seriesId,
               author: input.authorId,
+              tag: input.tag,
               ordering: input.ordering,
               page: input.page,
               pageSize,
@@ -247,7 +253,7 @@ export function LibraryBrowsePage({
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const r = await spl.library.series.list({ page, includePreviewBooks: true, ordering: seriesOrdering });
+        const r = await spl.library.series.list({ tag: tagSlug, page, pageSize, includePreviewBooks: true, ordering: seriesOrdering });
         if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesData(r);
         setSeriesPage(page);
@@ -258,7 +264,7 @@ export function LibraryBrowsePage({
         if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
       }
     },
-    [seriesOrdering, spl],
+    [pageSize, seriesOrdering, spl, tagSlug],
   );
 
   const loadAuthors = useCallback(
@@ -268,7 +274,7 @@ export function LibraryBrowsePage({
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const r = await spl.library.authors.list({ page, includePreviewBooks: true, ordering: authorsOrdering });
+        const r = await spl.library.authors.list({ tag: tagSlug, page, pageSize, includePreviewBooks: true, ordering: authorsOrdering });
         if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsData(r);
         setAuthorsPage(page);
@@ -279,7 +285,7 @@ export function LibraryBrowsePage({
         if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
       }
     },
-    [authorsOrdering, spl],
+    [authorsOrdering, pageSize, spl, tagSlug],
   );
 
   const loadGroups = useCallback(
@@ -306,7 +312,7 @@ export function LibraryBrowsePage({
   useEffect(() => {
     setBooksError(null);
     setBooksBusy(false);
-  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, pageSize, bookOrdering, routePage]);
+  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, pageSize, bookOrdering, routePage]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -314,27 +320,27 @@ export function LibraryBrowsePage({
 
     // Global search wins over browse.
     if (qFromRoute) {
-      void loadBooks({ page: routePage, q: qFromRoute, ordering: bookOrdering });
+      void loadBooks({ page: routePage, q: qFromRoute, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "series" && route.seriesId) {
-      void loadBooks({ page: routePage, seriesId: route.seriesId, ordering: bookOrdering });
+      void loadBooks({ page: routePage, seriesId: route.seriesId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "authors" && route.authorId) {
-      void loadBooks({ page: routePage, authorId: route.authorId, ordering: bookOrdering });
+      void loadBooks({ page: routePage, authorId: route.authorId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "groups" && route.groupId) {
-      void loadBooks({ page: routePage, groupId: route.groupId, ordering: bookOrdering });
+      void loadBooks({ page: routePage, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "books") {
-      void loadBooks({ page: routePage, ordering: bookOrdering });
+      void loadBooks({ page: routePage, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
@@ -350,7 +356,7 @@ export function LibraryBrowsePage({
       void loadGroups(routePage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering, routePage]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering, routePage]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -546,6 +552,16 @@ export function LibraryBrowsePage({
             </div>
           </div>
 
+          <div className="libraryCatalogLayout">
+            {spl ? (
+              <CatalogTagRail
+                spl={spl}
+                groupId={browseMode === "groups" ? route.groupId : undefined}
+                selectedSlug={tagSlug}
+                onSelect={(slug) => onUpdateRoute?.({ tag: slug ?? null, page: 1, pageSize })}
+              />
+            ) : null}
+            <div className="libraryCatalogResults">
           {booksError ? <p className="errorText">{booksError}</p> : null}
 
           {showBookList ? (
@@ -843,6 +859,8 @@ export function LibraryBrowsePage({
               ) : null}
             </>
           )}
+            </div>
+          </div>
         </>
       ) : null}
     </section>

@@ -69,6 +69,71 @@
   z-index: 2;
 }
 
+.libraryCatalogLayout {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.libraryCatalogResults {
+  min-width: 0;
+}
+
+.catalogTagRail {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+
+.catalogTagRailTitle {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.catalogTagRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 8px;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.catalogTagRow:hover,
+.catalogTagRowActive {
+  background: var(--color-surface);
+}
+
+.catalogTagRowActive {
+  color: var(--sp-accent);
+  font-weight: 700;
+}
+
+.catalogTagCount {
+  color: var(--sp-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.catalogTagStatus {
+  padding: 7px 8px;
+  font-size: 0.85rem;
+}
+
+.catalogTagPager {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .libraryBrowseTabs {
   display: flex;
   gap: 8px;
@@ -722,6 +787,10 @@
 }
 
 @media (max-width: 720px) {
+  .libraryCatalogLayout {
+    grid-template-columns: 1fr;
+  }
+
   .libraryEntityCard {
     grid-template-columns: 1fr;
   }

@@ -75,6 +75,22 @@ describe("navigation route ordering params", () => {
     })).toBe("#/library?browse=series&series=s1&ordering=title&page=2&page_size=50");
   });
 
+  it("round trips an optional catalog tag slug without serializing an empty tag", () => {
+    expect(routeToHash({
+      kind: "library",
+      browse: "series",
+      tag: "award winner",
+      ordering: "name",
+      page: 1,
+      pageSize: 20,
+    })).toBe("#/library?browse=series&tag=award+winner");
+
+    vi.stubGlobal("window", { location: { hash: "#/library?browse=authors&tag=classic&page=2" } });
+    expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "authors", tag: "classic", page: 2 });
+
+    expect(routeToHash({ kind: "library", browse: "books", tag: "", page: 1 })).toBe("#/library");
+  });
+
   it("omits default shelf params and keeps non-default shelf params", () => {
     expect(routeToHash({
       kind: "shelves",
@@ -109,6 +125,7 @@ describe("navigation route ordering params", () => {
       kind: "library",
       browse: "authors",
       authorId: "a1",
+      tag: undefined,
       ordering: "title",
       page: 3,
       pageSize: 100,

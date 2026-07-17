@@ -10,6 +10,7 @@ export type AppRoute =
       seriesId?: string;
       authorId?: string;
       groupId?: string;
+      tag?: string;
       view?: "list" | "grid";
       ordering?: string;
       page?: number;
@@ -88,6 +89,7 @@ export function routeToHash(route: AppRoute): string {
         series: !route.q && browse === "series" ? route.seriesId : undefined,
         author: !route.q && browse === "authors" ? route.authorId : undefined,
         group: !route.q && browse === "groups" ? route.groupId : undefined,
+        tag: route.tag,
         ordering: nonDefaultOrdering(route.ordering, getDefaultLibraryOrdering(route)),
         page: nonDefaultPage(route.page),
         page_size: nonDefaultPageSize(route.pageSize),
@@ -157,11 +159,12 @@ export function parseCurrentRoute(): AppRoute | null {
     const seriesId = queryParams.get("series")?.trim() ?? "";
     const authorId = queryParams.get("author")?.trim() ?? "";
     const groupId = queryParams.get("group")?.trim() ?? "";
+    const tag = queryParams.get("tag")?.trim() || undefined;
     // Old route format `#/library/<bookId>` is intentionally not supported anymore.
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
 
     if (q) {
-      return bookId ? { kind: "library", q, view, ordering, page, pageSize, bookId } : { kind: "library", q, view, ordering, page, pageSize };
+      return bookId ? { kind: "library", q, tag, view, ordering, page, pageSize, bookId } : { kind: "library", q, tag, view, ordering, page, pageSize };
     }
 
     const effectiveBrowse: "books" | "series" | "authors" | "groups" =
@@ -172,6 +175,7 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "series",
         seriesId: seriesId || undefined,
+        tag,
         view,
         ordering,
         page,
@@ -184,6 +188,7 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "authors",
         authorId: authorId || undefined,
+        tag,
         view,
         ordering,
         page,
@@ -196,6 +201,7 @@ export function parseCurrentRoute(): AppRoute | null {
         kind: "library",
         browse: "groups",
         groupId: groupId || undefined,
+        tag,
         view,
         ordering,
         page,
@@ -204,8 +210,8 @@ export function parseCurrentRoute(): AppRoute | null {
       };
     }
     return bookId
-      ? { kind: "library", browse: "books", view, ordering, page, pageSize, bookId }
-      : { kind: "library", browse: "books", view, ordering, page, pageSize };
+      ? { kind: "library", browse: "books", tag, view, ordering, page, pageSize, bookId }
+      : { kind: "library", browse: "books", tag, view, ordering, page, pageSize };
   }
   if (head === "sessions") {
     if (typeof parts[1] === "string" && parts[1]) {
