@@ -295,7 +295,7 @@ export function LibraryBrowsePage({
       setGroupsBusy(true);
       setGroupsError(null);
       try {
-        const r = await spl.library.groups.list({ page, includePreviewBooks: true, ordering: "name" });
+        const r = await spl.library.groups.list({ page, pageSize, includePreviewBooks: true, ordering: "name" });
         if (requestSeq !== groupsRequestSeq.current) return;
         setGroupsData(r);
         setGroupsPage(page);
@@ -306,7 +306,7 @@ export function LibraryBrowsePage({
         if (requestSeq === groupsRequestSeq.current) setGroupsBusy(false);
       }
     },
-    [spl],
+    [pageSize, spl],
   );
 
   useEffect(() => {
@@ -356,7 +356,7 @@ export function LibraryBrowsePage({
       void loadGroups(routePage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering, routePage]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, groupsEnabled, bookOrdering, seriesOrdering, authorsOrdering, routePage, pageSize]);
 
   useEffect(() => {
     if (status !== "verified") return;
