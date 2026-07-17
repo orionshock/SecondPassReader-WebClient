@@ -69,9 +69,14 @@
   z-index: 2;
 }
 
+.libraryBrowseTabs,
+.libraryCatalogLayout {
+  --library-filter-rail-width: 180px;
+}
+
 .libraryCatalogLayout {
   display: grid;
-  grid-template-columns: minmax(145px, 180px) minmax(0, 1fr);
+  grid-template-columns: minmax(145px, var(--library-filter-rail-width)) minmax(0, 1fr);
   gap: 8px;
   align-items: start;
 }
@@ -159,6 +164,7 @@
 
 .libraryScopeControl {
   position: relative;
+  width: min(var(--library-filter-rail-width), calc(100vw - 32px));
 }
 
 .libraryScopeTrigger {
@@ -166,7 +172,7 @@
   gap: 6px;
   align-items: center;
   min-height: 34px;
-  max-width: 240px;
+  width: 100%;
   border: 1px solid var(--sp-border);
   border-radius: 999px;
   padding: 5px 10px;
@@ -212,7 +218,7 @@
   z-index: 20;
   display: grid;
   min-width: 220px;
-  max-width: min(320px, calc(100vw - 32px));
+  max-width: min(360px, calc(100vw - 32px));
   max-height: 320px;
   overflow: auto;
   border: 1px solid var(--sp-border);
