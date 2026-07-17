@@ -10,7 +10,6 @@ export type BookFile = {
   bookId: string;
   mimeType: "application/epub+zip" | string;
   url: string;
-  // Some servers may provide a direct blob/arrayBuffer later; keep URL-first for now.
 };
 
 export type PaginatedResponse<T> = {
@@ -34,77 +33,88 @@ export type LibraryAuthorSummary = {
 export type LibrarySeriesSummary = {
   id: string | number;
   name: string;
+  sort_name: string;
+  series_index: number | string | null;
 };
 
-export type LibraryGroupSummary = {
+export type LibraryTag = {
   id: string | number;
   name: string;
-  is_public_group?: boolean;
+  slug: string;
+  book_count: number;
 };
 
-export type LibraryBookFileSummary = {
+export type LibraryTagSummary = Omit<LibraryTag, "book_count">;
+
+export type LibraryBookIdentifier = {
   id: string | number;
-  format?: string | null;
-  file_size?: number | null;
-  download_url?: string | null;
-  checksum_short?: string | null;
+  scheme: string;
+  value: string;
+};
+
+export type LibraryBookFile = {
+  format: string;
+  file_size: number;
+  checksum: string;
+  download_url: string;
 };
 
 export type LibraryBook = {
   id: string | number;
   title: string;
-  subtitle?: string | null;
-  summary?: string | null;
-  description?: string | null;
-  publisher?: string | null;
-  language?: string | null;
-  published_date?: string | null;
-  isbn?: string | null;
-  cover_url?: string | null;
-  subjects?: string[] | null;
-  authors?: LibraryAuthorSummary[] | null;
-  series?: LibrarySeriesSummary | null;
+  sort_title: string;
+  subtitle: string | null;
+  authors: LibraryAuthorSummary[];
+  series: LibrarySeriesSummary | null;
+  tags: LibraryTagSummary[];
+  language: string | null;
+  publisher: string | null;
+  published_year: number | null;
+  published_month: number | null;
+  published_day: number | null;
+  published_date_precision: string | null;
+  cover_url: string | null;
+  file_format: string | null;
+  /** @deprecated Compatibility with older servers; use series.series_index. */
   series_index?: number | string | null;
-  identifiers?: unknown;
-  groups?: LibraryGroupSummary[] | null;
-  file?: LibraryBookFileSummary | null;
-  created_at?: string;
-  updated_at?: string;
+  /** @deprecated Compatibility with older servers; detail descriptions use description. */
+  summary?: string | null;
+  /** @deprecated Compatibility with older servers; use the precision date fields. */
+  published_date?: string | null;
+  description?: string | null;
+  identifiers?: LibraryBookIdentifier[];
+  catalog_tags?: LibraryTagSummary[];
+  file?: LibraryBookFile | null;
 };
 
 export type LibrarySeries = {
   id: string | number;
   name: string;
-  summary?: string | null;
-  book_count?: number | null;
+  sort_name: string;
+  summary: string | null;
+  book_count: number;
   preview_books?: PreviewBook[];
-  created_at?: string;
-  updated_at?: string;
-  [k: string]: unknown;
 };
 
 export type LibraryAuthor = {
   id: string | number;
   name: string;
-  biography?: string | null;
-  book_count?: number | null;
+  sort_name: string;
+  biography: string | null;
+  book_count: number;
   preview_books?: PreviewBook[];
-  created_at?: string;
-  updated_at?: string;
-  [k: string]: unknown;
 };
 
 export type LibraryGroup = {
   id: string | number;
   name: string;
-  description?: string | null;
+  description: string | null;
   is_public_group: boolean;
-  is_curator: boolean;
+  /** @deprecated Not part of the rebuilt catalog group payload. */
+  is_curator?: boolean;
+  /** @deprecated Not part of the rebuilt catalog group payload. */
   book_count?: number | null;
   preview_books?: PreviewBook[];
-  created_at?: string;
-  updated_at?: string;
-  [k: string]: unknown;
 };
 
 export type BookFileDownloadResult = {

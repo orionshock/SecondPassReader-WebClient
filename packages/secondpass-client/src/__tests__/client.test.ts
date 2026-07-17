@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, createSecondPassClient } from "../index";
-import type { LibraryBook } from "../index";
+import type { LibraryBook, PreviewBook } from "../index";
 import { buildAuthHeaders, requestBlob, requestJsonUrl, resolveUrl, tryParseFilename } from "../apiHttp";
 import { updateReadingProgress } from "../readingProgressApi";
 
@@ -83,7 +83,7 @@ describe("@secondpass/client high-level workflows", () => {
     ).rejects.toMatchObject({ kind: "http_error", status: 404, message: "Custom not found." });
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
-    await expect(spl.library.books.download({ id: 1, title: "T", file: { id: 10, download_url: "https://files.example/book.epub" } })).rejects.toMatchObject({
+    await expect(spl.library.books.download({ id: 1, title: "T" } as LibraryBook)).rejects.toMatchObject({
       kind: "forbidden",
       status: 403,
     });
@@ -491,7 +491,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(personalUrl.searchParams.has("include_preview_books")).toBe(false);
   });
 
-  it("library books sends server ordering with existing filters", async () => {
+  it("library books sends rebuilt catalog filters and server ordering", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
@@ -499,6 +499,9 @@ describe("@secondpass/client high-level workflows", () => {
     await spl.library.books.list({
       author: "a1",
       series: "s1",
+      q: "space opera",
+      tag: "award-winner",
+      publisher: "Exact Press",
       ordering: "author",
       page: 2,
       pageSize: 20,
@@ -508,6 +511,9 @@ describe("@secondpass/client high-level workflows", () => {
     expect(url.origin + url.pathname).toBe("https://api.example/library/books/");
     expect(url.searchParams.get("author")).toBe("a1");
     expect(url.searchParams.get("series")).toBe("s1");
+    expect(url.searchParams.get("q")).toBe("space opera");
+    expect(url.searchParams.get("tag")).toBe("award-winner");
+    expect(url.searchParams.get("publisher")).toBe("Exact Press");
     expect(url.searchParams.get("ordering")).toBe("author");
     expect(url.searchParams.get("page")).toBe("2");
     expect(url.searchParams.get("page_size")).toBe("20");
@@ -515,26 +521,62 @@ describe("@secondpass/client high-level workflows", () => {
 
   it("library.books.get fetches an encoded book detail URL", async () => {
     const fetchMock = asMockFetch();
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "book 1", title: "T" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "book 1", title: "T", file: { format: "epub", file_size: 4, checksum: "abc", download_url: "https://files.example/book.epub" } }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     const book = await spl.library.books.get("book 1");
 
     expect(book.id).toBe("book 1");
+    expect(book.file?.download_url).toBe("https://files.example/book.epub");
+    expect(book).not.toHaveProperty("groups");
     expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/library/books/book%201/");
   });
 
+  it("library book list rows do not require groups or file data", async () => {
+    const row = {
+      id: "b1", title: "Book", sort_title: "Book", subtitle: null, authors: [], series: null, tags: [],
+      language: "en", publisher: null, published_year: null, published_month: null, published_day: null,
+      published_date_precision: null, cover_url: null, file_format: "epub",
+    } satisfies LibraryBook;
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ count: 1, next: null, previous: null, results: [row] }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const result = await spl.library.books.list();
+    expect(result.results[0]).not.toHaveProperty("groups");
+    expect(result.results[0]).not.toHaveProperty("file");
+  });
+
+  it("library tags list/get use catalog tag routes and query params", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: "t 1", name: "Classic", slug: "classic", book_count: 3 }));
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.library.tags.list({ q: "class", ordering: "-book_count", page: 2, pageSize: 10 });
+    await spl.library.tags.get("t 1");
+
+    const listUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(listUrl.origin + listUrl.pathname).toBe("https://api.example/library/tags/");
+    expect(listUrl.searchParams.get("q")).toBe("class");
+    expect(listUrl.searchParams.get("ordering")).toBe("-book_count");
+    expect(listUrl.searchParams.get("page")).toBe("2");
+    expect(listUrl.searchParams.get("page_size")).toBe("10");
+    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/library/tags/t%201/");
+  });
+
   it("library authors and series optionally request preview books and ordering", async () => {
+    const preview = { id: "b1", title: "Book", cover_url: null } satisfies PreviewBook;
     const fetchMock = asMockFetch();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
-      .mockResolvedValueOnce(jsonResponse({ id: "s1", name: "Series" }))
+      .mockResolvedValueOnce(jsonResponse({ id: "s1", name: "Series", preview_books: [preview] }))
       .mockResolvedValueOnce(jsonResponse({ id: "a1", name: "Author" }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.library.series.list({ page: 3, includePreviewBooks: true, ordering: "-book_count" });
-    await spl.library.authors.list({ page: 4, includePreviewBooks: false, ordering: "name" });
+    await spl.library.series.list({ q: "cycle", tag: "classic", page: 3, pageSize: 25, includePreviewBooks: true, ordering: "-book_count" });
+    await spl.library.authors.list({ q: "le guin", tag: "classic", page: 4, pageSize: 10, includePreviewBooks: false, ordering: "name" });
     await spl.library.series.get("s1", { includePreviewBooks: true });
     await spl.library.authors.get("a1");
 
@@ -543,12 +585,17 @@ describe("@secondpass/client high-level workflows", () => {
     expect(seriesListUrl.searchParams.get("page")).toBe("3");
     expect(seriesListUrl.searchParams.get("include_preview_books")).toBe("true");
     expect(seriesListUrl.searchParams.get("ordering")).toBe("-book_count");
+    expect(seriesListUrl.searchParams.get("q")).toBe("cycle");
+    expect(seriesListUrl.searchParams.get("tag")).toBe("classic");
+    expect(seriesListUrl.searchParams.get("page_size")).toBe("25");
 
     const authorsListUrl = new URL(String(fetchMock.mock.calls[1]![0]));
     expect(authorsListUrl.origin + authorsListUrl.pathname).toBe("https://api.example/library/authors/");
     expect(authorsListUrl.searchParams.get("page")).toBe("4");
     expect(authorsListUrl.searchParams.get("ordering")).toBe("name");
     expect(authorsListUrl.searchParams.has("include_preview_books")).toBe(false);
+    expect(authorsListUrl.searchParams.get("q")).toBe("le guin");
+    expect(authorsListUrl.searchParams.get("tag")).toBe("classic");
 
     const seriesDetailUrl = new URL(String(fetchMock.mock.calls[2]![0]));
     expect(seriesDetailUrl.origin + seriesDetailUrl.pathname).toBe("https://api.example/library/series/s1/");
@@ -567,13 +614,15 @@ describe("@secondpass/client high-level workflows", () => {
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.library.groups.list({ page: 2, includePreviewBooks: true, ordering: "name" });
+    await spl.library.groups.list({ q: "shared", page: 2, pageSize: 25, includePreviewBooks: true, ordering: "name" });
     await spl.library.groups.get("g1", { includePreviewBooks: true });
-    await spl.library.groups.books("g1", { page: 3, pageSize: 50, ordering: "title", hasFiles: true });
+    await spl.library.groups.books("g1", { q: "book", tag: "classic", page: 3, pageSize: 50, ordering: "title" });
 
     const groupListUrl = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(groupListUrl.origin + groupListUrl.pathname).toBe("https://api.example/library/groups/");
     expect(groupListUrl.searchParams.get("page")).toBe("2");
+    expect(groupListUrl.searchParams.get("page_size")).toBe("25");
+    expect(groupListUrl.searchParams.get("q")).toBe("shared");
     expect(groupListUrl.searchParams.get("include_preview_books")).toBe("true");
     expect(groupListUrl.searchParams.get("ordering")).toBe("name");
 
@@ -586,7 +635,33 @@ describe("@secondpass/client high-level workflows", () => {
     expect(groupBooksUrl.searchParams.get("page")).toBe("3");
     expect(groupBooksUrl.searchParams.get("page_size")).toBe("50");
     expect(groupBooksUrl.searchParams.get("ordering")).toBe("title");
-    expect(groupBooksUrl.searchParams.get("has_files")).toBe("true");
+    expect(groupBooksUrl.searchParams.get("q")).toBe("book");
+    expect(groupBooksUrl.searchParams.get("tag")).toBe("classic");
+  });
+
+  it("library group-scoped authors, series, and tags preserve server query controls", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await spl.library.groups.authors("g 1", { q: "author", tag: "classic", ordering: "-book_count", page: 2, pageSize: 10 });
+    await spl.library.groups.series("g 1", { q: "series", tag: "classic", ordering: "name", page: 3, pageSize: 20 });
+    await spl.library.groups.tags("g 1", { q: "tag", ordering: "-name", page: 4, pageSize: 30 });
+
+    const authorsUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(authorsUrl.pathname).toBe("/library/groups/g%201/authors/");
+    expect(authorsUrl.searchParams.get("tag")).toBe("classic");
+    expect(authorsUrl.searchParams.get("ordering")).toBe("-book_count");
+    const seriesUrl = new URL(String(fetchMock.mock.calls[1]![0]));
+    expect(seriesUrl.pathname).toBe("/library/groups/g%201/series/");
+    expect(seriesUrl.searchParams.get("q")).toBe("series");
+    expect(seriesUrl.searchParams.get("page_size")).toBe("20");
+    const tagsUrl = new URL(String(fetchMock.mock.calls[2]![0]));
+    expect(tagsUrl.pathname).toBe("/library/groups/g%201/tags/");
+    expect(tagsUrl.searchParams.get("q")).toBe("tag");
+    expect(tagsUrl.searchParams.get("page")).toBe("4");
   });
 
   it("library entity book routes add author/series filters and book downloads preserve metadata", async () => {
@@ -594,7 +669,6 @@ describe("@secondpass/client high-level workflows", () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
-      .mockResolvedValueOnce(jsonResponse({ id: 42, title: "T", file: { download_url: "https://files.example/book.epub" } }))
       .mockResolvedValueOnce(jsonResponse({ id: 42, title: "T", file: { download_url: "https://files.example/book.epub" } }))
       .mockResolvedValueOnce(
         blobResponse(new Blob(["epub"], { type: "application/epub+zip" }), {
@@ -607,26 +681,24 @@ describe("@secondpass/client high-level workflows", () => {
       );
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.library.series.books("series-1", { page: 2, pageSize: 25, ordering: "series_index", hasFiles: false });
-    await spl.library.authors.books("author-1", { page: 3, pageSize: 50, ordering: "title", hasFiles: true });
+    await spl.library.series.books("series-1", { page: 2, pageSize: 25, ordering: "series_index" });
+    await spl.library.authors.books("author-1", { page: 3, pageSize: 50, ordering: "title" });
     expect(await spl.library.books.getDownloadUrl(42)).toBe("https://files.example/book.epub");
     const blob = await spl.library.books.download(42);
 
     const seriesBooksUrl = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(seriesBooksUrl.origin + seriesBooksUrl.pathname).toBe("https://api.example/library/books/");
     expect(seriesBooksUrl.searchParams.get("series")).toBe("series-1");
-    expect(seriesBooksUrl.searchParams.get("has_files")).toBe("false");
     expect(seriesBooksUrl.searchParams.get("ordering")).toBe("series_index");
 
     const authorBooksUrl = new URL(String(fetchMock.mock.calls[1]![0]));
     expect(authorBooksUrl.origin + authorBooksUrl.pathname).toBe("https://api.example/library/books/");
     expect(authorBooksUrl.searchParams.get("author")).toBe("author-1");
-    expect(authorBooksUrl.searchParams.get("has_files")).toBe("true");
     expect(authorBooksUrl.searchParams.get("ordering")).toBe("title");
 
     expect(blob.size).toBe(4);
-    const downloadHeaders = fetchMock.mock.calls[4]![1]?.headers as Record<string, string>;
-    expect(String(fetchMock.mock.calls[4]![0])).toBe("https://files.example/book.epub");
+    const downloadHeaders = fetchMock.mock.calls[3]![1]?.headers as Record<string, string>;
+    expect(String(fetchMock.mock.calls[3]![0])).toBe("https://api.example/library/books/42/download/");
     expect(downloadHeaders.Accept).toBe("application/epub+zip, application/octet-stream, */*");
   });
 
@@ -826,11 +898,10 @@ describe("@secondpass/client high-level workflows", () => {
 
   it("library.books.download(book) downloads blob via internal download_url without app passing raw URL", async () => {
     const fetchMock = asMockFetch();
-    const book: LibraryBook = {
+    const book = {
       id: 1,
       title: "T",
-      file: { id: 10, download_url: "https://files.example/book.epub" },
-    };
+    } as LibraryBook;
 
     fetchMock.mockResolvedValueOnce(
       blobResponse(new Blob(["epub"], { type: "application/epub+zip" }), {
@@ -844,39 +915,29 @@ describe("@secondpass/client high-level workflows", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toBe("https://files.example/book.epub");
+    expect(String(url)).toBe("https://api.example/library/books/1/download/");
     const headers = init?.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer t");
   });
 
-  it("library.books.download(bookId) fetches the book then downloads the blob", async () => {
+  it("library.books.download(bookId) uses the dedicated download endpoint", async () => {
     const fetchMock = asMockFetch();
-    fetchMock
-      .mockResolvedValueOnce(
-        jsonResponse({
-          id: 1,
-          title: "T",
-          file: { id: 10, download_url: "https://files.example/book.epub" },
-        }),
-      )
-      .mockResolvedValueOnce(blobResponse(new Blob(["epub"], { type: "application/epub+zip" })));
+    fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["epub"], { type: "application/epub+zip" })));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
     const blob = await spl.library.books.download(1);
     expect(blob.size).toBeGreaterThan(0);
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/library/books/1/");
-    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://files.example/book.epub");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/library/books/1/download/");
   });
 
   it("reading.openForReading opens session then downloads blob and returns both", async () => {
     const fetchMock = asMockFetch();
-    const book: LibraryBook = {
+    const book = {
       id: 1,
       title: "T",
-      file: { id: 10, download_url: "https://files.example/book.epub" },
-    };
+    } as LibraryBook;
 
     fetchMock
       .mockResolvedValueOnce(
@@ -896,7 +957,7 @@ describe("@secondpass/client high-level workflows", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/reading/books/1/open/");
-    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://files.example/book.epub");
+    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/library/books/1/download/");
   });
 
   it("reading sessions preserve can_open from server payloads", async () => {
