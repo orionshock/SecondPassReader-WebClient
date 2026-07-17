@@ -13,6 +13,7 @@ import { OrderingControl, type OrderingOption } from "../../components/OrderingC
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
 import { LibraryScopeSelect } from "./libraryScope/LibraryScopeSelect";
+import { getEffectiveLibraryGroupId } from "./libraryScope/libraryScope";
 
 type BrowseMode = "books" | "series" | "authors";
 type BookOrdering = "title" | "author" | "series" | "series_index";
@@ -86,6 +87,7 @@ export function LibraryBrowsePage({
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const apiReady = Boolean(spl);
+  const advancedGroupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
   const qFromRoute = (route.q ?? "").trim();
   const browseFromRoute = route.browse ?? "books";
   const browseMode: BrowseMode = qFromRoute
@@ -97,6 +99,7 @@ export function LibraryBrowsePage({
   const routePage = route.page ?? 1;
   const pageSize = route.pageSize ?? 20;
   const tagSlug = route.tag?.trim() || undefined;
+  const effectiveGroupId = getEffectiveLibraryGroupId(route.groupId, advancedGroupsEnabled);
   const showBookList = Boolean(
     qFromRoute ||
       browseMode === "books" ||
@@ -136,6 +139,10 @@ export function LibraryBrowsePage({
   useEffect(() => {
     setQDraft(qFromRoute);
   }, [qFromRoute]);
+
+  useEffect(() => {
+    if (!advancedGroupsEnabled && route.groupId) onUpdateRoute?.({ groupId: null });
+  }, [advancedGroupsEnabled, onUpdateRoute, route.groupId]);
 
   useEffect(() => {
     const viewFromRoute = normalizeLibraryBooksView(route.view);
@@ -240,8 +247,8 @@ export function LibraryBrowsePage({
       setSeriesError(null);
       try {
         const params = { tag: tagSlug, page, pageSize, ordering: seriesOrdering } as const;
-        const r = route.groupId
-          ? await spl.library.groups.series(route.groupId, params)
+        const r = effectiveGroupId
+          ? await spl.library.groups.series(effectiveGroupId, params)
           : await spl.library.series.list({ ...params, includePreviewBooks: true });
         if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesData(r);
@@ -253,7 +260,7 @@ export function LibraryBrowsePage({
         if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
       }
     },
-    [pageSize, route.groupId, seriesOrdering, spl, tagSlug],
+    [effectiveGroupId, pageSize, seriesOrdering, spl, tagSlug],
   );
 
   const loadAuthors = useCallback(
@@ -264,8 +271,8 @@ export function LibraryBrowsePage({
       setAuthorsError(null);
       try {
         const params = { tag: tagSlug, page, pageSize, ordering: authorsOrdering } as const;
-        const r = route.groupId
-          ? await spl.library.groups.authors(route.groupId, params)
+        const r = effectiveGroupId
+          ? await spl.library.groups.authors(effectiveGroupId, params)
           : await spl.library.authors.list({ ...params, includePreviewBooks: true });
         if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsData(r);
@@ -277,13 +284,13 @@ export function LibraryBrowsePage({
         if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
       }
     },
-    [authorsOrdering, pageSize, route.groupId, spl, tagSlug],
+    [authorsOrdering, effectiveGroupId, pageSize, spl, tagSlug],
   );
 
   useEffect(() => {
     setBooksError(null);
     setBooksBusy(false);
-  }, [qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, pageSize, bookOrdering, routePage]);
+  }, [qFromRoute, browseMode, route.seriesId, route.authorId, effectiveGroupId, tagSlug, pageSize, bookOrdering, routePage]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -291,22 +298,22 @@ export function LibraryBrowsePage({
 
     // Global search wins over browse.
     if (qFromRoute) {
-      void loadBooks({ page: routePage, q: qFromRoute, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, q: qFromRoute, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "series" && route.seriesId) {
-      void loadBooks({ page: routePage, seriesId: route.seriesId, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, seriesId: route.seriesId, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "authors" && route.authorId) {
-      void loadBooks({ page: routePage, authorId: route.authorId, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, authorId: route.authorId, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
     if (browseMode === "books") {
-      void loadBooks({ page: routePage, groupId: route.groupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks({ page: routePage, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
       return;
     }
 
@@ -319,7 +326,7 @@ export function LibraryBrowsePage({
       return;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, route.groupId, tagSlug, bookOrdering, seriesOrdering, authorsOrdering, routePage, pageSize]);
+  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, effectiveGroupId, tagSlug, bookOrdering, seriesOrdering, authorsOrdering, routePage, pageSize]);
 
   useEffect(() => {
     if (status !== "verified") return;
@@ -437,10 +444,10 @@ export function LibraryBrowsePage({
 
           <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
             <div className="libraryBrowseTabGroup">
-              {spl ? (
+              {spl && advancedGroupsEnabled ? (
                 <LibraryScopeSelect
                   spl={spl}
-                  groupId={route.groupId}
+                  groupId={effectiveGroupId}
                   onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
                 />
               ) : null}
@@ -503,7 +510,7 @@ export function LibraryBrowsePage({
             {spl ? (
               <CatalogTagRail
                 spl={spl}
-                groupId={route.groupId}
+                groupId={effectiveGroupId}
                 selectedSlug={tagSlug}
                 onSelect={(slug) => onUpdateRoute?.({ tag: slug ?? null, page: 1, pageSize })}
               />
