@@ -4,17 +4,18 @@ import type { LibraryAuthor, LibraryBook, LibraryBookListParams, LibraryEntityLi
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookResultsView } from "./display/BookResultsView";
-import { BookViewModeToggle } from "./display/BookViewModeToggle";
 import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
 import { ExpandableText } from "./display/ExpandableText";
-import { InlineMeta } from "../../components/MetaSeparator";
-import { MaterialIcon } from "../../components/MaterialIcon";
-import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
+import type { OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
 import { LibraryScopeSelect } from "./libraryScope/LibraryScopeSelect";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./data/libraryAxisQueries";
 import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
+import { LibraryAxisTabs } from "./controls/LibraryAxisTabs";
+import { LibraryPaginationControls } from "./controls/LibraryPaginationControls";
+import { LibrarySearchControls } from "./controls/LibrarySearchControls";
+import { LibrarySortViewControls } from "./controls/LibrarySortViewControls";
 
 type BrowseMode = LibraryAxis;
 type BookOrdering = LibraryBookOrdering;
@@ -367,43 +368,13 @@ export function LibraryBrowsePage({
 
       {status === "verified" ? (
         <>
-          <div className="librarySearchSection">
-            <div className="libraryToolbar">
-              <label className="toolbarField toolbarSearch">
-                <span className="srOnly">Search</span>
-                <input
-                  className="input inputCompact"
-                  value={qDraft}
-                  onChange={(e) => setQDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    handleCommitSearch();
-                  }}
-                  placeholder="Search the library..."
-                />
-              </label>
-
-              <label className="toolbarField">
-                <span className="srOnly">Page size</span>
-                <select
-                  className="input inputCompact"
-                  value={pageSize}
-                  onChange={(e) => {
-                    handlePageSizeChange(Number(e.target.value));
-                  }}
-                >
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </label>
-
-              <button className="button buttonPrimary librarySearchButton" type="button" onClick={handleCommitSearch}>
-                Search
-              </button>
-            </div>
-          </div>
+          <LibrarySearchControls
+            draft={qDraft}
+            pageSize={pageSize}
+            onDraftChange={setQDraft}
+            onPageSizeChange={handlePageSizeChange}
+            onSearch={handleCommitSearch}
+          />
 
           <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
             <div className="libraryBrowseTabGroup">
@@ -414,57 +385,21 @@ export function LibraryBrowsePage({
                   onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
                 />
               ) : null}
-              <button
-                type="button"
-                className={`libraryBrowseTab ${browseMode === "books" ? "libraryBrowseTabActive" : ""}`}
-                onClick={() => onShowBooks?.()}
-              >
-                <MaterialIcon name="menu_book" />
-                Books
-              </button>
-              <button
-                type="button"
-                className={`libraryBrowseTab ${browseMode === "series" ? "libraryBrowseTabActive" : ""}`}
-                onClick={() => onShowSeries?.()}
-              >
-                <MaterialIcon name="auto_stories" />
-                Series
-              </button>
-              <button
-                type="button"
-                className={`libraryBrowseTab ${browseMode === "authors" ? "libraryBrowseTabActive" : ""}`}
-                onClick={() => onShowAuthors?.()}
-              >
-                <MaterialIcon name="person" />
-                Authors
-              </button>
+              <LibraryAxisTabs
+                activeAxis={browseMode}
+                onShowBooks={() => onShowBooks?.()}
+                onShowSeries={() => onShowSeries?.()}
+                onShowAuthors={() => onShowAuthors?.()}
+              />
             </div>
 
             <div className="libraryControlsRight">
               {showBookList ? (
-                <>
-                  <OrderingControl
-                    options={bookOrderingOptions}
-                    value={bookOrdering}
-                    onChange={handleBookOrderingChange}
-                    ariaLabel="Sort books"
-                  />
-                  <BookViewModeToggle viewMode={bookViewMode} onChange={handleBookViewChange} />
-                </>
+                <LibrarySortViewControls kind="books" options={bookOrderingOptions} ordering={bookOrdering} viewMode={bookViewMode} onOrderingChange={handleBookOrderingChange} onViewChange={handleBookViewChange} />
               ) : browseMode === "series" && !route.seriesId ? (
-                <OrderingControl
-                  options={SERIES_ORDERING_OPTIONS}
-                  value={seriesOrdering}
-                  onChange={handleSeriesOrderingChange}
-                  ariaLabel="Sort series"
-                />
+                <LibrarySortViewControls kind="entity" options={SERIES_ORDERING_OPTIONS} ordering={seriesOrdering} onOrderingChange={handleSeriesOrderingChange} ariaLabel="Sort series" />
               ) : browseMode === "authors" && !route.authorId ? (
-                <OrderingControl
-                  options={AUTHOR_ORDERING_OPTIONS}
-                  value={authorsOrdering}
-                  onChange={handleAuthorsOrderingChange}
-                  ariaLabel="Sort authors"
-                />
+                <LibrarySortViewControls kind="entity" options={AUTHOR_ORDERING_OPTIONS} ordering={authorsOrdering} onOrderingChange={handleAuthorsOrderingChange} ariaLabel="Sort authors" />
               ) : null}
             </div>
           </div>
@@ -519,29 +454,14 @@ export function LibraryBrowsePage({
 
               {booksData ? (
                 <>
-                  <div className="libraryMetaRow">
-                    <div className="muted">
-                      <InlineMeta items={bookListMetaItems} />
-                    </div>
-                    <div className="pagerButtons">
-                      <button
-                        className="button buttonCompact"
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, booksPage - 1))}
-                        disabled={booksBusy || !booksData.previous}
-                      >
-                        Previous
-                      </button>
-                      <button
-                        className="button buttonCompact"
-                        type="button"
-                        onClick={() => handlePageChange(booksPage + 1)}
-                        disabled={booksBusy || !booksData.next}
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
+                  <LibraryPaginationControls
+                    metaItems={bookListMetaItems}
+                    busy={booksBusy}
+                    hasPrevious={Boolean(booksData.previous)}
+                    hasNext={Boolean(booksData.next)}
+                    onPrevious={() => handlePageChange(Math.max(1, booksPage - 1))}
+                    onNext={() => handlePageChange(booksPage + 1)}
+                  />
 
                   <BookResultsView
                     books={booksData.results}
@@ -551,29 +471,15 @@ export function LibraryBrowsePage({
                     onViewBook={(b) => onViewBook?.(String(b.id))}
                   />
 
-                  <div className="libraryMetaRow libraryMetaRowBottom">
-                    <div className="muted">
-                      <InlineMeta items={bookListMetaItems} />
-                    </div>
-                    <div className="pagerButtons">
-                      <button
-                        className="button buttonCompact"
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, booksPage - 1))}
-                        disabled={booksBusy || !booksData.previous}
-                      >
-                        Previous
-                      </button>
-                      <button
-                        className="button buttonCompact"
-                        type="button"
-                        onClick={() => handlePageChange(booksPage + 1)}
-                        disabled={booksBusy || !booksData.next}
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
+                  <LibraryPaginationControls
+                    metaItems={bookListMetaItems}
+                    busy={booksBusy}
+                    hasPrevious={Boolean(booksData.previous)}
+                    hasNext={Boolean(booksData.next)}
+                    onPrevious={() => handlePageChange(Math.max(1, booksPage - 1))}
+                    onNext={() => handlePageChange(booksPage + 1)}
+                    stickyBottom
+                  />
                 </>
               ) : (
                 <div className="muted" style={{ marginTop: 10 }}>
@@ -613,29 +519,14 @@ export function LibraryBrowsePage({
               ) : null}
 
               {seriesData ? (
-                <div className="libraryMetaRow">
-                  <div className="muted">
-                    <InlineMeta items={[`Page ${seriesPage}`, `${seriesData.count} series`]} />
-                  </div>
-                  <div className="pagerButtons">
-                    <button
-                      className="button buttonCompact"
-                      type="button"
-                      onClick={() => handlePageChange(Math.max(1, seriesPage - 1))}
-                      disabled={seriesBusy || !seriesData.previous}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      className="button buttonCompact"
-                      type="button"
-                      onClick={() => handlePageChange(seriesPage + 1)}
-                      disabled={seriesBusy || !seriesData.next}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
+                <LibraryPaginationControls
+                  metaItems={[`Page ${seriesPage}`, `${seriesData.count} series`]}
+                  busy={seriesBusy}
+                  hasPrevious={Boolean(seriesData.previous)}
+                  hasNext={Boolean(seriesData.next)}
+                  onPrevious={() => handlePageChange(Math.max(1, seriesPage - 1))}
+                  onNext={() => handlePageChange(seriesPage + 1)}
+                />
               ) : null}
             </>
           ) : (
@@ -670,29 +561,14 @@ export function LibraryBrowsePage({
               ) : null}
 
               {authorsData ? (
-                <div className="libraryMetaRow">
-                  <div className="muted">
-                    <InlineMeta items={[`Page ${authorsPage}`, `${authorsData.count} authors`]} />
-                  </div>
-                  <div className="pagerButtons">
-                    <button
-                      className="button buttonCompact"
-                      type="button"
-                      onClick={() => handlePageChange(Math.max(1, authorsPage - 1))}
-                      disabled={authorsBusy || !authorsData.previous}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      className="button buttonCompact"
-                      type="button"
-                      onClick={() => handlePageChange(authorsPage + 1)}
-                      disabled={authorsBusy || !authorsData.next}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
+                <LibraryPaginationControls
+                  metaItems={[`Page ${authorsPage}`, `${authorsData.count} authors`]}
+                  busy={authorsBusy}
+                  hasPrevious={Boolean(authorsData.previous)}
+                  hasNext={Boolean(authorsData.next)}
+                  onPrevious={() => handlePageChange(Math.max(1, authorsPage - 1))}
+                  onNext={() => handlePageChange(authorsPage + 1)}
+                />
               ) : null}
             </>
           )}
