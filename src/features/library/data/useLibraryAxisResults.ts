@@ -1,0 +1,115 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ApiError } from "@secondpass/client";
+import type { LibraryAuthor, LibraryBook, LibraryBookListParams, LibraryEntityListParams, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./libraryAxisQueries";
+import type { DerivedLibraryRouteState } from "../route/libraryRouteState";
+
+type Input = {
+  spl: SecondPassClient | null;
+  state: DerivedLibraryRouteState;
+  canLoad: boolean;
+};
+
+export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
+  const [booksData, setBooksData] = useState<PaginatedResponse<LibraryBook> | null>(null);
+  const [booksBusy, setBooksBusy] = useState(false);
+  const [booksError, setBooksError] = useState<string | null>(null);
+  const [booksPage, setBooksPage] = useState(1);
+  const [authorsData, setAuthorsData] = useState<PaginatedResponse<LibraryAuthor> | null>(null);
+  const [authorsBusy, setAuthorsBusy] = useState(false);
+  const [authorsError, setAuthorsError] = useState<string | null>(null);
+  const [authorsPage, setAuthorsPage] = useState(1);
+  const [seriesData, setSeriesData] = useState<PaginatedResponse<LibrarySeries> | null>(null);
+  const [seriesBusy, setSeriesBusy] = useState(false);
+  const [seriesError, setSeriesError] = useState<string | null>(null);
+  const [seriesPage, setSeriesPage] = useState(1);
+  const booksRequestSeq = useRef(0);
+  const authorsRequestSeq = useRef(0);
+  const seriesRequestSeq = useRef(0);
+
+  const booksQuery = useMemo(() => buildLibraryBooksQuery(state), [state]);
+  const entityQuery = useMemo(() => buildLibraryEntityQuery(state), [state]);
+
+  const loadBooks = useCallback(async (params: LibraryBookListParams) => {
+    if (!spl) return;
+    const requestSeq = ++booksRequestSeq.current;
+    setBooksBusy(true);
+    setBooksError(null);
+    try {
+      const result = state.effectiveGroupId
+        ? await spl.library.groups.books(state.effectiveGroupId, params)
+        : await spl.library.books.list(params);
+      if (requestSeq !== booksRequestSeq.current) return;
+      setBooksData(result);
+      setBooksPage(params.page ?? 1);
+    } catch (error) {
+      if (requestSeq !== booksRequestSeq.current) return;
+      setBooksData((current) => current ?? null);
+      if (error instanceof ApiError && (error.kind === "unauthorized" || error.kind === "forbidden")) {
+        setBooksError("Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.");
+      } else {
+        setBooksError(error instanceof Error ? error.message : "Failed to load library.");
+      }
+    } finally {
+      if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
+    }
+  }, [spl, state.effectiveGroupId]);
+
+  const loadAuthors = useCallback(async (params: LibraryEntityListParams) => {
+    if (!spl) return;
+    const requestSeq = ++authorsRequestSeq.current;
+    setAuthorsBusy(true);
+    setAuthorsError(null);
+    try {
+      const result = state.effectiveGroupId
+        ? await spl.library.groups.authors(state.effectiveGroupId, params)
+        : await spl.library.authors.list({ ...params, includePreviewBooks: true });
+      if (requestSeq !== authorsRequestSeq.current) return;
+      setAuthorsData(result);
+      setAuthorsPage(params.page ?? 1);
+    } catch (error) {
+      if (requestSeq !== authorsRequestSeq.current) return;
+      setAuthorsError(error instanceof Error ? error.message : "Failed to load authors.");
+    } finally {
+      if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
+    }
+  }, [spl, state.effectiveGroupId]);
+
+  const loadSeries = useCallback(async (params: LibraryEntityListParams) => {
+    if (!spl) return;
+    const requestSeq = ++seriesRequestSeq.current;
+    setSeriesBusy(true);
+    setSeriesError(null);
+    try {
+      const result = state.effectiveGroupId
+        ? await spl.library.groups.series(state.effectiveGroupId, params)
+        : await spl.library.series.list({ ...params, includePreviewBooks: true });
+      if (requestSeq !== seriesRequestSeq.current) return;
+      setSeriesData(result);
+      setSeriesPage(params.page ?? 1);
+    } catch (error) {
+      if (requestSeq !== seriesRequestSeq.current) return;
+      setSeriesError(error instanceof Error ? error.message : "Failed to load series.");
+    } finally {
+      if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
+    }
+  }, [spl, state.effectiveGroupId]);
+
+  useEffect(() => {
+    setBooksError(null);
+    setBooksBusy(false);
+  }, [state.axis, state.selectedSeriesId, state.selectedAuthorId, state.effectiveGroupId, state.q, state.tag, state.pageSize, state.ordering, state.page]);
+
+  useEffect(() => {
+    if (!canLoad || !spl) return;
+    if (state.resultKind === "books") void loadBooks(booksQuery);
+    else if (state.resultKind === "series") void loadSeries(entityQuery);
+    else void loadAuthors(entityQuery);
+  }, [booksQuery, canLoad, entityQuery, loadAuthors, loadBooks, loadSeries, spl, state.resultKind]);
+
+  return {
+    books: { data: booksData, busy: booksBusy, error: booksError, page: booksPage },
+    authors: { data: authorsData, busy: authorsBusy, error: authorsError, page: authorsPage },
+    series: { data: seriesData, busy: seriesBusy, error: seriesError, page: seriesPage },
+  };
+}

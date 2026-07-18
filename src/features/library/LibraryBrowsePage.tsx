@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError } from "@secondpass/client";
-import type { LibraryAuthor, LibraryBook, LibraryBookListParams, LibraryEntityListParams, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { LibraryAuthor, LibrarySeries, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import type { OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
 import { LibraryScopeControl } from "./libraryScope/LibraryScopeControl";
-import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./data/libraryAxisQueries";
+import { useLibraryAxisResults } from "./data/useLibraryAxisResults";
 import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
 import { LibraryAxisTabs } from "./controls/LibraryAxisTabs";
 import { LibrarySearchControls } from "./controls/LibrarySearchControls";
@@ -88,40 +87,24 @@ export function LibraryBrowsePage({
   const advancedGroupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
   const routeState = useMemo(
     () => deriveLibraryRouteState(route, advancedGroupsEnabled),
-    [advancedGroupsEnabled, route],
+    [advancedGroupsEnabled, route.authorId, route.browse, route.groupId, route.ordering, route.page, route.pageSize, route.q, route.seriesId, route.tag],
   );
-  const { axis: browseMode, effectiveGroupId, page: routePage, pageSize, q: qFromRoute = "", tag: tagSlug } = routeState;
+  const { axis: browseMode, effectiveGroupId, pageSize, q: qFromRoute = "", tag: tagSlug } = routeState;
   const showBookList = routeState.resultKind === "books";
   const bookOrderingOptions = routeState.selectedSeriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
   const bookOrdering = routeState.resultKind === "books" ? routeState.ordering as BookOrdering : "title";
   const seriesOrdering = routeState.resultKind === "series" ? routeState.ordering as EntityOrdering : "name";
   const authorsOrdering = routeState.resultKind === "authors" ? routeState.ordering as EntityOrdering : "name";
-  const booksQuery = useMemo(() => buildLibraryBooksQuery(routeState), [routeState]);
-  const entityQuery = useMemo(() => buildLibraryEntityQuery(routeState), [routeState]);
 
   const [qDraft, setQDraft] = useState(qFromRoute);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
 
-  const [booksBusy, setBooksBusy] = useState(false);
-  const [booksError, setBooksError] = useState<string | null>(null);
-  const [booksPage, setBooksPage] = useState(1);
-  const [booksData, setBooksData] = useState<PaginatedResponse<LibraryBook> | null>(null);
-
-  const [seriesBusy, setSeriesBusy] = useState(false);
-  const [seriesError, setSeriesError] = useState<string | null>(null);
-  const [seriesPage, setSeriesPage] = useState(1);
-  const [seriesData, setSeriesData] = useState<PaginatedResponse<LibrarySeries> | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<LibrarySeries | null>(null);
-
-  const [authorsBusy, setAuthorsBusy] = useState(false);
-  const [authorsError, setAuthorsError] = useState<string | null>(null);
-  const [authorsPage, setAuthorsPage] = useState(1);
-  const [authorsData, setAuthorsData] = useState<PaginatedResponse<LibraryAuthor> | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<LibraryAuthor | null>(null);
-
-  const booksRequestSeq = useRef(0);
-  const seriesRequestSeq = useRef(0);
-  const authorsRequestSeq = useRef(0);
+  const axisResults = useLibraryAxisResults({ spl, state: routeState, canLoad: status === "verified" && apiReady });
+  const { data: booksData, busy: booksBusy, error: booksError, page: booksPage } = axisResults.books;
+  const { data: seriesData, busy: seriesBusy, error: seriesError, page: seriesPage } = axisResults.series;
+  const { data: authorsData, busy: authorsBusy, error: authorsError, page: authorsPage } = axisResults.authors;
 
   useEffect(() => {
     setQDraft(qFromRoute);
@@ -170,127 +153,6 @@ export function LibraryBrowsePage({
     (page: number) => onUpdateRoute?.({ ordering: route.ordering, page, pageSize }),
     [onUpdateRoute, pageSize, route.ordering],
   );
-
-  const loadBooks = useCallback(
-    async (params: LibraryBookListParams) => {
-      if (!spl) return;
-
-      const requestSeq = ++booksRequestSeq.current;
-      setBooksBusy(true);
-      setBooksError(null);
-      try {
-        const result = effectiveGroupId
-          ? await spl.library.groups.books(effectiveGroupId, params)
-          : await spl.library.books.list(params);
-        if (requestSeq !== booksRequestSeq.current) return;
-        setBooksData(result);
-        setBooksPage(params.page ?? 1);
-      } catch (e) {
-        if (requestSeq !== booksRequestSeq.current) return;
-        setBooksData((current) => {
-          if (current) return current;
-          return null;
-        });
-        if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
-          setBooksError(
-            "Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.",
-          );
-        } else {
-          setBooksError(e instanceof Error ? e.message : "Failed to load library.");
-        }
-      } finally {
-        if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
-      }
-    },
-    [effectiveGroupId, spl],
-  );
-
-  const loadSeries = useCallback(
-    async (params: LibraryEntityListParams) => {
-      if (!spl) return;
-      const requestSeq = ++seriesRequestSeq.current;
-      setSeriesBusy(true);
-      setSeriesError(null);
-      try {
-        const r = effectiveGroupId
-          ? await spl.library.groups.series(effectiveGroupId, params)
-          : await spl.library.series.list({ ...params, includePreviewBooks: true });
-        if (requestSeq !== seriesRequestSeq.current) return;
-        setSeriesData(r);
-        setSeriesPage(params.page ?? 1);
-      } catch (e) {
-        if (requestSeq !== seriesRequestSeq.current) return;
-        setSeriesError(e instanceof Error ? e.message : "Failed to load series.");
-      } finally {
-        if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
-      }
-    },
-    [effectiveGroupId, spl],
-  );
-
-  const loadAuthors = useCallback(
-    async (params: LibraryEntityListParams) => {
-      if (!spl) return;
-      const requestSeq = ++authorsRequestSeq.current;
-      setAuthorsBusy(true);
-      setAuthorsError(null);
-      try {
-        const r = effectiveGroupId
-          ? await spl.library.groups.authors(effectiveGroupId, params)
-          : await spl.library.authors.list({ ...params, includePreviewBooks: true });
-        if (requestSeq !== authorsRequestSeq.current) return;
-        setAuthorsData(r);
-        setAuthorsPage(params.page ?? 1);
-      } catch (e) {
-        if (requestSeq !== authorsRequestSeq.current) return;
-        setAuthorsError(e instanceof Error ? e.message : "Failed to load authors.");
-      } finally {
-        if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
-      }
-    },
-    [effectiveGroupId, spl],
-  );
-
-  useEffect(() => {
-    setBooksError(null);
-    setBooksBusy(false);
-  }, [qFromRoute, browseMode, route.seriesId, route.authorId, effectiveGroupId, tagSlug, pageSize, bookOrdering, routePage]);
-
-  useEffect(() => {
-    if (status !== "verified") return;
-    if (!apiReady || !spl) return;
-
-    // Global search wins over browse.
-    if (qFromRoute) {
-      void loadBooks(booksQuery);
-      return;
-    }
-
-    if (browseMode === "series" && route.seriesId) {
-      void loadBooks(booksQuery);
-      return;
-    }
-
-    if (browseMode === "authors" && route.authorId) {
-      void loadBooks(booksQuery);
-      return;
-    }
-
-    if (browseMode === "books") {
-      void loadBooks(booksQuery);
-      return;
-    }
-
-    if (browseMode === "series" && !route.seriesId) {
-      void loadSeries(entityQuery);
-      return;
-    }
-    if (browseMode === "authors" && !route.authorId) {
-      void loadAuthors(entityQuery);
-      return;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, qFromRoute, browseMode, route.seriesId, route.authorId, effectiveGroupId, tagSlug, bookOrdering, seriesOrdering, authorsOrdering, routePage, pageSize]);
 
   useEffect(() => {
     if (status !== "verified") return;
