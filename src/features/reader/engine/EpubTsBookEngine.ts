@@ -392,7 +392,13 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       try {
         const visibleRange = rendition.getRange(trimmed);
         if (isUsableRange(visibleRange)) {
-          return { ok: true, code: "exists-visible", description: describeCfiSection(book.spine.get(spineIndex), spineIndex) };
+          return {
+            ok: true,
+            code: "exists-visible",
+            description: describeCfiSection(book.spine.get(spineIndex), spineIndex),
+            cfiKind: parsed.range ? "range" : "point",
+            rangeText: parsed.range ? visibleRange.toString().trim() || undefined : undefined,
+          };
         }
       } catch {
         // Not visible or not resolvable in the current view; continue with book-level resolution.
@@ -406,6 +412,8 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       const wasLoaded = Boolean(section.document);
       try {
         await section.load(createSectionRequest(book));
+        // Resolve range CFIs as one DOM Range. This validates both endpoints
+        // together and avoids lossy start/end CFI decomposition.
         const range = parsed.toRange(section.document);
         if (!isUsableRange(range)) {
           return {
@@ -415,7 +423,13 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
             description: describeCfiSection(section, spineIndex),
           };
         }
-        return { ok: true, code: "exists-in-book", description: describeCfiSection(section, spineIndex) };
+        return {
+          ok: true,
+          code: "exists-in-book",
+          description: describeCfiSection(section, spineIndex),
+          cfiKind: parsed.range ? "range" : "point",
+          rangeText: parsed.range ? range?.toString().trim() || undefined : undefined,
+        };
       } catch (error) {
         return {
           ok: false,

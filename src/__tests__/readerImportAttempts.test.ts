@@ -23,6 +23,13 @@ describe("reader import attempts", () => {
     ]);
   });
 
+  it("queues a highlight range CFI before text attempts", () => {
+    expect(buildReaderImportAttemptQueue(row({ quoteText: "Selected text", cfiHint: "epubcfi(/6/2!/4/2,/1:0,/1:4)" }))).toEqual([
+      { kind: "cfi-range", cfiRange: "epubcfi(/6/2!/4/2,/1:0,/1:4)" },
+      { kind: "text-search", text: "Selected text" },
+    ]);
+  });
+
   it("orders quote hints before plain text search and preserves context", () => {
     expect(
       buildReaderImportAttemptQueue(

@@ -1,6 +1,8 @@
 import type { ReaderImportRow } from "./readerImportTypes";
+import { isReaderCfiRange } from "../shell/readerCfiKind";
 
 export type ReaderImportAttempt =
+  | { kind: "cfi-range"; cfiRange: string }
   | { kind: "quote-text"; exact: string; prefix?: string; suffix?: string }
   | { kind: "text-search"; text: string };
 
@@ -10,8 +12,9 @@ export function buildReaderImportAttemptQueue(row: ReaderImportRow): ReaderImpor
   const attempts: ReaderImportAttempt[] = [];
   const text = row.quoteText?.trim() ?? "";
 
-  // TODO: enqueue cfiHint for bookmarks/highlights only after import activation
-  // has safe row-local CFI navigation and range staging handles.
+  const cfiRange = row.cfiHint?.trim() ?? "";
+  if (cfiRange && isReaderCfiRange(cfiRange)) attempts.push({ kind: "cfi-range", cfiRange });
+
   const prefix = trimOptional(row.preQuoteText);
   const suffix = trimOptional(row.postQuoteText);
   if (text && (prefix || suffix)) {

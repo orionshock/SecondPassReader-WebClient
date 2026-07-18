@@ -10,6 +10,7 @@ import { getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatches } from "./readerImportSearch";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
+import { stageReaderImportHighlightCfi } from "./readerImportHighlightCfi";
 
 export function useReaderImportActivation({
   job,
@@ -119,7 +120,7 @@ export function useReaderImportActivation({
       return;
     }
 
-    if (!searchBook || !stagedSelectionHandle) {
+    if (!stagedSelectionHandle) {
       debugReaderImport("activation dependencies missing", {
         rowId,
         hasSearchBook: Boolean(searchBook),
@@ -137,13 +138,15 @@ export function useReaderImportActivation({
 
     try {
       const attempts = buildReaderImportAttemptQueue(row);
+      let activationCursor = next.cursor;
+      let activationResultCursor = next.resultCursor;
       debugReaderImport("activation start", {
         rowId,
         status: row.status,
         next: { kind: next.attempt.kind, cursor: next.cursor, resultCursor: next.resultCursor },
         attempts: attempts.map((attempt) => ({
           kind: attempt.kind,
-          textPreview: previewImportText(attempt.kind === "quote-text" ? attempt.exact : attempt.text),
+          textPreview: previewImportText(attempt.kind === "quote-text" ? attempt.exact : attempt.kind === "text-search" ? attempt.text : attempt.cfiRange),
           hasPrefix: attempt.kind === "quote-text" ? Boolean(attempt.prefix) : undefined,
           hasSuffix: attempt.kind === "quote-text" ? Boolean(attempt.suffix) : undefined,
         })),
@@ -152,8 +155,36 @@ export function useReaderImportActivation({
         postQuotePreview: previewImportText(row.postQuoteText),
         hasCfiHint: Boolean(row.cfiHint),
       });
+
+      if (next.attempt.kind === "cfi-range") {
+        debugReaderImport("highlight CFI range stage start", { rowId, cfiPreview: previewImportText(next.attempt.cfiRange) });
+        const result = await stageReaderImportHighlightCfi({
+          jobId: job.id,
+          row,
+          probeCfi,
+          displayCfi,
+          stagedSelection: stagedSelectionHandle,
+        });
+        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+        if (result.ok) {
+          debugReaderImport("highlight CFI range stage success", { rowId, code: result.code });
+          setRowActivationState(rowId, "staged", { attemptCursor: next.cursor + 1, resultCursor: 0, hasMatched: true });
+          return;
+        }
+        debugReaderImport("highlight CFI range stage failure", { rowId, code: result.code, reason: result.error });
+        activationCursor = next.cursor + 1;
+        activationResultCursor = 0;
+      }
+
+      if (!searchBook) {
+        setRowActivationState(rowId, "not-found", { attemptCursor: activationCursor, resultCursor: activationResultCursor, hasMatched: row.hasMatched });
+        setDrawerOpen(true);
+        return;
+      }
       const resultsByAttempt = await Promise.all(
-        attempts.map((attempt) => findImportRowSearchMatches({ row, attempt, searchBook, signal: controller.signal })),
+        attempts.map((attempt) => attempt.kind === "cfi-range"
+          ? Promise.resolve([])
+          : findImportRowSearchMatches({ row, attempt, searchBook, signal: controller.signal })),
       );
       if (requestIdRef.current !== requestId || controller.signal.aborted) return;
       debugReaderImport("activation search results", {
@@ -162,8 +193,8 @@ export function useReaderImportActivation({
       });
       const cycle = getNextImportCycleMatch(
         {
-          attemptCursor: next.cursor,
-          resultCursor: next.resultCursor,
+          attemptCursor: activationCursor,
+          resultCursor: activationResultCursor,
           hasMatched: row.hasMatched,
         },
         resultsByAttempt,
