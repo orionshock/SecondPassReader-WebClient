@@ -17,6 +17,7 @@ export function ReaderActivityHeader({
   canBookmark,
   isBookmarked,
   annotationBusy,
+  bookmarkSuggested,
   onToggleBookmark,
   marginaliaOpen,
   onOpenMarginalia,
@@ -45,6 +46,7 @@ export function ReaderActivityHeader({
   canBookmark: boolean;
   isBookmarked: boolean;
   annotationBusy: boolean;
+  bookmarkSuggested: boolean;
   onToggleBookmark: () => void;
   marginaliaOpen: boolean;
   onOpenMarginalia: () => void;
@@ -102,10 +104,10 @@ export function ReaderActivityHeader({
 
           <button
             type="button"
-            className="button buttonCompact spIconButton"
+            className={`button buttonCompact spIconButton${bookmarkSuggested ? " spReaderBookmarkSuggested" : ""}`}
             onClick={onToggleBookmark}
             disabled={!canBookmark || annotationBusy}
-            title={!canBookmark ? "Bookmark is unavailable until a reading location is known." : "Bookmark"}
+            title={!canBookmark ? "Bookmark is unavailable until a reading location is known." : bookmarkSuggested ? "Save imported bookmark" : "Bookmark"}
             aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
           >
             <MaterialIcon name={isBookmarked ? "bookmark_added" : "bookmark_add"} />

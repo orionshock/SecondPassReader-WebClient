@@ -201,6 +201,12 @@
   gap: 6px;
 }
 
+.spReaderBookmarkSuggested {
+  outline: 2px solid var(--sp-reader-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sp-reader-accent) 18%, transparent);
+}
+
 .spIconButtonTight {
   height: 22px;
   padding: 0 6px;
@@ -461,4 +467,3 @@
   gap: 6px 10px;
   font-size: 12px;
 }
-

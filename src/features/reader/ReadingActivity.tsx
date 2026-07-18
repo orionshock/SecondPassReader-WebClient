@@ -178,6 +178,7 @@ function ReaderActivityContent({
     setDrawerOpen: readerImport.setDrawerOpen,
     jumpToResult: readerState.search.jumpToCfi,
     clearTemporaryHighlight: readerState.search.clearTemporaryHighlight,
+    onBookmarkSuggested: readerImport.suggestBookmark,
   });
 
   const cleanupImportTemporaryState = () => {
@@ -312,8 +313,13 @@ function ReaderActivityContent({
         canBookmark={canBookmark}
         isBookmarked={isBookmarked}
         annotationBusy={Boolean(annotations.busy)}
+        bookmarkSuggested={Boolean(readerImport.bookmarkSuggestion)}
         onToggleBookmark={() => {
-          void annotations.toggleBookmarkAtCurrentLocation();
+          const suggestion = readerImport.bookmarkSuggestion;
+          const createsBookmark = !isBookmarked;
+          void annotations.toggleBookmarkAtCurrentLocation().then(() => {
+            if (suggestion && createsBookmark) readerImport.acceptBookmarkSuggestion(suggestion.cfi);
+          });
         }}
         marginaliaOpen={marginaliaOpen}
         onOpenMarginalia={() => setMarginaliaOpen(true)}

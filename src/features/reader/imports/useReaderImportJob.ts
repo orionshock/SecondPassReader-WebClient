@@ -1,16 +1,18 @@
 import { useCallback, useMemo, useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportFormat } from "./readerImportFormats";
-import { resetOtherStagedRowsForActivation } from "./readerImportJobState";
+import { acceptSuggestedBookmarkRow, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation } from "./readerImportJobState";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
   const [job, setJob] = useState<ReaderImportJob | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [bookmarkSuggestion, setBookmarkSuggestion] = useState<ReaderImportBookmarkSuggestion | null>(null);
 
   const startImport = useCallback(async (format: string, file: File) => {
     const nextJob = await getReaderImportFormat(format).importFile(file);
     setJob(nextJob);
+    setBookmarkSuggestion(null);
     setDrawerOpen(true);
     return nextJob;
   }, []);
@@ -36,13 +38,38 @@ export function useReaderImportJob() {
   }, []);
 
   const selectRow = useCallback((rowId: string) => {
+    setBookmarkSuggestion(null);
     setJob((prev) => prev ? { ...prev, activeRowId: rowId, rows: resetOtherStagedRowsForActivation(prev.rows, rowId) } : prev);
   }, []);
 
   const clearJob = useCallback(() => {
+    setBookmarkSuggestion(null);
     setJob(null);
     setDrawerOpen(false);
   }, []);
+
+  const setImportDrawerOpen = useCallback((open: boolean) => {
+    if (!open) setBookmarkSuggestion(null);
+    setDrawerOpen(open);
+  }, []);
+
+  const suggestBookmark = useCallback((suggestion: ReaderImportBookmarkSuggestion) => {
+    setBookmarkSuggestion(suggestion);
+  }, []);
+
+  const acceptBookmarkSuggestion = useCallback((currentCfi: string) => {
+    if (!bookmarkSuggestion || bookmarkSuggestion.cfi !== currentCfi.trim()) return;
+    setJob((prev) => {
+      if (!prev || prev.id !== bookmarkSuggestion.jobId) return prev;
+      return { ...prev, rows: acceptSuggestedBookmarkRow(prev.rows, bookmarkSuggestion) };
+    });
+    setBookmarkSuggestion(null);
+  }, [bookmarkSuggestion]);
+
+  const skipRow = useCallback((rowId: string) => {
+    setBookmarkSuggestion((suggestion) => suggestion?.rowId === rowId ? null : suggestion);
+    setRowStatus(rowId, "skipped");
+  }, [setRowStatus]);
 
   const counts = useMemo(() => {
     const out = { pending: 0, accepted: 0, skipped: 0, notFound: 0 };
@@ -58,7 +85,10 @@ export function useReaderImportJob() {
   return {
     job,
     drawerOpen,
-    setDrawerOpen,
+    setDrawerOpen: setImportDrawerOpen,
+    bookmarkSuggestion,
+    suggestBookmark,
+    acceptBookmarkSuggestion,
     counts,
     startImport,
     startGlaspCsvImport,
@@ -68,7 +98,7 @@ export function useReaderImportJob() {
     setRowActivationState,
     markRowAccepted: (jobId: string, rowId: string) => setSourcedRowStatus(jobId, rowId, "accepted"),
     markRowPending: (jobId: string, rowId: string) => setSourcedRowStatus(jobId, rowId, "pending"),
-    skipRow: (rowId: string) => setRowStatus(rowId, "skipped"),
+    skipRow,
     unskipRow: (rowId: string) => setRowStatus(rowId, "pending"),
   };
 }

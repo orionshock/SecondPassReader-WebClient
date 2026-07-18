@@ -23,6 +23,7 @@ export function useReaderImportActivation({
   setDrawerOpen,
   jumpToResult,
   clearTemporaryHighlight,
+  onBookmarkSuggested,
 }: {
   job: ReaderImportJob | null;
   searchBook: ReaderSearchBookHandle | null;
@@ -35,6 +36,7 @@ export function useReaderImportActivation({
   setDrawerOpen: (open: boolean) => void;
   jumpToResult: (cfi: string) => void;
   clearTemporaryHighlight: () => void;
+  onBookmarkSuggested: (suggestion: { jobId: string; rowId: string; cfi: string }) => void;
 }) {
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -84,6 +86,9 @@ export function useReaderImportActivation({
           });
         }
         setRowActivationState(rowId, outcome.status, { attemptCursor: row.attemptCursor, resultCursor: row.resultCursor, hasMatched: outcome.result.ok || row.hasMatched });
+        if (outcome.status === "staged" && outcome.result.ok && row.cfiHint?.trim()) {
+          onBookmarkSuggested({ jobId: job.id, rowId: row.id, cfi: row.cfiHint.trim() });
+        }
         setDrawerOpen(true);
       } catch (error) {
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
@@ -231,5 +236,5 @@ export function useReaderImportActivation({
       clearTemporaryHighlight();
       setDrawerOpen(true);
     }
-  }, [clearTemporaryHighlight, displayCfi, job, jumpToResult, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
+  }, [clearTemporaryHighlight, displayCfi, job, jumpToResult, onBookmarkSuggested, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hasOtherStagedRows, resetOtherStagedRowsForActivation } from "../features/reader/imports/readerImportJobState";
+import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, hasOtherStagedRows, resetOtherStagedRowsForActivation } from "../features/reader/imports/readerImportJobState";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
 
 describe("reader import job state", () => {
@@ -32,6 +32,20 @@ describe("reader import job state", () => {
 
     expect(hasOtherStagedRows(rows, "next")).toBe(true);
     expect(hasOtherStagedRows(rows, "staged")).toBe(false);
+  });
+
+  it("creates a suggestion for a staged bookmark", () => {
+    expect(createBookmarkSuggestion("job-1", row({ id: "bookmark", kind: "bookmark", status: "staged", cfiHint: " epubcfi(/6/2) " }))).toEqual({
+      jobId: "job-1",
+      rowId: "bookmark",
+      cfi: "epubcfi(/6/2)",
+    });
+  });
+
+  it("marks only the suggested bookmark row accepted after bookmark success", () => {
+    const rows = [row({ id: "bookmark", kind: "bookmark", status: "staged" }), row({ id: "other", status: "pending" })];
+    const result = acceptSuggestedBookmarkRow(rows, { jobId: "job-1", rowId: "bookmark", cfi: "epubcfi(/6/2)" });
+    expect(result.map((item) => [item.id, item.status])).toEqual([["bookmark", "accepted"], ["other", "pending"]]);
   });
 });
 
