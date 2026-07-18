@@ -55,7 +55,7 @@ export function CloseSessionDialog({
   const unnamed = trimmedName.length === 0;
   const showNextBookPreview = afterAction === "nextBook" && Boolean(nextBook);
   const nextBookCoverSrc = getBookCoverUrl(nextBook, coverBase);
-  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
+  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.series_index) : null;
 
   useEffect(() => {
     nameRef.current?.focus();

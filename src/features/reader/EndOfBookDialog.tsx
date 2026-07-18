@@ -24,7 +24,7 @@ export function EndOfBookDialog({
   onGoToLibrary?: () => void;
   returnLabel?: string;
 }) {
-  const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series_index) : null;
+  const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.series_index) : null;
   const coverSrc = getBookCoverUrl(nextBook, coverBase);
 
   useEffect(() => {

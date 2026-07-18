@@ -4,20 +4,17 @@ export function formatBookAuthors(book: Pick<LibraryBook, "authors">): string {
   return (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
 }
 
-export function formatBookSeries(book: Pick<LibraryBook, "series" | "series_index">): string | null {
-  return book.series?.name && book.series_index != null ? `${book.series.name} #${book.series_index}` : book.series?.name ?? null;
+export function formatBookSeries(book: Pick<LibraryBook, "series">): string | null {
+  return book.series?.name && book.series.series_index != null ? `${book.series.name} #${book.series.series_index}` : book.series?.name ?? null;
 }
 
-export function formatFileSize(bytes?: number | null): string | null {
-  if (!bytes || bytes <= 0) return null;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(0)} KB`;
-  const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(1)} MB`;
-  const gb = mb / 1024;
-  return `${gb.toFixed(2)} GB`;
+export function formatBookPublishedDate(book: Pick<LibraryBook, "published_year" | "published_month" | "published_day">): string | null {
+  if (book.published_year == null) return null;
+  return [book.published_year, book.published_month?.toString().padStart(2, "0"), book.published_day?.toString().padStart(2, "0")]
+    .filter(Boolean)
+    .join("-");
 }
 
 export function getBookMetaItems(book: LibraryBook): Array<string | null> {
-  return [book.language || null, book.published_date || null, formatFileSize(book.file?.file_size ?? null)];
+  return [book.language || null, formatBookPublishedDate(book), book.file_format || null];
 }

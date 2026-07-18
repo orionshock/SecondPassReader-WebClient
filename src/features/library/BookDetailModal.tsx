@@ -31,17 +31,15 @@ export function BookDetailModal({
     | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
 }) {
-  const DEBUG_BOOK_DETAIL = import.meta.env.DEV;
-  const [book, setBook] = useState<LibraryBook | null>(initialBook);
+  const [book, setBook] = useState<LibraryBook | null>(null);
   const [activitySummary, setActivitySummary] = useState<ReadingBookActivitySummaryRow | null>(null);
   const [activitySummaryFailed, setActivitySummaryFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchSeqRef = useRef(0);
-  const loggedBookIdsRef = useRef<Record<string, true>>({});
 
   useEffect(() => {
-    setBook(initialBook ?? null);
+    setBook(null);
     setActivitySummary(null);
     setActivitySummaryFailed(false);
     setError(null);
@@ -72,31 +70,6 @@ export function BookDetailModal({
         const full = await spl.library.books.get(bookId);
         if (seq !== fetchSeqRef.current) return;
         setBook(full);
-        if (DEBUG_BOOK_DETAIL && !loggedBookIdsRef.current[bookId]) {
-          loggedBookIdsRef.current[bookId] = true;
-          const anyFull = full as unknown as {
-            isbn?: unknown;
-            identifiers?: unknown;
-            groups?: unknown;
-            subjects?: unknown;
-            cover_url?: unknown;
-            file?: unknown;
-          };
-          const identifiersCount = Array.isArray(anyFull.identifiers) ? anyFull.identifiers.length : null;
-          const groupsCount = Array.isArray(anyFull.groups) ? anyFull.groups.length : null;
-          const subjectsCount = Array.isArray(anyFull.subjects) ? anyFull.subjects.length : null;
-          // eslint-disable-next-line no-console
-          console.debug("[book-detail] loaded", {
-            id: full.id,
-            title: full.title,
-            hasIsbn: Boolean(anyFull.isbn),
-            identifiersCount,
-            groupsCount,
-            subjectsCount,
-            coverUrlType: typeof anyFull.cover_url,
-            hasFile: Boolean(anyFull.file),
-          });
-        }
       } catch (e) {
         if (seq !== fetchSeqRef.current) return;
         const message =
@@ -137,7 +110,7 @@ export function BookDetailModal({
     };
   }, [bookId, canFetch, spl]);
 
-  const headerTitle = useMemo(() => (book?.title ? book.title : `Book ${bookId}`), [book?.title, bookId]);
+  const headerTitle = useMemo(() => book?.title || initialBook?.title || `Book ${bookId}`, [book?.title, bookId, initialBook?.title]);
 
   return (
     <div

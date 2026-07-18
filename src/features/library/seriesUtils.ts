@@ -10,17 +10,17 @@ export function normalizeSeriesIndex(value: unknown): number | null {
 }
 
 export function findNextSeriesBook(currentBook: LibraryBook, books: LibraryBook[]): LibraryBook | null {
-  const currentIndex = normalizeSeriesIndex(currentBook.series_index);
+  const currentIndex = normalizeSeriesIndex(currentBook.series?.series_index);
   if (currentIndex == null) return null;
   const currentId = String(currentBook.id);
 
-  const candidates = books
-    .map((book) => ({ book, index: normalizeSeriesIndex(book.series_index) }))
-    .filter((entry): entry is { book: LibraryBook; index: number } => entry.index != null)
-    .filter((entry) => String(entry.book.id) !== currentId && entry.index > currentIndex)
-    .sort((a, b) => a.index - b.index);
-
-  return candidates[0]?.book ?? null;
+  let next: { book: LibraryBook; index: number } | null = null;
+  for (const book of books) {
+    const index = normalizeSeriesIndex(book.series?.series_index);
+    if (String(book.id) === currentId || index == null || index <= currentIndex) continue;
+    if (!next || index < next.index) next = { book, index };
+  }
+  return next?.book ?? null;
 }
 
 export function formatSeriesIndex(value: unknown): string | null {

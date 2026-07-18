@@ -3,6 +3,7 @@ import type { LibraryBook, ReadingBookActivitySummaryRow } from "@secondpass/cli
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 import { InlineMeta } from "../../components/MetaSeparator";
+import { formatBookPublishedDate } from "./display/bookDisplayUtils";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -41,7 +42,8 @@ export function BookDetailPanel({
 }) {
   const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
-    book.series?.name && book.series_index != null ? `${book.series.name} #${book.series_index}` : book.series?.name;
+    book.series?.name && book.series.series_index != null ? `${book.series.name} #${book.series.series_index}` : book.series?.name;
+  const published = formatBookPublishedDate(book);
 
   const busy =
     downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
@@ -85,7 +87,7 @@ export function BookDetailPanel({
           {seriesText ? <div className="muted">{seriesText}</div> : null}
 
           <div className="bookDetailMetaLine muted">
-            <InlineMeta items={[book.publisher || null, book.language || null, book.published_date || null]} />
+            <InlineMeta items={[book.publisher || null, book.language || null, published]} />
           </div>
         </div>
 

@@ -41,9 +41,9 @@ function stripHtmlToText(input: string): string {
   return t.trim();
 }
 
-export function getBookDescriptionText(book: Pick<LibraryBook, "summary" | "description"> | null | undefined): string | undefined {
+export function getBookDescriptionText(book: Pick<LibraryBook, "description"> | null | undefined): string | undefined {
   if (!book) return undefined;
-  const raw = (book.summary ?? book.description ?? "").trim();
+  const raw = (book.description ?? "").trim();
   if (!raw) return undefined;
   const text = stripHtmlToText(raw);
   return text ? text : undefined;

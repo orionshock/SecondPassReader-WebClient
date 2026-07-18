@@ -150,7 +150,7 @@ function ReaderActivityContent({
   const [nextSeriesStatus, setNextSeriesStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const activeReaderKey = `${openedBook.book.id}|${currentSessionId ?? ""}`;
   const seriesId = openedBook.book.series?.id;
-  const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series_index);
+  const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series?.series_index);
   const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
   const returnTarget = openedBook.returnTarget;
   const returnLabel = buildReturnLabel(returnTarget);
