@@ -44,7 +44,8 @@
       "**/*.tsbuildinfo",
       "**/package-lock.json",
       "**/linecount.json",
-      "**/linecount.txt"
+      "**/linecount.txt",
+      "**/.playwright-profile/**"
     ],
   },
 }
