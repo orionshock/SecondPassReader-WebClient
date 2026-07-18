@@ -64,28 +64,14 @@ export function useReaderImportActivation({
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
       setRowStatus(rowId, "searching");
-      debugReaderImport("bookmark CFI probe start", {
+      debugReaderImport("bookmark CFI activation start", {
         rowId,
         hasCfiHint: Boolean(row.cfiHint?.trim()),
         cfiPreview: previewImportText(row.cfiHint),
       });
       try {
-        debugReaderImport("bookmark CFI display start", { rowId, cfiPreview: previewImportText(row.cfiHint) });
-        const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi, displayCfi });
+        const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi, displayCfi, rowId });
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-        if (outcome.result.ok) {
-          debugReaderImport("bookmark CFI display success", {
-            rowId,
-            code: outcome.result.code,
-            verification: outcome.result.code === "displayed" ? "exact" : "approximate",
-          });
-        } else {
-          debugReaderImport("bookmark CFI display failure", {
-            rowId,
-            code: outcome.result.code,
-            reason: outcome.result.error,
-          });
-        }
         setRowActivationState(rowId, outcome.status, { attemptCursor: row.attemptCursor, resultCursor: row.resultCursor, hasMatched: outcome.result.ok || row.hasMatched });
         if (outcome.status === "staged" && outcome.result.ok && row.cfiHint?.trim()) {
           onBookmarkSuggested({ jobId: job.id, rowId: row.id, cfi: row.cfiHint.trim() });
