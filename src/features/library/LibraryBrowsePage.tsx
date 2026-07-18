@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { LibraryAuthor, LibrarySeries, SecondPassClient } from "@secondpass/client";
+import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import type { OrderingOption } from "../../components/OrderingControl";
@@ -7,6 +7,7 @@ import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, t
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
 import { LibraryScopeControl } from "./libraryScope/LibraryScopeControl";
 import { useLibraryAxisResults } from "./data/useLibraryAxisResults";
+import { useSelectedLibraryEntity } from "./data/useSelectedLibraryEntity";
 import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
 import { LibraryAxisTabs } from "./controls/LibraryAxisTabs";
 import { LibrarySearchControls } from "./controls/LibrarySearchControls";
@@ -99,9 +100,14 @@ export function LibraryBrowsePage({
   const [qDraft, setQDraft] = useState(qFromRoute);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
 
-  const [selectedSeries, setSelectedSeries] = useState<LibrarySeries | null>(null);
-  const [selectedAuthor, setSelectedAuthor] = useState<LibraryAuthor | null>(null);
   const axisResults = useLibraryAxisResults({ spl, state: routeState, canLoad: status === "verified" && apiReady });
+  const selectedEntity = useSelectedLibraryEntity({
+    spl,
+    selectedAuthorId: routeState.selectedAuthorId,
+    selectedSeriesId: routeState.selectedSeriesId,
+    canLoad: status === "verified" && apiReady,
+  });
+  const { selectedAuthorData: selectedAuthor, selectedSeriesData: selectedSeries } = selectedEntity;
   const { data: booksData, busy: booksBusy, error: booksError, page: booksPage } = axisResults.books;
   const { data: seriesData, busy: seriesBusy, error: seriesError, page: seriesPage } = axisResults.series;
   const { data: authorsData, busy: authorsBusy, error: authorsError, page: authorsPage } = axisResults.authors;
@@ -153,48 +159,6 @@ export function LibraryBrowsePage({
     (page: number) => onUpdateRoute?.({ ordering: route.ordering, page, pageSize }),
     [onUpdateRoute, pageSize, route.ordering],
   );
-
-  useEffect(() => {
-    if (status !== "verified") return;
-    if (!apiReady || !spl) return;
-    if (qFromRoute) {
-      setSelectedSeries(null);
-      setSelectedAuthor(null);
-      return;
-    }
-    let cancelled = false;
-
-    if (browseMode === "series" && route.seriesId) {
-      void (async () => {
-        try {
-          const s = await spl.library.series.get(route.seriesId!, { includePreviewBooks: true });
-          if (!cancelled) setSelectedSeries(s);
-        } catch {
-          if (!cancelled) setSelectedSeries(null);
-        }
-      })();
-    } else {
-      setSelectedSeries(null);
-    }
-
-    if (browseMode === "authors" && route.authorId) {
-      void (async () => {
-        try {
-          const a = await spl.library.authors.get(route.authorId!, { includePreviewBooks: true });
-          if (!cancelled) setSelectedAuthor(a);
-        } catch {
-          if (!cancelled) setSelectedAuthor(null);
-        }
-      })();
-    } else {
-      setSelectedAuthor(null);
-    }
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, apiReady, browseMode, route.seriesId, route.authorId, qFromRoute, spl]);
 
   const handleCommitSearch = useCallback(() => {
     const next = qDraft.trim();
