@@ -10,9 +10,12 @@ services:
     env_file:
       - path: .env
         required: false
-    # If you do not use .env, uncomment this block and set the desired values.
+    # If you do not use .env, uncomment environment and either the JSON value
+    # or the indexed values below.
     # environment:
-    #   SECONDPASS_SERVER_PRESETS_JSON: '[]'
+    #   SECONDPASS_SERVER_PRESETS_JSON: '[{"name":"Production Library","url":"https://library.example.com"}]'
+    # Or use indexed pairs:
+    # environment:
     #   SECONDPASS_SERVER_1_NAME: Production Library
     #   SECONDPASS_SERVER_1_URL: https://library.example.com
     #   SECONDPASS_SERVER_2_NAME: Local Library

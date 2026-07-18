@@ -15,13 +15,13 @@ The container listens on port `8000`, which Compose exposes to other containers 
 
 ## Optional server presets
 
-Deployment operators can put known Library servers in `.env`. Use one JSON array:
+Copy `.env.example` to `.env`, then configure known Library servers using one of the forms below. For the JSON form, set one JSON array:
 
 ```dotenv
 SECONDPASS_SERVER_PRESETS_JSON=[{"name":"Production Library","url":"https://library.example.com"}]
 ```
 
-Or use indexed name/URL pairs:
+Alternatively, leave `SECONDPASS_SERVER_PRESETS_JSON` empty and use indexed name/URL pairs:
 
 ```dotenv
 SECONDPASS_SERVER_1_NAME=Production Library
@@ -30,7 +30,7 @@ SECONDPASS_SERVER_2_NAME=Local Library
 SECONDPASS_SERVER_2_URL=http://localhost:8000
 ```
 
-A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence. Otherwise, complete indexed pairs are used and incomplete pairs are ignored. Container startup writes the resulting public, credential-free array to `/secondpass-servers.json`; no configuration produces `[]`.
+A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. Otherwise, complete indexed pairs are used and incomplete pairs are ignored. Container startup writes the resulting public, credential-free array to `/usr/share/nginx/html/secondpass-servers.json`, served by nginx at `/secondpass-servers.json`; no configuration produces `[]`.
 
 After changing presets, run `docker compose up -d` to recreate/restart the container with the new environment. The image does not need to be rebuilt. Presets are only UI hints: selecting one still makes the Reader verify that server through `/.well-known/secondpass` before pairing. They do not carry tokens or bypass linking.
 
