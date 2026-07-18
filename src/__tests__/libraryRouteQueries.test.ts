@@ -1,0 +1,66 @@
+import { describe, expect, it } from "vitest";
+import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "../features/library/data/libraryAxisQueries";
+import { deriveLibraryRouteState, type DerivedLibraryRouteState } from "../features/library/route/libraryRouteState";
+
+describe("Library route state", () => {
+  it("forces search to Books results", () => {
+    const state = deriveLibraryRouteState({ browse: "authors", q: "  space opera  ", ordering: "name" }, true);
+    expect(state).toMatchObject({ axis: "books", resultKind: "books", q: "space opera", ordering: "title" });
+  });
+
+  it("turns selected author and series routes into Books results", () => {
+    expect(deriveLibraryRouteState({ browse: "authors", authorId: "a1", ordering: "author" }, true))
+      .toMatchObject({ axis: "authors", resultKind: "books", selectedAuthorId: "a1", ordering: "author" });
+    expect(deriveLibraryRouteState({ browse: "series", seriesId: "s1" }, true))
+      .toMatchObject({ axis: "series", resultKind: "books", selectedSeriesId: "s1", ordering: "series_index" });
+  });
+
+  it("removes disabled group scope and falls back invalid ordering by result kind", () => {
+    expect(deriveLibraryRouteState({ browse: "series", groupId: "g1", ordering: "bogus" }, false))
+      .toMatchObject({ resultKind: "series", effectiveGroupId: undefined, ordering: "name" });
+    expect(deriveLibraryRouteState({ browse: "books", ordering: "bogus" }, true).ordering).toBe("title");
+  });
+});
+
+describe("Library axis queries", () => {
+  const booksState: DerivedLibraryRouteState = {
+    axis: "books",
+    resultKind: "books",
+    effectiveGroupId: "g1",
+    q: "query",
+    tag: "award-winner",
+    page: 3,
+    pageSize: 50,
+    ordering: "series_index",
+    selectedAuthorId: "a1",
+    selectedSeriesId: "s1",
+  };
+
+  it("builds the complete Books query shared by global and group endpoints", () => {
+    expect(buildLibraryBooksQuery(booksState)).toEqual({
+      q: "query",
+      author: "a1",
+      series: "s1",
+      tag: "award-winner",
+      ordering: "series_index",
+      page: 3,
+      pageSize: 50,
+    });
+  });
+
+  it("builds Authors and Series list query controls with a tag slug", () => {
+    const entityState: DerivedLibraryRouteState = {
+      ...booksState,
+      axis: "authors",
+      resultKind: "authors",
+      ordering: "-book_count",
+    };
+    expect(buildLibraryEntityQuery(entityState)).toEqual({
+      q: "query",
+      tag: "award-winner",
+      ordering: "-book_count",
+      page: 3,
+      pageSize: 50,
+    });
+  });
+});

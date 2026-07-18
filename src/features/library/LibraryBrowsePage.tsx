@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryAuthor, LibraryBook, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import type { LibraryAuthor, LibraryBook, LibraryBookListParams, LibraryEntityListParams, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { BookResultsView } from "./display/BookResultsView";
@@ -13,11 +13,12 @@ import { OrderingControl, type OrderingOption } from "../../components/OrderingC
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
 import { LibraryScopeSelect } from "./libraryScope/LibraryScopeSelect";
-import { getEffectiveLibraryGroupId } from "./libraryScope/libraryScope";
+import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./data/libraryAxisQueries";
+import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
 
-type BrowseMode = "books" | "series" | "authors";
-type BookOrdering = "title" | "author" | "series" | "series_index";
-type EntityOrdering = "name" | "-book_count";
+type BrowseMode = LibraryAxis;
+type BookOrdering = LibraryBookOrdering;
+type EntityOrdering = LibraryEntityOrdering;
 
 const BOOK_ORDERING_OPTIONS: Array<OrderingOption<BookOrdering>> = [
   { value: "title", label: "Title A-Z", icon: "sort_by_alpha" },
@@ -40,10 +41,6 @@ const SERIES_ORDERING_OPTIONS: Array<OrderingOption<EntityOrdering>> = [
   { value: "name", label: "Series A-Z", icon: "sort_by_alpha" },
   { value: "-book_count", label: "Most books", icon: "format_list_numbered" },
 ];
-
-function getDefaultBookOrdering(browseMode: BrowseMode, seriesId?: string): BookOrdering {
-  return browseMode === "series" && seriesId ? "series_index" : "title";
-}
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -88,29 +85,18 @@ export function LibraryBrowsePage({
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const apiReady = Boolean(spl);
   const advancedGroupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
-  const qFromRoute = (route.q ?? "").trim();
-  const browseFromRoute = route.browse ?? "books";
-  const browseMode: BrowseMode = qFromRoute
-    ? "books"
-    : browseFromRoute === "series" || browseFromRoute === "authors" || browseFromRoute === "books"
-      ? browseFromRoute
-      : "books";
-  const defaultBookOrdering = getDefaultBookOrdering(browseMode, route.seriesId);
-  const routePage = route.page ?? 1;
-  const pageSize = route.pageSize ?? 20;
-  const tagSlug = route.tag?.trim() || undefined;
-  const effectiveGroupId = getEffectiveLibraryGroupId(route.groupId, advancedGroupsEnabled);
-  const showBookList = Boolean(
-    qFromRoute ||
-      browseMode === "books" ||
-      (browseMode === "series" && route.seriesId) ||
-      (browseMode === "authors" && route.authorId),
+  const routeState = useMemo(
+    () => deriveLibraryRouteState(route, advancedGroupsEnabled),
+    [advancedGroupsEnabled, route],
   );
-  const bookOrderingOptions = browseMode === "series" && route.seriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
-  const validBookOrderings = new Set(bookOrderingOptions.map((option) => option.value));
-  const bookOrdering = validBookOrderings.has(route.ordering as BookOrdering) ? (route.ordering as BookOrdering) : defaultBookOrdering;
-  const seriesOrdering = SERIES_ORDERING_OPTIONS.some((option) => option.value === route.ordering) ? (route.ordering as EntityOrdering) : "name";
-  const authorsOrdering = AUTHOR_ORDERING_OPTIONS.some((option) => option.value === route.ordering) ? (route.ordering as EntityOrdering) : "name";
+  const { axis: browseMode, effectiveGroupId, page: routePage, pageSize, q: qFromRoute = "", tag: tagSlug } = routeState;
+  const showBookList = routeState.resultKind === "books";
+  const bookOrderingOptions = routeState.selectedSeriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
+  const bookOrdering = routeState.resultKind === "books" ? routeState.ordering as BookOrdering : "title";
+  const seriesOrdering = routeState.resultKind === "series" ? routeState.ordering as EntityOrdering : "name";
+  const authorsOrdering = routeState.resultKind === "authors" ? routeState.ordering as EntityOrdering : "name";
+  const booksQuery = useMemo(() => buildLibraryBooksQuery(routeState), [routeState]);
+  const entityQuery = useMemo(() => buildLibraryEntityQuery(routeState), [routeState]);
 
   const [qDraft, setQDraft] = useState(qFromRoute);
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
@@ -185,40 +171,19 @@ export function LibraryBrowsePage({
   );
 
   const loadBooks = useCallback(
-    async (input: {
-      page: number;
-      q?: string;
-      seriesId?: string;
-      authorId?: string;
-      groupId?: string;
-      tag?: string;
-      ordering: BookOrdering;
-    }) => {
+    async (params: LibraryBookListParams) => {
       if (!spl) return;
 
       const requestSeq = ++booksRequestSeq.current;
       setBooksBusy(true);
       setBooksError(null);
       try {
-        const result = input.groupId
-          ? await spl.library.groups.books(input.groupId, {
-              ordering: input.ordering,
-              tag: input.tag,
-              page: input.page,
-              pageSize,
-            })
-          : await spl.library.books.list({
-              q: input.q?.trim() ? input.q.trim() : undefined,
-              series: input.seriesId,
-              author: input.authorId,
-              tag: input.tag,
-              ordering: input.ordering,
-              page: input.page,
-              pageSize,
-            });
+        const result = effectiveGroupId
+          ? await spl.library.groups.books(effectiveGroupId, params)
+          : await spl.library.books.list(params);
         if (requestSeq !== booksRequestSeq.current) return;
         setBooksData(result);
-        setBooksPage(input.page);
+        setBooksPage(params.page ?? 1);
       } catch (e) {
         if (requestSeq !== booksRequestSeq.current) return;
         setBooksData((current) => {
@@ -236,23 +201,22 @@ export function LibraryBrowsePage({
         if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
       }
     },
-    [pageSize, spl],
+    [effectiveGroupId, spl],
   );
 
   const loadSeries = useCallback(
-    async (page: number) => {
+    async (params: LibraryEntityListParams) => {
       if (!spl) return;
       const requestSeq = ++seriesRequestSeq.current;
       setSeriesBusy(true);
       setSeriesError(null);
       try {
-        const params = { tag: tagSlug, page, pageSize, ordering: seriesOrdering } as const;
         const r = effectiveGroupId
           ? await spl.library.groups.series(effectiveGroupId, params)
           : await spl.library.series.list({ ...params, includePreviewBooks: true });
         if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesData(r);
-        setSeriesPage(page);
+        setSeriesPage(params.page ?? 1);
       } catch (e) {
         if (requestSeq !== seriesRequestSeq.current) return;
         setSeriesError(e instanceof Error ? e.message : "Failed to load series.");
@@ -260,23 +224,22 @@ export function LibraryBrowsePage({
         if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
       }
     },
-    [effectiveGroupId, pageSize, seriesOrdering, spl, tagSlug],
+    [effectiveGroupId, spl],
   );
 
   const loadAuthors = useCallback(
-    async (page: number) => {
+    async (params: LibraryEntityListParams) => {
       if (!spl) return;
       const requestSeq = ++authorsRequestSeq.current;
       setAuthorsBusy(true);
       setAuthorsError(null);
       try {
-        const params = { tag: tagSlug, page, pageSize, ordering: authorsOrdering } as const;
         const r = effectiveGroupId
           ? await spl.library.groups.authors(effectiveGroupId, params)
           : await spl.library.authors.list({ ...params, includePreviewBooks: true });
         if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsData(r);
-        setAuthorsPage(page);
+        setAuthorsPage(params.page ?? 1);
       } catch (e) {
         if (requestSeq !== authorsRequestSeq.current) return;
         setAuthorsError(e instanceof Error ? e.message : "Failed to load authors.");
@@ -284,7 +247,7 @@ export function LibraryBrowsePage({
         if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
       }
     },
-    [authorsOrdering, effectiveGroupId, pageSize, spl, tagSlug],
+    [effectiveGroupId, spl],
   );
 
   useEffect(() => {
@@ -298,31 +261,31 @@ export function LibraryBrowsePage({
 
     // Global search wins over browse.
     if (qFromRoute) {
-      void loadBooks({ page: routePage, q: qFromRoute, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks(booksQuery);
       return;
     }
 
     if (browseMode === "series" && route.seriesId) {
-      void loadBooks({ page: routePage, seriesId: route.seriesId, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks(booksQuery);
       return;
     }
 
     if (browseMode === "authors" && route.authorId) {
-      void loadBooks({ page: routePage, authorId: route.authorId, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks(booksQuery);
       return;
     }
 
     if (browseMode === "books") {
-      void loadBooks({ page: routePage, groupId: effectiveGroupId, tag: tagSlug, ordering: bookOrdering });
+      void loadBooks(booksQuery);
       return;
     }
 
     if (browseMode === "series" && !route.seriesId) {
-      void loadSeries(routePage);
+      void loadSeries(entityQuery);
       return;
     }
     if (browseMode === "authors" && !route.authorId) {
-      void loadAuthors(routePage);
+      void loadAuthors(entityQuery);
       return;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
