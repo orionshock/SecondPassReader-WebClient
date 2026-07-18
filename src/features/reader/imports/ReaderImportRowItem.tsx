@@ -20,7 +20,7 @@ export function ReaderImportRowItem({
 
   return (
     <article
-      className={`spReaderImportRow${selected ? " spReaderImportRowSelected" : ""}`}
+      className={`spReaderImportRow${selected ? " spReaderImportRowSelected" : ""}${row.status === "not-found" ? " spReaderImportRowNotFound" : ""}`}
       style={{ ["--annotation-color" as any]: colorVars.color, ["--annotation-bg" as any]: colorVars.bg }}
     >
       <div className="spReaderImportRowHeader">
@@ -64,7 +64,6 @@ export function ReaderImportRowItem({
             disabled={row.status === "accepted" || row.status === "skipped" || row.status === "searching"}
           >
             <span>{cfiHint ? `Location hint: ${cfiHint}` : "No location hint"}</span>
-            {row.status === "searching" ? null : <span className="spReaderImportLocationAction">Check location</span>}
           </button>
         ) : null}
       </div>

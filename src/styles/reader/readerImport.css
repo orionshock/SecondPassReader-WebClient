@@ -136,6 +136,10 @@
   box-shadow: inset 3px 0 0 var(--sp-reader-accent);
 }
 
+.spReaderImportRowNotFound:not(.spReaderImportRowSelected) {
+  box-shadow: inset 2px 0 0 var(--sp-reader-danger-border);
+}
+
 .spReaderImportRowHeader {
   display: flex;
   align-items: center;
@@ -190,6 +194,15 @@
   font-weight: 600;
 }
 
+.spReaderImportStatus-not-found {
+  border: 1px solid var(--sp-reader-danger-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: var(--sp-reader-danger-bg);
+  color: var(--sp-reader-danger-text);
+  font-weight: 700;
+}
+
 .spReaderImportQuote {
   display: block;
   width: auto;
@@ -216,7 +229,8 @@
   justify-content: space-between;
   gap: 8px;
   border: 0;
-  padding: 4px 0;
+  border-radius: 4px;
+  padding: 5px 6px;
   background: transparent;
   color: var(--sp-reader-muted);
   cursor: pointer;
@@ -226,10 +240,11 @@
   text-align: left;
 }
 
-.spReaderImportLocationButton:hover,
-.spReaderImportLocationButton:focus-visible {
+.spReaderImportLocationButton:not(:disabled):hover,
+.spReaderImportLocationButton:not(:disabled):focus-visible {
   outline: 0;
   background: var(--sp-reader-hover);
+  box-shadow: inset 0 0 0 1px var(--sp-reader-border);
 }
 
 .spReaderImportLocationButton:disabled {
@@ -238,12 +253,6 @@
 
 .spReaderImportLocationButtonEmpty {
   color: var(--sp-reader-muted);
-}
-
-.spReaderImportLocationAction {
-  flex: 0 0 auto;
-  color: var(--sp-reader-accent);
-  font-weight: 700;
 }
 
 .spReaderImportRowActions {
