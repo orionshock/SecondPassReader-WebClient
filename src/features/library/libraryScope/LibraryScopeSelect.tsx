@@ -1,41 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import type { LibraryGroup, SecondPassClient } from "@secondpass/client";
+import { useEffect, useRef } from "react";
+import type { LibraryGroup } from "@secondpass/client";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 
-type Props = { spl: SecondPassClient; groupId?: string; onChange: (groupId?: string) => void };
-const GROUP_PAGE_SIZE = 100;
+type Props = {
+  groups: LibraryGroup[];
+  busy: boolean;
+  error: string | null;
+  groupId?: string;
+  onChange: (groupId?: string) => void;
+};
 
-export function LibraryScopeSelect({ spl, groupId, onChange }: Props) {
-  const [groups, setGroups] = useState<LibraryGroup[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: Props) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setBusy(true);
-    setError(null);
-    void (async () => {
-      try {
-        const loaded: LibraryGroup[] = [];
-        let page = 1;
-        let hasNext = true;
-        while (hasNext) {
-          const result = await spl.library.groups.list({ ordering: "name", page, pageSize: GROUP_PAGE_SIZE });
-          loaded.push(...result.results);
-          hasNext = Boolean(result.next);
-          page += 1;
-        }
-        if (!cancelled) setGroups(loaded);
-      } catch (reason) {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Failed to load library groups.");
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [spl]);
-
   useEffect(() => {
     const closeOnOutsidePointer = (event: PointerEvent) => {
       if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) detailsRef.current.open = false;

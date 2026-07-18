@@ -6,7 +6,7 @@ import { getConnectionStatus } from "../connection/connectionStatus";
 import type { OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
-import { LibraryScopeSelect } from "./libraryScope/LibraryScopeSelect";
+import { LibraryScopeControl } from "./libraryScope/LibraryScopeControl";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./data/libraryAxisQueries";
 import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
 import { LibraryAxisTabs } from "./controls/LibraryAxisTabs";
@@ -358,7 +358,7 @@ export function LibraryBrowsePage({
           <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
             <div className="libraryBrowseTabGroup">
               {spl && advancedGroupsEnabled ? (
-                <LibraryScopeSelect
+                <LibraryScopeControl
                   spl={spl}
                   groupId={effectiveGroupId}
                   onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
