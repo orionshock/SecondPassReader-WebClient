@@ -21,6 +21,9 @@ export function BookDetailPanel({
   launchMessage,
   onOpenReader,
   onViewSessions,
+  onViewAuthor,
+  onViewSeries,
+  onViewTag,
   activitySummary,
   activitySummaryFailed,
   downloadState,
@@ -30,6 +33,9 @@ export function BookDetailPanel({
   launchMessage: string | null;
   onOpenReader: (book: LibraryBook) => void;
   onViewSessions: (book: LibraryBook) => void;
+  onViewAuthor: (authorId: string) => void;
+  onViewSeries: (seriesId: string) => void;
+  onViewTag: (tagSlug: string) => void;
   activitySummary?: ReadingBookActivitySummaryRow | null;
   activitySummaryFailed?: boolean;
   downloadState:
@@ -40,7 +46,6 @@ export function BookDetailPanel({
     | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
 }) {
-  const authors = (book.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
   const seriesText =
     book.series?.name && book.series.series_index != null ? `${book.series.name} #${book.series.series_index}` : book.series?.name;
   const published = formatBookPublishedDate(book);
@@ -63,7 +68,7 @@ export function BookDetailPanel({
 
   return (
     <div className="bookDetailPanel">
-      <div className="bookDetailHeader">
+      <div className="bookDetailHero">
         <div className="bookDetailCover">
           {coverSrc ? (
             <img
@@ -80,66 +85,85 @@ export function BookDetailPanel({
           )}
         </div>
 
-        <div className="bookDetailHeaderText">
-          <div className="bookDetailTitle">{book.title}</div>
+        <div className="bookDetailHeroContent">
+          <h2 className="bookDetailTitle">{book.title}</h2>
           {book.subtitle ? <div className="bookDetailSubtitle">{book.subtitle}</div> : null}
-          {authors ? <div className="muted">{authors}</div> : null}
-          {seriesText ? <div className="muted">{seriesText}</div> : null}
+
+          {book.series && seriesText ? (
+            <div className="bookDetailRelationLine muted">
+              <span>Series</span>
+              <button type="button" className="bookDetailLink" onClick={() => onViewSeries(String(book.series!.id))}>{seriesText}</button>
+            </div>
+          ) : null}
+          {book.authors?.length ? (
+            <div className="bookDetailRelationLine muted">
+              <span>By</span>
+              <span className="bookDetailLinkList">
+                {book.authors.map((author, index) => (
+                  <span key={String(author.id)}>
+                    {index > 0 ? ", " : null}
+                    <button type="button" className="bookDetailLink" onClick={() => onViewAuthor(String(author.id))}>{author.name}</button>
+                  </span>
+                ))}
+              </span>
+            </div>
+          ) : null}
 
           <div className="bookDetailMetaLine muted">
             <InlineMeta items={[book.publisher || null, book.language || null, published]} />
           </div>
-        </div>
 
-        <div className="bookDetailActions">
-          <button
-            type="button"
-            className="button buttonPrimary bookDetailActionButton"
-            onClick={() => onOpenReader(book)}
-            disabled={busy}
-          >
-            Open reader
-          </button>
-          <button
-            type="button"
-            className="button buttonPrimary bookDetailActionButton"
-            onClick={() => onViewSessions(book)}
-            disabled={sessionsUnavailable}
-            title={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
-            aria-label={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
-          >
-            Reading sessions
-          </button>
+          {book.catalog_tags?.length ? (
+            <div className="bookDetailTags" aria-label="Catalog tags">
+              {book.catalog_tags.map((tag) => (
+                <button key={String(tag.id)} type="button" className="bookDetailTagChip" onClick={() => onViewTag(tag.slug)}>{tag.name}</button>
+              ))}
+            </div>
+          ) : null}
+
+          {descriptionText ? (
+            <div className="bookDetailSummaryBlock">
+              <div
+                className={`bookDetailSummary ${descriptionExpanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
+                id="book-detail-summary"
+              >
+                {descriptionText}
+              </div>
+              <button
+                type="button"
+                className="bookDetailSummaryToggle"
+                onClick={() => setDescriptionExpanded((v) => !v)}
+                aria-expanded={descriptionExpanded}
+                aria-controls="book-detail-summary"
+              >
+                {descriptionExpanded ? "Show less" : "Show more"}
+              </button>
+            </div>
+          ) : (
+            <div className="bookDetailSummaryBlock">
+              <div className="bookDetailSummary">
+                <span className="muted"><em>No Summary Provided</em></span>
+              </div>
+            </div>
+          )}
+
+          <div className="bookDetailActions">
+            <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={busy}>
+              Open reader
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => onViewSessions(book)}
+              disabled={sessionsUnavailable}
+              title={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
+              aria-label={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
+            >
+              Reading sessions
+            </button>
+          </div>
         </div>
       </div>
-
-      {descriptionText ? (
-        <div className="bookDetailSummaryBlock">
-          <div
-            className={`bookDetailSummary ${descriptionExpanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
-            id="book-detail-summary"
-          >
-            {descriptionText}
-          </div>
-          <button
-            type="button"
-            className="bookDetailSummaryToggle"
-            onClick={() => setDescriptionExpanded((v) => !v)}
-            aria-expanded={descriptionExpanded}
-            aria-controls="book-detail-summary"
-          >
-            {descriptionExpanded ? "Show less" : "Show more"}
-          </button>
-        </div>
-      ) : (
-        <div className="bookDetailSummaryBlock">
-          <div className="bookDetailSummary">
-            <span className="muted">
-              <em>No Summary Provided</em>
-            </span>
-          </div>
-        </div>
-      )}
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
       {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}

@@ -12,6 +12,9 @@ export function BookDetailModal({
   onClose,
   onOpenReader,
   onViewSessions,
+  onViewAuthor,
+  onViewSeries,
+  onViewTag,
   launchMessage,
   downloadState,
 }: {
@@ -22,6 +25,9 @@ export function BookDetailModal({
   onClose: () => void;
   onOpenReader: (book: LibraryBook) => void;
   onViewSessions: (book: LibraryBook) => void;
+  onViewAuthor: (authorId: string) => void;
+  onViewSeries: (seriesId: string) => void;
+  onViewTag: (tagSlug: string) => void;
   launchMessage: string | null;
   downloadState:
     | { phase: "idle" }
@@ -145,6 +151,9 @@ export function BookDetailModal({
               launchMessage={launchMessage}
               onOpenReader={onOpenReader}
               onViewSessions={onViewSessions}
+              onViewAuthor={onViewAuthor}
+              onViewSeries={onViewSeries}
+              onViewTag={onViewTag}
               activitySummary={activitySummary}
               activitySummaryFailed={activitySummaryFailed}
               downloadState={downloadState}

@@ -647,6 +647,41 @@ export default function App() {
               onViewSessions={(book) => {
                 navigateTo({ kind: "sessions", bookId: String(book.id) });
               }}
+              onViewAuthor={(authorId) => {
+                navigateTo({
+                  kind: "library",
+                  browse: "authors",
+                  authorId,
+                  groupId: route?.kind === "library" ? route.groupId : undefined,
+                  tag: route?.kind === "library" ? route.tag : undefined,
+                  ordering: "title",
+                  page: 1,
+                  pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
+                });
+              }}
+              onViewSeries={(seriesId) => {
+                navigateTo({
+                  kind: "library",
+                  browse: "series",
+                  seriesId,
+                  groupId: route?.kind === "library" ? route.groupId : undefined,
+                  tag: route?.kind === "library" ? route.tag : undefined,
+                  ordering: "series_index",
+                  page: 1,
+                  pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
+                });
+              }}
+              onViewTag={(tag) => {
+                navigateTo({
+                  kind: "library",
+                  browse: "books",
+                  groupId: route?.kind === "library" ? route.groupId : undefined,
+                  tag,
+                  ordering: "title",
+                  page: 1,
+                  pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
+                });
+              }}
               launchMessage={null}
               downloadState={{ phase: "idle" }}
             />
