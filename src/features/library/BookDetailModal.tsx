@@ -15,6 +15,7 @@ export function BookDetailModal({
   onViewAuthor,
   onViewSeries,
   onViewTag,
+  onManageShelves,
   launchMessage,
   downloadState,
 }: {
@@ -28,6 +29,7 @@ export function BookDetailModal({
   onViewAuthor: (authorId: string) => void;
   onViewSeries: (seriesId: string) => void;
   onViewTag: (tagSlug: string) => void;
+  onManageShelves: () => void;
   launchMessage: string | null;
   downloadState:
     | { phase: "idle" }
@@ -154,6 +156,8 @@ export function BookDetailModal({
               onViewAuthor={onViewAuthor}
               onViewSeries={onViewSeries}
               onViewTag={onViewTag}
+              onManageShelves={onManageShelves}
+              spl={spl}
               activitySummary={activitySummary}
               activitySummaryFailed={activitySummaryFailed}
               downloadState={downloadState}

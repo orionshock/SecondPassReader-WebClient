@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import type { LibraryBook, ReadingBookActivitySummaryRow } from "@secondpass/client";
+import type { LibraryBook, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { formatBookPublishedDate } from "./display/bookDisplayUtils";
+import { AddToShelfMenu } from "./bookDetail/AddToShelfMenu";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -24,6 +25,8 @@ export function BookDetailPanel({
   onViewAuthor,
   onViewSeries,
   onViewTag,
+  onManageShelves,
+  spl,
   activitySummary,
   activitySummaryFailed,
   downloadState,
@@ -36,6 +39,8 @@ export function BookDetailPanel({
   onViewAuthor: (authorId: string) => void;
   onViewSeries: (seriesId: string) => void;
   onViewTag: (tagSlug: string) => void;
+  onManageShelves: () => void;
+  spl: SecondPassClient | null;
   activitySummary?: ReadingBookActivitySummaryRow | null;
   activitySummaryFailed?: boolean;
   downloadState:
@@ -147,21 +152,23 @@ export function BookDetailPanel({
             </div>
           )}
 
-          <div className="bookDetailActions">
-            <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={busy}>
-              Open reader
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => onViewSessions(book)}
-              disabled={sessionsUnavailable}
-              title={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
-              aria-label={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
-            >
-              Reading sessions
-            </button>
-          </div>
+        </div>
+
+        <div className="bookDetailActions">
+          <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={busy}>
+            Open reader
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={() => onViewSessions(book)}
+            disabled={sessionsUnavailable}
+            title={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
+            aria-label={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
+          >
+            Reading sessions
+          </button>
+          {spl ? <AddToShelfMenu spl={spl} bookId={String(book.id)} onManageShelves={onManageShelves} /> : null}
         </div>
       </div>
 

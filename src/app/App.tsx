@@ -682,6 +682,7 @@ export default function App() {
                   pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
                 });
               }}
+              onManageShelves={() => navigateTo({ kind: "shelves" })}
               launchMessage={null}
               downloadState={{ phase: "idle" }}
             />
