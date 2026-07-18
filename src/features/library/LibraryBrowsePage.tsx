@@ -1,11 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibraryBookListParams, LibraryEntityListParams, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { getConnectionStatus } from "../connection/connectionStatus";
-import { BookResultsView } from "./display/BookResultsView";
-import { CoverPreviewStrip } from "./display/CoverPreviewStrip";
-import { ExpandableText } from "./display/ExpandableText";
 import type { OrderingOption } from "../../components/OrderingControl";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/libraryBooksView";
 import { CatalogTagRail } from "./catalogTags/CatalogTagRail";
@@ -13,9 +10,12 @@ import { LibraryScopeSelect } from "./libraryScope/LibraryScopeSelect";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./data/libraryAxisQueries";
 import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
 import { LibraryAxisTabs } from "./controls/LibraryAxisTabs";
-import { LibraryPaginationControls } from "./controls/LibraryPaginationControls";
 import { LibrarySearchControls } from "./controls/LibrarySearchControls";
 import { LibrarySortViewControls } from "./controls/LibrarySortViewControls";
+import { LibraryAuthorRows } from "./results/LibraryAuthorRows";
+import { LibraryBooksResults } from "./results/LibraryBooksResults";
+import { LibrarySelectedAxisHeader } from "./results/LibrarySelectedAxisHeader";
+import { LibrarySeriesRows } from "./results/LibrarySeriesRows";
 
 type BrowseMode = LibraryAxis;
 type BookOrdering = LibraryBookOrdering;
@@ -339,27 +339,6 @@ export function LibraryBrowsePage({
     onCommitSearch?.(next);
   }, [onCommitSearch, qDraft]);
 
-  const handleCardKeyDown = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    action();
-  }, []);
-
-  const booksPager = useMemo(() => {
-    if (!booksData) return null;
-    const totalPages = Math.max(1, Math.ceil((booksData.count ?? 0) / pageSize));
-    return { totalPages };
-  }, [booksData, pageSize]);
-
-  const selectedSeriesSummary = typeof selectedSeries?.summary === "string" ? selectedSeries.summary.trim() : "";
-  const selectedAuthorBiography = typeof selectedAuthor?.biography === "string" ? selectedAuthor.biography.trim() : "";
-  const bookListMetaItems = booksData
-    ? [
-        `Page ${booksPage} of ${booksPager?.totalPages ?? 1}`,
-        `${booksData.count} books`,
-      ]
-    : [];
-
   return (
     <section className="panel">
       {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
@@ -414,164 +393,28 @@ export function LibraryBrowsePage({
               />
             ) : null}
             <div className="libraryCatalogResults">
-          {booksError ? <p className="errorText">{booksError}</p> : null}
-
-          {showBookList ? (
-            <>
-              {browseMode === "series" && selectedSeries ? (
-                <div className="libraryBrowseHeader">
-                  <div>
-                    <div className="panelTitle" style={{ margin: 0 }}>
-                      {selectedSeries.name}
-                    </div>
-                    <ExpandableText
-                      key={`series-${String(selectedSeries.id)}`}
-                      text={selectedSeriesSummary}
-                      collapsedLines={1}
-                      className="libraryBrowseHeaderText"
-                      label="series summary"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {browseMode === "authors" && selectedAuthor ? (
-                <div className="libraryBrowseHeader">
-                  <div>
-                    <div className="panelTitle" style={{ margin: 0 }}>
-                      {selectedAuthor.name}
-                    </div>
-                    <ExpandableText
-                      key={`author-${String(selectedAuthor.id)}`}
-                      text={selectedAuthorBiography}
-                      collapsedLines={1}
-                      className="libraryBrowseHeaderText"
-                      label="author biography"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {booksData ? (
+              {booksError ? <p className="errorText">{booksError}</p> : null}
+              {showBookList ? (
                 <>
-                  <LibraryPaginationControls
-                    metaItems={bookListMetaItems}
+                  {browseMode === "series" && selectedSeries ? <LibrarySelectedAxisHeader kind="series" series={selectedSeries} /> : null}
+                  {browseMode === "authors" && selectedAuthor ? <LibrarySelectedAxisHeader kind="author" author={selectedAuthor} /> : null}
+                  <LibraryBooksResults
+                    data={booksData}
                     busy={booksBusy}
-                    hasPrevious={Boolean(booksData.previous)}
-                    hasNext={Boolean(booksData.next)}
-                    onPrevious={() => handlePageChange(Math.max(1, booksPage - 1))}
-                    onNext={() => handlePageChange(booksPage + 1)}
-                  />
-
-                  <BookResultsView
-                    books={booksData.results}
+                    page={booksPage}
+                    pageSize={pageSize}
                     viewMode={bookViewMode}
                     serverBaseUrl={profile?.serverBaseUrl}
                     selectedBookId={selectedBookId ? String(selectedBookId) : null}
-                    onViewBook={(b) => onViewBook?.(String(b.id))}
-                  />
-
-                  <LibraryPaginationControls
-                    metaItems={bookListMetaItems}
-                    busy={booksBusy}
-                    hasPrevious={Boolean(booksData.previous)}
-                    hasNext={Boolean(booksData.next)}
-                    onPrevious={() => handlePageChange(Math.max(1, booksPage - 1))}
-                    onNext={() => handlePageChange(booksPage + 1)}
-                    stickyBottom
+                    onViewBook={(book) => onViewBook?.(String(book.id))}
+                    onPageChange={handlePageChange}
                   />
                 </>
+              ) : browseMode === "series" ? (
+                <LibrarySeriesRows data={seriesData} busy={seriesBusy} error={seriesError} page={seriesPage} profile={profile} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
               ) : (
-                <div className="muted" style={{ marginTop: 10 }}>
-                  {booksBusy ? `Loading${"\u2026"}` : "No results yet."}
-                </div>
+                <LibraryAuthorRows data={authorsData} busy={authorsBusy} error={authorsError} page={authorsPage} profile={profile} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
               )}
-            </>
-          ) : browseMode === "series" ? (
-            <>
-              {seriesError ? <p className="errorText">{seriesError}</p> : null}
-              {seriesBusy && !seriesData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
-
-              {seriesData?.results?.length ? (
-                <div className="libraryEntityList">
-                  {seriesData.results.map((s) => {
-                    const openSeries = () => onShowSeriesBooks?.(String(s.id));
-                    return (
-                    <div
-                      key={String(s.id)}
-                      className="libraryEntityCard libraryEntityCardButton"
-                      role="button"
-                      tabIndex={0}
-                      onClick={openSeries}
-                      onKeyDown={(event) => handleCardKeyDown(event, openSeries)}
-                      aria-label={`View books in ${s.name}`}
-                      title={`View books in ${s.name}`}
-                    >
-                      <div className="libraryEntityMain">
-                        <div className="libraryEntityTitle">{s.name}</div>
-                        {typeof s.book_count === "number" ? <div className="muted">{s.book_count} books</div> : null}
-                      </div>
-                      <CoverPreviewStrip books={s.preview_books} baseUrl={profile} onBookClick={onViewBook} />
-                    </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              {seriesData ? (
-                <LibraryPaginationControls
-                  metaItems={[`Page ${seriesPage}`, `${seriesData.count} series`]}
-                  busy={seriesBusy}
-                  hasPrevious={Boolean(seriesData.previous)}
-                  hasNext={Boolean(seriesData.next)}
-                  onPrevious={() => handlePageChange(Math.max(1, seriesPage - 1))}
-                  onNext={() => handlePageChange(seriesPage + 1)}
-                />
-              ) : null}
-            </>
-          ) : (
-            <>
-              {authorsError ? <p className="errorText">{authorsError}</p> : null}
-              {authorsBusy && !authorsData ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
-
-              {authorsData?.results?.length ? (
-                <div className="libraryEntityList">
-                  {authorsData.results.map((a) => {
-                    const openAuthor = () => onShowAuthorBooks?.(String(a.id));
-                    return (
-                    <div
-                      key={String(a.id)}
-                      className="libraryEntityCard libraryEntityCardButton"
-                      role="button"
-                      tabIndex={0}
-                      onClick={openAuthor}
-                      onKeyDown={(event) => handleCardKeyDown(event, openAuthor)}
-                      aria-label={`View books by ${a.name}`}
-                      title={`View books by ${a.name}`}
-                    >
-                      <div className="libraryEntityMain">
-                        <div className="libraryEntityTitle">{a.name}</div>
-                        {typeof a.book_count === "number" ? <div className="muted">{a.book_count} books</div> : null}
-                      </div>
-                      <CoverPreviewStrip books={a.preview_books} baseUrl={profile} onBookClick={onViewBook} />
-                    </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              {authorsData ? (
-                <LibraryPaginationControls
-                  metaItems={[`Page ${authorsPage}`, `${authorsData.count} authors`]}
-                  busy={authorsBusy}
-                  hasPrevious={Boolean(authorsData.previous)}
-                  hasNext={Boolean(authorsData.next)}
-                  onPrevious={() => handlePageChange(Math.max(1, authorsPage - 1))}
-                  onNext={() => handlePageChange(authorsPage + 1)}
-                />
-              ) : null}
-            </>
-          )}
             </div>
           </div>
         </>
