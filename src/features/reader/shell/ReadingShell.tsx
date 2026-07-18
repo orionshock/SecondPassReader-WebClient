@@ -5,6 +5,7 @@ import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
 import type {
   ReaderDescribeCfiHandle,
+  ReaderDisplayCfiHandle,
   ReaderProbeCfiHandle,
   ReaderSearchBookHandle,
   ReadingShellCommand,
@@ -16,6 +17,7 @@ import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
 import { probeReaderCfi } from "./readerCfiProbe";
+import { displayReaderCfiSafely } from "./readerCfiDisplay";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
@@ -39,6 +41,7 @@ export type ReadingShellProps = {
   onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
   onDescribeCfiReady?: (fn: ReaderDescribeCfiHandle | null) => void;
   onProbeCfiReady?: (fn: ReaderProbeCfiHandle | null) => void;
+  onDisplayCfiReady?: (fn: ReaderDisplayCfiHandle | null) => void;
   onSearchReady?: (fn: ReaderSearchBookHandle | null) => void;
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
@@ -294,6 +297,12 @@ export function ReadingShell(props: ReadingShellProps) {
           }
           return probeReaderCfi((candidate) => engine.probeCfi(candidate), cfi);
         });
+        props.onDisplayCfiReady?.((cfi) => {
+          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
+            return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
+          }
+          return displayReaderCfiSafely((candidate) => engine.displayCfiSafely(candidate), cfi);
+        });
         props.onSearchReady?.((query, options) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
             return Promise.reject(new Error("Reader engine is not ready."));
@@ -337,6 +346,7 @@ export function ReadingShell(props: ReadingShellProps) {
       engineRef.current = null;
       props.onDescribeCfiReady?.(null);
       props.onProbeCfiReady?.(null);
+      props.onDisplayCfiReady?.(null);
       props.onSearchReady?.(null);
       engine?.destroy();
     };
@@ -348,6 +358,7 @@ export function ReadingShell(props: ReadingShellProps) {
     props.blob,
     props.onDescribeCfiReady,
     props.onProbeCfiReady,
+    props.onDisplayCfiReady,
     props.onSearchReady,
     reportCommandError,
     runCommandOnEngine,

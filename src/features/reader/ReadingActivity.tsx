@@ -170,6 +170,7 @@ function ReaderActivityContent({
     job: readerImport.job,
     searchBook: readerState.search.searchBook,
     probeCfi: readerState.search.probeCfi,
+    displayCfi: readerState.search.displayCfi,
     stagedSelectionHandle: readerState.stagedSelection.handle,
     selectRow: readerImport.selectRow,
     setRowStatus: readerImport.setRowStatus,

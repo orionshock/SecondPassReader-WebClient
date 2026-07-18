@@ -1,6 +1,6 @@
 import ePub, { EpubCFI, type Book, type Location, type Rendition, type Section } from "@likecoin/epub-ts";
 import { normalizeReaderSettings, type ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/types";
+import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection } from "../domain/types";
@@ -47,6 +47,7 @@ export type EpubTsBookEngine = {
   setTemporarySearchHighlight(cfiRange: string | null): void;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   probeCfi(cfi: string): Promise<ReaderCfiProbeResult>;
+  displayCfiSafely(cfi: string): Promise<ReaderCfiDisplayResult>;
   searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]>;
   destroy(): void;
 };
@@ -201,7 +202,9 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     }
   };
 
+  let safeDisplayInProgress = 0;
   const onDisplayError = (err: Error) => {
+    if (safeDisplayInProgress > 0) return;
     init.onError?.(err);
   };
 
@@ -422,6 +425,37 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         };
       } finally {
         if (!wasLoaded) section.unload();
+      }
+    },
+    async displayCfiSafely(cfi: string): Promise<ReaderCfiDisplayResult> {
+      const trimmed = cfi.trim();
+      if (!trimmed) return { ok: false, code: "invalid", error: "CFI is required." };
+      if (destroyed) return { ok: false, code: "unsupported", error: "Engine is destroyed." };
+
+      let targetSpine: number | undefined;
+      try {
+        targetSpine = new EpubCFI(trimmed).spinePos;
+      } catch (error) {
+        return { ok: false, code: "invalid", error: error instanceof Error ? error.message : "Invalid CFI." };
+      }
+
+      safeDisplayInProgress += 1;
+      try {
+        await rendition.display(trimmed);
+        try {
+          if (isUsableRange(rendition.getRange(trimmed))) return { ok: true, code: "displayed" };
+        } catch {
+          // Exact range verification is not always available after a section display.
+        }
+        const current = getCurrentCfi();
+        if (current && new EpubCFI(current).spinePos === targetSpine) {
+          return { ok: true, code: "displayed-approximate" };
+        }
+        return { ok: false, code: "verification-failed", error: "Reader did not reach the bookmark section." };
+      } catch (error) {
+        return { ok: false, code: "display-failed", error: error instanceof Error ? error.message : "CFI display failed." };
+      } finally {
+        safeDisplayInProgress -= 1;
       }
     },
     async searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]> {

@@ -9,12 +9,13 @@ import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./rea
 import { getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatches } from "./readerImportSearch";
-import type { ReaderProbeCfiHandle } from "../shell/types";
+import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
 
 export function useReaderImportActivation({
   job,
   searchBook,
   probeCfi,
+  displayCfi,
   stagedSelectionHandle,
   selectRow,
   setRowStatus,
@@ -26,6 +27,7 @@ export function useReaderImportActivation({
   job: ReaderImportJob | null;
   searchBook: ReaderSearchBookHandle | null;
   probeCfi: ReaderProbeCfiHandle | null;
+  displayCfi: ReaderDisplayCfiHandle | null;
   stagedSelectionHandle: StagedSelectionHandle | null;
   selectRow: (rowId: string) => void;
   setRowStatus: (rowId: string, status: ReaderImportRowStatus) => void;
@@ -65,16 +67,17 @@ export function useReaderImportActivation({
         cfiPreview: previewImportText(row.cfiHint),
       });
       try {
-        const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi });
+        debugReaderImport("bookmark CFI display start", { rowId, cfiPreview: previewImportText(row.cfiHint) });
+        const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi, displayCfi });
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
         if (outcome.result.ok) {
-          debugReaderImport("bookmark CFI probe success", {
+          debugReaderImport("bookmark CFI display success", {
             rowId,
             code: outcome.result.code,
-            description: outcome.result.description,
+            verification: outcome.result.code === "displayed" ? "exact" : "approximate",
           });
         } else {
-          debugReaderImport("bookmark CFI probe failed", {
+          debugReaderImport("bookmark CFI display failure", {
             rowId,
             code: outcome.result.code,
             reason: outcome.result.error,
@@ -228,5 +231,5 @@ export function useReaderImportActivation({
       clearTemporaryHighlight();
       setDrawerOpen(true);
     }
-  }, [clearTemporaryHighlight, job, jumpToResult, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
+  }, [clearTemporaryHighlight, displayCfi, job, jumpToResult, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
 }

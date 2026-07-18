@@ -77,6 +77,10 @@ export type ReaderCfiProbeResult =
   | { ok: true; code: "exists-visible" | "exists-in-book"; description?: string }
   | { ok: false; code: "invalid" | "missing-target" | "unsupported" | "resolution-failed"; error: string; description?: string };
 
+export type ReaderCfiDisplayResult =
+  | { ok: true; code: "displayed" | "displayed-approximate" }
+  | { ok: false; code: "invalid" | "unsupported" | "display-failed" | "verification-failed"; error: string };
+
 export type ReaderSearchResult = {
   id: string;
   cfi: string;
