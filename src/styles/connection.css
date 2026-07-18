@@ -4,6 +4,20 @@
   max-width: 680px;
 }
 
+.serverPresets {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.serverPresetButton {
+  display: grid;
+  justify-items: start;
+  text-align: left;
+}
+
 .pairScreen {
   max-width: 760px;
   display: grid;
@@ -328,4 +342,3 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-

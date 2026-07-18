@@ -32,3 +32,12 @@ export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondP
     throw new Error(message);
   }
 }
+
+export async function verifySecondPassServer(
+  input: string,
+  discover: (serverBaseUrl: string) => Promise<SecondPassDiscovery> = discoverSecondPass,
+) {
+  const { serverBaseUrl } = normalizeServerBaseUrl(input);
+  const discovery = await discover(serverBaseUrl);
+  return { serverBaseUrl, discovery };
+}

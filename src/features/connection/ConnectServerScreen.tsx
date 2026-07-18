@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SecondPassDiscovery } from "@secondpass/client";
 import {
   getActiveConnection,
@@ -6,7 +6,8 @@ import {
   touchConnectionProfileLastUsed,
   type ConnectionProfile,
 } from "../../storage/connectionProfiles";
-import { discoverSecondPass, normalizeServerBaseUrl } from "./connectionUtils";
+import { verifySecondPassServer } from "./connectionUtils";
+import { loadServerPresets, type ServerPreset } from "./serverPresets";
 
 type Props = {
   selectedProfileId: string | null;
@@ -41,13 +42,23 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
   const [serverUrlInput, setServerUrlInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [presets, setPresets] = useState<ServerPreset[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void loadServerPresets().then((loaded) => {
+      if (active) setPresets(loaded);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleConnect() {
     setError(null);
     setBusy(true);
     try {
-      const { serverBaseUrl } = normalizeServerBaseUrl(serverUrlInput);
-      const discovery = await discoverSecondPass(serverBaseUrl);
+      const { serverBaseUrl, discovery } = await verifySecondPassServer(serverUrlInput);
       const summary = formatDiscoverySummary(discovery);
 
       const now = new Date().toISOString();
@@ -91,6 +102,23 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
           void handleConnect();
         }}
       >
+        {presets.length > 0 ? (
+          <fieldset className="serverPresets">
+            <legend className="fieldLabel">Known servers</legend>
+            {presets.map((preset) => (
+              <button
+                className="button serverPresetButton"
+                type="button"
+                key={`${preset.name}:${preset.url}`}
+                onClick={() => setServerUrlInput(preset.url)}
+              >
+                <span>{preset.name}</span>
+                <span className="muted mono">{preset.url}</span>
+              </button>
+            ))}
+            <div className="fieldHelp muted">Presets are suggestions. The selected server is verified before pairing.</div>
+          </fieldset>
+        ) : null}
         <label className="field">
           <span className="fieldLabel">Server URL</span>
           <input

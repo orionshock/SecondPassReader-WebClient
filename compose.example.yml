@@ -5,7 +5,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: secondpassreader:local
+    image: secondpass-reader-client:local
+    container_name: secondpass-reader-client
+    env_file:
+      - path: .env
+        required: false
+    # If you do not use .env, uncomment this block and set the desired values.
+    # environment:
+    #   SECONDPASS_SERVER_PRESETS_JSON: '[]'
+    #   SECONDPASS_SERVER_1_NAME: Production Library
+    #   SECONDPASS_SERVER_1_URL: https://library.example.com
+    #   SECONDPASS_SERVER_2_NAME: Local Library
+    #   SECONDPASS_SERVER_2_URL: http://localhost:8000
     expose:
       - "8000"
     restart: unless-stopped
