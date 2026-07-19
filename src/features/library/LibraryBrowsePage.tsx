@@ -181,7 +181,7 @@ export function LibraryBrowsePage({
             onSearch={handleCommitSearch}
           />
 
-          <div className="libraryBrowseTabs" role="tablist" aria-label="Browse by">
+          <div className="libraryBrowseTabs">
             <div className="libraryBrowseTabGroup">
               {spl && advancedGroupsEnabled ? (
                 <LibraryScopeControl
@@ -218,7 +218,12 @@ export function LibraryBrowsePage({
                 onSelect={(slug) => onUpdateRoute?.({ tag: slug ?? null, page: 1, pageSize })}
               />
             ) : null}
-            <div className="libraryCatalogResults">
+            <div
+              id="library-axis-results"
+              className="libraryCatalogResults"
+              role="tabpanel"
+              aria-labelledby={`library-axis-${browseMode}-tab`}
+            >
               {booksError ? <p className="errorText">{booksError}</p> : null}
               {showBookList ? (
                 <>

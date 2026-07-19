@@ -13,6 +13,7 @@ export function BookViewModeToggle({
         type="button"
         className={`libraryViewToggleButton ${viewMode === "list" ? "libraryViewToggleButtonActive" : ""}`}
         onClick={() => onChange("list")}
+        aria-pressed={viewMode === "list"}
       >
         List
       </button>
@@ -20,6 +21,7 @@ export function BookViewModeToggle({
         type="button"
         className={`libraryViewToggleButton ${viewMode === "grid" ? "libraryViewToggleButtonActive" : ""}`}
         onClick={() => onChange("grid")}
+        aria-pressed={viewMode === "grid"}
       >
         Grid
       </button>

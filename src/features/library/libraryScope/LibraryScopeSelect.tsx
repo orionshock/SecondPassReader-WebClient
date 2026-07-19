@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { LibraryGroup } from "@secondpass/client";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 
@@ -12,6 +12,8 @@ type Props = {
 
 export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: Props) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
+  const triggerRef = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const closeOnOutsidePointer = (event: PointerEvent) => {
       if (detailsRef.current && !detailsRef.current.contains(event.target as Node)) detailsRef.current.open = false;
@@ -25,12 +27,21 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
   const selectedIcon = selectedGroup?.is_public_group === true ? "public" : groupId ? "groups" : "library_books";
   const select = (nextGroupId?: string) => {
     if (detailsRef.current) detailsRef.current.open = false;
+    triggerRef.current?.focus();
     onChange(nextGroupId);
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDetailsElement>) => {
+    if (event.key !== "Escape" || !detailsRef.current?.open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    detailsRef.current.open = false;
+    triggerRef.current?.focus();
+  };
+
   return (
-    <details className="libraryScopeControl" ref={detailsRef}>
-      <summary className="libraryScopeTrigger" aria-label="Library scope" title="Library scope">
+    <details className="libraryScopeControl" ref={detailsRef} onKeyDown={handleKeyDown} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary ref={triggerRef} className="libraryScopeTrigger" aria-label={`Library scope: ${selectedName}`} aria-haspopup="menu" aria-expanded={open} title="Library scope">
         <MaterialIcon name={selectedIcon} className={selectedGroup?.is_public_group === true ? "libraryScopePublicIcon" : undefined} />
         <span>{selectedName}</span>
         <MaterialIcon name="expand_more" className="libraryScopeChevron" />

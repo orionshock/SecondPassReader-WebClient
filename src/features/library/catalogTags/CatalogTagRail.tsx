@@ -6,14 +6,14 @@ export function CatalogTagRail({ spl, groupId, selectedSlug, onSelect }: Props) 
   const { data, busy, error, previousPage, nextPage } = useCatalogTags(spl, groupId);
 
   return (
-    <aside className="catalogTagRail" aria-label="Catalog Tags">
+    <nav className="catalogTagRail" aria-label="Catalog tags">
       <h2 className="catalogTagRailTitle">Catalog Tags</h2>
-      <button type="button" className={`catalogTagRow catalogTagRowAll ${!selectedSlug ? "catalogTagRowActive" : ""}`} onClick={() => onSelect(undefined)}>
+      <button type="button" className={`catalogTagRow catalogTagRowAll ${!selectedSlug ? "catalogTagRowActive" : ""}`} onClick={() => onSelect(undefined)} aria-current={!selectedSlug ? "true" : undefined}>
         <span>All tags</span>
       </button>
       {data?.results.map((tag) => (
         <button key={String(tag.id)} type="button" className={`catalogTagRow ${selectedSlug === tag.slug ? "catalogTagRowActive" : ""}`} onClick={() => onSelect(selectedSlug === tag.slug ? undefined : tag.slug)} aria-pressed={selectedSlug === tag.slug}>
-          <span className="catalogTagCount">{tag.book_count}</span><span>{tag.name}</span>
+          <span className="catalogTagCount" aria-label={`${tag.book_count} books`}>{tag.book_count}</span><span>{tag.name}</span>
         </button>
       ))}
       {busy && !data ? <div className="catalogTagStatus muted">Loading...</div> : null}
@@ -24,6 +24,6 @@ export function CatalogTagRail({ spl, groupId, selectedSlug, onSelect }: Props) 
           <button className="button buttonCompact" type="button" disabled={busy || !data.next} onClick={nextPage}>Next</button>
         </div>
       ) : null}
-    </aside>
+    </nav>
   );
 }

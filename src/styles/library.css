@@ -119,6 +119,24 @@
   background: var(--color-surface);
 }
 
+.catalogTagRow:focus-visible,
+.libraryScopeTrigger:focus-visible,
+.libraryScopeOption:focus-visible,
+.libraryBrowseTab:focus-visible,
+.bookDetailShelfTrigger:focus-visible,
+.bookDetailShelfRow:focus-visible,
+.bookDetailManageShelves:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: 2px;
+}
+
+.libraryAxisTabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .catalogTagRowAll {
   grid-template-columns: 1fr;
 }

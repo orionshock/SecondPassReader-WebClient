@@ -45,6 +45,15 @@ export function BookDetailModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchSeqRef = useRef(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+    return () => openerRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     setBook(null);
@@ -55,9 +64,29 @@ export function BookDetailModal({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])',
+      ) ?? []).filter((element) => !element.hasAttribute("hidden"));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -125,18 +154,18 @@ export function BookDetailModal({
       className="modalOverlay"
       role="dialog"
       aria-modal="true"
-      aria-label={headerTitle}
+      aria-labelledby="book-detail-dialog-title"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="modalPanel" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="modalPanel" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="modalHeaderRow">
-          <div className="modalTitle" title={headerTitle}>
+          <div id="book-detail-dialog-title" className="modalTitle" title={headerTitle}>
             {headerTitle}
           </div>
-          <button type="button" className="button buttonCompact" onClick={onClose} aria-label="Close">
+          <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose} aria-label="Close book details">
             Close
           </button>
         </div>
