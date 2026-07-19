@@ -1,22 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Shelf, SecondPassClient } from "@secondpass/client";
+import type { SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { getPersonalShelfTargets, type PersonalShelfTarget } from "./addToShelfTargets";
-
-const SHELF_PAGE_SIZE = 100;
-
-async function loadPersonalShelves(spl: SecondPassClient, book?: string): Promise<Shelf[]> {
-  const shelves: Shelf[] = [];
-  let page = 1;
-  let hasNext = true;
-  while (hasNext) {
-    const result = await spl.shelves.list({ scope: "personal", book, ordering: "name", page, pageSize: SHELF_PAGE_SIZE });
-    shelves.push(...result.results);
-    hasNext = Boolean(result.next);
-    page += 1;
-  }
-  return shelves;
-}
+import { addBookToPersonalShelf, loadPersonalShelves } from "./personalShelfOperations";
 
 type Props = {
   spl: SecondPassClient;
@@ -73,18 +59,13 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
     setAddingShelfId(shelfId);
     setError(null);
     try {
-      await spl.shelves.addItem(shelfId, { book: bookId });
-      setTargets((current) => current?.map((target) => String(target.id) === shelfId ? { ...target, added: true } : target) ?? null);
-    } catch (reason) {
-      try {
-        const matchingShelves = await loadPersonalShelves(spl, bookId);
-        if (matchingShelves.some((shelf) => String(shelf.id) === shelfId)) {
-          setTargets((current) => current?.map((target) => String(target.id) === shelfId ? { ...target, added: true } : target) ?? null);
-          return;
-        }
-      } catch {
-        // Preserve the original add error when membership reconciliation also fails.
+      const result = await addBookToPersonalShelf({ spl, shelfId, bookId });
+      if (result.added) {
+        setTargets((current) => current?.map((target) => String(target.id) === shelfId ? { ...target, added: true } : target) ?? null);
+      } else {
+        setError(result.message);
       }
+    } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not add this book to the shelf.");
     } finally {
       setAddingShelfId(null);
