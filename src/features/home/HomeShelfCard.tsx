@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Shelf } from "@secondpass/client";
+import { MaterialIcon } from "../../components/MaterialIcon";
 import { resolveCoverUrl } from "../library/coverUtils";
 
 export function HomeShelfCard({
@@ -14,12 +15,13 @@ export function HomeShelfCard({
   const [brokenCoverIds, setBrokenCoverIds] = useState<Set<string>>(() => new Set());
   const previews = Array.isArray(shelf.preview_books) ? shelf.preview_books.slice(0, 3) : [];
   const count = shelf.item_count ?? 0;
-  const ownerLabel = getShelfOwnerLabel(shelf);
+  const owner = getShelfOwner(shelf);
+  const accessibleOwner = owner ? `, ${owner.kind} ${owner.label}` : "";
 
   return (
     <a
       className="homeShelfCard"
-      aria-label={`Open shelf ${shelf.name}, ${count} ${count === 1 ? "book" : "books"}`}
+      aria-label={`Open shelf ${shelf.name}${accessibleOwner}, ${count} ${count === 1 ? "book" : "books"}`}
       title={shelf.description ?? undefined}
       href={href}
     >
@@ -49,15 +51,33 @@ export function HomeShelfCard({
       </span>
       <span className="homeShelfCardText">
         <span className="homeShelfName">{shelf.name}</span>
-        {ownerLabel ? <span className="homeShelfOwner">{ownerLabel}</span> : null}
-        <span className="homeShelfCount">{count} {count === 1 ? "book" : "books"}</span>
+        <span className="homeShelfMetadata">
+          {owner ? (
+            <>
+              <MaterialIcon name={owner.kind === "group" ? "groups" : "person"} />
+              <span className="homeShelfOwner">{owner.label}</span>
+              <span aria-hidden="true">{"\u00b7"}</span>
+            </>
+          ) : null}
+          <span>{count} {count === 1 ? "book" : "books"}</span>
+        </span>
       </span>
     </a>
   );
 }
 
-function getShelfOwnerLabel(shelf: Shelf): string | null {
-  if (shelf.owner_type === "group") return shelf.owner_group?.name || null;
-  const fullName = [shelf.owner_user?.first_name, shelf.owner_user?.last_name].filter(Boolean).join(" ");
-  return fullName || shelf.owner_user?.username || null;
+function getShelfOwner(shelf: Shelf): { kind: "group" | "user"; label: string } | null {
+  if (shelf.owner_type === "group") {
+    const label = asDisplayString(shelf.owner_group?.name) || asDisplayString(shelf.owner_group?.display_name);
+    return label ? { kind: "group", label } : null;
+  }
+  if (shelf.owner_type !== "user") return null;
+  const displayName = asDisplayString(shelf.owner_user?.display_name);
+  const fullName = [asDisplayString(shelf.owner_user?.first_name), asDisplayString(shelf.owner_user?.last_name)].filter(Boolean).join(" ");
+  const label = displayName || fullName || asDisplayString(shelf.owner_user?.username);
+  return label ? { kind: "user", label } : null;
+}
+
+function asDisplayString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }

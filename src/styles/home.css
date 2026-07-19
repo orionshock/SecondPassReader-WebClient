@@ -20,7 +20,7 @@
 
 .homeShelfGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 10px;
 }
 
@@ -101,19 +101,33 @@
   overflow: hidden;
   font-size: 0.9rem;
   font-weight: 700;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.homeShelfOwner,
-.homeShelfCount {
+.homeShelfMetadata {
+  display: flex;
+  gap: 4px;
+  align-items: center;
   overflow: hidden;
   color: var(--sp-muted);
   font-size: 0.76rem;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.homeShelfMetadata .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.homeShelfOwner {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 520px) {

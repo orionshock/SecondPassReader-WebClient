@@ -5,7 +5,7 @@ import type { Shelf } from "@secondpass/client";
 import { HomeShelfCard } from "../features/home/HomeShelfCard";
 
 describe("Home shelf cards", () => {
-  it("renders the exact server shelf name, count, owner, and shelf route", () => {
+  it("renders the exact server shelf name and group ownership with count", () => {
     const html = render(shelf({
       id: "shelf one",
       name: "Group Name - Group Name - Favorites",
@@ -16,8 +16,31 @@ describe("Home shelf cards", () => {
 
     expect(html).toContain("Group Name - Group Name - Favorites");
     expect(html).toContain("12 books");
+    expect(html).toContain(">groups</span>");
     expect(html).toContain('href="#/shelves/shelf%20one"');
-    expect(html).toContain('aria-label="Open shelf Group Name - Group Name - Favorites, 12 books"');
+    expect(html).toContain('aria-label="Open shelf Group Name - Group Name - Favorites, group Group Name, 12 books"');
+  });
+
+  it("renders user ownership with count", () => {
+    const html = render(shelf({
+      name: "Favorites",
+      item_count: 6,
+      owner_user: { profile_id: "user-1", username: "eismusd" },
+    }));
+
+    expect(html).toContain(">person</span>");
+    expect(html).toContain("eismusd");
+    expect(html).toContain("6 books");
+    expect(html).toContain('aria-label="Open shelf Favorites, user eismusd, 6 books"');
+  });
+
+  it("renders count only when owner metadata is missing", () => {
+    const html = render(shelf({ item_count: 6, owner_user: null }));
+
+    expect(html).toContain("6 books");
+    expect(html).not.toContain(">person</span>");
+    expect(html).not.toContain(">groups</span>");
+    expect(html).toContain('aria-label="Open shelf Shelf, 6 books"');
   });
 
   it("renders available preview covers", () => {
