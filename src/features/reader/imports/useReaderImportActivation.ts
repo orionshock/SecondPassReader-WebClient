@@ -112,6 +112,13 @@ export function useReaderImportActivation({
         hasSearchBook: Boolean(searchBook),
         hasStagedSelectionHandle: Boolean(stagedSelectionHandle),
       });
+      setRowActivationState(rowId, "not-found", {
+        attemptCursor: next.cursor,
+        resultCursor: next.resultCursor,
+        hasMatched: row.hasMatched,
+      });
+      clearTemporaryHighlight();
+      setDrawerOpen(true);
       return;
     }
 
