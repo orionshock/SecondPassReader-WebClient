@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createSecondPassClient, type SecondPassClient } from "@secondpass/client";
-import type { ClientApiLoginRequestResponse, ClientApiPollResponse, SecondPassDiscovery } from "@secondpass/client";
+import { createSecondPassClient } from "@secondpass/client";
+import type { ClientApiLoginRequestResponse, SecondPassDiscovery } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { isProfileLinked } from "./connectionStatus";
 import { buildDefaultDeviceName } from "./defaultDeviceName";
+import { runPairingAttempt } from "./pairingFlow";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -81,17 +82,13 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
     try {
       const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "" });
-      const loginRequest = await spl.server.createLoginRequest(discovery, {
-        clientName: clientName.trim(),
-        clientType: "reader",
-      });
-      setState({ phase: "waiting", loginRequest });
-
-      await pollUntilDone({
+      await runPairingAttempt({
         spl,
-        loginRequest,
+        discovery,
+        clientName: clientName.trim(),
         signal: abort.signal,
-        onUpdate: (nextAt) => {
+        onLoginRequest: (loginRequest) => setState({ phase: "waiting", loginRequest }),
+        onPollScheduled: (nextAt) => {
           setNextPollAt(nextAt);
         },
         onApproved: (approved) => {
@@ -253,46 +250,4 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
     </section>
   );
-}
-
-async function pollUntilDone(input: {
-  spl: SecondPassClient;
-  loginRequest: ClientApiLoginRequestResponse;
-  signal: AbortSignal;
-  onUpdate: (nextPollAt: number) => void;
-  onApproved: (approved: Extract<ClientApiPollResponse, { status: "approved" }>) => void;
-}) {
-  const intervalSeconds = Math.max(1, Math.floor(input.loginRequest.interval ?? 3));
-
-  while (!input.signal.aborted) {
-    const result = await input.spl.server.pollLoginRequest(input.loginRequest.poll_url);
-
-    if (result.status === "approved") {
-      input.onApproved(result);
-      return;
-    }
-    if (result.status === "denied" || result.status === "expired" || result.status === "consumed") {
-      throw new Error(`Linking ended: ${result.status}`);
-    }
-
-    input.onUpdate(Date.now() + intervalSeconds * 1000);
-    await sleep(intervalSeconds * 1000, input.signal);
-  }
-}
-
-function sleep(ms: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-
-    function onAbort() {
-      clearTimeout(timer);
-      reject(new DOMException("Aborted", "AbortError"));
-    }
-
-    if (signal.aborted) return onAbort();
-    signal.addEventListener("abort", onAbort);
-  });
 }
