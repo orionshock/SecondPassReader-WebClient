@@ -57,7 +57,7 @@ export function HomePage({
 
           <RecentReadingSection profile={profile} spl={spl} />
 
-          <ShelvesPreviewSection spl={spl} />
+          <ShelvesPreviewSection spl={spl} serverBaseUrl={profile?.serverBaseUrl} />
         </>
       ) : null}
     </section>

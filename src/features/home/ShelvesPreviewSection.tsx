@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo, routeToHash } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
+import { HomeShelfCard } from "./HomeShelfCard";
 
-export function ShelvesPreviewSection({ spl }: { spl: SecondPassClient | null }) {
+export function ShelvesPreviewSection({ spl, serverBaseUrl }: { spl: SecondPassClient | null; serverBaseUrl?: string | null }) {
   const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +15,7 @@ export function ShelvesPreviewSection({ spl }: { spl: SecondPassClient | null })
     setBusy(true);
     setError(null);
     try {
-      const r = await spl.shelves.list();
+      const r = await spl.shelves.list({ pageSize: 6, includePreviewBooks: true });
       setShelves(r.results ?? []);
     } catch (e) {
       const message =
@@ -37,8 +38,6 @@ export function ShelvesPreviewSection({ spl }: { spl: SecondPassClient | null })
     if (!canLoad) return;
     void load();
   }, [canLoad, load]);
-
-  const previewShelves = useMemo(() => (shelves ?? []).slice(0, 6), [shelves]);
 
   return (
     <div className="shelfPreviewSection">
@@ -64,19 +63,15 @@ export function ShelvesPreviewSection({ spl }: { spl: SecondPassClient | null })
 
       {canLoad && !busy && !error && shelves && shelves.length === 0 ? <div className="muted">No shelves yet.</div> : null}
 
-      {previewShelves.length ? (
-        <div className="shelfPreviewList">
-          {previewShelves.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className="shelfPreviewChip"
-              onClick={() => navigateTo({ kind: "shelf", shelfId: s.id })}
-              title={s.description ?? undefined}
-            >
-              <span>{s.name}</span>
-              <span className="muted">({s.item_count ?? 0})</span>
-            </button>
+      {shelves?.length ? (
+        <div className="homeShelfGrid">
+          {shelves.map((shelf) => (
+            <HomeShelfCard
+              key={shelf.id}
+              shelf={shelf}
+              baseUrl={serverBaseUrl}
+              href={routeToHash({ kind: "shelf", shelfId: String(shelf.id) })}
+            />
           ))}
         </div>
       ) : null}
