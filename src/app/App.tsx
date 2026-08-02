@@ -32,8 +32,10 @@ import { applyCurrentAccountToProfile, hasCurrentAccountProfileChanged } from ".
 import type { SecondPassClient } from "@secondpass/client";
 import { saveReaderReturnTarget } from "../features/reader/readerReturnTarget";
 import type { ReaderReturnTarget } from "../features/reader/types";
+import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
+import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
 
-export default function App() {
+function AppShell() {
   const DEBUG_NAV = import.meta.env.DEV;
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
@@ -42,6 +44,11 @@ export default function App() {
   const [readerRestoreError, setReaderRestoreError] = useState<string | null>(null);
   const [readerRestoreAttempt, setReaderRestoreAttempt] = useState(0);
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getAppTheme());
+  const {
+    authorizationFailure,
+    clearAuthorizationFailure,
+    reportAuthorizationFailure,
+  } = useConnectionRecovery();
 
   const selectedProfile = useMemo(() => {
     void profilesVersion;
@@ -59,6 +66,19 @@ export default function App() {
   const openingBookRef = useRef<string | null>(null);
   const navSeqRef = useRef(0);
   const lastMeCheckRef = useRef<Record<string, number>>({});
+  const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
+
+  useEffect(() => {
+    const nextIdentity = `${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`;
+    if (connectionIdentityRef.current !== nextIdentity) clearAuthorizationFailure();
+    connectionIdentityRef.current = nextIdentity;
+  }, [clearAuthorizationFailure, selectedProfile?.accessToken, selectedProfileId]);
+
+  useEffect(() => {
+    if (route?.kind === "settings" && route.tab === "library-server") {
+      clearAuthorizationFailure();
+    }
+  }, [clearAuthorizationFailure, route]);
 
   useEffect(() => {
     const handler = () => setRoute(parseCurrentRoute());
@@ -92,6 +112,7 @@ export default function App() {
 
     try {
       const me = await splClient.account.getCurrent();
+      clearAuthorizationFailure();
       const nextProfile = applyCurrentAccountToProfile(selectedProfile, me, new Date().toISOString(), {
         markVerified: false,
       });
@@ -101,10 +122,11 @@ export default function App() {
 
       saveConnectionProfile(nextProfile);
       refreshProfiles();
-    } catch {
+    } catch (error) {
+      reportAuthorizationFailure(error);
       // ignore: keep existing verified identity if refresh fails
     }
-  }, [selectedProfile, splClient, workflowStep]);
+  }, [clearAuthorizationFailure, reportAuthorizationFailure, selectedProfile, splClient, workflowStep]);
 
   useEffect(() => {
     void checkMe();
@@ -264,6 +286,7 @@ export default function App() {
         handleBookOpened(opened);
       } catch (e) {
         if (cancelled) return;
+        reportAuthorizationFailure(e);
         const message =
           e instanceof ApiError && e.status === 404
             ? "That book could not be found or you do not have access to it."
@@ -291,11 +314,17 @@ export default function App() {
     selectedProfile,
     workflowStep,
     readerRestoreAttempt,
+    reportAuthorizationFailure,
     splClient,
   ]);
 
   function refreshProfiles() {
     setProfilesVersion((v) => v + 1);
+  }
+
+  function handleConnectionChanged() {
+    clearAuthorizationFailure();
+    refreshProfiles();
   }
 
   function handleBookOpened(opened: OpenedBook) {
@@ -370,6 +399,7 @@ export default function App() {
   }
 
   function returnToConnect(options?: { replace?: boolean }) {
+    clearAuthorizationFailure();
     clearActiveConnection();
     handleCloseReader();
     refreshProfiles();
@@ -416,12 +446,18 @@ export default function App() {
         />
       )}
 
+      <ConnectionRecoveryBannerForState
+        authorizationFailure={authorizationFailure}
+        hasConnection={Boolean(selectedProfile)}
+        route={route}
+      />
+
       <main className="appMain">
         {view === "settings" ? (
           <>
             <SettingsPanel
               profile={selectedProfile}
-              onProfilesChanged={refreshProfiles}
+              onProfilesChanged={handleConnectionChanged}
               onForgetServer={handleForgetServer}
               appTheme={appTheme}
               onAppThemeChange={setAppTheme}
@@ -434,14 +470,14 @@ export default function App() {
               <ConnectServerScreen
                 selectedProfileId={selectedProfileId}
                 onSelectedProfileIdChange={() => undefined}
-                onProfilesChanged={refreshProfiles}
+                onProfilesChanged={handleConnectionChanged}
               />
             ) : null}
 
             {workflowStep === "pair_device" ? (
               <ClientApiLinking
                 selectedProfileId={selectedProfileId}
-                onProfilesChanged={refreshProfiles}
+                onProfilesChanged={handleConnectionChanged}
                 profilesVersion={profilesVersion}
                 onCancel={handleCancelPairing}
               />
@@ -454,7 +490,7 @@ export default function App() {
                 <ClientApiVerification
                   selectedProfileId={selectedProfileId}
                   profilesVersion={profilesVersion}
-                  onProfilesChanged={refreshProfiles}
+                  onProfilesChanged={handleConnectionChanged}
                   autoVerify
                 />
               </section>
@@ -719,5 +755,13 @@ function ServerSummary({ profile }: { profile: ConnectionProfile | null }) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ConnectionRecoveryProvider>
+      <AppShell />
+    </ConnectionRecoveryProvider>
   );
 }

@@ -18,6 +18,8 @@ import {
 } from "../features/settings/marginaliaSplitExport";
 import { createMarginaliaZipBlob } from "../features/settings/marginaliaZipExport";
 import { IMPORT_DEBUG_KEY, IMPORT_DEBUG_VERBOSE_KEY } from "../features/reader/imports/readerImportDebug";
+import { ApiError } from "@secondpass/client";
+import { getTechnicalErrorDetail, isAuthorizationError } from "./userFacingErrors";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -33,7 +35,7 @@ type ActionState =
   | { phase: "checking" }
   | { phase: "logging_out" }
   | { phase: "success"; message: string }
-  | { phase: "error"; message: string; action: "check" | "logout" };
+  | { phase: "error"; message: string; action: "check" | "logout"; technicalDetail?: string | null };
 
 type MarginaliaToolState =
   | { phase: "idle" }
@@ -92,7 +94,10 @@ export function SettingsPanel({
       setState({
         phase: "error",
         action: "check",
-        message: e instanceof Error ? e.message : "Connection check failed.",
+        message: isAuthorizationError(e)
+          ? "This device is no longer authorized."
+          : "Connection check failed.",
+        technicalDetail: getTechnicalErrorDetail(e),
       });
     }
   }
@@ -119,13 +124,24 @@ export function SettingsPanel({
           Authorization: `${profile.tokenType ?? "Bearer"} ${profile.accessToken}`,
         },
       });
-      if (!response.ok) throw new Error(`Logout failed with HTTP ${response.status}.`);
+      if (!response.ok) {
+        const kind = response.status === 401 ? "unauthorized" : response.status === 403 ? "forbidden" : "http_error";
+        throw new ApiError({
+          kind,
+          status: response.status,
+          statusText: response.statusText,
+          message: `Logout failed with HTTP ${response.status}.`,
+        });
+      }
       onForgetServer();
     } catch (e) {
       setState({
         phase: "error",
         action: "logout",
-        message: e instanceof Error ? e.message : "Logout failed.",
+        message: isAuthorizationError(e)
+          ? "This device is no longer authorized. Forget it locally if server logout is unavailable."
+          : "Logout failed.",
+        technicalDetail: getTechnicalErrorDetail(e),
       });
     }
   }
@@ -328,7 +344,12 @@ export function SettingsPanel({
         </section>
 
         {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
-        {state.phase === "error" ? <p className="errorText">{state.message}</p> : null}
+        {state.phase === "error" ? (
+          <div className="settingsNotice">
+            <p className="errorText">{state.message}</p>
+            {state.technicalDetail ? <p className="muted mono">{state.technicalDetail}</p> : null}
+          </div>
+        ) : null}
       </div>
       ) : null}
 

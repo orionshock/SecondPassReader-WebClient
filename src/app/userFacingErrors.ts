@@ -36,3 +36,12 @@ export function getPageLoadErrorMessage(
 ): string {
   return isAuthorizationError(error) ? authFallback : fallback;
 }
+
+export function getTechnicalErrorDetail(error: unknown): string | null {
+  if (error instanceof ApiError) {
+    const status = [error.status, error.statusText].filter(Boolean).join(" ");
+    return status ? `Request failed: ${status}` : null;
+  }
+  const message = getErrorMessage(error);
+  return message && !containsHtml(message) ? message : null;
+}

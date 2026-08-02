@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { isAuthorizationError } from "./userFacingErrors";
 
 export function PageLoadErrorNotice({
@@ -13,6 +15,12 @@ export function PageLoadErrorNotice({
   retryDisabled?: boolean;
   className?: string;
 }) {
+  const { reportAuthorizationFailure } = useConnectionRecovery();
+
+  useEffect(() => {
+    reportAuthorizationFailure(error);
+  }, [error, reportAuthorizationFailure]);
+
   return (
     <div className={className}>
       {message}{" "}
