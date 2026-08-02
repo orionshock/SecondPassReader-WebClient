@@ -94,6 +94,55 @@ describe("@secondpass/client high-level workflows", () => {
     expect(tryParseFilename("attachment")).toBeUndefined();
   });
 
+  it("API errors suppress HTML response bodies but retain a concise status", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(new Response("<!DOCTYPE html><html><body>Django 404</body></html>", {
+        status: 404,
+        statusText: "Not Found",
+      }))
+      .mockResolvedValueOnce(new Response("<html><body>Proxy failure</body></html>", {
+        status: 502,
+        statusText: "Bad Gateway",
+        headers: { "content-type": "text/html" },
+      }))
+      .mockResolvedValueOnce(new Response("<!DOCTYPE html><html><body>Missing recent endpoint</body></html>", {
+        status: 404,
+        statusText: "Not Found",
+      }));
+
+    await expect(requestJsonUrl({ url: "https://api.example/missing/" })).rejects.toMatchObject({
+      status: 404,
+      statusText: "Not Found",
+      message: "Request failed: 404 Not Found",
+    });
+    await expect(requestBlob({
+      apiBaseUrl: "https://api.example",
+      endpointOrUrl: "/broken-download/",
+    })).rejects.toMatchObject({
+      status: 502,
+      statusText: "Bad Gateway",
+      message: "Request failed: 502 Bad Gateway",
+    });
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    await expect(spl.reading.sessions.recent()).rejects.toMatchObject({
+      status: 404,
+      statusText: "Not Found",
+      message: "Request failed: 404 Not Found",
+    });
+  });
+
+  it("API errors preserve non-HTML response detail", async () => {
+    asMockFetch().mockResolvedValueOnce(new Response("Service unavailable", {
+      status: 503,
+      statusText: "Service Unavailable",
+    }));
+
+    await expect(requestJsonUrl({ url: "https://api.example/unavailable/" })).rejects.toMatchObject({
+      message: "Request failed: 503 Service Unavailable - Service unavailable",
+    });
+  });
+
   it("client config requires apiBaseUrl and requestBlob uses the default accept header", async () => {
     const fetchMock = asMockFetch();
     expect(() => createSecondPassClient({ apiBaseUrl: "" })).toThrowError(/apiBaseUrl is required/i);

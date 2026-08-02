@@ -19,12 +19,30 @@ export type ApiErrorKind = "unauthorized" | "forbidden" | "http_error";
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status: number;
+  readonly statusText: string;
 
-  constructor(input: { kind: ApiErrorKind; status: number; message: string }) {
+  constructor(input: { kind: ApiErrorKind; status: number; statusText?: string; message: string }) {
     super(input.message);
     this.kind = input.kind;
     this.status = input.status;
+    this.statusText = input.statusText ?? "";
   }
+}
+
+function containsHtml(value: string): boolean {
+  return /<!doctype\s+html\b|<html(?:\s|>)/i.test(value);
+}
+
+function createApiError(res: Response, responseBody: string, overrideMessage?: string): ApiError {
+  const statusDescription = [res.status, res.statusText].filter(Boolean).join(" ");
+  const conciseMessage = `Request failed: ${statusDescription}`;
+  const contentType = res.headers.get("content-type") ?? "";
+  const bodyIsHtml = /(?:text\/html|application\/xhtml\+xml)/i.test(contentType) || containsHtml(responseBody);
+  const safeOverride = overrideMessage && !containsHtml(overrideMessage) ? overrideMessage : undefined;
+  const message = safeOverride ?? `${conciseMessage}${responseBody && !bodyIsHtml ? ` - ${responseBody}` : ""}`;
+  const kind: ApiErrorKind =
+    res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
+  return new ApiError({ kind, status: res.status, statusText: res.statusText, message });
 }
 
 /**
@@ -76,12 +94,7 @@ export async function requestJsonUrl<T>(options: RequestUrlOptions): Promise<T> 
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    const message =
-      options.errorMessages?.[res.status] ??
-      `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`;
-    const kind: ApiErrorKind =
-      res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
-    throw new ApiError({ kind, status: res.status, message });
+    throw createApiError(res, text, options.errorMessages?.[res.status]);
   }
 
   return (await res.json()) as T;
@@ -130,12 +143,7 @@ export async function requestJson<T>(input: {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    const message =
-      input.options?.errorMessages?.[res.status] ??
-      `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`;
-    const kind: ApiErrorKind =
-      res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
-    throw new ApiError({ kind, status: res.status, message });
+    throw createApiError(res, text, input.options?.errorMessages?.[res.status]);
   }
 
   if (res.status === 204) return undefined as T;
@@ -163,12 +171,7 @@ export async function requestBlob(input: {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    const message =
-      input.options?.errorMessages?.[res.status] ??
-      `Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`;
-    const kind: ApiErrorKind =
-      res.status === 401 ? "unauthorized" : res.status === 403 ? "forbidden" : "http_error";
-    throw new ApiError({ kind, status: res.status, message });
+    throw createApiError(res, text, input.options?.errorMessages?.[res.status]);
   }
 
   const blob = await res.blob();

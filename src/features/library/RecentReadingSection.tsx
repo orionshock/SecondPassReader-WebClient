@@ -4,6 +4,28 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "./coverUtils";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
+import { getUserFacingErrorMessage } from "../../app/userFacingErrors";
+
+const RECENT_READING_ERROR = "Could not load recent reading.";
+
+export function RecentReadingLoadFailure({
+  error,
+  disabled,
+  onRetry,
+}: {
+  error: unknown;
+  disabled: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="errorText">
+      {getUserFacingErrorMessage(error, RECENT_READING_ERROR)}{" "}
+      <button type="button" className="button buttonCompact" onClick={onRetry} disabled={disabled}>
+        Retry
+      </button>
+    </div>
+  );
+}
 
 function formatLastActivity(isoUtc: string): string {
   try {
@@ -22,7 +44,7 @@ export function RecentReadingSection({
   spl: SecondPassClient | null;
 }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [data, setData] = useState<ReadingRecentSessionsResponse | null>(null);
   const [brokenCoverIds, setBrokenCoverIds] = useState<Record<string, true>>({});
 
@@ -37,7 +59,7 @@ export function RecentReadingSection({
       setData(r);
     } catch (e) {
       setData(null);
-      setError(e instanceof Error ? e.message : "Failed to load recent reading.");
+      setError(e instanceof Error ? e : new Error(RECENT_READING_ERROR));
     } finally {
       setBusy(false);
     }
@@ -58,7 +80,7 @@ export function RecentReadingSection({
       saveReaderReturnTarget(bookKey, { kind: "home", label: "Home", route: "#/home" });
       navigateTo({ kind: "reader", bookId: bookKey });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to resume book.");
+      setError(e instanceof Error ? e : new Error("Failed to resume book."));
     }
   }
 
@@ -70,18 +92,12 @@ export function RecentReadingSection({
         </div>
         <div className="muted">
           {busy ? `Loading${"\u2026"}` : data && data.count > 1 ? `${data.count} recent` : null}
-          {error ? (
-            <>
-              {" "}
-              <button type="button" className="button buttonCompact" onClick={() => void loadRecent()} disabled={!canLoad || busy}>
-                Retry
-              </button>
-            </>
-          ) : null}
         </div>
       </div>
 
-      {error ? <div className="errorText">{error}</div> : null}
+      {error ? (
+        <RecentReadingLoadFailure error={error} onRetry={() => void loadRecent()} disabled={!canLoad || busy} />
+      ) : null}
 
       {!busy && !error && (!data?.results || data.results.length === 0) ? <div className="muted">No recent reading yet.</div> : null}
 
