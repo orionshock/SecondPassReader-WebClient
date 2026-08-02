@@ -1114,6 +1114,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(discovery.api_base_url).toBe("https://api.example");
     expect(discovery.server_release_date).toBe("2026-07-06");
 
+    expect(() => spl.server.info()).toThrowError(ApiError);
     expect(() => spl.library.books.list()).toThrowError(ApiError);
   });
 
@@ -1207,7 +1208,7 @@ describe("@secondpass/client high-level workflows", () => {
     });
   });
 
-  it("account.getCurrent preserves identity, groups, banner, and advanced group context without capabilities", async () => {
+  it("account.getCurrentUser projects identity, role flags, and groups", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
@@ -1217,38 +1218,109 @@ describe("@secondpass/client high-level workflows", () => {
         last_name: "Lovelace",
         profile_id: "profile-1",
         role: "reader",
-        must_change_password: false,
         is_owner: true,
-        advanced_library_groups_enabled: true,
-        banner_text: "Maintenance tonight",
+        can_access_django_admin: true,
         groups: [
-          { id: "public", name: "Common Room", is_public_group: true, is_curator: false },
+          { id: "public", name: "Common Room", is_public_group: true },
           { id: "club", name: "Fantasy Club", is_public_group: false, is_curator: true },
         ],
       }),
     );
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    const me = await spl.account.getCurrent();
+    const me = await spl.account.getCurrentUser();
 
     expect(me.username).toBe("ada");
     expect(me.email).toBe("ada@example.test");
-    expect(me.first_name).toBe("Ada");
-    expect(me.last_name).toBe("Lovelace");
-    expect(me.profile_id).toBe("profile-1");
+    expect(me.firstName).toBe("Ada");
+    expect(me.lastName).toBe("Lovelace");
+    expect(me.profileId).toBe("profile-1");
     expect(me.role).toBe("reader");
-    expect(me.must_change_password).toBe(false);
-    expect(me.is_owner).toBe(true);
-    expect(me.advanced_library_groups_enabled).toBe(true);
-    expect(me.banner_text).toBe("Maintenance tonight");
+    expect(me.mustChangePassword).toBe(false);
+    expect(me.isOwner).toBe(true);
+    expect(me.isManager).toBe(false);
+    expect(me.isLibrarian).toBe(false);
+    expect(me.isReader).toBe(false);
+    expect(me.canAccessDjangoAdmin).toBe(true);
     expect(me.groups).toEqual([
-      { id: "public", name: "Common Room", is_public_group: true, is_curator: false },
-      { id: "club", name: "Fantasy Club", is_public_group: false, is_curator: true },
+      { id: "public", name: "Common Room", isPublicGroup: true, isCurator: false },
+      { id: "club", name: "Fantasy Club", isPublicGroup: false, isCurator: true },
     ]);
-    expect(me).not.toHaveProperty("capabilities");
+    expect(me).not.toHaveProperty("advancedLibraryGroupsEnabled");
+    expect(me).not.toHaveProperty("bannerText");
 
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe("https://api.example/accounts/me/");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer t");
+  });
+
+  it("account.getCurrentUser derives manager, librarian, and reader flags from role", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ username: "manager", role: "manager" }))
+      .mockResolvedValueOnce(jsonResponse({ username: "librarian", role: "librarian" }))
+      .mockResolvedValueOnce(jsonResponse({ username: "reader", role: "reader" }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await expect(spl.account.getCurrentUser()).resolves.toMatchObject({
+      isOwner: false,
+      isManager: true,
+      isLibrarian: false,
+      isReader: false,
+      mustChangePassword: false,
+      canAccessDjangoAdmin: false,
+      groups: [],
+    });
+    await expect(spl.account.getCurrentUser()).resolves.toMatchObject({
+      isOwner: false,
+      isManager: false,
+      isLibrarian: true,
+      isReader: false,
+    });
+    await expect(spl.account.getCurrentUser()).resolves.toMatchObject({
+      isOwner: false,
+      isManager: false,
+      isLibrarian: false,
+      isReader: true,
+    });
+  });
+
+  it("server.info projects authenticated server display and configuration context", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      server_name: "Athena Library",
+      server_description: "Private reading server",
+      server_banner_message: "Maintenance tonight",
+      advanced_library_groups_enabled: true,
+      reading_client_base_url: "https://reader.example",
+      marginalia_profile_uri: "https://example.test/profiles/marginalia",
+      public_group: {
+        id: "public-1",
+        name: "Common Room",
+        description: "Public catalog",
+      },
+      server_version: "2.4.0",
+      server_release_date: "2026-08-01",
+    }));
+
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    await expect(spl.server.info()).resolves.toEqual({
+      name: "Athena Library",
+      description: "Private reading server",
+      bannerText: "Maintenance tonight",
+      advancedLibraryGroupsEnabled: true,
+      readingClientBaseUrl: "https://reader.example",
+      marginaliaProfileUri: "https://example.test/profiles/marginalia",
+      publicGroup: {
+        id: "public-1",
+        name: "Common Room",
+        description: "Public catalog",
+      },
+      version: "2.4.0",
+      releaseDate: "2026-08-01",
+    });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/server/info/");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer t");
   });
 

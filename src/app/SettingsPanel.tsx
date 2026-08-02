@@ -4,7 +4,7 @@ import { saveConnectionProfile } from "../storage/connectionProfiles";
 import type { AppTheme } from "../storage/appTheme";
 import { getConnectionStatus, getConnectionStatusLabel } from "../features/connection/connectionStatus";
 import { discoverSecondPass } from "../features/connection/connectionUtils";
-import { applyCurrentAccountToProfile } from "../features/connection/accountProfile";
+import { applyAuthenticatedContextToProfile } from "../features/connection/accountProfile";
 import { createSplClientFromProfile } from "./createSplClient";
 import { navigateTo, type AppRoute, type SettingsTab } from "./navigation";
 import {
@@ -20,6 +20,7 @@ import { createMarginaliaZipBlob } from "../features/settings/marginaliaZipExpor
 import { IMPORT_DEBUG_KEY, IMPORT_DEBUG_VERBOSE_KEY } from "../features/reader/imports/readerImportDebug";
 import { ApiError } from "@secondpass/client";
 import { getTechnicalErrorDetail, isAuthorizationError } from "./userFacingErrors";
+import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -86,8 +87,8 @@ export function SettingsPanel({
         lastCheckedAt: now,
       };
 
-      const me = await createSplClientFromProfile(discoveredProfile).account.getCurrent();
-      saveConnectionProfile(applyCurrentAccountToProfile(discoveredProfile, me, now));
+      const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromProfile(discoveredProfile));
+      saveConnectionProfile(applyAuthenticatedContextToProfile(discoveredProfile, currentUser, serverInfo, now));
       onProfilesChanged();
       setState({ phase: "success", message: "Connection checked successfully." });
     } catch (e) {

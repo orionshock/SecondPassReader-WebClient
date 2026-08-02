@@ -10,18 +10,19 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 
 ## Auth model
 
-- `spl.server.*` is allowed without an access token.
-- All other namespaces require an access token and throw `ApiError(kind="unauthorized")` if missing/invalid.
+- Server discovery and linking methods are allowed without an access token.
+- `spl.server.info()` and all non-server namespaces require an access token and throw `ApiError(kind="unauthorized")` if missing/invalid.
 
 ## server
 
 - `spl.server.discover(serverBaseUrl)`
+- `spl.server.info()`
 - `spl.server.createLoginRequest(discovery, input?)`
 - `spl.server.pollLoginRequest(pollUrl)`
 
 ## account
 
-- `spl.account.getCurrent()`
+- `spl.account.getCurrentUser()`
 
 ## library
 

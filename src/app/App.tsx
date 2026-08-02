@@ -28,12 +28,13 @@ import { BookDetailModal } from "../features/library/BookDetailModal";
 import { SessionsPage } from "../features/sessions/SessionsPage";
 import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
-import { applyCurrentAccountToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
+import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
 import type { SecondPassClient } from "@secondpass/client";
 import { saveReaderReturnTarget } from "../features/reader/readerReturnTarget";
 import type { ReaderReturnTarget } from "../features/reader/types";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
+import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
 
 function AppShell() {
   const DEBUG_NAV = import.meta.env.DEV;
@@ -111,9 +112,9 @@ function AppShell() {
     lastMeCheckRef.current[profileId] = now;
 
     try {
-      const me = await splClient.account.getCurrent();
+      const { currentUser, serverInfo } = await loadAuthenticatedContext(splClient);
       clearAuthorizationFailure();
-      const nextProfile = applyCurrentAccountToProfile(selectedProfile, me, new Date().toISOString(), {
+      const nextProfile = applyAuthenticatedContextToProfile(selectedProfile, currentUser, serverInfo, new Date().toISOString(), {
         markVerified: false,
       });
       const changed = hasCurrentAccountProfileChanged(selectedProfile, nextProfile);

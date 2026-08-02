@@ -1,9 +1,10 @@
 import type {
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
-  MePayload,
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
+import type { CurrentUser } from "./schemas/account";
+import type { ServerInfo } from "./schemas/server";
 import type {
   LibraryAuthor,
   LibraryBook,
@@ -37,7 +38,9 @@ import type {
   ReadingSessionSummary,
 } from "./schemas/readingSession";
 
-import { createLoginRequest, discoverSecondPass, getMe, pollLoginRequest } from "./clientApiAuthApi";
+import { createLoginRequest, discoverSecondPass, pollLoginRequest } from "./clientApiAuthApi";
+import { getCurrentUser } from "./accountApi";
+import { getServerInfo } from "./serverApi";
 import { downloadBookFile, getAuthor, getBook, getGroup, getSeries, getTag, listAuthors, listBooks, listGroupAuthors, listGroupBooks, listGroups, listGroupSeries, listGroupTags, listSeries, listTags } from "./libraryApi";
 import {
   closeReadingSession,
@@ -136,6 +139,7 @@ export type SecondPassClient = {
 
   server: {
     discover(serverBaseUrl: string): Promise<SecondPassDiscovery>;
+    info(): Promise<ServerInfo>;
     createLoginRequest(
       discovery: SecondPassDiscovery,
       input?: { clientName?: string; clientType?: string },
@@ -144,7 +148,7 @@ export type SecondPassClient = {
   };
 
   account: {
-    getCurrent(): Promise<MePayload>;
+    getCurrentUser(): Promise<CurrentUser>;
   };
 
   library: {
@@ -273,15 +277,19 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
 
     server: {
       discover: (serverBaseUrl: string) => discoverSecondPass(serverBaseUrl),
+      info: () => {
+        const auth = requireAuth(ctx);
+        return getServerInfo(auth);
+      },
       createLoginRequest: (discovery: SecondPassDiscovery, input?: { clientName?: string; clientType?: string }) =>
         createLoginRequest(discovery, input, frozenConfig.accessToken ? frozenConfig.accessToken : null),
       pollLoginRequest: (pollUrl: string) => pollLoginRequest(pollUrl, frozenConfig.accessToken ? frozenConfig.accessToken : null),
     },
 
     account: {
-      getCurrent: () => {
+      getCurrentUser: () => {
         const auth = requireAuth(ctx);
-        return getMe(auth);
+        return getCurrentUser(auth);
       },
     },
 

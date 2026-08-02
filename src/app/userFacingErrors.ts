@@ -14,6 +14,10 @@ export function isAuthorizationError(error: unknown): boolean {
     if (error.kind === "unauthorized" || error.kind === "forbidden") return true;
   }
 
+  if (error instanceof Error && "cause" in error && error.cause !== error) {
+    if (isAuthorizationError(error.cause)) return true;
+  }
+
   return /\btoken\b[^.\n]*\bnot allowed\b/i.test(getErrorMessage(error));
 }
 
@@ -41,6 +45,9 @@ export function getTechnicalErrorDetail(error: unknown): string | null {
   if (error instanceof ApiError) {
     const status = [error.status, error.statusText].filter(Boolean).join(" ");
     return status ? `Request failed: ${status}` : null;
+  }
+  if (error instanceof Error && "cause" in error && error.cause !== error) {
+    return getTechnicalErrorDetail(error.cause);
   }
   const message = getErrorMessage(error);
   return message && !containsHtml(message) ? message : null;

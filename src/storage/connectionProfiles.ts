@@ -10,6 +10,13 @@ export type ConnectionProfile = {
   serverReleaseDate?: string;
   advancedLibraryGroupsEnabled?: boolean;
   bannerText?: string | null;
+  readingClientBaseUrl?: string;
+  marginaliaProfileUri?: string;
+  publicGroup?: {
+    id: string;
+    name: string;
+    description: string;
+  };
   accessToken?: string;
   tokenType?: string;
   clientSessionId?: string;
@@ -25,6 +32,10 @@ export type ConnectionProfile = {
     email?: string;
     role?: string;
     isOwner?: boolean;
+    isManager?: boolean;
+    isLibrarian?: boolean;
+    isReader?: boolean;
+    canAccessDjangoAdmin?: boolean;
     groups?: Array<{
       id: string;
       name: string;

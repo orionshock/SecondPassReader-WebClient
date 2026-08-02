@@ -19,10 +19,10 @@ export type {
 export type {
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
-  MeGroup,
-  MePayload,
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
+export type { CurrentUser, CurrentUserGroup, MePayload } from "./schemas/account";
+export type { ServerInfo, ServerPublicGroup } from "./schemas/server";
 
 export type { LibraryAuthor, LibraryAuthorSummary, LibraryBook, LibraryBookFile, LibraryBookIdentifier, LibraryGroup, LibrarySeries, LibrarySeriesSummary, LibraryTag, LibraryTagSummary, PaginatedResponse, PreviewBook } from "./schemas/library";
 

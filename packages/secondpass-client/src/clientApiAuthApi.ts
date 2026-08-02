@@ -1,11 +1,9 @@
 import type {
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
-  MePayload,
   SecondPassDiscovery,
 } from "./schemas/clientApiAuth";
-import { authErrorMessages, requestJson, requestJsonUrl, resolveUrl } from "./apiHttp";
-import type { AuthenticatedClientContext } from "./clientContext";
+import { requestJsonUrl, resolveUrl } from "./apiHttp";
 
 const CLIENT_API_LOGIN_REQUEST_ENDPOINT = "/client-api/login-requests/";
 
@@ -33,16 +31,4 @@ export async function createLoginRequest(
 
 export async function pollLoginRequest(pollUrl: string, defaultAccessToken?: string | null): Promise<ClientApiPollResponse> {
   return requestJsonUrl<ClientApiPollResponse>({ url: pollUrl, method: "GET", defaultAccessToken });
-}
-
-export async function getMe(ctx: AuthenticatedClientContext): Promise<MePayload> {
-  return requestJson<MePayload>({
-    apiBaseUrl: ctx.apiBaseUrl,
-    accessToken: ctx.accessToken,
-    tokenType: ctx.tokenType,
-    endpointOrUrl: "/accounts/me/",
-    options: {
-      errorMessages: authErrorMessages({ forbidden: "Token is not allowed for /me (403)." }),
-    },
-  });
 }

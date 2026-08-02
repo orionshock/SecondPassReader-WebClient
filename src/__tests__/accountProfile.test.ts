@@ -1,132 +1,128 @@
 import { describe, expect, it } from "vitest";
-import { applyCurrentAccountToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
+import type { CurrentUser, ServerInfo } from "@secondpass/client";
+import {
+  applyAuthenticatedContextToProfile,
+  applyCurrentAccountToProfile,
+  hasCurrentAccountProfileChanged,
+} from "../features/connection/accountProfile";
 import type { ConnectionProfile } from "../storage/connectionProfiles";
 
 function baseProfile(): ConnectionProfile {
   return {
     id: "local-1",
-    label: "Local",
+    label: "Discovery Name",
     serverBaseUrl: "https://server.example",
     apiBaseUrl: "https://api.example",
+    serverName: "Discovery Name",
     accessToken: "token",
     createdAt: "2026-06-25T00:00:00.000Z",
   };
 }
 
 describe("accountProfile", () => {
-  it("maps the current /accounts/me payload into the persisted connection profile", () => {
-    const next = applyCurrentAccountToProfile(baseProfile(), {
-      username: "orionshock",
-      email: "orionshock@gmail.com",
-      first_name: "Apollo",
-      last_name: "Shockman",
-      profile_id: "f241b2c7-414e-4fc0-9623-dbea4a1cf449",
-      role: "manager",
-      must_change_password: false,
-      is_owner: true,
-      advanced_library_groups_enabled: true,
-      banner_text: "Maintenance tonight",
-      groups: [
-        {
-          id: "8ad00b1e-e108-4ad2-a0b4-1d5c465083c7",
-          name: "Common Room",
-          is_public_group: true,
-          is_curator: false,
-        },
-        {
-          id: "c7309a6d-3559-43eb-a5f0-0bf9eb83dcd0",
-          name: "Fantasy Club",
-          is_public_group: false,
-          is_curator: true,
-        },
-      ],
-    }, "2026-06-25T12:00:00.000Z");
+  it("stores identity from /accounts/me and display/config from /server/info", () => {
+    const next = applyAuthenticatedContextToProfile(
+      baseProfile(),
+      currentUser({
+        username: "orionshock",
+        email: "orionshock@gmail.com",
+        firstName: "Apollo",
+        lastName: "Shockman",
+        profileId: "profile-1",
+        role: "manager",
+        isOwner: true,
+        groups: [
+          { id: "public", name: "Common Room", isPublicGroup: true, isCurator: false },
+          { id: "club", name: "Fantasy Club", isPublicGroup: false, isCurator: true },
+        ],
+      }),
+      serverInfo({
+        name: "Authenticated Library Name",
+        description: "Authenticated description",
+        bannerText: "Maintenance tonight",
+        advancedLibraryGroupsEnabled: true,
+      }),
+      "2026-06-25T12:00:00.000Z",
+    );
 
     expect(next.verifiedAt).toBe("2026-06-25T12:00:00.000Z");
-    expect(next.mustChangePassword).toBe(false);
+    expect(next.serverName).toBe("Authenticated Library Name");
+    expect(next.serverDescription).toBe("Authenticated description");
     expect(next.advancedLibraryGroupsEnabled).toBe(true);
     expect(next.bannerText).toBe("Maintenance tonight");
-    expect(next.verifiedUser).toEqual({
-      profileId: "f241b2c7-414e-4fc0-9623-dbea4a1cf449",
+    expect(next.publicGroup).toEqual({ id: "public", name: "Common Room", description: "Public catalog" });
+    expect(next.verifiedUser).toMatchObject({
+      profileId: "profile-1",
       username: "orionshock",
-      displayName: undefined,
       firstName: "Apollo",
       lastName: "Shockman",
-      email: "orionshock@gmail.com",
       role: "manager",
       isOwner: true,
       groups: [
-        {
-          id: "8ad00b1e-e108-4ad2-a0b4-1d5c465083c7",
-          name: "Common Room",
-          isPublicGroup: true,
-          isCurator: false,
-        },
-        {
-          id: "c7309a6d-3559-43eb-a5f0-0bf9eb83dcd0",
-          name: "Fantasy Club",
-          isPublicGroup: false,
-          isCurator: true,
-        },
+        { id: "public", name: "Common Room", isPublicGroup: true, isCurator: false },
+        { id: "club", name: "Fantasy Club", isPublicGroup: false, isCurator: true },
       ],
     });
   });
 
-  it("detects changes in account role and ownership during the background refresh", () => {
-    const profile = applyCurrentAccountToProfile(baseProfile(), {
-      username: "orionshock",
-      role: "reader",
-      must_change_password: false,
-      is_owner: false,
-      groups: [],
-    }, "2026-06-25T12:00:00.000Z");
+  it("does not change server configuration when only /accounts/me is applied", () => {
+    const profile = { ...baseProfile(), advancedLibraryGroupsEnabled: true, bannerText: "Server banner" };
+    const next = applyCurrentAccountToProfile(profile, currentUser(), "2026-06-25T12:00:00.000Z");
 
-    const next = applyCurrentAccountToProfile(profile, {
-      username: "orionshock",
-      role: "manager",
-      must_change_password: false,
-      is_owner: true,
-      groups: [],
-    }, "2026-06-25T13:00:00.000Z", { markVerified: false });
-
-    expect(hasCurrentAccountProfileChanged(profile, next)).toBe(true);
+    expect(next.advancedLibraryGroupsEnabled).toBe(true);
+    expect(next.bannerText).toBe("Server banner");
   });
 
-  it("detects dynamic /me context changes during the background refresh", () => {
-    const profile = applyCurrentAccountToProfile(baseProfile(), {
-      username: "reader",
-      advanced_library_groups_enabled: false,
-      banner_text: null,
-    }, "2026-06-25T12:00:00.000Z");
-
-    const next = applyCurrentAccountToProfile(profile, {
-      username: "reader",
-      advanced_library_groups_enabled: true,
-      banner_text: "Maintenance tonight",
-    }, "2026-06-25T13:00:00.000Z", { markVerified: false });
+  it("detects account and authenticated server-context changes", () => {
+    const profile = applyAuthenticatedContextToProfile(
+      baseProfile(),
+      currentUser({ role: "reader", isReader: true }),
+      serverInfo({ advancedLibraryGroupsEnabled: false }),
+      "2026-06-25T12:00:00.000Z",
+    );
+    const next = applyAuthenticatedContextToProfile(
+      profile,
+      currentUser({ role: "manager", isManager: true }),
+      serverInfo({ advancedLibraryGroupsEnabled: true }),
+      "2026-06-25T13:00:00.000Z",
+      { markVerified: false },
+    );
 
     expect(hasCurrentAccountProfileChanged(profile, next)).toBe(true);
-  });
-
-  it("maps current account data without broad permission fields", () => {
-    const next = applyCurrentAccountToProfile(baseProfile(), {
-      username: "reader",
-      email: "reader@example.com",
-      first_name: "Read",
-      last_name: "Er",
-      profile_id: "profile-1",
-      role: "reader",
-      must_change_password: false,
-      is_owner: false,
-      groups: [],
-    }, "2026-06-25T12:00:00.000Z");
-
-    expect(next.verifiedUser).toMatchObject({
-      profileId: "profile-1",
-      username: "reader",
-      role: "reader",
-      isOwner: false,
-      groups: [],
-    });
+    expect(next.advancedLibraryGroupsEnabled).toBe(true);
   });
 });
+
+function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
+  return {
+    username: "reader",
+    email: "reader@example.com",
+    firstName: "Read",
+    lastName: "Er",
+    profileId: "profile-1",
+    role: "reader",
+    mustChangePassword: false,
+    isOwner: false,
+    isManager: false,
+    isLibrarian: false,
+    isReader: true,
+    canAccessDjangoAdmin: false,
+    groups: [],
+    ...overrides,
+  };
+}
+
+function serverInfo(overrides: Partial<ServerInfo> = {}): ServerInfo {
+  return {
+    name: "Authenticated Library",
+    description: "Library description",
+    bannerText: "",
+    advancedLibraryGroupsEnabled: false,
+    readingClientBaseUrl: "https://reader.example",
+    marginaliaProfileUri: "https://example.test/profiles/marginalia",
+    publicGroup: { id: "public", name: "Common Room", description: "Public catalog" },
+    version: "2.4.0",
+    releaseDate: "2026-08-01",
+    ...overrides,
+  };
+}

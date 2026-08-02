@@ -15,13 +15,13 @@ import { createSecondPassClient } from "@secondpass/client";
 ```ts
 const spl = createSecondPassClient({
   apiBaseUrl,
-  accessToken, // optional for `spl.server.*`
+  accessToken, // optional for server discovery/linking; required for server.info()
   tokenType,   // optional, defaults to "Bearer"
 });
 ```
 
-- `spl.server.*` methods may run without an access token (discovery/linking).
-- Other namespaces require auth and throw an `ApiError(kind="unauthorized")` if called without credentials.
+- Server discovery/linking methods may run without an access token.
+- `spl.server.info()` and non-server namespaces require auth and throw an `ApiError(kind="unauthorized")` if called without credentials.
 
 ## Docs
 

@@ -48,27 +48,3 @@ export type ClientApiPollResponse =
         client_type: string;
       };
     };
-
-export type MeGroup = {
-  id: string;
-  name: string;
-  is_public_group: boolean;
-  is_curator: boolean;
-};
-
-export type MePayload = {
-  id?: string | number;
-  profile_id?: string;
-  username: string;
-  display_name?: string;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  role?: string;
-  must_change_password?: boolean;
-  is_owner?: boolean;
-  advanced_library_groups_enabled?: boolean;
-  banner_text?: string | null;
-  groups?: MeGroup[];
-  raw?: unknown;
-};

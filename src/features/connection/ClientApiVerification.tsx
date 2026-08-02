@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError } from "@secondpass/client";
-import type { MePayload } from "@secondpass/client";
+import type { CurrentUser } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { createSplClientFromProfile } from "../../app/createSplClient";
-import { applyCurrentAccountToProfile } from "./accountProfile";
+import { applyAuthenticatedContextToProfile } from "./accountProfile";
+import { loadAuthenticatedContext } from "./authenticatedContext";
+import { isAuthorizationError } from "../../app/userFacingErrors";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -15,7 +16,7 @@ type Props = {
 type State =
   | { phase: "idle" }
   | { phase: "verifying" }
-  | { phase: "success"; me: MePayload }
+  | { phase: "success"; me: CurrentUser }
   | { phase: "error"; message: string };
 
 export function ClientApiVerification({ selectedProfileId, profilesVersion, onProfilesChanged, autoVerify }: Props) {
@@ -54,16 +55,16 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     setState({ phase: "verifying" });
     try {
       const spl = createSplClientFromProfile(profile);
-      const me = await spl.account.getCurrent();
+      const { currentUser, serverInfo } = await loadAuthenticatedContext(spl);
 
       const now = new Date().toISOString();
-      const updated: ConnectionProfile = applyCurrentAccountToProfile(profile, me, now);
+      const updated: ConnectionProfile = applyAuthenticatedContextToProfile(profile, currentUser, serverInfo, now);
 
       saveConnectionProfile(updated);
       onProfilesChanged?.();
-      setState({ phase: "success", me });
+      setState({ phase: "success", me: currentUser });
     } catch (e) {
-      if (e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")) {
+      if (isAuthorizationError(e)) {
         setState({
           phase: "error",
           message: "Token is invalid/revoked/not allowed. Re-link this library if needed, then verify again.",

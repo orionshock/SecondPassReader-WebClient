@@ -7,6 +7,7 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - Do **not** couple the app to Django templates, server-rendered pages, or Django-specific routing assumptions.
 - Do **not** introduce styling frameworks or state-management libraries without asking first.
 - Do **not** add OAuth/OIDC libraries unless explicitly requested.
+- This project is pre-release. Do **not** add compatibility aliases, deprecated API shims, dual method names, legacy fallbacks, or migration layers unless explicitly requested. Update callers directly.
 - Assume the primary dev environment is **Windows 10 + VS Code**.
 
 ## Architecture rules of thumb
@@ -23,7 +24,7 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
   - Create login request
   - Display `code` and `authorize_url`
   - Poll `poll_url` for a one-time bearer token
-  - Verify with `GET /api/v1/accounts/me/`
+  - Verify with `GET /api/v1/accounts/me/` and `GET /api/v1/server/info/`
 - Treat bearer tokens as password-equivalent: never log them and avoid persisting unless explicitly designed.
 
 ## Coding style
