@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReaderStatusLine, findTocLabelForHref, getReaderLocationTocLabel } from "../features/reader/session/readerSessionLabels";
+import { buildReaderLocationLabel, buildReaderStatusLine, findTocLabelForHref, getReaderLocationTocLabel } from "../features/reader/session/readerSessionLabels";
 import type { ReaderTocItem } from "../features/reader/domain/types";
 
 describe("buildReaderStatusLine", () => {
@@ -128,5 +128,43 @@ describe("buildReaderStatusLine", () => {
         bookTitle: "Sample Book",
       }),
     ).toBe("Chapter 1");
+  });
+});
+
+describe("buildReaderLocationLabel", () => {
+  it("uses a padded section ordinal and integer book progress", () => {
+    expect(buildReaderLocationLabel({
+      sectionIndex: 7,
+      sectionCount: 12,
+      bookProgress: 0.421,
+      displayedPage: 1,
+      displayedTotal: 10,
+      href: "chapter-eight.xhtml",
+    })).toBe("Chapter 08 - 42%");
+  });
+
+  it("does not persist rendered pages, page counts, hrefs, or chapter titles", () => {
+    const label = buildReaderLocationLabel({
+      sectionIndex: 0,
+      sectionCount: 10,
+      bookProgress: 0.01,
+      displayedPage: 1,
+      displayedTotal: 10,
+      href: "Chapter One.xhtml",
+    });
+    expect(label).toBe("Chapter 01 - 01%");
+    expect(label).not.toContain("p1/10");
+    expect(label).not.toContain("Chapter One");
+  });
+
+  it("uses location ordinal and percent-only fallbacks", () => {
+    expect(buildReaderLocationLabel({ locationIndex: 0, locationCount: 120, bookProgress: 0.01 })).toBe("Location 001 - 01%");
+    expect(buildReaderLocationLabel({ bookProgress: 0.42 })).toBe("42%");
+  });
+
+  it("pads to the known total width and caps generated labels", () => {
+    expect(buildReaderLocationLabel({ sectionIndex: 102, sectionCount: 103, bookProgress: 1 })).toBe("Chapter 103 - 100%");
+    expect(buildReaderLocationLabel({ sectionIndex: 0, bookProgress: 0 })).toBe("Chapter 01 - 00%");
+    expect(buildReaderLocationLabel({ sectionIndex: Number.MAX_SAFE_INTEGER, bookProgress: 0.5 }).length).toBeLessThanOrEqual(255);
   });
 });

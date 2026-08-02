@@ -13,12 +13,20 @@ export function toRenditionTarget(target: ReaderLocationTarget | undefined): str
   }
 }
 
-export function normalizeLocation(loc: Location, opts?: { bookProgress?: number | undefined }): ReaderLocation {
+export function normalizeLocation(loc: Location, opts?: {
+  bookProgress?: number | undefined;
+  sectionCount?: number | undefined;
+  locationCount?: number | undefined;
+}): ReaderLocation {
   const start = loc.start;
   return {
     cfi: start.cfi,
     href: start.href,
     bookProgress: typeof opts?.bookProgress === "number" ? opts.bookProgress : typeof start.percentage === "number" ? start.percentage : undefined,
+    sectionIndex: typeof start.index === "number" ? start.index : undefined,
+    sectionCount: opts?.sectionCount,
+    locationIndex: typeof start.location === "number" ? start.location : undefined,
+    locationCount: opts?.locationCount,
     displayedPage: start.displayed?.page,
     displayedTotal: start.displayed?.total,
     raw: loc,

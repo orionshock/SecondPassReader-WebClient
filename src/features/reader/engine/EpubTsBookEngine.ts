@@ -196,7 +196,11 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
           return undefined;
         }
       })();
-      init.onLocationChanged?.(normalizeLocation(loc, { bookProgress }));
+      init.onLocationChanged?.(normalizeLocation(loc, {
+        bookProgress,
+        sectionCount: book.spine.length,
+        locationCount: book.locations.total,
+      }));
     } catch (err) {
       init.onError?.(err);
     }

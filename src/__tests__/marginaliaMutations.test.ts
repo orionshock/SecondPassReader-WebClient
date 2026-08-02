@@ -8,6 +8,7 @@ import {
   normalizeOptionalHighlightContext,
   toMarginaliaLocationLabel,
 } from "../features/reader/session/marginaliaMutations";
+import { buildReaderLocationLabel } from "../features/reader/session/readerSessionLabels";
 
 describe("Reader marginalia mutations", () => {
   it("maps progress location labels without changing their text", () => {
@@ -16,15 +17,18 @@ describe("Reader marginalia mutations", () => {
   });
 
   it("keeps bookmark upserts body-free", () => {
-    const operation = buildBookmarkUpsert({ clientId: "client-b", cfi: "point", locationLabel: "Location 08 - 42%" });
+    const locationLabel = buildReaderLocationLabel({ locationIndex: 7, bookProgress: 0.42 });
+    const operation = buildBookmarkUpsert({ clientId: "client-b", cfi: "point", locationLabel });
     expect(operation).not.toHaveProperty("annotation.body");
+    expect(operation).toHaveProperty("annotation.location.locationLabel", "Location 08 - 42%");
   });
 
   it("normalizes highlight prose and context while preserving notes and labels", () => {
+    const locationLabel = buildReaderLocationLabel({ sectionIndex: 7, bookProgress: 0.42 });
     const operation = buildHighlightUpsert({
       clientId: "client-h",
       cfi: "  epubcfi(/6/2)  ",
-      locationLabel: "  Chapter 08  -  42%  ",
+      locationLabel,
       text: "  One\n\n Apocalypses\t always   kick off...  ",
       color: "blue",
       note: "  User note\nwith intentional spacing  ",
@@ -40,7 +44,7 @@ describe("Reader marginalia mutations", () => {
     });
     expect(operation).toHaveProperty("annotation.location", {
       cfi: "  epubcfi(/6/2)  ",
-      locationLabel: "  Chapter 08  -  42%  ",
+      locationLabel: "Chapter 08 - 42%",
     });
   });
 

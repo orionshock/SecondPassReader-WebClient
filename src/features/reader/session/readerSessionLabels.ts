@@ -1,5 +1,28 @@
 import type { ReaderLocation, ReaderTocItem } from "../domain/types";
 
+function formatGeneratedOrdinal(index: number, total: number | undefined): string {
+  const ordinal = Math.max(1, Math.floor(index) + 1);
+  const totalWidth = typeof total === "number" && Number.isFinite(total) && total > 0
+    ? String(Math.floor(total)).length
+    : 0;
+  return String(ordinal).padStart(Math.max(2, totalWidth), "0");
+}
+
+export function buildReaderLocationLabel(location: ReaderLocation | null | undefined): string {
+  const progress = typeof location?.bookProgress === "number" && Number.isFinite(location.bookProgress)
+    ? `${String(Math.round(location.bookProgress * 100)).padStart(2, "0")}%`
+    : null;
+
+  let ordinal: string | null = null;
+  if (typeof location?.sectionIndex === "number" && Number.isFinite(location.sectionIndex) && location.sectionIndex >= 0) {
+    ordinal = `Chapter ${formatGeneratedOrdinal(location.sectionIndex, location.sectionCount)}`;
+  } else if (typeof location?.locationIndex === "number" && Number.isFinite(location.locationIndex) && location.locationIndex >= 0) {
+    ordinal = `Location ${formatGeneratedOrdinal(location.locationIndex, location.locationCount)}`;
+  }
+
+  return [ordinal, progress].filter((part): part is string => Boolean(part)).join(" - ").slice(0, 255);
+}
+
 export function buildReaderStatusLine(input: {
   location: ReaderLocation | null;
   toc: ReaderTocItem[] | null;

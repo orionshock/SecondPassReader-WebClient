@@ -23,6 +23,12 @@ export type ReaderLocation = {
    * not authoritative and must not be used as the canonical restore anchor.
    */
   bookProgress?: number;
+  /** Zero-based EPUB spine section index and total, when reported by the engine. */
+  sectionIndex?: number;
+  sectionCount?: number;
+  /** Zero-based generated whole-book location index and total, when available. */
+  locationIndex?: number;
+  locationCount?: number;
   /**
    * Rendition display metadata (not persisted as canonical position).
    */

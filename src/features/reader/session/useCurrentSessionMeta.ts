@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { SecondPassClient } from "@secondpass/client";
+import type { MarginaliaProgressInput, SecondPassClient } from "@secondpass/client";
 
 export type CurrentSessionMeta = {
   name: string | null;
@@ -11,6 +11,7 @@ export type CurrentSessionMeta = {
 export function useCurrentSessionMeta(args: {
   spl?: SecondPassClient | null;
   sessionId: string | null;
+  finalProgress?: MarginaliaProgressInput;
 }) {
   const [currentSessionMeta, setCurrentSessionMeta] = useState<CurrentSessionMeta>({
     name: null,
@@ -76,10 +77,13 @@ export function useCurrentSessionMeta(args: {
       if (Object.keys(payload).length > 0) {
         await args.spl.marginalia.sessions.update(args.sessionId, payload);
       }
-      await args.spl.marginalia.sessions.close(args.sessionId);
+      await args.spl.marginalia.sessions.close(
+        args.sessionId,
+        args.finalProgress ? { progress: args.finalProgress } : undefined,
+      );
       setCurrentSessionMeta((prev) => ({ ...prev, name: input.name || null, notes: input.notes || null }));
     },
-    [args.spl, args.sessionId, currentSessionMeta.name, currentSessionMeta.notes],
+    [args.finalProgress, args.spl, args.sessionId, currentSessionMeta.name, currentSessionMeta.notes],
   );
 
   return {

@@ -17,7 +17,7 @@ import { toReaderAnnotation } from "../annotations/annotationUtils";
 import { useSessionAnnotations } from "./useSessionAnnotations";
 import { usePreviousSessionLayers, type PreviousSessionAnnotationGroup } from "./usePreviousSessionLayers";
 import { useCurrentSessionMeta } from "./useCurrentSessionMeta";
-import { buildReaderStatusLine } from "./readerSessionLabels";
+import { buildReaderLocationLabel, buildReaderStatusLine } from "./readerSessionLabels";
 import { useCurrentSessionAnnotationActions } from "./useCurrentSessionAnnotationActions";
 
 export type ReadingSessionOrchestratorProps = {
@@ -90,12 +90,21 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const commandSeqRef = useRef(0);
   const lastActiveBookKeyRef = useRef(activeBookKey);
   const location = locationEntry?.bookKey === activeBookKey ? locationEntry.location : null;
+  const generatedLocationLabel = useMemo(
+    () => buildReaderLocationLabel(location),
+    [location],
+  );
+  const finalProgress = useMemo(
+    () => location?.cfi ? { cfi: location.cfi, locationLabel: generatedLocationLabel } : undefined,
+    [generatedLocationLabel, location?.cfi],
+  );
   const bootstrapSession = props.openedBook.marginaliaBootstrap?.session ?? null;
   const sessionId = bootstrapSession?.id ?? null;
   const canMutateSession = bootstrapSession?.status === "active";
   const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
     spl: props.spl,
     sessionId,
+    finalProgress,
   });
 
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
@@ -175,11 +184,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     spl: props.spl,
     sessionId: state.sessionId,
     location: state.location,
-    locationLabel: buildReaderStatusLine({
-      location: state.location,
-      toc: state.toc,
-      bookTitle: props.openedBook.book.title,
-    }).join(" - "),
   });
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -369,7 +373,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     spl: props.spl,
     sessionId,
     location,
-    locationLabel: statusLine.join(" - "),
+    locationLabel: generatedLocationLabel,
     currentBookmark,
     annotationsRaw,
     setAnnotationsRaw,

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaProgress, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation } from "../domain/types";
 import { buildMarginaliaProgressInput } from "./marginaliaMutations";
+import { buildReaderLocationLabel } from "./readerSessionLabels";
 
 export type ReadingProgressAutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
@@ -20,13 +21,22 @@ export type ReadingProgressAutosaveState = {
   progress?: MarginaliaProgress;
 };
 
+export function buildReadingProgressSaveInput(location: ReaderLocation | null): {
+  cfi: string;
+  locationLabel: string;
+} | null {
+  if (!location) return null;
+  const cfi = typeof location.cfi === "string" ? location.cfi.trim() : "";
+  if (!cfi) return null;
+  return { cfi, locationLabel: buildReaderLocationLabel(location) };
+}
+
 export function useReadingProgressAutosave(input: {
   enabled?: boolean;
   autosaveDelayMs?: number;
   spl?: SecondPassClient | null;
   sessionId: string | null;
   location: ReaderLocation | null;
-  locationLabel?: string;
 }) {
   const enabled = input.enabled !== false;
   const autosaveDelayMs = input.autosaveDelayMs ?? 5000;
@@ -42,14 +52,8 @@ export function useReadingProgressAutosave(input: {
   const sessionIdRef = useRef<string | null>(null);
 
   const progressInput = useMemo(() => {
-    if (!input.location) return null;
-    const cfi = typeof input.location.cfi === "string" ? input.location.cfi.trim() : "";
-    if (!cfi) return null;
-    return {
-      cfi,
-      locationLabel: (input.locationLabel ?? "").slice(0, 255),
-    };
-  }, [input.location, input.locationLabel]);
+    return buildReadingProgressSaveInput(input.location);
+  }, [input.location]);
 
   useEffect(() => {
     sessionIdRef.current = input.sessionId;
