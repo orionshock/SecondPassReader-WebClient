@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
@@ -8,6 +7,8 @@ import { OrderingControl, type OrderingOption } from "../../components/OrderingC
 import { CoverPreviewStrip } from "../library/display/CoverPreviewStrip";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
+import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
 
 type ShelfOrdering = "name" | "-item_count";
 
@@ -29,6 +30,29 @@ type ScopedShelves = {
   shared: Shelf[];
 };
 
+export function ShelvesLoadErrorNotice({
+  error,
+  disabled,
+  onRetry,
+}: {
+  error: unknown;
+  disabled: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <PageLoadErrorNotice
+      error={error}
+      message={getPageLoadErrorMessage(
+        error,
+        "Could not load shelves.",
+        getAuthRecoveryMessage("access shelves"),
+      )}
+      onRetry={onRetry}
+      retryDisabled={disabled}
+    />
+  );
+}
+
 export function ShelvesPage({
   profile,
   spl,
@@ -47,7 +71,7 @@ export function ShelvesPage({
   const canLoad = Boolean(spl);
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [data, setData] = useState<ScopedShelves | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
@@ -73,13 +97,7 @@ export function ShelvesPage({
       });
     } catch (e) {
       if (requestSeq !== loadRequestSeq.current) return;
-      const message =
-        e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-          ? "Could not load shelves. Your device token may be revoked or not allowed to access shelves."
-          : e instanceof Error
-            ? e.message
-            : "Failed to load shelves.";
-      setError(message);
+      setError(e instanceof Error ? e : new Error("Could not load shelves."));
     } finally {
       if (requestSeq === loadRequestSeq.current) setBusy(false);
     }
@@ -257,12 +275,11 @@ export function ShelvesPage({
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {busy && !data ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? (
-        <div className="errorText">
-          {error}{" "}
-          <button type="button" className="button buttonCompact" onClick={() => void load()} disabled={!canLoad || busy}>
-            Retry
-          </button>
-        </div>
+        <ShelvesLoadErrorNotice
+          error={error}
+          onRetry={() => void load()}
+          disabled={!canLoad || busy}
+        />
       ) : null}
       {mutationError ? <div className="errorText">{mutationError}</div> : null}
 

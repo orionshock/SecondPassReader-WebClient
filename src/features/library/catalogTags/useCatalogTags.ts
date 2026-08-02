@@ -7,7 +7,7 @@ export function useCatalogTags(spl: SecondPassClient, groupId?: string) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PaginatedResponse<LibraryTag> | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const requestSeq = useRef(0);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useCatalogTags(spl: SecondPassClient, groupId?: string) {
     }).catch((reason: unknown) => {
       if (request !== requestSeq.current) return;
       setData(null);
-      setError(reason instanceof Error ? reason.message : "Failed to load catalog tags.");
+      setError(reason instanceof Error ? reason : new Error("Could not load catalog tags."));
     }).finally(() => {
       if (request === requestSeq.current) setBusy(false);
     });

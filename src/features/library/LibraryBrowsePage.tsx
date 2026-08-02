@@ -16,6 +16,7 @@ import { LibraryAuthorRows } from "./results/LibraryAuthorRows";
 import { LibraryBooksResults } from "./results/LibraryBooksResults";
 import { LibrarySelectedAxisHeader } from "./results/LibrarySelectedAxisHeader";
 import { LibrarySeriesRows } from "./results/LibrarySeriesRows";
+import { LibraryResultsLoadErrorNotice } from "./LibraryResultsLoadErrorNotice";
 
 type BrowseMode = LibraryAxis;
 type BookOrdering = LibraryBookOrdering;
@@ -224,7 +225,9 @@ export function LibraryBrowsePage({
               role="tabpanel"
               aria-labelledby={`library-axis-${browseMode}-tab`}
             >
-              {booksError ? <p className="errorText">{booksError}</p> : null}
+              {booksError ? (
+                <LibraryResultsLoadErrorNotice error={booksError} />
+              ) : null}
               {showBookList ? (
                 <>
                   {browseMode === "series" && selectedSeries ? <LibrarySelectedAxisHeader kind="series" series={selectedSeries} /> : null}
@@ -239,6 +242,7 @@ export function LibraryBrowsePage({
                     selectedBookId={selectedBookId ? String(selectedBookId) : null}
                     onViewBook={(book) => onViewBook?.(String(book.id))}
                     onPageChange={handlePageChange}
+                    hasError={Boolean(booksError)}
                   />
                 </>
               ) : browseMode === "series" ? (

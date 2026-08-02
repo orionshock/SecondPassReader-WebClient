@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError } from "@secondpass/client";
 import type { LibraryAuthor, LibraryBook, LibraryBookListParams, LibraryEntityListParams, LibrarySeries, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./libraryAxisQueries";
 import type { DerivedLibraryRouteState } from "../route/libraryRouteState";
@@ -13,15 +12,15 @@ type Input = {
 export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
   const [booksData, setBooksData] = useState<PaginatedResponse<LibraryBook> | null>(null);
   const [booksBusy, setBooksBusy] = useState(false);
-  const [booksError, setBooksError] = useState<string | null>(null);
+  const [booksError, setBooksError] = useState<unknown>(null);
   const [booksPage, setBooksPage] = useState(1);
   const [authorsData, setAuthorsData] = useState<PaginatedResponse<LibraryAuthor> | null>(null);
   const [authorsBusy, setAuthorsBusy] = useState(false);
-  const [authorsError, setAuthorsError] = useState<string | null>(null);
+  const [authorsError, setAuthorsError] = useState<unknown>(null);
   const [authorsPage, setAuthorsPage] = useState(1);
   const [seriesData, setSeriesData] = useState<PaginatedResponse<LibrarySeries> | null>(null);
   const [seriesBusy, setSeriesBusy] = useState(false);
-  const [seriesError, setSeriesError] = useState<string | null>(null);
+  const [seriesError, setSeriesError] = useState<unknown>(null);
   const [seriesPage, setSeriesPage] = useState(1);
   const booksRequestSeq = useRef(0);
   const authorsRequestSeq = useRef(0);
@@ -45,11 +44,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
     } catch (error) {
       if (requestSeq !== booksRequestSeq.current) return;
       setBooksData((current) => current ?? null);
-      if (error instanceof ApiError && (error.kind === "unauthorized" || error.kind === "forbidden")) {
-        setBooksError("Your reader client is linked, but this token is not allowed to access the library. It may be revoked, lack permissions, or the server may not support reader-token library access yet.");
-      } else {
-        setBooksError(error instanceof Error ? error.message : "Failed to load library.");
-      }
+      setBooksError(error instanceof Error ? error : new Error("Could not load library results."));
     } finally {
       if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
     }
@@ -69,7 +64,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
       setAuthorsPage(params.page ?? 1);
     } catch (error) {
       if (requestSeq !== authorsRequestSeq.current) return;
-      setAuthorsError(error instanceof Error ? error.message : "Failed to load authors.");
+      setAuthorsError(error instanceof Error ? error : new Error("Could not load library results."));
     } finally {
       if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
     }
@@ -89,7 +84,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
       setSeriesPage(params.page ?? 1);
     } catch (error) {
       if (requestSeq !== seriesRequestSeq.current) return;
-      setSeriesError(error instanceof Error ? error.message : "Failed to load series.");
+      setSeriesError(error instanceof Error ? error : new Error("Could not load library results."));
     } finally {
       if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);
     }

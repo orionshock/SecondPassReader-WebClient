@@ -1,13 +1,38 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError } from "@secondpass/client";
 import { navigateTo, routeToHash } from "../../app/navigation";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import { HomeShelfCard } from "./HomeShelfCard";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
+import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
+
+export function ShelvesPreviewLoadFailure({
+  error,
+  disabled,
+  onRetry,
+}: {
+  error: unknown;
+  disabled: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <PageLoadErrorNotice
+      error={error}
+      message={getPageLoadErrorMessage(
+        error,
+        "Could not load shelves.",
+        getAuthRecoveryMessage("load shelves"),
+      )}
+      onRetry={onRetry}
+      retryDisabled={disabled}
+      className="muted"
+    />
+  );
+}
 
 export function ShelvesPreviewSection({ spl, serverBaseUrl }: { spl: SecondPassClient | null; serverBaseUrl?: string | null }) {
   const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [shelves, setShelves] = useState<Shelf[] | null>(null);
 
   const load = useCallback(async () => {
@@ -18,13 +43,7 @@ export function ShelvesPreviewSection({ spl, serverBaseUrl }: { spl: SecondPassC
       const r = await spl.shelves.list({ pageSize: 6, includePreviewBooks: true });
       setShelves(r.results ?? []);
     } catch (e) {
-      const message =
-        e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-          ? "Could not load shelves."
-          : e instanceof Error
-            ? e.message
-            : "Failed to load shelves.";
-      setError(message);
+      setError(e instanceof Error ? e : new Error("Could not load shelves."));
       setShelves(null);
     } finally {
       setBusy(false);
@@ -53,12 +72,11 @@ export function ShelvesPreviewSection({ spl, serverBaseUrl }: { spl: SecondPassC
       {!canLoad ? <div className="muted">Select a verified profile first.</div> : null}
       {busy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
       {error ? (
-        <div className="muted">
-          {error}{" "}
-          <button type="button" className="button buttonCompact" onClick={() => void load()} disabled={!canLoad || busy}>
-            Retry
-          </button>
-        </div>
+        <ShelvesPreviewLoadFailure
+          error={error}
+          onRetry={() => void load()}
+          disabled={!canLoad || busy}
+        />
       ) : null}
 
       {canLoad && !busy && !error && shelves && shelves.length === 0 ? <div className="muted">No shelves yet.</div> : null}

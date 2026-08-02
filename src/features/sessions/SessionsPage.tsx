@@ -6,6 +6,8 @@ import { navigateTo, routeToHash } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/userFacingErrors";
+import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
 
 function formatBookAuthors(book?: ReadingSessionBookSummary | null): string {
   const authors = book?.authors ?? [];
@@ -53,6 +55,36 @@ function formatAnnotationCount(n?: number | null): string | null {
 
 type Filter = "all" | "active" | "closed";
 
+export function getSessionsLoadErrorMessage(error: unknown, hasBookFilter: boolean): string {
+  const authMessage = getAuthRecoveryMessage("access reading sessions");
+  if (isAuthorizationError(error)) return authMessage;
+  if (error instanceof ApiError && error.status === 400 && hasBookFilter) {
+    return "That book filter is not valid.";
+  }
+  if (error instanceof ApiError && error.status === 404 && hasBookFilter) {
+    return "That book could not be found or is not accessible.";
+  }
+  return getPageLoadErrorMessage(error, "Could not load reading sessions.", authMessage);
+}
+
+export function SessionsLoadErrorNotice({ error, hasBookFilter }: { error: unknown; hasBookFilter: boolean }) {
+  return (
+    <PageLoadErrorNotice
+      error={error}
+      message={getSessionsLoadErrorMessage(error, hasBookFilter)}
+    />
+  );
+}
+
+export function SessionsNoDataState({ busy, hasError }: { busy: boolean; hasError: boolean }) {
+  if (hasError) return null;
+  return (
+    <div className="muted" style={{ marginTop: 10 }}>
+      {busy ? `Loading${"\u2026"}` : "No sessions yet."}
+    </div>
+  );
+}
+
 export function SessionsPage({
   profile,
   spl,
@@ -72,7 +104,7 @@ export function SessionsPage({
   const [searchDraft, setSearchDraft] = useState(effectiveSearchQuery);
 
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ReadingSessionsListResponse | null>(null);
 
@@ -92,17 +124,7 @@ export function SessionsPage({
         setData(r);
         setPage(targetPage);
       } catch (e) {
-        const message =
-          e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-            ? "Could not load sessions. Your device token may be revoked or not allowed to access reading data."
-            : e instanceof ApiError && e.status === 400
-              ? "That book filter is not valid."
-              : e instanceof ApiError && e.status === 404
-                ? "That book could not be found or is not accessible."
-                : e instanceof Error
-                  ? e.message
-                  : "Failed to load sessions.";
-        setError(message);
+        setError(e instanceof Error ? e : new Error("Could not load reading sessions."));
         setData(null);
       } finally {
         setBusy(false);
@@ -137,7 +159,9 @@ export function SessionsPage({
   return (
     <section className="panel sessionsPage">
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {error ? <div className="errorText">{error}</div> : null}
+      {error ? (
+        <SessionsLoadErrorNotice error={error} hasBookFilter={Boolean(bookFilter)} />
+      ) : null}
 
       <form
         className="sessionsToolbar"
@@ -318,9 +342,7 @@ export function SessionsPage({
           </div>
         </>
       ) : (
-        <div className="muted" style={{ marginTop: 10 }}>
-          {busy ? `Loading${"\u2026"}` : "No sessions yet."}
-        </div>
+        <SessionsNoDataState busy={busy} hasError={Boolean(error)} />
       )}
     </section>
   );

@@ -3,13 +3,14 @@ import type { LibraryAuthor, PaginatedResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../../storage/connectionProfiles";
 import { CoverPreviewStrip } from "../display/CoverPreviewStrip";
 import { LibraryPaginationControls } from "../controls/LibraryPaginationControls";
+import { LibraryResultsLoadErrorNotice } from "../LibraryResultsLoadErrorNotice";
 
-type Props = { data: PaginatedResponse<LibraryAuthor> | null; busy: boolean; error: string | null; page: number; profile: ConnectionProfile | null; onSelectAuthor: (authorId: string) => void; onViewBook?: (bookId: string) => void; onPageChange: (page: number) => void };
+type Props = { data: PaginatedResponse<LibraryAuthor> | null; busy: boolean; error: unknown; page: number; profile: ConnectionProfile | null; onSelectAuthor: (authorId: string) => void; onViewBook?: (bookId: string) => void; onPageChange: (page: number) => void };
 
 export function LibraryAuthorRows({ data, busy, error, page, profile, onSelectAuthor, onViewBook, onPageChange }: Props) {
   const keyDown = (event: KeyboardEvent<HTMLElement>, action: () => void) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); action(); } };
   return <>
-    {error ? <p className="errorText">{error}</p> : null}
+    {error ? <LibraryResultsLoadErrorNotice error={error} /> : null}
     {busy && !data ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
     {data?.results.length ? <div className="libraryEntityList">{data.results.map((author) => {
       const open = () => onSelectAuthor(String(author.id));

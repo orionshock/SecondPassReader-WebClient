@@ -4,7 +4,8 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "./coverUtils";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
-import { getUserFacingErrorMessage } from "../../app/userFacingErrors";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
+import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
 
 const RECENT_READING_ERROR = "Could not load recent reading.";
 
@@ -17,13 +18,18 @@ export function RecentReadingLoadFailure({
   disabled: boolean;
   onRetry: () => void;
 }) {
+  const message = getPageLoadErrorMessage(
+    error,
+    RECENT_READING_ERROR,
+    getAuthRecoveryMessage("load recent reading"),
+  );
   return (
-    <div className="errorText">
-      {getUserFacingErrorMessage(error, RECENT_READING_ERROR)}{" "}
-      <button type="button" className="button buttonCompact" onClick={onRetry} disabled={disabled}>
-        Retry
-      </button>
-    </div>
+    <PageLoadErrorNotice
+      error={error}
+      message={message}
+      onRetry={onRetry}
+      retryDisabled={disabled}
+    />
   );
 }
 

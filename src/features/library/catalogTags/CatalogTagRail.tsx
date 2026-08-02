@@ -1,7 +1,24 @@
 import type { SecondPassClient } from "@secondpass/client";
 import { useCatalogTags } from "./useCatalogTags";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../../app/userFacingErrors";
+import { PageLoadErrorNotice } from "../../../app/PageLoadErrorNotice";
 
 type Props = { spl: SecondPassClient; groupId?: string; selectedSlug?: string; onSelect: (slug?: string) => void };
+
+export function CatalogTagLoadErrorNotice({ error }: { error: unknown }) {
+  return (
+    <PageLoadErrorNotice
+      error={error}
+      message={getPageLoadErrorMessage(
+        error,
+        "Could not load catalog tags.",
+        getAuthRecoveryMessage("load catalog tags"),
+      )}
+      className="catalogTagStatus errorText"
+    />
+  );
+}
+
 export function CatalogTagRail({ spl, groupId, selectedSlug, onSelect }: Props) {
   const { data, busy, error, previousPage, nextPage } = useCatalogTags(spl, groupId);
 
@@ -17,7 +34,7 @@ export function CatalogTagRail({ spl, groupId, selectedSlug, onSelect }: Props) 
         </button>
       ))}
       {busy && !data ? <div className="catalogTagStatus muted">Loading...</div> : null}
-      {error ? <div className="catalogTagStatus errorText">{error}</div> : null}
+      {error ? <CatalogTagLoadErrorNotice error={error} /> : null}
       {data && (data.previous || data.next) ? (
         <div className="catalogTagPager">
           <button className="button buttonCompact" type="button" disabled={busy || !data.previous} onClick={previousPage}>Previous</button>

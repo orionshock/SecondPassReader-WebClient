@@ -1,0 +1,43 @@
+import { ApiError } from "@secondpass/client";
+import { describe, expect, it } from "vitest";
+import {
+  getAuthRecoveryMessage,
+  getPageLoadErrorMessage,
+  isAuthorizationError,
+} from "../app/userFacingErrors";
+
+describe("user-facing API errors", () => {
+  it("classifies 401 and 403 API errors as authorization failures", () => {
+    expect(isAuthorizationError(apiError(401, "Unauthorized"))).toBe(true);
+    expect(isAuthorizationError(apiError(403, "Forbidden"))).toBe(true);
+  });
+
+  it("classifies token-not-allowed messages as authorization failures", () => {
+    expect(isAuthorizationError(apiError(404, "Token is not allowed to access this endpoint."))).toBe(true);
+    expect(isAuthorizationError(new Error("Reader token is currently not allowed here."))).toBe(true);
+  });
+
+  it("does not classify an ordinary 404 as an authorization failure", () => {
+    expect(isAuthorizationError(apiError(404, "Book not found."))).toBe(false);
+  });
+
+  it("returns the page-specific authorization fallback", () => {
+    expect(getPageLoadErrorMessage(
+      apiError(403, "Forbidden"),
+      "Could not load library results.",
+      getAuthRecoveryMessage("access the library"),
+    )).toBe("This device is not authorized to access the library.");
+  });
+
+  it("returns the page-specific generic fallback for other load errors", () => {
+    expect(getPageLoadErrorMessage(
+      new Error("fetch failed"),
+      "Could not load library results.",
+      "This device is not authorized to access the library.",
+    )).toBe("Could not load library results.");
+  });
+});
+
+function apiError(status: number, message: string): ApiError {
+  return new ApiError({ kind: "http_error", status, message });
+}

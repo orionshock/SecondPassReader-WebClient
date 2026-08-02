@@ -13,9 +13,11 @@ type Props = {
   selectedBookId: string | null;
   onViewBook: (book: LibraryBook) => void;
   onPageChange: (page: number) => void;
+  hasError?: boolean;
 };
 
-export function LibraryBooksResults({ data, busy, page, pageSize, viewMode, serverBaseUrl, selectedBookId, onViewBook, onPageChange }: Props) {
+export function LibraryBooksResults({ data, busy, page, pageSize, viewMode, serverBaseUrl, selectedBookId, onViewBook, onPageChange, hasError = false }: Props) {
+  if (!data && hasError) return null;
   if (!data) return <div className="muted" style={{ marginTop: 10 }}>{busy ? `Loading${"\u2026"}` : "No results yet."}</div>;
   const totalPages = Math.max(1, Math.ceil((data.count ?? 0) / pageSize));
   const metaItems = [`Page ${page} of ${totalPages}`, `${data.count} books`];

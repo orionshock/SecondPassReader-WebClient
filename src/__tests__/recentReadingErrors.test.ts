@@ -43,4 +43,15 @@ describe("recent reading errors", () => {
       ),
     ).toBe("Safe fallback.");
   });
+
+  it("shows the Home authorization fallback for recent reading", () => {
+    const html = renderToStaticMarkup(createElement(RecentReadingLoadFailure, {
+      error: new ApiError({ kind: "unauthorized", status: 401, message: "Unauthorized" }),
+      disabled: false,
+      onRetry: vi.fn(),
+    }));
+
+    expect(html).toContain("This device is not authorized to load recent reading.");
+    expect(html).toContain("Manage connection");
+  });
 });
