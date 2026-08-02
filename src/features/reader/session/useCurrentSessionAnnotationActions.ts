@@ -52,7 +52,7 @@ export function useCurrentSessionAnnotationActions(args: {
       if (!raw || raw.kind !== "highlight") throw new Error("Highlight not found.");
 
       const nextColor = update.color.trim() || (getAnnotationColor(raw) ?? "").trim() || "yellow";
-      const nextNote = update.note.trim();
+      const nextNote = update.note;
 
       setAnnotationBusy(true);
       args.setAnnotationError(null);

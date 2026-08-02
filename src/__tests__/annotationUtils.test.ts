@@ -17,4 +17,12 @@ describe("annotationUtils", () => {
     expect(getAnnotationNoteText(highlight)).toBe("Note here");
     expect(getAnnotationColor(highlight)).toBe("yellow");
   });
+
+  it("preserves server-returned highlight text on read", () => {
+    const stored = {
+      ...highlight,
+      body: { ...highlight.body, text: "Stored\n\n exactly\t as returned" },
+    };
+    expect(getAnnotationDescribingText(stored)).toBe("Stored\n\n exactly\t as returned");
+  });
 });
