@@ -1,7 +1,7 @@
-import { useState } from "react";
 import type { Shelf } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon";
-import { resolveCoverUrl } from "../library/coverUtils";
+import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack";
+import { normalizePreviewBooks } from "../library/display/previewBooks";
 
 export function HomeShelfCard({
   shelf,
@@ -12,8 +12,7 @@ export function HomeShelfCard({
   baseUrl?: string | null;
   href: string;
 }) {
-  const [brokenCoverIds, setBrokenCoverIds] = useState<Set<string>>(() => new Set());
-  const previews = Array.isArray(shelf.preview_books) ? shelf.preview_books.slice(0, 3) : [];
+  const previews = normalizePreviewBooks(shelf.preview_books);
   const count = shelf.item_count ?? 0;
   const owner = getShelfOwner(shelf);
   const accessibleOwner = owner ? `, ${owner.kind} ${owner.label}` : "";
@@ -25,30 +24,13 @@ export function HomeShelfCard({
       title={shelf.description ?? undefined}
       href={href}
     >
-      <span className="homeShelfCovers" aria-hidden="true">
-        {previews.length ? previews.map((book) => {
-          const bookId = String(book.id);
-          const coverSrc = brokenCoverIds.has(bookId) ? undefined : resolveCoverUrl(book.cover_url, baseUrl ?? null);
-          return (
-            <span className="homeShelfCover" key={bookId}>
-              {coverSrc ? (
-                <img
-                  className="homeShelfCoverImage"
-                  src={coverSrc}
-                  alt=""
-                  title={book.title}
-                  loading="lazy"
-                  onError={() => setBrokenCoverIds((current) => new Set(current).add(bookId))}
-                />
-              ) : <span className="homeShelfCoverPlaceholder">No cover</span>}
-            </span>
-          );
-        }) : (
-          <span className="homeShelfCover homeShelfCoverEmpty">
-            <span className="homeShelfCoverPlaceholder">No books</span>
-          </span>
-        )}
-      </span>
+      <PreviewBookCoverStack
+        previewBooks={previews}
+        baseUrl={baseUrl}
+        variant="homeShelf"
+        emptyLabel="No books"
+        decorative
+      />
       <span className="homeShelfCardText">
         <span className="homeShelfName">{shelf.name}</span>
         <span className="homeShelfMetadata">

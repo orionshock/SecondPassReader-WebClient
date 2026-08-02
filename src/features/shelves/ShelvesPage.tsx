@@ -4,7 +4,8 @@ import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl";
-import { CoverPreviewStrip } from "../library/display/CoverPreviewStrip";
+import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack";
+import { normalizePreviewBooks } from "../library/display/previewBooks";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
@@ -181,8 +182,8 @@ export function ShelvesPage({
           </div>
         </div>
         <div className="shelfCardRight">
-          <CoverPreviewStrip
-            books={shelf.preview_books}
+          <PreviewBookCoverStack
+            previewBooks={normalizePreviewBooks(shelf.preview_books)}
             baseUrl={profile}
             onBookClick={(bookId) => navigateTo({ kind: "shelves", bookId })}
           />

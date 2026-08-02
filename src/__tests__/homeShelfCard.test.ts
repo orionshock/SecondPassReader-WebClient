@@ -50,13 +50,14 @@ describe("Home shelf cards", () => {
 
     expect(html).toContain('src="https://library.example/covers/book-1.jpg"');
     expect(html).toContain('title="Preview Book"');
+    expect(html).toContain("previewBookCoverStackHomeShelf");
     expect(html).not.toContain("No books");
   });
 
   it("renders a compact placeholder when no previews are available", () => {
     const html = render(shelf({ preview_books: [] }));
 
-    expect(html).toContain("homeShelfCoverEmpty");
+    expect(html).toContain("previewBookCoverTileEmpty");
     expect(html).toContain("No books");
   });
 });

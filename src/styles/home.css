@@ -50,14 +50,16 @@
   outline-offset: 2px;
 }
 
-.homeShelfCovers {
+.previewBookCoverStackHomeShelf {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  gap: 0;
   width: 78px;
   min-height: 66px;
 }
 
-.homeShelfCover {
+.previewBookCoverStackHomeShelf .previewBookCoverTile {
   display: grid;
   place-items: center;
   width: 42px;
@@ -69,26 +71,18 @@
   box-shadow: 0 2px 5px rgba(15, 23, 42, 0.14);
 }
 
-.homeShelfCover + .homeShelfCover {
+.previewBookCoverStackHomeShelf .previewBookCoverTile + .previewBookCoverTile {
   margin-left: -24px;
 }
 
-.homeShelfCoverEmpty {
+.previewBookCoverStackHomeShelf .previewBookCoverTileEmpty {
   width: 44px;
 }
 
-.homeShelfCoverImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.homeShelfCoverPlaceholder {
+.previewBookCoverStackHomeShelf .previewBookCoverPlaceholder {
   padding: 3px;
-  color: var(--sp-muted);
   font-size: 8px;
   line-height: 1.1;
-  text-align: center;
 }
 
 .homeShelfCardText {

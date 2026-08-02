@@ -429,7 +429,7 @@
   font-weight: 700;
 }
 
-.coverPreviewStrip {
+.previewBookCoverStack {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -437,7 +437,7 @@
   min-width: 0;
 }
 
-.coverPreviewTile {
+.previewBookCoverTile {
   width: 30px;
   aspect-ratio: 2 / 3;
   border: 1px solid var(--sp-border);
@@ -449,29 +449,29 @@
   flex: 0 0 auto;
 }
 
-.coverPreviewButton {
+.previewBookCoverButton {
   padding: 0;
   color: inherit;
   cursor: pointer;
 }
 
-.coverPreviewButton:hover,
-.coverPreviewButton:focus-visible {
+.previewBookCoverButton:hover,
+.previewBookCoverButton:focus-visible {
   border-color: var(--sp-primary-border);
   outline: none;
 }
 
-.coverPreviewButton:focus-visible {
+.previewBookCoverButton:focus-visible {
   box-shadow: 0 0 0 2px var(--color-primary-bg);
 }
 
-.coverPreviewImage {
+.previewBookCoverImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.coverPreviewPlaceholder {
+.previewBookCoverPlaceholder {
   padding: 2px;
   color: var(--sp-muted);
   font-size: 8px;
@@ -1093,7 +1093,7 @@
     grid-template-columns: 1fr;
   }
 
-  .coverPreviewStrip {
+  .previewBookCoverStack {
     justify-content: flex-start;
   }
 }

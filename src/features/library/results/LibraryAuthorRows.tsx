@@ -1,7 +1,8 @@
 import type { KeyboardEvent } from "react";
 import type { LibraryAuthor, PaginatedResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../../storage/connectionProfiles";
-import { CoverPreviewStrip } from "../display/CoverPreviewStrip";
+import { PreviewBookCoverStack } from "../display/PreviewBookCoverStack";
+import { normalizePreviewBooks } from "../display/previewBooks";
 import { LibraryPaginationControls } from "../controls/LibraryPaginationControls";
 import { LibraryResultsLoadErrorNotice } from "../LibraryResultsLoadErrorNotice";
 
@@ -16,7 +17,7 @@ export function LibraryAuthorRows({ data, busy, error, page, profile, onSelectAu
       const open = () => onSelectAuthor(String(author.id));
       return <div key={String(author.id)} className="libraryEntityCard libraryEntityCardButton" role="button" tabIndex={0} onClick={open} onKeyDown={(event) => keyDown(event, open)} aria-label={`View books by ${author.name}`} title={`View books by ${author.name}`}>
         <div className="libraryEntityMain"><div className="libraryEntityTitle">{author.name}</div>{typeof author.book_count === "number" ? <div className="muted">{author.book_count} books</div> : null}</div>
-        <CoverPreviewStrip books={author.preview_books} baseUrl={profile} onBookClick={onViewBook} />
+        <PreviewBookCoverStack previewBooks={normalizePreviewBooks(author.preview_books)} baseUrl={profile} onBookClick={onViewBook} />
       </div>;
     })}</div> : null}
     {data ? <LibraryPaginationControls metaItems={[`Page ${page}`, `${data.count} authors`]} busy={busy} hasPrevious={Boolean(data.previous)} hasNext={Boolean(data.next)} onPrevious={() => onPageChange(Math.max(1, page - 1))} onNext={() => onPageChange(page + 1)} /> : null}
