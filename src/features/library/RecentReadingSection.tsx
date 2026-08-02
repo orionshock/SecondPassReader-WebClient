@@ -1,12 +1,12 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import type { MarginaliaRecentSessions, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo } from "../../app/navigation";
-import { resolveCoverUrl } from "./coverUtils";
+import { navigateTo, routeToHash } from "../../app/navigation";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
 import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
 import { loadRecentReading } from "../reader/marginaliaRequests";
+import { RecentReadingCarousel } from "./RecentReadingCarousel";
 
 const RECENT_READING_ERROR = "Could not load recent reading.";
 
@@ -34,15 +34,6 @@ export function RecentReadingLoadFailure({
   );
 }
 
-function formatLastActivity(isoUtc: string): string {
-  try {
-    const d = new Date(isoUtc);
-    return Number.isFinite(d.getTime()) ? d.toLocaleString() : isoUtc;
-  } catch {
-    return isoUtc;
-  }
-}
-
 export function RecentReadingSection({
   profile,
   spl,
@@ -53,8 +44,6 @@ export function RecentReadingSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [data, setData] = useState<MarginaliaRecentSessions | null>(null);
-  const [brokenCoverIds, setBrokenCoverIds] = useState<Record<string, true>>({});
-
   const canLoad = Boolean(spl);
 
   const loadRecent = useCallback(async () => {
@@ -93,12 +82,17 @@ export function RecentReadingSection({
 
   return (
     <div className="recentReadingSection">
-      <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
+      <div className="panelHeaderRow recentReadingHeader">
         <div className="panelTitle" style={{ margin: 0 }}>
           Continue reading
         </div>
-        <div className="muted">
-          {busy ? `Loading${"\u2026"}` : data && data.results.length > 1 ? `${data.results.length} recent` : null}
+        <div className="recentReadingHeaderActions">
+          <span className="muted">
+            {busy ? `Loading${"\u2026"}` : data && data.results.length > 1 ? `${data.results.length} recent` : null}
+          </span>
+          <a className="button buttonCompact recentReadingViewAll" href={routeToHash({ kind: "sessions" })}>
+            View all
+          </a>
         </div>
       </div>
 
@@ -109,43 +103,12 @@ export function RecentReadingSection({
       {!busy && !error && (!data?.results || data.results.length === 0) ? <div className="muted">No recent reading yet.</div> : null}
 
       {data?.results?.length ? (
-        <div className="recentCarousel" role="region" aria-label="Recent reading">
-          {data.results.map((item) => {
-            const id = String(item.book.id);
-            const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.coverUrl, profile);
-            const sessionName = item.name.trim();
-            const ariaLabel = `Resume ${item.book.title}`;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className="recentBookCard"
-                onClick={() => handleResume(item.book.id)}
-                disabled={!canLoad}
-                aria-label={ariaLabel}
-                title={sessionName ? `${ariaLabel}\n${sessionName}` : ariaLabel}
-              >
-                <div className="recentCoverWrap">
-                  {coverSrc ? (
-                    <img
-                      className="recentCoverImg"
-                      src={coverSrc}
-                      alt={`${item.book.title} cover`}
-                      loading="lazy"
-                      onError={() => setBrokenCoverIds((prev) => ({ ...prev, [id]: true }))}
-                    />
-                  ) : (
-                    <div className="recentCoverPlaceholder">No cover</div>
-                  )}
-                </div>
-                <div className="recentBookTitle" title={item.book.title}>
-                  {item.book.title}
-                </div>
-                <div className="recentBookMeta muted">Last read: {formatLastActivity(item.lastActivityAt)}</div>
-              </button>
-            );
-          })}
-        </div>
+        <RecentReadingCarousel
+          items={data.results}
+          profile={profile}
+          disabled={!canLoad}
+          onResume={handleResume}
+        />
       ) : null}
     </div>
   );

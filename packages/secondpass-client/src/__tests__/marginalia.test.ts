@@ -17,12 +17,17 @@ describe("marginalia client", () => {
   it("projects book summaries, bounded books, recent sessions, and null activity", async () => {
     fetchMock()
       .mockResolvedValueOnce(json({ count: 1, next: null, previous: null, results: [{ ...wireBook, authors: [{ id: "author-1", name: "Author" }], series: { id: "series-1", name: "Series", series_index: "1.25" }, session_count: 3, active_session_count: 1, last_activity_at: null }] }))
-      .mockResolvedValueOnce(json({ results: [{ id: "session-1", name: "Morning", status: "active", last_activity_at: "2026-08-02", book: wireBook }] }));
+      .mockResolvedValueOnce(json({ results: [
+        { id: "session-1", name: "Morning", status: "active", last_activity_at: "2026-08-02", book: wireBook, progress: wireProgress },
+        { id: "session-2", name: "New", status: "active", last_activity_at: "2026-08-01", book: wireBook, progress: null },
+      ] }));
     const spl = client();
     const books = await spl.marginalia.books.list({ page: 2, pageSize: 50 });
     const recent = await spl.marginalia.sessions.recent({ limit: 10, includeClosed: true });
     expect(books.results[0]).toEqual({ id: "book-1", title: "Book", authors: [{ id: "author-1", name: "Author" }], series: { id: "series-1", name: "Series", seriesIndex: "1.25" }, coverUrl: null, canOpen: true, sessionCount: 3, activeSessionCount: 1, lastActivityAt: null });
     expect(recent.results[0].book).toEqual({ id: "book-1", title: "Book", coverUrl: null, canOpen: true });
+    expect(recent.results[0].progress).toEqual({ cfi: wireProgress.cfi, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at });
+    expect(recent.results[1].progress).toBeNull();
     expect(String(fetchMock().mock.calls[0]![0])).toContain("page_size=50");
     expect(String(fetchMock().mock.calls[1]![0])).toBe("https://api.example/api/v1/marginalia/sessions/recent/?limit=10&include_closed=true");
   });

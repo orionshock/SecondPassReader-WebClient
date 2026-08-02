@@ -64,6 +64,7 @@ export type MarginaliaRecentSession = {
   status: MarginaliaSessionStatus;
   lastActivityAt: string;
   book: BoundedSessionBook;
+  progress: MarginaliaProgress | null;
 };
 
 export type MarginaliaRecentSessions = { results: MarginaliaRecentSession[] };
