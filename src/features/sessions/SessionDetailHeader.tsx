@@ -1,8 +1,9 @@
-import type { ReadingSessionSummary } from "@secondpass/client";
+import type { BoundedSessionBook, MarginaliaSession } from "@secondpass/client";
 import { InlineMeta } from "../../components/MetaSeparator";
 
 export function SessionDetailHeader({
   session,
+  book,
   coverSrc,
   bookLine,
   statusText,
@@ -14,7 +15,8 @@ export function SessionDetailHeader({
   onCloseSession,
   onOpenBookSessions,
 }: {
-  session: ReadingSessionSummary;
+  session: MarginaliaSession;
+  book: BoundedSessionBook;
   coverSrc: string | null;
   bookLine: string[];
   statusText: string;
@@ -29,20 +31,20 @@ export function SessionDetailHeader({
   return (
       <div className="sessionHeader">
         <div className="sessionCover">
-          {coverSrc ? <img className="sessionCoverImg" src={coverSrc} alt={`${session.book?.title ?? "Book"} cover`} loading="lazy" /> : <div className="bookCoverPlaceholderText">No cover</div>}
+          {coverSrc ? <img className="sessionCoverImg" src={coverSrc} alt={`${book.title} cover`} loading="lazy" /> : <div className="bookCoverPlaceholderText">No cover</div>}
         </div>
         <div className="sessionHeaderMain">
-          {session.book?.id ? (
+          {book.id ? (
             <button
               type="button"
               className="sessionBookTitleButton bookTitle"
               onClick={onOpenBookSessions}
               title="View reading sessions for this book"
             >
-              {session.book?.title ?? "Book"}
+              {book.title}
             </button>
           ) : (
-            <div className="bookTitle">{session.book?.title ?? "Book"}</div>
+            <div className="bookTitle">{book.title}</div>
           )}
           {bookLine.length ? <div className="muted"><InlineMeta items={bookLine} /></div> : null}
           <div className="muted">

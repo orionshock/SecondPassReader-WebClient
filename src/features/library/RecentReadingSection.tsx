@@ -1,11 +1,12 @@
 ﻿import { useCallback, useEffect, useState } from "react";
-import type { ReadingRecentSessionsResponse, SecondPassClient } from "@secondpass/client";
+import type { MarginaliaRecentSessions, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "./coverUtils";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
 import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
+import { loadRecentReading } from "../reader/marginaliaRequests";
 
 const RECENT_READING_ERROR = "Could not load recent reading.";
 
@@ -51,7 +52,7 @@ export function RecentReadingSection({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [data, setData] = useState<ReadingRecentSessionsResponse | null>(null);
+  const [data, setData] = useState<MarginaliaRecentSessions | null>(null);
   const [brokenCoverIds, setBrokenCoverIds] = useState<Record<string, true>>({});
 
   const canLoad = Boolean(spl);
@@ -61,7 +62,7 @@ export function RecentReadingSection({
     setBusy(true);
     setError(null);
     try {
-      const r = await spl.reading.sessions.recent({ limit: 10 });
+      const r = await loadRecentReading(spl);
       setData(r);
     } catch (e) {
       setData(null);
@@ -97,7 +98,7 @@ export function RecentReadingSection({
           Continue reading
         </div>
         <div className="muted">
-          {busy ? `Loading${"\u2026"}` : data && data.count > 1 ? `${data.count} recent` : null}
+          {busy ? `Loading${"\u2026"}` : data && data.results.length > 1 ? `${data.results.length} recent` : null}
         </div>
       </div>
 
@@ -111,16 +112,12 @@ export function RecentReadingSection({
         <div className="recentCarousel" role="region" aria-label="Recent reading">
           {data.results.map((item) => {
             const id = String(item.book.id);
-            const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.cover_url, profile);
-            const rawProgression = item.session?.progression;
-            const progression =
-              typeof rawProgression === "number" && Number.isFinite(rawProgression) ? Math.min(1, Math.max(0, rawProgression)) : null;
-            const progressionPercent = progression != null ? Math.round(progression * 100) : null;
-            const sessionName = typeof item.session?.name === "string" ? item.session.name.trim() : "";
-            const ariaLabel = `Resume ${item.book.title}${progressionPercent != null ? `, ${progressionPercent}% complete` : ""}`;
+            const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.coverUrl, profile);
+            const sessionName = item.name.trim();
+            const ariaLabel = `Resume ${item.book.title}`;
             return (
               <button
-                key={item.session.id}
+                key={item.id}
                 type="button"
                 className="recentBookCard"
                 onClick={() => handleResume(item.book.id)}
@@ -140,12 +137,11 @@ export function RecentReadingSection({
                   ) : (
                     <div className="recentCoverPlaceholder">No cover</div>
                   )}
-                  {progressionPercent != null ? <div className="recentProgressBadge">{progressionPercent}%</div> : null}
                 </div>
                 <div className="recentBookTitle" title={item.book.title}>
                   {item.book.title}
                 </div>
-                <div className="recentBookMeta muted">Last read: {formatLastActivity(item.last_activity_at)}</div>
+                <div className="recentBookMeta muted">Last read: {formatLastActivity(item.lastActivityAt)}</div>
               </button>
             );
           })}

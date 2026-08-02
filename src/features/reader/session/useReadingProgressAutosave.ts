@@ -1,7 +1,8 @@
 import { ApiError } from "@secondpass/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReadingProgress, SecondPassClient } from "@secondpass/client";
+import type { MarginaliaProgress, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation } from "../domain/types";
+import { buildMarginaliaProgressInput } from "./marginaliaMutations";
 
 export type ReadingProgressAutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
@@ -16,7 +17,7 @@ export type ReadingProgressAutosaveState = {
   nextSaveAt?: number;
   error?: string;
   dirty?: boolean;
-  progress?: ReadingProgress;
+  progress?: MarginaliaProgress;
 };
 
 export function useReadingProgressAutosave(input: {
@@ -24,8 +25,8 @@ export function useReadingProgressAutosave(input: {
   autosaveDelayMs?: number;
   spl?: SecondPassClient | null;
   sessionId: string | null;
-  profileVersion: string | null;
   location: ReaderLocation | null;
+  locationLabel?: string;
 }) {
   const enabled = input.enabled !== false;
   const autosaveDelayMs = input.autosaveDelayMs ?? 5000;
@@ -41,17 +42,14 @@ export function useReadingProgressAutosave(input: {
   const sessionIdRef = useRef<string | null>(null);
 
   const progressInput = useMemo(() => {
-    if (!input.profileVersion || !input.location) return null;
+    if (!input.location) return null;
     const cfi = typeof input.location.cfi === "string" ? input.location.cfi.trim() : "";
     if (!cfi) return null;
-    const href = typeof input.location.href === "string" ? input.location.href.trim() : "";
     return {
-      profileVersion: input.profileVersion,
       cfi,
-      href: href || undefined,
-      bookProgress: typeof input.location.bookProgress === "number" && Number.isFinite(input.location.bookProgress) ? input.location.bookProgress : undefined,
+      locationLabel: (input.locationLabel ?? "").slice(0, 255),
     };
-  }, [input.location, input.profileVersion]);
+  }, [input.location, input.locationLabel]);
 
   useEffect(() => {
     sessionIdRef.current = input.sessionId;
@@ -102,13 +100,11 @@ export function useReadingProgressAutosave(input: {
     setState((prev) => ({ ...prev, status: "saving", error: undefined, dirty: false, nextSaveAt: undefined }));
 
     try {
-      const progress = await input.spl.reading.progress.save(sid, {
-        profileVersion: progressInput.profileVersion,
-        cfi: progressInput.cfi,
-        href: progressInput.href,
-        bookProgress: progressInput.bookProgress,
-        format: "epub",
-      });
+      const response = await input.spl.marginalia.sessions.replaceProgress(
+        sid,
+        buildMarginaliaProgressInput(progressInput.cfi, progressInput.locationLabel),
+      );
+      const progress = response.progress;
 
       const savedAt = new Date().toISOString();
       lastSavedCfiRef.current = cfi;

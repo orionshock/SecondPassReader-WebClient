@@ -66,26 +66,23 @@ export function getPreviousSessionHighlightCount(input: {
 export function toPreviousSessionSummary(input: {
   id?: unknown;
   name?: unknown;
-  annotation_count?: unknown;
-  updated_at?: unknown;
-  completed_at?: unknown;
-  started_at?: unknown;
-  created_at?: unknown;
+  annotationCount?: unknown;
+  updatedAt?: unknown;
+  closedAt?: unknown;
+  startedAt?: unknown;
 }): PreviousSessionSummaryWithUpdatedAt {
   const sessionId = typeof input.id === "string" ? input.id : "";
-  const updatedAt = typeof input.updated_at === "string" ? input.updated_at : null;
-  const completedAt = typeof input.completed_at === "string" ? input.completed_at : null;
-  const startedAt = typeof input.started_at === "string" ? input.started_at : null;
-  const createdAt = typeof input.created_at === "string" ? input.created_at : null;
+  const updatedAt = typeof input.updatedAt === "string" ? input.updatedAt : null;
+  const completedAt = typeof input.closedAt === "string" ? input.closedAt : null;
+  const startedAt = typeof input.startedAt === "string" ? input.startedAt : null;
   const timeLabel = toSessionTimeLabel({
     updatedAt,
     completedAt,
     startedAt,
-    createdAt,
     fallbackId: sessionId || "(unknown session)",
   });
   const name = typeof input.name === "string" ? input.name : null;
-  const annotationCount = typeof input.annotation_count === "number" ? input.annotation_count : null;
+  const annotationCount = typeof input.annotationCount === "number" ? input.annotationCount : null;
   return { sessionId, timeLabel, name, annotationCount, updatedAt };
 }
 

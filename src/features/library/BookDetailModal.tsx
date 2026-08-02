@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { BookDetail, CompactBook, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
+import type { BookDetail, CompactBook, MarginaliaBookSummary, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailPanel } from "./BookDetailPanel";
 
@@ -40,7 +40,7 @@ export function BookDetailModal({
     | { phase: "error"; message: string };
 }) {
   const [book, setBook] = useState<BookDetail | null>(null);
-  const [activitySummary, setActivitySummary] = useState<ReadingBookActivitySummaryRow | null>(null);
+  const [activitySummary, setActivitySummary] = useState<MarginaliaBookSummary | null>(null);
   const [activitySummaryFailed, setActivitySummaryFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,9 +132,9 @@ export function BookDetailModal({
 
     void (async () => {
       try {
-        const summary = await spl.reading.books.activitySummary({ books: [bookId] });
+        const summary = await spl.marginalia.books.get(bookId);
         if (cancelled) return;
-        setActivitySummary(summary.results[0] ?? null);
+        setActivitySummary(summary);
       } catch {
         if (cancelled) return;
         setActivitySummaryFailed(true);

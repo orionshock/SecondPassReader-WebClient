@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ReadingAnnotation } from "@secondpass/client";
+import type { MarginaliaAnnotation } from "@secondpass/client";
 import { getSeedAnnotationsFromOpen, getSessionAnnotationsActiveKey } from "../features/reader/session/useSessionAnnotations";
 
 describe("useSessionAnnotations helpers", () => {
@@ -22,7 +22,7 @@ describe("useSessionAnnotations helpers", () => {
   });
 
   it("copies bootstrap annotations before seeding hook state", () => {
-    const annotation = { id: "annotation-a" } as ReadingAnnotation;
+    const annotation = { id: "annotation-a", clientId: "client-a", kind: "bookmark", location: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 1" }, createdAt: "now", updatedAt: "now" } satisfies MarginaliaAnnotation;
     const input = [annotation];
     const seeded = getSeedAnnotationsFromOpen(input);
     expect(seeded).toEqual(input);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { ReadingSessionBookSummary, ReadingSessionsListResponse, SecondPassClient } from "@secondpass/client";
+import type { BoundedSessionBook, MarginaliaSessionListItem, MarginaliaSessionSummary, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo, routeToHash } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
@@ -8,19 +8,7 @@ import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
 import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/userFacingErrors";
 import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
-
-function formatBookAuthors(book?: ReadingSessionBookSummary | null): string {
-  const authors = book?.authors ?? [];
-  return (authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
-}
-
-function formatBookSeries(book?: ReadingSessionBookSummary | null): string | null {
-  const seriesName = book?.series?.name ?? null;
-  const idx = book?.series_index;
-  if (!seriesName) return null;
-  if (idx === null || idx === undefined || idx === "") return seriesName;
-  return `${seriesName} #${idx}`;
-}
+import { loadSessionsPage } from "../reader/marginaliaRequests";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -30,21 +18,6 @@ function formatIso(iso?: string | null): string | null {
   } catch {
     return iso;
   }
-}
-
-function formatProgress(p?: number | null): string | null {
-  if (typeof p !== "number" || !Number.isFinite(p)) return null;
-  const clamped = Math.min(1, Math.max(0, p));
-  return `${Math.round(clamped * 100)}%`;
-}
-
-function normalizeStatus(status?: string | null, isActive?: boolean | null): "active" | "completed" | "archived" | string {
-  if (isActive === true) return "active";
-  const raw = typeof status === "string" ? status.trim().toLowerCase() : "";
-  if (raw === "active" || raw === "completed" || raw === "archived") return raw;
-  if (raw) return raw;
-  if (isActive === false) return "completed";
-  return "active";
 }
 
 function formatAnnotationCount(n?: number | null): string | null {
@@ -106,7 +79,7 @@ export function SessionsPage({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<ReadingSessionsListResponse | null>(null);
+  const [data, setData] = useState<(PaginatedResponse<MarginaliaSessionSummary | MarginaliaSessionListItem> & { context?: { book: BoundedSessionBook } }) | null>(null);
 
   const load = useCallback(
     async (targetPage: number) => {
@@ -114,12 +87,13 @@ export function SessionsPage({
       setBusy(true);
       setError(null);
       try {
-        const r = await spl.reading.sessions.list({
+        const r = await loadSessionsPage({
+          spl,
+          bookId: bookFilter ?? undefined,
+          status: filter === "all" ? undefined : filter,
+          q: effectiveSearchQuery || undefined,
           page: targetPage,
           pageSize,
-          bookId: bookFilter ?? undefined,
-          isActive: filter === "active" ? true : filter === "closed" ? false : undefined,
-          q: effectiveSearchQuery || undefined,
         });
         setData(r);
         setPage(targetPage);
@@ -147,8 +121,6 @@ export function SessionsPage({
   }, [bookFilter, canLoad, effectiveSearchQuery, filter, load, pageSize]);
 
   const contextBook = data?.context?.book ?? null;
-  const contextBookAuthors = formatBookAuthors(contextBook);
-  const contextBookSeries = formatBookSeries(contextBook);
   const sessions = data?.results ?? [];
 
   const commitSearch = useCallback(() => {
@@ -214,11 +186,6 @@ export function SessionsPage({
       {bookFilter && contextBook ? (
         <div className="sessionsScope">
           <div className="sessionsScopeTitle">Reading sessions for {contextBook.title}</div>
-          {contextBookAuthors || contextBookSeries ? (
-            <div className="sessionsScopeMeta muted">
-              <InlineMeta items={[contextBookAuthors || null, contextBookSeries]} />
-            </div>
-          ) : null}
         </div>
       ) : null}
 
@@ -270,20 +237,12 @@ export function SessionsPage({
           ) : (
             <div className="sessionsList">
               {sessions.map((s) => {
-                const coverSrc = resolveCoverUrl(s.book?.cover_url ?? null, profile);
-                const authors = formatBookAuthors(s.book);
-                const series = formatBookSeries(s.book);
-                const progress = formatProgress(s.progression);
-                const updated = formatIso(s.updated_at ?? null);
-                const state = normalizeStatus(typeof s.status === "string" ? s.status : null, s.is_active);
-                const statusLine = state;
-                const sessionName = typeof s.name === "string" ? s.name.trim() : "";
-                const annoText = formatAnnotationCount(s.annotation_count);
-                const titleBits = [
-                  s.book?.title ? s.book.title : "Book",
-                  authors ? `<${authors}>` : null,
-                  series ? `[${series}]` : null,
-                ].filter(Boolean);
+                const sessionBook = "book" in s ? s.book : contextBook;
+                const coverSrc = resolveCoverUrl(sessionBook?.coverUrl ?? null, profile);
+                const updated = formatIso(s.updatedAt);
+                const statusLine = s.status;
+                const sessionName = s.name.trim();
+                const annoText = formatAnnotationCount(s.annotationCount);
 
                 return (
                   <button
@@ -296,7 +255,7 @@ export function SessionsPage({
                   >
                     <div className="sessionsCover">
                       {coverSrc ? (
-                        <img className="sessionsCoverImg" src={coverSrc} alt={`${s.book?.title ?? "Book"} cover`} loading="lazy" />
+                        <img className="sessionsCoverImg" src={coverSrc} alt={`${sessionBook?.title ?? "Book"} cover`} loading="lazy" />
                       ) : (
                         <div className="bookCoverPlaceholderText">No cover</div>
                       )}
@@ -304,7 +263,7 @@ export function SessionsPage({
 
                     <div className="sessionsMain">
                       <div className="sessionsTitleLine">
-                        <span className="bookTitle">{titleBits.join(" ")}</span>
+                        <span className="bookTitle">{sessionBook?.title ?? "Book"}</span>
                       </div>
                       <div className="sessionsMeta muted">
                         {sessionName ? <span className="mono">{sessionName}</span> : null}
@@ -313,11 +272,9 @@ export function SessionsPage({
                       </div>
                       <div className="sessionsMeta muted">
                         {statusLine ? <span>{statusLine}</span> : null}
-                        {statusLine && progress ? <MetaSeparator /> : null}
-                        {progress ? <span>{progress}</span> : null}
-                        {(statusLine || progress) && annoText ? <MetaSeparator /> : null}
+                        {statusLine && annoText ? <MetaSeparator /> : null}
                         {annoText ? <span>{annoText}</span> : null}
-                        {(statusLine || progress || annoText) && updated ? <MetaSeparator /> : null}
+                        {(statusLine || annoText) && updated ? <MetaSeparator /> : null}
                         {updated ? <span>{updated}</span> : null}
                       </div>
                     </div>

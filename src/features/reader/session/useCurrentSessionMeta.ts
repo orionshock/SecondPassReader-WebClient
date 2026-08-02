@@ -26,7 +26,8 @@ export function useCurrentSessionMeta(args: {
     let cancelled = false;
     void (async () => {
       try {
-        const s = await args.spl!.reading.sessions.get(args.sessionId!);
+        const response = await args.spl!.marginalia.sessions.get(args.sessionId!);
+        const s = response.session;
         if (cancelled) return;
         const name = typeof (s as any).name === "string" ? (s as any).name : null;
         const notes = typeof (s as any).notes === "string" ? (s as any).notes : null;
@@ -51,12 +52,12 @@ export function useCurrentSessionMeta(args: {
       if (!args.sessionId) throw new Error("Missing session id.");
       const name = update.name.trim();
       const notes = update.notes.trim();
-      const updated = await args.spl.reading.sessions.updateDetails(args.sessionId, {
+      const response = await args.spl.marginalia.sessions.update(args.sessionId, {
         name: name ? name : "",
         notes: notes ? notes : "",
       });
-      const nextName = typeof (updated as any).name === "string" ? (updated as any).name : name ? name : "";
-      const nextNotes = typeof (updated as any).notes === "string" ? (updated as any).notes : notes ? notes : "";
+      const nextName = response.session.name;
+      const nextNotes = response.session.notes;
       setCurrentSessionMeta({ name: nextName || null, notes: nextNotes || null, status: "ready", error: null });
     },
     [args.spl, args.sessionId],
@@ -73,9 +74,9 @@ export function useCurrentSessionMeta(args: {
       if (input.name !== savedName) payload.name = input.name;
       if (input.notes !== savedNotes) payload.notes = input.notes;
       if (Object.keys(payload).length > 0) {
-        await args.spl.reading.sessions.updateDetails(args.sessionId, payload);
+        await args.spl.marginalia.sessions.update(args.sessionId, payload);
       }
-      await args.spl.reading.sessions.close(args.sessionId);
+      await args.spl.marginalia.sessions.close(args.sessionId);
       setCurrentSessionMeta((prev) => ({ ...prev, name: input.name || null, notes: input.notes || null }));
     },
     [args.spl, args.sessionId, currentSessionMeta.name, currentSessionMeta.notes],

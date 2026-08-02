@@ -1,4 +1,4 @@
-import type { BookDetail, CompactBook, ReadingOpenResponse } from "@secondpass/client";
+import type { BookDetail, CompactBook, MarginaliaBootstrap } from "@secondpass/client";
 
 export type ReaderReturnTarget = {
   kind: "home" | "library" | "shelves" | "shelf" | "sessions" | "bookDetail" | "series";
@@ -15,6 +15,6 @@ export type OpenedBook = {
   blob: Blob;
   objectUrl: string;
   openedAt: string;
-  readingOpen?: ReadingOpenResponse;
+  marginaliaBootstrap?: MarginaliaBootstrap;
   returnTarget: ReaderReturnTarget;
 };

@@ -14,7 +14,7 @@
     "hygiene:fix": "node tools/static-hygiene.mjs --fix",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:coverage:client": "vitest run packages/secondpass-client/src/__tests__/client.test.ts --coverage --coverage.include=packages/secondpass-client/src/**/*.ts --coverage.exclude=packages/secondpass-client/src/__tests__/** --coverage.exclude=packages/secondpass-client/src/index.ts --coverage.exclude=packages/secondpass-client/src/schemas/**",
+    "test:coverage:client": "vitest run packages/secondpass-client/src/__tests__ --coverage --coverage.include=packages/secondpass-client/src/**/*.ts --coverage.exclude=packages/secondpass-client/src/__tests__/** --coverage.exclude=packages/secondpass-client/src/index.ts --coverage.exclude=packages/secondpass-client/src/schemas/**",
     "preview": "vite preview"
   },
   "dependencies": {

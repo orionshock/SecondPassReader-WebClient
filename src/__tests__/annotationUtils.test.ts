@@ -1,57 +1,20 @@
 import { describe, expect, it } from "vitest";
+import type { MarginaliaAnnotation } from "@secondpass/client";
 import { getAnnotationColor, getAnnotationDescribingText, getAnnotationFragmentCfi, getAnnotationNoteText, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/annotationUtils";
 
+const bookmark = { id: "b", clientId: "cb", kind: "bookmark", location: { cfi: "epubcfi(/6/2)", locationLabel: "Location 08 - 42%" }, createdAt: "now", updatedAt: "now" } satisfies MarginaliaAnnotation;
+const highlight = { id: "h", clientId: "ch", kind: "highlight", location: { cfi: "epubcfi(/6/4,/2,/8)", locationLabel: "Chapter 08 - 42%" }, body: { text: "Hello", prefix: "Before", suffix: "After", color: "yellow", note: "Note here" }, createdAt: "now", updatedAt: "now" } satisfies MarginaliaAnnotation;
+
 describe("annotationUtils", () => {
-  it("detects bookmark motivation", () => {
-    expect(isBookmarkAnnotation({ id: "1", motivation: ["bookmarking"] } as any)).toBe(true);
-    expect(isBookmarkAnnotation({ id: "1", motivation: ["highlighting"] } as any)).toBe(false);
+  it("uses strict annotation kinds and location CFIs", () => {
+    expect(isBookmarkAnnotation(bookmark)).toBe(true);
+    expect(isHighlightAnnotation(highlight)).toBe(true);
+    expect(getAnnotationFragmentCfi(highlight)).toBe("epubcfi(/6/4,/2,/8)");
   });
 
-  it("detects highlight motivation", () => {
-    expect(isHighlightAnnotation({ id: "1", motivation: ["highlighting"] } as any)).toBe(true);
-    expect(isHighlightAnnotation({ id: "1", motivation: ["bookmarking"] } as any)).toBe(false);
-    expect(isHighlightAnnotation({ id: "1", motivation: ["commenting"] } as any)).toBe(false);
-    expect(isHighlightAnnotation({ id: "1", motivation: ["highlighting", "commenting"] } as any)).toBe(true);
-  });
-
-  it("extracts fragment selector CFI from selector or selector[]", () => {
-    const ann1 = { id: "a", target: { selector: { type: "FragmentSelector", value: "epubcfi(/6/2)" } } } as any;
-    expect(getAnnotationFragmentCfi(ann1)).toBe("epubcfi(/6/2)");
-
-    const ann2 = {
-      id: "b",
-      target: { selector: [{ type: "TextQuoteSelector", exact: "x" }, { type: "FragmentSelector", value: "epubcfi(/6/4)" }] },
-    } as any;
-    expect(getAnnotationFragmentCfi(ann2)).toBe("epubcfi(/6/4)");
-  });
-
-  it("extracts describing text from body", () => {
-    const ann = {
-      id: "a",
-      body: [
-        { type: "TextualBody", purpose: "describing", value: "  Hello  " },
-        { type: "TextualBody", purpose: "commenting", value: "Note" },
-      ],
-    } as any;
-    expect(getAnnotationDescribingText(ann)).toBe("Hello");
-  });
-
-  it("extracts note/comment text when present", () => {
-    const ann = {
-      id: "a",
-      body: [
-        { type: "TextualBody", purpose: "describing", value: "Quote" },
-        { type: "TextualBody", purpose: "commenting", value: "  Note here  " },
-      ],
-    } as any;
-    expect(getAnnotationNoteText(ann)).toBe("Note here");
-  });
-
-  it("extracts color token when present", () => {
-    const ann = {
-      id: "a",
-      body: [{ type: "TextualBody", purpose: "describing", value: "Quote", color: "yellow" }],
-    } as any;
-    expect(getAnnotationColor(ann)).toBe("yellow");
+  it("extracts highlight body fields", () => {
+    expect(getAnnotationDescribingText(highlight)).toBe("Hello");
+    expect(getAnnotationNoteText(highlight)).toBe("Note here");
+    expect(getAnnotationColor(highlight)).toBe("yellow");
   });
 });

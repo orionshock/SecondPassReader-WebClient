@@ -1,4 +1,4 @@
-import type { ReadingSessionSummary } from "@secondpass/client";
+import type { MarginaliaSession } from "@secondpass/client";
 
 export function SessionDetailMetadataEditor({
   session,
@@ -17,7 +17,7 @@ export function SessionDetailMetadataEditor({
   onSaveName,
   onSaveNotes,
 }: {
-  session: ReadingSessionSummary;
+  session: MarginaliaSession;
   isActive: boolean;
   draftName: string;
   setDraftName: (value: string) => void;

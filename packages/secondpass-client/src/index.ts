@@ -11,13 +11,6 @@ export type {
   LibraryPreviewParams,
   LibraryGroupBookListParams,
   LibraryGroupEntityListParams,
-  SaveReadingProgressInput,
-  CreateHighlightInput,
-  CreateBookmarkInput,
-  ListReadingAnnotationsInput,
-  ReadingAnnotationKind,
-  ReadingAnnotationsOrdering,
-  UpdateNoteInput,
 } from "./client";
 
 export type {
@@ -31,20 +24,31 @@ export type { ServerInfo, ServerPublicGroup } from "./schemas/server";
 export type { BookDetail, BookIdentifierScheme, CatalogTag, CatalogTagSummary, CompactBook, Author, AuthorSummary, BookFile, BookGroup, BookIdentifier, LibraryGroup, Series, SeriesSummary, PaginatedResponse, PreviewBook } from "./schemas/library";
 
 export type {
-  ReadingAnnotation,
-  ReadingAnnotationBatchCreatePayload,
-  ReadingAnnotationBatchCreateResponse,
-  ReadingAnnotationPage,
-  ReadingBookActivitySummaryResponse,
-  ReadingBookActivitySummaryRow,
-  ReadingOpenResponse,
-  ReadingProgress,
-  ReadingRecentSessionsResponse,
-  ReadingSessionsListResponse,
-  ReadingSession,
-  ReadingSessionBookSummary,
-  ReadingSessionSummary,
-} from "./schemas/readingSession";
+  BoundedSessionBook,
+  MarginaliaAnnotation,
+  MarginaliaAnnotationBatchOperation,
+  MarginaliaAnnotationCollection,
+  MarginaliaAnnotationLocation,
+  MarginaliaBookSessions,
+  MarginaliaBookSummary,
+  MarginaliaBookmark,
+  MarginaliaBookmarkUpsert,
+  MarginaliaBootstrap,
+  MarginaliaHighlight,
+  MarginaliaHighlightColor,
+  MarginaliaHighlightUpsert,
+  MarginaliaProgress,
+  MarginaliaProgressInput,
+  MarginaliaRecentSession,
+  MarginaliaRecentSessions,
+  MarginaliaSession,
+  MarginaliaSessionDetail,
+  MarginaliaSessionFinalizeInput,
+  MarginaliaSessionListItem,
+  MarginaliaSessionMetadataInput,
+  MarginaliaSessionSummary,
+  MarginaliaSessionStatus,
+} from "./schemas/marginalia";
 
 export type {
   AddShelfItemInput,

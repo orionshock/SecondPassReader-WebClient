@@ -1,17 +1,19 @@
 import { useCallback, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { ReadingAnnotation, SecondPassClient } from "@secondpass/client";
+import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation, ReaderSelection } from "../domain/types";
 import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
 import { getAnnotationColor } from "../annotations/annotationUtils";
+import { buildBookmarkUpsert, buildHighlightUpdate, buildHighlightUpsert } from "./marginaliaMutations";
 
 export function useCurrentSessionAnnotationActions(args: {
   spl?: SecondPassClient | null;
   sessionId: string | null;
   location: ReaderLocation | null;
+  locationLabel?: string;
   currentBookmark: ReaderBookmark | null;
-  annotationsRaw: ReadingAnnotation[];
-  setAnnotationsRaw: Dispatch<SetStateAction<ReadingAnnotation[]>>;
+  annotationsRaw: MarginaliaAnnotation[];
+  setAnnotationsRaw: Dispatch<SetStateAction<MarginaliaAnnotation[]>>;
   setAnnotationError: (value: string | null) => void;
   canMutate?: boolean;
 }) {
@@ -25,15 +27,19 @@ export function useCurrentSessionAnnotationActions(args: {
       setAnnotationBusy(true);
       args.setAnnotationError(null);
       try {
-        await args.spl.reading.annotations.remove(annotationId);
-        args.setAnnotationsRaw((prev) => prev.filter((a) => a.id !== annotationId));
+        const annotation = args.annotationsRaw.find((item) => item.id === annotationId);
+        if (!annotation) return;
+        const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId!, [
+          { action: "delete", clientId: annotation.clientId },
+        ]);
+        args.setAnnotationsRaw(response.annotations);
       } catch (e) {
         args.setAnnotationError(e instanceof Error ? e.message : "Failed to remove annotation.");
       } finally {
         setAnnotationBusy(false);
       }
     },
-    [args.canMutate, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
+    [args.annotationsRaw, args.canMutate, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
   );
 
   const updateHighlight = useCallback(
@@ -42,8 +48,8 @@ export function useCurrentSessionAnnotationActions(args: {
       if (args.canMutate === false) throw new Error("This session cannot be modified.");
       if (!annotationId) return;
 
-      const raw = args.annotationsRaw.find((a) => a.id === annotationId) ?? null;
-      if (!raw) throw new Error("Annotation not found.");
+      const raw = args.annotationsRaw.find((a) => a.id === annotationId && a.kind === "highlight") ?? null;
+      if (!raw || raw.kind !== "highlight") throw new Error("Highlight not found.");
 
       const nextColor = update.color.trim() || (getAnnotationColor(raw) ?? "").trim() || "yellow";
       const nextNote = update.note.trim();
@@ -51,11 +57,10 @@ export function useCurrentSessionAnnotationActions(args: {
       setAnnotationBusy(true);
       args.setAnnotationError(null);
       try {
-        const updated = await args.spl.reading.annotations.updateNote(annotationId, {
-          color: nextColor,
-          note: nextNote ? nextNote : null,
-        });
-        args.setAnnotationsRaw((prev) => [...prev.filter((a) => a.id !== annotationId), updated as unknown as ReadingAnnotation]);
+        const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId!, [
+          buildHighlightUpdate(raw, { color: nextColor as MarginaliaHighlightColor, note: nextNote }),
+        ]);
+        args.setAnnotationsRaw(response.annotations);
       } catch (e) {
         args.setAnnotationError(e instanceof Error ? e.message : "Failed to update highlight.");
         throw e;
@@ -81,13 +86,13 @@ export function useCurrentSessionAnnotationActions(args: {
     setAnnotationBusy(true);
     args.setAnnotationError(null);
     try {
-      const created = await args.spl.reading.annotations.createBookmark({
-        sessionId: args.sessionId,
-        cfi,
-      });
-      const b = toReaderBookmark(created as unknown as ReadingAnnotation);
+      const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId, [
+        buildBookmarkUpsert({ clientId: crypto.randomUUID(), cfi, locationLabel: args.locationLabel }),
+      ]);
+      const created = response.annotations.find((item) => item.kind === "bookmark" && item.location.cfi === cfi);
+      const b = created ? toReaderBookmark(created) : null;
       if (b) {
-        args.setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== b.id), created as unknown as ReadingAnnotation]);
+        args.setAnnotationsRaw(response.annotations);
       }
     } catch (e) {
       args.setAnnotationError(e instanceof Error ? e.message : "Failed to create bookmark.");
@@ -98,6 +103,7 @@ export function useCurrentSessionAnnotationActions(args: {
     args.currentBookmark,
     args.canMutate,
     args.location?.cfi,
+    args.locationLabel,
     args.sessionId,
     args.spl,
     args.setAnnotationError,
@@ -116,16 +122,19 @@ export function useCurrentSessionAnnotationActions(args: {
       setAnnotationBusy(true);
       args.setAnnotationError(null);
       try {
-        const created = await args.spl.reading.annotations.createHighlight({
-          sessionId: args.sessionId,
-          cfiRange: sel.cfiRange,
-          text: sel.text,
-          color: input.color,
-          note: input.note,
-          quotePrefix: sel.quotePrefix,
-          quoteSuffix: sel.quoteSuffix,
-        });
-        args.setAnnotationsRaw((prev) => [...prev.filter((x) => x.id !== created.id), created as unknown as ReadingAnnotation]);
+        const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId, [
+          buildHighlightUpsert({
+            clientId: crypto.randomUUID(),
+            cfi: sel.cfiRange,
+            locationLabel: args.locationLabel,
+            text: sel.text,
+            color: input.color as MarginaliaHighlightColor,
+            note: input.note,
+            prefix: sel.quotePrefix,
+            suffix: sel.quoteSuffix,
+          }),
+        ]);
+        args.setAnnotationsRaw(response.annotations);
       } catch (e) {
         args.setAnnotationError(e instanceof Error ? e.message : "Failed to create highlight.");
         throw e;
@@ -133,7 +142,7 @@ export function useCurrentSessionAnnotationActions(args: {
         setAnnotationBusy(false);
       }
     },
-    [args.canMutate, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
+    [args.canMutate, args.locationLabel, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
   );
 
   return {

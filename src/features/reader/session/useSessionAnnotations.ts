@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReadingAnnotation, SecondPassClient } from "@secondpass/client";
+import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
 import type { OpenedBook } from "../types";
 import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
 import type { HighlightViewModel } from "../annotations/viewModels";
@@ -14,8 +14,8 @@ import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type Reader
 import { describeCfiBestEffort, toReaderCfiLocationDisplay } from "./readerCfiDescriptions";
 
 export type SessionAnnotations = {
-  raw: ReadingAnnotation[];
-  setRaw: React.Dispatch<React.SetStateAction<ReadingAnnotation[]>>;
+  raw: MarginaliaAnnotation[];
+  setRaw: React.Dispatch<React.SetStateAction<MarginaliaAnnotation[]>>;
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   setError: (value: string | null) => void;
@@ -42,7 +42,7 @@ export function getSessionAnnotationsActiveKey(input: {
   return `${String(input.bookId)}|${input.objectUrl}|${input.sessionId ?? ""}`;
 }
 
-export function getSeedAnnotationsFromOpen(annotations: ReadingAnnotation[] | null | undefined): ReadingAnnotation[] | null {
+export function getSeedAnnotationsFromOpen(annotations: MarginaliaAnnotation[] | null | undefined): MarginaliaAnnotation[] | null {
   if (!Array.isArray(annotations)) return null;
   return [...annotations];
 }
@@ -59,12 +59,12 @@ export function useSessionAnnotations(args: {
     objectUrl: args.openedBook.objectUrl,
     sessionId: args.sessionId,
   });
-  const [rawEntry, setRawEntry] = useState<{ key: string; annotations: ReadingAnnotation[] }>(() => ({
+  const [rawEntry, setRawEntry] = useState<{ key: string; annotations: MarginaliaAnnotation[] }>(() => ({
     key: activeKey,
     annotations: [],
   }));
   const raw = rawEntry.key === activeKey ? rawEntry.annotations : [];
-  const setRaw = useCallback<React.Dispatch<React.SetStateAction<ReadingAnnotation[]>>>(
+  const setRaw = useCallback<React.Dispatch<React.SetStateAction<MarginaliaAnnotation[]>>>(
     (value) => {
       setRawEntry((prev) => {
         const current = prev.key === activeKey ? prev.annotations : [];
@@ -110,7 +110,7 @@ export function useSessionAnnotations(args: {
 
   const sortedRaw = useMemo(() => {
     const copy = [...raw];
-    const tsMs = (a: ReadingAnnotation): number => {
+    const tsMs = (a: MarginaliaAnnotation): number => {
       const s = getAnnotationTimestamp(a);
       if (!s) return 0;
       const ms = Date.parse(s);
@@ -124,18 +124,18 @@ export function useSessionAnnotations(args: {
     return copy;
   }, [raw]);
 
-  // Seed from readingOpen response (first page) immediately when available.
+  // Seed from the open bootstrap response immediately when available.
   const lastSeedKeyRef = useRef<string>("");
   useEffect(() => {
-    const open = args.openedBook.readingOpen;
+    const open = args.openedBook.marginaliaBootstrap;
     const id = open?.session?.id ?? "";
     if (!id) return;
     if (lastSeedKeyRef.current === activeKey) return;
-    const seeded = getSeedAnnotationsFromOpen(open?.annotations?.results as unknown as ReadingAnnotation[] | undefined);
+    const seeded = getSeedAnnotationsFromOpen(open?.annotations);
     if (!seeded) return;
     lastSeedKeyRef.current = activeKey;
     setRaw(seeded);
-  }, [activeKey, args.openedBook.readingOpen, setRaw]);
+  }, [activeKey, args.openedBook.marginaliaBootstrap, setRaw]);
 
   // Load annotations for the session (non-blocking).
   useEffect(() => {
@@ -149,19 +149,8 @@ export function useSessionAnnotations(args: {
     let cancelled = false;
     void (async () => {
       try {
-        const all: ReadingAnnotation[] = [];
-        let page = 1;
-        for (let guard = 0; guard < 50; guard += 1) {
-          const res = await args.spl!.reading.annotations.list({
-            sessionId,
-            page,
-            kind: ["bookmark", "highlight"],
-            ordering: "-created",
-          });
-          all.push(...(res.results as unknown as ReadingAnnotation[]));
-          if (!res.next) break;
-          page += 1;
-        }
+        const res = await args.spl!.marginalia.sessions.getAnnotations(sessionId);
+        const all = res.annotations;
         if (cancelled) return;
         if (loadGenerationRef.current !== generation) return;
         setRaw(all);
@@ -270,6 +259,7 @@ export function useSessionAnnotations(args: {
         description: entry?.value ?? null,
         fallbackBookProgress: args.location?.bookProgress ?? null,
         timestamp,
+        locationLabel: rawA?.location.locationLabel,
         descriptionStatus: entry?.status ?? (describeCfi ? "idle" : "idle"),
       });
     });
@@ -296,8 +286,8 @@ export function useSessionAnnotations(args: {
         note: note ?? undefined,
         color: color ?? undefined,
         timestamp: timestamp ?? undefined,
-        label: locationDisplay.label,
-        labelParts: locationDisplay.labelParts,
+        label: rawA?.location.locationLabel || locationDisplay.label,
+        labelParts: rawA?.location.locationLabel ? [rawA.location.locationLabel] : locationDisplay.labelParts,
         descriptionStatus: entry?.status ?? "idle",
       };
     });

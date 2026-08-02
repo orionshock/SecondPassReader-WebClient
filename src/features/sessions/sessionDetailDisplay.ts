@@ -29,52 +29,8 @@ export function formatAnnotationCount(n?: number | null): string | null {
   return count === 1 ? "1 annotation" : `${count} annotations`;
 }
 
-export function getAnnotationTexts(annotation: unknown): { quote: string | null; note: string | null } {
-  const highlightText = typeof (annotation as any)?.highlight_text === "string" ? (annotation as any).highlight_text.replace(/\s+/g, " ").trim() : "";
-  const quoteText = typeof (annotation as any)?.quote === "string" ? (annotation as any).quote.replace(/\s+/g, " ").trim() : "";
-  const commentText = typeof (annotation as any)?.comment_text === "string" ? (annotation as any).comment_text.replace(/\s+/g, " ").trim() : "";
-  if (highlightText || quoteText || commentText) {
-    return { quote: highlightText || quoteText || null, note: commentText || null };
-  }
-
-  const bodies = (annotation as any)?.body;
-  if (!Array.isArray(bodies)) return { quote: null, note: null };
-
-  const textBodies: Array<{ purpose: string | null; value: string }> = [];
-  for (const b of bodies) {
-    if (!b || typeof b !== "object") continue;
-    const type = (b as any).type;
-    if (typeof type === "string" && type !== "TextualBody") continue;
-
-    const value = (b as any).value;
-    if (typeof value !== "string") continue;
-    const trimmed = value.replace(/\s+/g, " ").trim();
-    if (!trimmed) continue;
-    const purposeRaw = (b as any).purpose;
-    const purpose = typeof purposeRaw === "string" ? purposeRaw.trim().toLowerCase() : null;
-    textBodies.push({ purpose, value: trimmed });
-  }
-
-  if (!textBodies.length) return { quote: null, note: null };
-
-  const quote = textBodies.find((tb) => tb.purpose === "describing")?.value ?? null;
-  const note = textBodies.find((tb) => tb.purpose === "commenting")?.value ?? null;
-  if (quote || note) return { quote, note };
-
-  const rawMotivation = (annotation as any)?.motivation;
-  const motivations: string[] = Array.isArray(rawMotivation)
-    ? rawMotivation.filter((x): x is string => typeof x === "string")
-    : typeof rawMotivation === "string"
-      ? [rawMotivation]
-      : [];
-  const isHighlight = motivations.includes("highlighting");
-  const isComment = motivations.includes("commenting");
-
-  // Minimal fallbacks (explicit):
-  // - Highlight-only: use first textual body as quote.
-  // - Comment-only: if there is only one textual body, treat it as note-only.
-  if (isHighlight) return { quote: textBodies[0]?.value ?? null, note: null };
-  if (isComment && textBodies.length === 1) return { quote: null, note: textBodies[0]?.value ?? null };
-
-  return { quote: textBodies[0]?.value ?? null, note: null };
+export function getAnnotationTexts(annotation: import("@secondpass/client").MarginaliaAnnotation): { quote: string | null; note: string | null } {
+  return annotation.kind === "highlight"
+    ? { quote: annotation.body.text || null, note: annotation.body.note || null }
+    : { quote: null, note: null };
 }

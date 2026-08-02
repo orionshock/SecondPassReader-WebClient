@@ -1,95 +1,18 @@
-import type { ReadingAnnotation } from "@secondpass/client";
+import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderAnnotation } from "../domain/types";
 import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
 
 export { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
 
-export function getAnnotationDescribingText(annotation: ReadingAnnotation): string | null {
-  const highlightText = typeof annotation.highlight_text === "string" ? annotation.highlight_text.trim() : "";
-  if (highlightText) return highlightText;
-  const quoteRaw = (annotation as unknown as { quote?: unknown }).quote;
-  const quote =
-    typeof quoteRaw === "string"
-      ? quoteRaw.trim()
-      : quoteRaw && typeof quoteRaw === "object" && typeof (quoteRaw as { exact?: unknown }).exact === "string"
-        ? (quoteRaw as { exact: string }).exact.trim()
-        : "";
-  if (quote) return quote;
+export function getAnnotationDescribingText(annotation: MarginaliaAnnotation): string | null { return annotation.kind === "highlight" ? annotation.body.text : null; }
 
-  const body = (annotation as unknown as { body?: unknown }).body;
-  if (!Array.isArray(body)) return null;
-  for (const b of body) {
-    if (!b || typeof b !== "object") continue;
-    const anyB = b as { type?: unknown; value?: unknown; purpose?: unknown };
-    if (anyB.type !== "TextualBody") continue;
-    if (typeof anyB.value !== "string") continue;
-    if (anyB.purpose && anyB.purpose !== "describing") continue;
-    const s = anyB.value.trim();
-    if (s) return s;
-  }
-  return null;
-}
+export function getAnnotationNoteText(annotation: MarginaliaAnnotation): string | null { return annotation.kind === "highlight" ? annotation.body.note || null : null; }
 
-export function getAnnotationNoteText(annotation: ReadingAnnotation): string | null {
-  const comment = typeof annotation.comment_text === "string" ? annotation.comment_text.trim() : "";
-  if (comment) return comment;
+export function getAnnotationColor(annotation: MarginaliaAnnotation): string | null { return annotation.kind === "highlight" ? annotation.body.color : null; }
 
-  const body = (annotation as unknown as { body?: unknown }).body;
-  if (!Array.isArray(body)) return null;
-  for (const b of body) {
-    if (!b || typeof b !== "object") continue;
-    const anyB = b as { type?: unknown; value?: unknown; purpose?: unknown };
-    if (anyB.type !== "TextualBody") continue;
-    if (typeof anyB.value !== "string") continue;
-    // Prefer explicit commenting purpose; fall back to any non-describing TextualBody.
-    if (anyB.purpose && anyB.purpose !== "commenting") continue;
-    const s = anyB.value.trim();
-    if (s) return s;
-  }
-  // Fallback: find first non-empty TextualBody that isn't the describing text.
-  const describing = getAnnotationDescribingText(annotation);
-  for (const b of body) {
-    if (!b || typeof b !== "object") continue;
-    const anyB = b as { type?: unknown; value?: unknown; purpose?: unknown };
-    if (anyB.type !== "TextualBody") continue;
-    if (typeof anyB.value !== "string") continue;
-    const s = anyB.value.trim();
-    if (!s) continue;
-    if (describing && s === describing) continue;
-    return s;
-  }
-  return null;
-}
+export function getAnnotationTimestamp(annotation: MarginaliaAnnotation): string | null { return annotation.updatedAt || annotation.createdAt || null; }
 
-export function getAnnotationColor(annotation: ReadingAnnotation): string | null {
-  const directColor = typeof annotation.highlight_color === "string" ? annotation.highlight_color.trim() : "";
-  if (directColor) return directColor;
-
-  const body = (annotation as unknown as { body?: unknown }).body;
-  if (!Array.isArray(body)) return null;
-  for (const b of body) {
-    if (!b || typeof b !== "object") continue;
-    const anyB = b as { type?: unknown; color?: unknown; purpose?: unknown };
-    if (anyB.type !== "TextualBody") continue;
-    if (typeof anyB.color !== "string") continue;
-    const c = anyB.color.trim();
-    if (c) return c;
-  }
-  return null;
-}
-
-export function getAnnotationTimestamp(annotation: ReadingAnnotation): string | null {
-  const anyA = annotation as unknown as { updated_at?: unknown; modified?: unknown; created_at?: unknown; created?: unknown };
-  const candidates = [anyA.updated_at, anyA.modified, anyA.created_at, anyA.created];
-  for (const c of candidates) {
-    if (typeof c !== "string") continue;
-    const s = c.trim();
-    if (s) return s;
-  }
-  return null;
-}
-
-export function toReaderAnnotation(annotation: ReadingAnnotation): ReaderAnnotation | null {
+export function toReaderAnnotation(annotation: MarginaliaAnnotation): ReaderAnnotation | null {
   if (isBookmarkAnnotation(annotation)) {
     const cfi = getAnnotationFragmentCfi(annotation);
     if (!cfi) return null;

@@ -1,4 +1,4 @@
-import type { ReadingAnnotation } from "@secondpass/client";
+import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
 import {
   getAnnotationColor,
@@ -43,7 +43,7 @@ export type PreviousSessionAnnotationItem =
       descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
     };
 
-export function toPreviousSessionHighlightMarks(annotations: ReadingAnnotation[], sessionId?: string): { marks: ReaderHighlightMark[]; highlightCount: number } {
+export function toPreviousSessionHighlightMarks(annotations: MarginaliaAnnotation[], sessionId?: string): { marks: ReaderHighlightMark[]; highlightCount: number } {
   const marks: ReaderHighlightMark[] = [];
   let count = 0;
   for (const a of annotations) {
@@ -63,20 +63,21 @@ export function toPreviousSessionHighlightMarks(annotations: ReadingAnnotation[]
 
 function toPreviousSessionLocationLabel(input: {
   cfi: string;
+  serverLocationLabel?: string;
   descriptions: Map<string, PreviousSessionLocationDescriptionCacheEntry>;
   toc: ReaderTocItem[] | null | undefined;
   bookTitle?: string | null;
 }): PreviousSessionLocationLabel {
   const entry = input.descriptions.get(input.cfi);
-  const locationLabel =
+  const locationLabel = input.serverLocationLabel || (
     entry?.status === "ready"
       ? toReaderCfiLocationDisplay({ description: entry.value, toc: input.toc, bookTitle: input.bookTitle }).locationLabel
-      : undefined;
+      : undefined);
   return { locationLabel, descriptionStatus: entry?.status ?? "idle" };
 }
 
 export function toPreviousSessionItems(
-  annotations: ReadingAnnotation[],
+  annotations: MarginaliaAnnotation[],
   descriptions: Map<string, PreviousSessionLocationDescriptionCacheEntry>,
   toc: ReaderTocItem[] | null | undefined,
   bookTitle?: string | null,
@@ -87,7 +88,7 @@ export function toPreviousSessionItems(
     if (isBookmarkAnnotation(a)) {
       const cfi = getAnnotationFragmentCfi(a);
       if (!cfi) continue;
-      out.push({ kind: "bookmark", id: a.id, cfi, timestamp, ...toPreviousSessionLocationLabel({ cfi, descriptions, toc, bookTitle }) });
+      out.push({ kind: "bookmark", id: a.id, cfi, timestamp, ...toPreviousSessionLocationLabel({ cfi, serverLocationLabel: a.location.locationLabel, descriptions, toc, bookTitle }) });
       continue;
     }
     if (isHighlightAnnotation(a)) {
@@ -103,7 +104,7 @@ export function toPreviousSessionItems(
         note,
         color,
         timestamp,
-        ...toPreviousSessionLocationLabel({ cfi: ra.cfiRange, descriptions, toc, bookTitle }),
+        ...toPreviousSessionLocationLabel({ cfi: ra.cfiRange, serverLocationLabel: a.location.locationLabel, descriptions, toc, bookTitle }),
       });
     }
   }

@@ -28,7 +28,7 @@ function ReadOnlyItemRow({
 }) {
   if (item.kind === "bookmark") {
     const when = formatWhen(item.timestamp);
-    const label = item.locationLabel?.trim() || "Bookmark";
+    const label = item.locationLabel || "Bookmark";
     return (
       <article tabIndex={-1} data-annotation-id={item.id} className="spAnnotationCard spAnnotationCardBookmark spAnnotationCardReadOnly">
         <div className="spAnnotationLeftRail" aria-hidden="true">

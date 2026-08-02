@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SecondPassClient, ReadingAnnotation } from "@secondpass/client";
+import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
 import { getAnnotationFragmentCfi } from "../annotations/annotationUtils";
 import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../storage/marginaliaLayerPreferences";
@@ -27,7 +27,7 @@ export type { PreviousSessionAnnotationItem } from "./previousSessionAnnotationI
 type CachedSessionAnnotations = {
   status: "idle" | "loading" | "ready" | "error";
   error?: string;
-  annotations?: ReadingAnnotation[];
+  annotations?: MarginaliaAnnotation[];
   highlightMarks?: ReaderHighlightMark[];
   highlightCount?: number;
 };
@@ -35,27 +35,8 @@ type CachedSessionAnnotations = {
 async function fetchAllAnnotationsForSession(args: {
   spl: SecondPassClient;
   sessionId: string;
-}): Promise<ReadingAnnotation[]> {
-  const out: ReadingAnnotation[] = [];
-  let page = 1;
-  let next: string | null = null;
-  // v1: use pagination metadata if present; cap pages defensively.
-  const MAX_PAGES = 25;
-
-  do {
-    // eslint-disable-next-line no-await-in-loop
-    const resp = await args.spl.reading.annotations.list({
-      sessionId: args.sessionId,
-      kind: ["bookmark", "highlight"],
-      ordering: "-created",
-      page,
-    });
-    for (const a of resp.results ?? []) out.push(a as unknown as ReadingAnnotation);
-    next = (resp as any).next ?? null;
-    page += 1;
-  } while (next && page <= MAX_PAGES);
-
-  return out;
+}): Promise<MarginaliaAnnotation[]> {
+  return (await args.spl.marginalia.sessions.getAnnotations(args.sessionId)).annotations;
 }
 
 export function usePreviousSessionLayers(args: {
@@ -104,7 +85,7 @@ export function usePreviousSessionLayers(args: {
     let cancelled = false;
     void (async () => {
       try {
-        const resp = await args.spl!.reading.sessions.list({ bookId, pageSize: 100 });
+        const resp = await args.spl!.marginalia.books.sessions(String(bookId), { pageSize: 100 });
         if (cancelled) return;
         const currentId = args.currentSessionId ?? "";
         const results = resp.results ?? [];

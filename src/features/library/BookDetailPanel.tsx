@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BookDetail, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
+import type { BookDetail, MarginaliaBookSummary, SecondPassClient } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 import { InlineMeta } from "../../components/MetaSeparator";
@@ -41,7 +41,7 @@ export function BookDetailPanel({
   onViewTag: (tagSlug: string) => void;
   onManageShelves: () => void;
   spl: SecondPassClient | null;
-  activitySummary?: ReadingBookActivitySummaryRow | null;
+  activitySummary?: MarginaliaBookSummary | null;
   activitySummaryFailed?: boolean;
   downloadState:
     | { phase: "idle" }
@@ -57,8 +57,8 @@ export function BookDetailPanel({
 
   const busy =
     downloadState.phase === "opening_session" || downloadState.phase === "fetching" || downloadState.phase === "opening_reader";
-  const sessionCount = typeof activitySummary?.session_count === "number" && Number.isFinite(activitySummary.session_count)
-    ? Math.max(0, Math.floor(activitySummary.session_count))
+  const sessionCount = typeof activitySummary?.sessionCount === "number" && Number.isFinite(activitySummary.sessionCount)
+    ? Math.max(0, Math.floor(activitySummary.sessionCount))
     : null;
   const sessionsUnavailable = !activitySummaryFailed && sessionCount === 0;
 

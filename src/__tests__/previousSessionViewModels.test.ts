@@ -17,8 +17,8 @@ describe("previousSessionViewModels", () => {
     const summary = toPreviousSessionSummary({
       id: "session-a",
       name: "Notes pass",
-      annotation_count: 3,
-      updated_at: "2024-01-01T12:00:00.000Z",
+      annotationCount: 3,
+      updatedAt: "2024-01-01T12:00:00.000Z",
     });
 
     expect(summary).toEqual({

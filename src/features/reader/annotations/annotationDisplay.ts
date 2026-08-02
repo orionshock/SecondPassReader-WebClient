@@ -1,5 +1,4 @@
-import type { ReadingAnnotation } from "@secondpass/client";
-import { getAnnotationFragmentCfi, getAnnotationMotivations } from "./annotationSelectors";
+import type { MarginaliaAnnotation } from "@secondpass/client";
 
 export type AnnotationDisplay = {
   iconName: "bookmark" | "chat_bubble" | "border_color" | "edit_note";
@@ -22,22 +21,6 @@ export function getHighlightAnnotationDisplay(note: string | null | undefined): 
   return hasAnnotationComment(note) ? COMMENTED_HIGHLIGHT_DISPLAY : HIGHLIGHT_DISPLAY;
 }
 
-function isRangeCfi(cfi: string | null): boolean {
-  return Boolean(cfi && cfi.includes(","));
-}
-
-export function getRawAnnotationDisplay(annotation: unknown, note: string | null | undefined): AnnotationDisplay {
-  const rawAnnotation = (annotation ?? {}) as ReadingAnnotation;
-  const motivations = getAnnotationMotivations(rawAnnotation);
-  const cfi = getAnnotationFragmentCfi(rawAnnotation);
-
-  if (rawAnnotation.kind === "bookmark" || motivations.includes("bookmarking") || (cfi && !isRangeCfi(cfi) && !motivations.includes("highlighting") && rawAnnotation.kind !== "highlight")) {
-    return BOOKMARK_DISPLAY;
-  }
-
-  if (rawAnnotation.kind === "highlight" || motivations.includes("highlighting") || isRangeCfi(cfi)) {
-    return getHighlightAnnotationDisplay(note);
-  }
-
-  return FALLBACK_ANNOTATION_DISPLAY;
+export function getRawAnnotationDisplay(annotation: MarginaliaAnnotation, note: string | null | undefined): AnnotationDisplay {
+  return annotation.kind === "bookmark" ? BOOKMARK_DISPLAY : getHighlightAnnotationDisplay(note);
 }

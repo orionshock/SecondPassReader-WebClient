@@ -1,4 +1,4 @@
-import type { ReadingAnnotation } from "@secondpass/client";
+import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderAnnotation } from "../domain/types";
 import type { ReaderLocationDescription, ReaderTocItem } from "../domain/types";
 import { toReaderCfiLocationDisplay } from "../session/readerCfiDescriptions";
@@ -16,7 +16,7 @@ export type ReaderBookmarkViewModel = {
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 };
 
-export function toReaderBookmark(annotation: ReadingAnnotation): ReaderBookmark | null {
+export function toReaderBookmark(annotation: MarginaliaAnnotation): ReaderBookmark | null {
   if (!isBookmarkAnnotation(annotation)) return null;
   const cfi = getAnnotationFragmentCfi(annotation);
   if (!cfi) return null;
@@ -31,6 +31,7 @@ export function toBookmarkViewModel(input: {
   description?: ReaderLocationDescription | null;
   fallbackBookProgress?: number | null | undefined;
   timestamp?: string | null;
+  locationLabel?: string;
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 }): ReaderBookmarkViewModel {
   const isCurrent = Boolean(input.currentCfi && input.bookmark.cfi === input.currentCfi);
@@ -51,8 +52,8 @@ export function toBookmarkViewModel(input: {
     id: input.bookmark.id,
     cfi: input.bookmark.cfi,
     href: description?.href,
-    label: locationDisplay.label,
-    labelParts: locationDisplay.labelParts,
+    label: input.locationLabel || locationDisplay.label,
+    labelParts: input.locationLabel ? [input.locationLabel] : locationDisplay.labelParts,
     timestamp: input.timestamp ?? undefined,
     isCurrent,
     descriptionStatus: input.descriptionStatus,

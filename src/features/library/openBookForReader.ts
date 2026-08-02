@@ -24,14 +24,19 @@ export async function openBookForReader(input: {
     }
   };
 
-  const opened = await withTimeout(spl.reading.openForReading(book), 120_000, "Opening reading session");
-  const objectUrl = URL.createObjectURL(opened.blob);
+  const marginaliaBootstrap = await withTimeout(
+    spl.marginalia.books.open(String(book.id)),
+    120_000,
+    "Opening reading session",
+  );
+  const blob = await withTimeout(spl.library.books.download(book), 120_000, "Downloading book");
+  const objectUrl = URL.createObjectURL(blob);
   return {
     book,
-    blob: opened.blob,
+    blob,
     objectUrl,
     openedAt: new Date().toISOString(),
-    readingOpen: opened.open,
+    marginaliaBootstrap,
     returnTarget,
   };
 }

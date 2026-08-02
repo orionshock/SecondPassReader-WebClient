@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { ReadingAnnotationPage, ReadingSessionSummary, SecondPassClient } from "@secondpass/client";
+import type { MarginaliaAnnotation, MarginaliaSessionDetail, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
@@ -9,14 +9,16 @@ import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
 import { SessionDetailAnnotationsList } from "./SessionDetailAnnotationsList";
 import { SessionDetailHeader } from "./SessionDetailHeader";
 import { SessionDetailMetadataEditor } from "./SessionDetailMetadataEditor";
-import { formatAnnotationCount, formatIso, formatProgress, normalizeStatus } from "./sessionDetailDisplay";
+import { formatAnnotationCount, formatIso } from "./sessionDetailDisplay";
 
 export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
   const canLoad = Boolean(spl);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<ReadingSessionSummary | null>(null);
+  const [detail, setDetail] = useState<MarginaliaSessionDetail | null>(null);
+  const session = detail?.session ?? null;
+  const book = detail?.context.book ?? null;
 
   const [draftName, setDraftName] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
@@ -29,16 +31,16 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
 
   const [annoBusy, setAnnoBusy] = useState(false);
   const [annoError, setAnnoError] = useState<string | null>(null);
-  const [annoPage, setAnnoPage] = useState<ReadingAnnotationPage | null>(null);
-  const [annoLoadingMore, setAnnoLoadingMore] = useState(false);
+  const [annotations, setAnnotations] = useState<MarginaliaAnnotation[] | null>(null);
 
   const load = useCallback(async () => {
     if (!spl) return;
     setBusy(true);
     setError(null);
     try {
-      const s = await spl.reading.sessions.get(sessionId);
-      setSession(s);
+      const response = await spl.marginalia.sessions.get(sessionId);
+      const s = response.session;
+      setDetail(response);
       setDraftName(typeof s.name === "string" ? s.name : "");
       setDraftNotes(typeof s.notes === "string" ? s.notes : "");
       setEditingName(false);
@@ -53,24 +55,24 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
               ? e.message
               : "Failed to load session.";
       setError(message);
-      setSession(null);
+      setDetail(null);
     } finally {
       setBusy(false);
     }
   }, [sessionId, spl]);
 
   const loadAnnotations = useCallback(
-    async (page = 1) => {
+    async () => {
       if (!spl) return;
       setAnnoBusy(true);
       setAnnoError(null);
       try {
-        const p = await spl.reading.annotations.list({ sessionId, page });
-        setAnnoPage(p);
+        const response = await spl.marginalia.sessions.getAnnotations(sessionId);
+        setAnnotations(response.annotations);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Failed to load annotations.";
         setAnnoError(message);
-        setAnnoPage(null);
+        setAnnotations(null);
       } finally {
         setAnnoBusy(false);
       }
@@ -79,27 +81,27 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
   );
 
   useEffect(() => {
-    setSession(null);
+    setDetail(null);
     setError(null);
     setBusy(false);
     setSaveError(null);
     setCloseDialogOpen(false);
-    setAnnoPage(null);
+    setAnnotations(null);
     setAnnoError(null);
     setAnnoBusy(false);
     if (!canLoad) return;
     void load();
-    void loadAnnotations(1);
+    void loadAnnotations();
   }, [canLoad, load, loadAnnotations]);
 
-  const isActive = Boolean(session?.is_active);
-  const progressText = formatProgress(session?.progression ?? null);
-  const coverSrc = resolveCoverUrl(session?.book?.cover_url ?? null, profile) ?? null;
-  const statusText = normalizeStatus(typeof session?.status === "string" ? session.status : null, session?.is_active ?? null);
-  const annoText = formatAnnotationCount(session?.annotation_count ?? null);
+  const isActive = session?.status === "active";
+  const progressText = session?.progress?.locationLabel || null;
+  const coverSrc = resolveCoverUrl(book?.coverUrl ?? null, profile) ?? null;
+  const statusText = session?.status ?? "";
+  const annoText = formatAnnotationCount(session?.annotationCount ?? null);
 
-  const headerTitle = session?.book?.title
-    ? `Marginalia for ${"\u201C"}${session.book.title}${"\u201D"}`
+  const headerTitle = book?.title
+    ? `Marginalia for ${"\u201C"}${book.title}${"\u201D"}`
     : "Marginalia";
 
   const handleSaveName = useCallback(async () => {
@@ -109,9 +111,8 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
     setSaveBusy(true);
     setSaveError(null);
     try {
-      await spl.reading.sessions.updateDetails(sessionId, { name: draftName });
-      const refreshed = await spl.reading.sessions.get(sessionId);
-      setSession(refreshed);
+      const refreshed = await spl.marginalia.sessions.update(sessionId, { name: draftName });
+      setDetail(refreshed);
       setEditingName(false);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save session.");
@@ -127,9 +128,8 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
     setSaveBusy(true);
     setSaveError(null);
     try {
-      await spl.reading.sessions.updateDetails(sessionId, { notes: draftNotes });
-      const refreshed = await spl.reading.sessions.get(sessionId);
-      setSession(refreshed);
+      const refreshed = await spl.marginalia.sessions.update(sessionId, { notes: draftNotes });
+      setDetail(refreshed);
       setEditingNotes(false);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save session.");
@@ -150,13 +150,12 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
       if (input.name !== savedName) payload.name = input.name;
       if (input.notes !== savedNotes) payload.notes = input.notes;
       if (Object.keys(payload).length > 0) {
-        await spl.reading.sessions.updateDetails(sessionId, payload);
+        await spl.marginalia.sessions.update(sessionId, payload);
       }
-      await spl.reading.sessions.close(sessionId);
-      const refreshed = await spl.reading.sessions.get(sessionId);
-      setSession(refreshed);
-      setDraftName(typeof refreshed.name === "string" ? refreshed.name : "");
-      setDraftNotes(typeof refreshed.notes === "string" ? refreshed.notes : "");
+      const refreshed = await spl.marginalia.sessions.close(sessionId);
+      setDetail(refreshed);
+      setDraftName(refreshed.session.name);
+      setDraftNotes(refreshed.session.notes);
       setEditingName(false);
       setEditingNotes(false);
       setCloseDialogOpen(false);
@@ -166,48 +165,8 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
     }
   }, [session, sessionId, spl]);
 
-  const handleLoadMoreAnnotations = useCallback(async () => {
-    if (annoLoadingMore) return;
-    const nextUrl = annoPage?.next ?? null;
-    if (!nextUrl) return;
-    let nextPage: number | null = null;
-    try {
-      const u = new URL(nextUrl);
-      const raw = u.searchParams.get("page");
-      if (raw) {
-        const n = Number(raw);
-        nextPage = Number.isFinite(n) && n > 0 ? n : null;
-      }
-    } catch {
-      nextPage = null;
-    }
-    if (!nextPage) return;
-
-    setAnnoLoadingMore(true);
-    setAnnoError(null);
-    try {
-      if (!spl) return;
-      const p = await spl.reading.annotations.list({ sessionId, page: nextPage });
-      setAnnoPage((prev) => {
-        if (!prev) return p;
-        return { ...p, results: [...(prev.results ?? []), ...(p.results ?? [])] };
-      });
-    } catch (e) {
-      setAnnoError(e instanceof Error ? e.message : "Failed to load more annotations.");
-    } finally {
-      setAnnoLoadingMore(false);
-    }
-  }, [annoLoadingMore, annoPage, sessionId, spl]);
-
-  const bookLine = useMemo(() => {
-    const authors = (session?.book?.authors ?? []).map((a) => a.name).filter(Boolean).join(", ");
-    const seriesName = session?.book?.series?.name ?? null;
-    const idx = session?.book?.series_index;
-    const series = seriesName ? (idx === null || idx === undefined || idx === "" ? seriesName : `${seriesName} #${idx}`) : null;
-    return [authors || null, series || null].filter((item): item is string => Boolean(item));
-  }, [session?.book?.authors, session?.book?.series?.name, session?.book?.series_index]);
-
-  const canOpenReader = Boolean(session?.book?.id) && session?.can_open !== false;
+  const bookLine = useMemo(() => [], []);
+  const canOpenReader = Boolean(book?.id) && book?.canOpen !== false;
 
   return (
     <section className="panel sessionDetailPage">
@@ -225,6 +184,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
         <>
           <SessionDetailHeader
             session={session}
+            book={book!}
             coverSrc={coverSrc}
             bookLine={bookLine}
             statusText={statusText}
@@ -233,8 +193,8 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
             isActive={isActive}
             canOpenReader={canOpenReader}
             onOpenReader={() => {
-              if (session.can_open === false) return;
-              const bookId = String(session.book?.id ?? "");
+              if (book?.canOpen === false) return;
+              const bookId = String(book?.id ?? "");
               saveReaderReturnTarget(bookId, {
                 kind: "sessions",
                 label: session.name?.trim() ? session.name.trim() : "Session detail",
@@ -244,13 +204,13 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
               navigateTo({ kind: "reader", bookId });
             }}
             onCloseSession={() => setCloseDialogOpen(true)}
-            onOpenBookSessions={() => navigateTo({ kind: "sessions", bookId: String(session.book?.id) })}
+            onOpenBookSessions={() => navigateTo({ kind: "sessions", bookId: String(book?.id) })}
           />
 
           <div className="sessionMetaGrid">
-            {session.started_at ? <div className="detailRow"><span className="muted">Started:</span> {formatIso(session.started_at)}</div> : null}
-            {session.updated_at ? <div className="detailRow"><span className="muted">Updated:</span> {formatIso(session.updated_at)}</div> : null}
-            {session.completed_at ? <div className="detailRow"><span className="muted">Completed:</span> {formatIso(session.completed_at)}</div> : null}
+            {session.startedAt ? <div className="detailRow"><span className="muted">Started:</span> {formatIso(session.startedAt)}</div> : null}
+            {session.updatedAt ? <div className="detailRow"><span className="muted">Updated:</span> {formatIso(session.updatedAt)}</div> : null}
+            {session.closedAt ? <div className="detailRow"><span className="muted">Closed:</span> {formatIso(session.closedAt)}</div> : null}
           </div>
 
           <SessionDetailMetadataEditor
@@ -272,11 +232,9 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
           />
 
           <SessionDetailAnnotationsList
-            annoPage={annoPage}
+            annotations={annotations}
             annoBusy={annoBusy}
             annoError={annoError}
-            annoLoadingMore={annoLoadingMore}
-            onLoadMore={() => void handleLoadMoreAnnotations()}
           />
         </>
       ) : null}

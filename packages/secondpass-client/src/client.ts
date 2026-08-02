@@ -26,60 +26,42 @@ import type {
   UpdateShelfItemInput,
 } from "./schemas/shelves";
 import type {
-  ReadingAnnotation,
-  ReadingAnnotationBatchCreatePayload,
-  ReadingAnnotationBatchCreateResponse,
-  ReadingAnnotationPage,
-  ReadingOpenResponse,
-  ReadingBookActivitySummaryResponse,
-  ReadingProgress,
-  ReadingRecentSessionsResponse,
-  ReadingSessionsListResponse,
-  ReadingSession,
-  ReadingSessionSummary,
-} from "./schemas/readingSession";
+  MarginaliaAnnotationBatchOperation,
+  MarginaliaAnnotationCollection,
+  MarginaliaBookSessions,
+  MarginaliaBookSummary,
+  MarginaliaBootstrap,
+  MarginaliaProgress,
+  MarginaliaProgressInput,
+  MarginaliaRecentSessions,
+  MarginaliaSessionDetail,
+  MarginaliaSessionFinalizeInput,
+  MarginaliaSessionListItem,
+  MarginaliaSessionMetadataInput,
+  MarginaliaSessionStatus,
+} from "./schemas/marginalia";
 
 import { createLoginRequest, discoverSecondPass, pollLoginRequest } from "./clientApiAuthApi";
 import { getCurrentUser } from "./accountApi";
 import { getServerInfo } from "./serverApi";
 import { downloadBookFile, getAuthor, getBook, getGroup, getSeries, getTag, listAuthors, listBooks, listGroupAuthors, listGroupBooks, listGroups, listGroupSeries, listGroupTags, listSeries, listTags, searchBooks } from "./libraryApi";
 import {
-  closeReadingSession,
-  getReadingBookActivitySummary,
-  getReadingSession,
-  listReadingSessions,
-  listRecentReadingSessions,
-  openReadingSession,
-  startOverReadingSession,
-  updateReadingSession,
-} from "./readingSessionsApi";
-import {
-  batchCreateReadingAnnotations,
-  createBookmarkAnnotation,
-  createHighlightAnnotation,
-  deleteReadingAnnotation,
-  listReadingAnnotations,
-  updateNoteAnnotation,
-} from "./readingAnnotationsApi";
-import { saveReadingProgress } from "./readingProgressApi";
-import type {
-  CreateBookmarkInput,
-  CreateHighlightInput,
-  ListReadingAnnotationsInput,
-  UpdateNoteInput,
-} from "./readingAnnotationsApi";
-import type { SaveReadingProgressInput } from "./readingProgressApi";
-
-export type {
-  CreateBookmarkInput,
-  CreateHighlightInput,
-  ListReadingAnnotationsInput,
-  ReadingAnnotationsOrdering,
-  ReadingAnnotationKind,
-  UpdateNoteInput,
-} from "./readingAnnotationsApi";
-export type { ReadingAnnotationBatchCreatePayload, ReadingAnnotationBatchCreateResponse } from "./schemas/readingSession";
-export type { SaveReadingProgressInput } from "./readingProgressApi";
+  batchMarginaliaAnnotations,
+  closeMarginaliaSession,
+  getActiveMarginaliaSession,
+  getMarginaliaAnnotations,
+  getMarginaliaBook,
+  getMarginaliaProgress,
+  getMarginaliaSession,
+  listBookSessions,
+  listMarginaliaBooks,
+  listMarginaliaSessions,
+  listRecentMarginaliaSessions,
+  openMarginaliaBook,
+  replaceMarginaliaProgress,
+  startOverMarginaliaBook,
+  updateMarginaliaSession,
+} from "./marginaliaApi";
 import {
   addShelfItem,
   createShelf,
@@ -221,48 +203,25 @@ export type SecondPassClient = {
     removeItem(shelfId: string, itemId: string): Promise<void>;
   };
 
-  reading: {
-    openForReading(book: CompactBook | BookDetail | string | number): Promise<{ open: ReadingOpenResponse; blob: Blob }>;
-
+  marginalia: {
     books: {
-      activitySummary(input: { books: Array<string | number> }): Promise<ReadingBookActivitySummaryResponse>;
+      list(params?: { page?: number; pageSize?: number }): Promise<PaginatedResponse<MarginaliaBookSummary>>;
+      get(bookId: string): Promise<MarginaliaBookSummary>;
+      sessions(bookId: string, params?: { status?: MarginaliaSessionStatus; q?: string; page?: number; pageSize?: number }): Promise<MarginaliaBookSessions>;
+      open(bookId: string, input?: MarginaliaSessionMetadataInput): Promise<MarginaliaBootstrap>;
+      getActiveSession(bookId: string): Promise<MarginaliaBootstrap>;
+      startOver(bookId: string, input: MarginaliaSessionFinalizeInput | undefined, options: { idempotencyKey: string }): Promise<MarginaliaBootstrap>;
     };
-
     sessions: {
-      open(bookId: string | number): Promise<ReadingOpenResponse>;
-      startOver(bookId: string | number): Promise<ReadingOpenResponse>;
-      recent(params?: { limit?: number }): Promise<ReadingRecentSessionsResponse>;
-      list(params?: {
-        page?: number;
-        pageSize?: number;
-        bookId?: string | number;
-        status?: "active" | "completed" | "archived" | string;
-        isActive?: boolean;
-        q?: string;
-      }): Promise<ReadingSessionsListResponse>;
-      get(sessionId: string): Promise<ReadingSessionSummary>;
-      updateDetails(sessionId: string, input: { name?: string; notes?: string }): Promise<ReadingSessionSummary>;
-      close(sessionId: string): Promise<ReadingSession>;
-    };
-
-    progress: {
-      /**
-       * Save reading progress (high-level helper).
-       *
-       * Hides wire-format field names and uses PATCH internally.
-       */
-      save(sessionId: string, progress: SaveReadingProgressInput): Promise<ReadingProgress>;
-    };
-
-    annotations: {
-      list(params: ListReadingAnnotationsInput): Promise<ReadingAnnotationPage>;
-      createHighlight(input: CreateHighlightInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
-      createBookmark(input: CreateBookmarkInput, options?: { idempotencyKey?: string }): Promise<ReadingAnnotation>;
-      batchCreate(
-        input: ReadingAnnotationBatchCreatePayload,
-      ): Promise<ReadingAnnotationBatchCreateResponse>;
-      updateNote(annotationId: string, input: UpdateNoteInput): Promise<ReadingAnnotation>;
-      remove(annotationId: string): Promise<void>;
+      list(params?: { status?: MarginaliaSessionStatus; q?: string; hasAnnotations?: boolean; page?: number; pageSize?: number }): Promise<PaginatedResponse<MarginaliaSessionListItem>>;
+      recent(params?: { limit?: number; includeClosed?: boolean }): Promise<MarginaliaRecentSessions>;
+      get(sessionId: string): Promise<MarginaliaSessionDetail>;
+      update(sessionId: string, input: MarginaliaSessionMetadataInput): Promise<MarginaliaSessionDetail>;
+      close(sessionId: string, input?: MarginaliaSessionFinalizeInput): Promise<MarginaliaSessionDetail>;
+      getProgress(sessionId: string): Promise<{ progress: MarginaliaProgress | null }>;
+      replaceProgress(sessionId: string, input: MarginaliaProgressInput): Promise<{ progress: MarginaliaProgress }>;
+      getAnnotations(sessionId: string): Promise<MarginaliaAnnotationCollection>;
+      batchAnnotations(sessionId: string, operations: MarginaliaAnnotationBatchOperation[]): Promise<MarginaliaAnnotationCollection>;
     };
   };
 };
@@ -458,88 +417,25 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       },
     },
 
-    reading: {
-      openForReading: async (book) => {
-        const auth = requireAuth(ctx);
-        const resolved =
-          typeof book === "string" || typeof book === "number"
-            ? await getBook(auth, String(book))
-            : book;
-        const open = await openReadingSession(auth, { bookId: resolved.id });
-        const blob = await downloadBookBlob(resolved);
-        return { open, blob };
-      },
-
+    marginalia: {
       books: {
-        activitySummary: (input) => {
-          const auth = requireAuth(ctx);
-          return getReadingBookActivitySummary(auth, input);
-        },
+        list: (params) => listMarginaliaBooks(requireAuth(ctx), params),
+        get: (bookId) => getMarginaliaBook(requireAuth(ctx), bookId),
+        sessions: (bookId, params) => listBookSessions(requireAuth(ctx), bookId, params),
+        open: (bookId, input) => openMarginaliaBook(requireAuth(ctx), bookId, input),
+        getActiveSession: (bookId) => getActiveMarginaliaSession(requireAuth(ctx), bookId),
+        startOver: (bookId, input, options) => startOverMarginaliaBook(requireAuth(ctx), bookId, input, options.idempotencyKey),
       },
-
       sessions: {
-        open: (bookId) => {
-          const auth = requireAuth(ctx);
-          return openReadingSession(auth, { bookId });
-        },
-        startOver: (bookId) => {
-          const auth = requireAuth(ctx);
-          return startOverReadingSession(auth, { bookId });
-        },
-        recent: (params) => {
-          const auth = requireAuth(ctx);
-          return listRecentReadingSessions(auth, { limit: params?.limit });
-        },
-        list: (params) => {
-          const auth = requireAuth(ctx);
-          return listReadingSessions({ ctx: auth, ...params });
-        },
-        get: (sessionId) => {
-          const auth = requireAuth(ctx);
-          return getReadingSession({ ctx: auth, sessionId });
-        },
-        updateDetails: (sessionId, payload) => {
-          const auth = requireAuth(ctx);
-          return updateReadingSession(auth, { sessionId, payload });
-        },
-        close: (sessionId) => {
-          const auth = requireAuth(ctx);
-          return closeReadingSession(auth, { sessionId });
-        },
-      },
-
-      progress: {
-        save: (sessionId, progress) => {
-          const auth = requireAuth(ctx);
-          return saveReadingProgress({ ctx: auth, sessionId, progress });
-        },
-      },
-
-      annotations: {
-        list: (params) => {
-          const auth = requireAuth(ctx);
-          return listReadingAnnotations({ ctx: auth, params });
-        },
-        createHighlight: (input, options) => {
-          const auth = requireAuth(ctx);
-          return createHighlightAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
-        },
-        createBookmark: (input, options) => {
-          const auth = requireAuth(ctx);
-          return createBookmarkAnnotation({ ctx: auth, create: input, idempotencyKey: options?.idempotencyKey });
-        },
-        batchCreate: (input) => {
-          const auth = requireAuth(ctx);
-          return batchCreateReadingAnnotations(auth, { payload: input });
-        },
-        updateNote: (annotationId, input) => {
-          const auth = requireAuth(ctx);
-          return updateNoteAnnotation({ ctx: auth, annotationId, update: input });
-        },
-        remove: (annotationId) => {
-          const auth = requireAuth(ctx);
-          return deleteReadingAnnotation(auth, { annotationId });
-        },
+        list: (params) => listMarginaliaSessions(requireAuth(ctx), params),
+        recent: (params) => listRecentMarginaliaSessions(requireAuth(ctx), params),
+        get: (sessionId) => getMarginaliaSession(requireAuth(ctx), sessionId),
+        update: (sessionId, input) => updateMarginaliaSession(requireAuth(ctx), sessionId, input),
+        close: (sessionId, input) => closeMarginaliaSession(requireAuth(ctx), sessionId, input),
+        getProgress: (sessionId) => getMarginaliaProgress(requireAuth(ctx), sessionId),
+        replaceProgress: (sessionId, input) => replaceMarginaliaProgress(requireAuth(ctx), sessionId, input),
+        getAnnotations: (sessionId) => getMarginaliaAnnotations(requireAuth(ctx), sessionId),
+        batchAnnotations: (sessionId, operations) => batchMarginaliaAnnotations(requireAuth(ctx), sessionId, operations),
       },
     },
   };
