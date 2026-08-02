@@ -1,8 +1,4 @@
-export type PreviewBook = {
-  id: string;
-  title: string;
-  coverUrl: string | null;
-};
+import type { PreviewBook } from "@secondpass/client";
 
 type PreviewBookInput = {
   id: string | number;

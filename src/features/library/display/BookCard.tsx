@@ -1,4 +1,4 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { BookCover } from "./BookCover";
 import { formatBookAuthors, formatBookSeries } from "./bookDisplayUtils";
 
@@ -8,7 +8,7 @@ export function BookCard({
   selected,
   onView,
 }: {
-  book: LibraryBook;
+  book: CompactBook;
   serverBaseUrl?: string;
   selected: boolean;
   onView: () => void;

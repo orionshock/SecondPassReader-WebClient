@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
-import type { LibraryBook, SecondPassClient } from "@secondpass/client";
+import type { CompactBook, SecondPassClient } from "@secondpass/client";
 import { useReaderImportActivation } from "./imports/useReaderImportActivation";
 import { useReaderImportJob } from "./imports/useReaderImportJob";
 import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
@@ -146,11 +146,11 @@ function ReaderActivityContent({
   const canBookmark = Boolean(openedBook.readingOpen?.session?.id && state.location?.cfi);
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
   const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
-  const [nextSeriesBook, setNextSeriesBook] = useState<LibraryBook | null>(null);
+  const [nextSeriesBook, setNextSeriesBook] = useState<CompactBook | null>(null);
   const [nextSeriesStatus, setNextSeriesStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const activeReaderKey = `${openedBook.book.id}|${currentSessionId ?? ""}`;
   const seriesId = openedBook.book.series?.id;
-  const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series?.series_index);
+  const currentSeriesIndex = normalizeSeriesIndex(openedBook.book.series?.seriesIndex);
   const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
   const returnTarget = openedBook.returnTarget;
   const returnLabel = buildReturnLabel(returnTarget);
@@ -248,7 +248,7 @@ function ReaderActivityContent({
     setNextSeriesStatus("loading");
     void (async () => {
       try {
-        const books = await spl.library.series.books(String(seriesId), { ordering: "series_index", pageSize: 100 });
+        const books = await spl.library.books.list({ series: String(seriesId), ordering: "series_index", pageSize: 100 });
         if (cancelled) return;
         setNextSeriesBook(findNextSeriesBook(openedBook.book, books.results));
         setNextSeriesStatus("ready");
@@ -285,7 +285,7 @@ function ReaderActivityContent({
     }
   };
 
-  const startNextBook = (book: LibraryBook) => {
+  const startNextBook = (book: CompactBook) => {
     setEndBookDialogOpen(false);
     setCloseDialogOpen(false);
     saveReaderReturnTarget(book.id, returnTarget);

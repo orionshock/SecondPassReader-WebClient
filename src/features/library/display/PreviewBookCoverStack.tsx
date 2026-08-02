@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { resolveCoverUrl } from "../coverUtils";
-import type { PreviewBook } from "./previewBooks";
+import type { PreviewBook } from "@secondpass/client";
 
 type PreviewBookCoverStackProps = {
   previewBooks: PreviewBook[];

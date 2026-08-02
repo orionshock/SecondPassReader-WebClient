@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { LibraryBook, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
+import type { BookDetail, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
 import { getBookCoverUrl } from "./coverUtils";
 import { getBookDescriptionText } from "./bookTextUtils";
 import { InlineMeta } from "../../components/MetaSeparator";
@@ -31,11 +31,11 @@ export function BookDetailPanel({
   activitySummaryFailed,
   downloadState,
 }: {
-  book: LibraryBook;
+  book: BookDetail;
   serverBaseUrl?: string;
   launchMessage: string | null;
-  onOpenReader: (book: LibraryBook) => void;
-  onViewSessions: (book: LibraryBook) => void;
+  onOpenReader: (book: BookDetail) => void;
+  onViewSessions: (book: BookDetail) => void;
   onViewAuthor: (authorId: string) => void;
   onViewSeries: (seriesId: string) => void;
   onViewTag: (tagSlug: string) => void;
@@ -52,7 +52,7 @@ export function BookDetailPanel({
     | { phase: "error"; message: string };
 }) {
   const seriesText =
-    book.series?.name && book.series.series_index != null ? `${book.series.name} #${book.series.series_index}` : book.series?.name;
+    book.series?.name && book.series.seriesIndex != null ? `${book.series.name} #${book.series.seriesIndex}` : book.series?.name;
   const published = formatBookPublishedDate(book);
 
   const busy =
@@ -118,13 +118,28 @@ export function BookDetailPanel({
             <InlineMeta items={[book.publisher || null, book.language || null, published]} />
           </div>
 
-          {book.catalog_tags?.length ? (
+          {book.catalogTags.length ? (
             <div className="bookDetailTags" aria-label="Catalog tags">
-              {book.catalog_tags.map((tag) => (
+              {book.catalogTags.map((tag) => (
                 <button key={String(tag.id)} type="button" className="bookDetailTagChip" onClick={() => onViewTag(tag.slug)}>{tag.name}</button>
               ))}
             </div>
           ) : null}
+
+          {book.groups.length ? (
+            <div className="bookDetailRelationLine muted">
+              <span>Groups</span>
+              <span>{book.groups.map((group) => group.name).join(", ")}</span>
+            </div>
+          ) : null}
+
+          {book.file ? (
+            <div className="bookDetailMetaLine muted">
+              <InlineMeta items={[book.file.format, formatFileSize(book.file.fileSize)]} />
+            </div>
+          ) : (
+            <div className="bookDetailMetaLine muted">EPUB file unavailable</div>
+          )}
 
           {descriptionText ? (
             <div className="bookDetailSummaryBlock">
@@ -155,7 +170,7 @@ export function BookDetailPanel({
         </div>
 
         <div className="bookDetailActions">
-          <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={busy}>
+          <button type="button" className="button buttonPrimary" onClick={() => onOpenReader(book)} disabled={busy || !book.file}>
             Open reader
           </button>
           <button

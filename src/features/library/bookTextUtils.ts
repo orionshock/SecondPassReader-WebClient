@@ -1,4 +1,4 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { BookDetail } from "@secondpass/client";
 
 function decodeBasicEntities(text: string): string {
   return text
@@ -41,7 +41,7 @@ function stripHtmlToText(input: string): string {
   return t.trim();
 }
 
-export function getBookDescriptionText(book: Pick<LibraryBook, "description"> | null | undefined): string | undefined {
+export function getBookDescriptionText(book: Pick<BookDetail, "description"> | null | undefined): string | undefined {
   if (!book) return undefined;
   const raw = (book.description ?? "").trim();
   if (!raw) return undefined;

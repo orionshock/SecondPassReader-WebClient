@@ -26,6 +26,10 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 
 ## library
 
+- `spl.library.search(params?)`
+  - Uses `/api/v1/library/search` with no trailing slash.
+  - Supports broad `q`, ordering, exclusions, and pagination.
+
 ### library.books
 
 - `spl.library.books.list(params?)`
@@ -39,14 +43,30 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 ### library.series
 
 - `spl.library.series.list(params?)`
-- `spl.library.series.get(seriesId)`
-- `spl.library.series.books(seriesId, params?)`
+- `spl.library.series.get(seriesId, { includePreviewBooks?, previewLimit? }?)`
 
 ### library.authors
 
 - `spl.library.authors.list(params?)`
-- `spl.library.authors.get(authorId)`
-- `spl.library.authors.books(authorId, params?)`
+- `spl.library.authors.get(authorId, { includePreviewBooks?, previewLimit? }?)`
+
+Author- and series-filtered books use `spl.library.books.list({ author })` and
+`spl.library.books.list({ series })` directly.
+
+### library.tags
+
+- `spl.library.tags.list(params?)`
+- `spl.library.tags.get(tagId)`
+- Tags do not accept preview parameters.
+
+### library.groups
+
+- `spl.library.groups.list(params?)`
+- `spl.library.groups.get(groupId, { includePreviewBooks?, previewLimit? }?)`
+- `spl.library.groups.books(groupId, params?)`
+- `spl.library.groups.authors(groupId, params?)`
+- `spl.library.groups.series(groupId, params?)`
+- `spl.library.groups.tags(groupId, params?)`
 
 ## shelves
 

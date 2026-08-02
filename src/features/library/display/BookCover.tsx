@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../coverUtils";
 
 export function BookCover({
@@ -7,7 +7,7 @@ export function BookCover({
   serverBaseUrl,
   size = "small",
 }: {
-  book: LibraryBook;
+  book: CompactBook;
   serverBaseUrl?: string;
   size?: "small" | "large";
 }) {

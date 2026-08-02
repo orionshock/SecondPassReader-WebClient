@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import { navigateTo } from "../../app/navigation";
-import type { LibraryBook, SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
+import type { CompactBook, SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookResultsView } from "../library/display/BookResultsView";
 import { BookViewModeToggle } from "../library/display/BookViewModeToggle";
@@ -138,7 +138,28 @@ export function ShelfDetailPage({
     saveLibraryBooksView(viewMode);
   }, []);
 
-  const shelfBooks = useMemo(() => items.map((item) => item.book as LibraryBook), [items]);
+  const shelfBooks = useMemo<CompactBook[]>(() => items.map(({ book }) => ({
+    id: String(book.id),
+    title: book.title,
+    sortTitle: book.title,
+    subtitle: "",
+    authors: (book.authors ?? []).map((author) => ({ id: String(author.id), name: author.name })),
+    series: book.series ? {
+      id: String(book.series.id),
+      name: book.series.name,
+      sortName: book.series.sort_name ?? book.series.name,
+      seriesIndex: book.series.series_index == null ? null : String(book.series.series_index),
+    } : null,
+    catalogTags: [],
+    language: null,
+    publisher: null,
+    publishedYear: null,
+    publishedMonth: null,
+    publishedDay: null,
+    publishedDatePrecision: "",
+    coverUrl: book.cover_url ?? null,
+    fileFormat: "",
+  })), [items]);
 
   const canEditCurrentShelf = canEditShelf(shelf);
 

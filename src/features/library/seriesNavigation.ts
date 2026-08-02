@@ -1,4 +1,4 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 
 function parseSeriesIndex(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -6,17 +6,17 @@ function parseSeriesIndex(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function findNextBookInSeries(currentBook: LibraryBook, seriesBooks: LibraryBook[]): LibraryBook | null {
+export function findNextBookInSeries(currentBook: CompactBook, seriesBooks: CompactBook[]): CompactBook | null {
   const seriesId = currentBook.series?.id ?? null;
   if (!seriesId) return null;
 
-  const currentIndex = parseSeriesIndex(currentBook.series?.series_index);
+  const currentIndex = parseSeriesIndex(currentBook.series?.seriesIndex);
   const candidates = seriesBooks.filter((b) => String(b.series?.id ?? "") === String(seriesId));
 
   if (currentIndex != null) {
-    let next: { book: LibraryBook; idx: number } | null = null;
+    let next: { book: CompactBook; idx: number } | null = null;
     for (const book of candidates) {
-      const idx = parseSeriesIndex(book.series?.series_index);
+      const idx = parseSeriesIndex(book.series?.seriesIndex);
       if (idx != null && idx > currentIndex && (!next || idx < next.idx)) next = { book, idx };
     }
     return next?.book ?? null;

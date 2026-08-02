@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { LibraryTag, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import type { CatalogTag, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 
 const TAG_PAGE_SIZE = 50;
 
 export function useCatalogTags(spl: SecondPassClient, groupId?: string) {
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<PaginatedResponse<LibraryTag> | null>(null);
+  const [data, setData] = useState<PaginatedResponse<CatalogTag> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const requestSeq = useRef(0);

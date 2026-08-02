@@ -24,7 +24,7 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
 
   const selectedGroup = groups.find((group) => String(group.id) === groupId);
   const selectedName = selectedGroup?.name ?? (groupId ? "Selected Library Group" : "All Library");
-  const selectedIcon = selectedGroup?.is_public_group === true ? "public" : groupId ? "groups" : "library_books";
+  const selectedIcon = selectedGroup?.isPublicGroup === true ? "public" : groupId ? "groups" : "library_books";
   const select = (nextGroupId?: string) => {
     if (detailsRef.current) detailsRef.current.open = false;
     triggerRef.current?.focus();
@@ -42,7 +42,7 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
   return (
     <details className="libraryScopeControl" ref={detailsRef} onKeyDown={handleKeyDown} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary ref={triggerRef} className="libraryScopeTrigger" aria-label={`Library scope: ${selectedName}`} aria-haspopup="menu" aria-expanded={open} title="Library scope">
-        <MaterialIcon name={selectedIcon} className={selectedGroup?.is_public_group === true ? "libraryScopePublicIcon" : undefined} />
+        <MaterialIcon name={selectedIcon} className={selectedGroup?.isPublicGroup === true ? "libraryScopePublicIcon" : undefined} />
         <span>{selectedName}</span>
         <MaterialIcon name="expand_more" className="libraryScopeChevron" />
       </summary>
@@ -51,7 +51,7 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
           <MaterialIcon name="library_books" /><span>All Library</span>
         </button>
         {groups.map((group) => {
-          const isPublic = group.is_public_group === true;
+          const isPublic = group.isPublicGroup === true;
           return (
             <button key={String(group.id)} type="button" role="menuitemradio" aria-checked={String(group.id) === groupId} className="libraryScopeOption" onClick={() => select(String(group.id))}>
               <MaterialIcon name={isPublic ? "public" : "groups"} className={isPublic ? "libraryScopePublicIcon" : undefined} />

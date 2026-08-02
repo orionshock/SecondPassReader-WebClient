@@ -1,5 +1,5 @@
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import type { LibraryBook } from "@secondpass/client";
+import type { BookDetail, CompactBook } from "@secondpass/client";
 
 export function resolveCoverUrl(
   coverUrl: string | null | undefined,
@@ -27,10 +27,10 @@ export function resolveCoverUrl(
 }
 
 export function getBookCoverUrl(
-  book: Pick<LibraryBook, "cover_url"> | { cover_url?: string | null } | null | undefined,
+  book: Pick<CompactBook | BookDetail, "coverUrl"> | null | undefined,
   base?: ConnectionProfile | { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null,
 ): string | undefined {
-  const coverUrl = book && typeof book === "object" ? book.cover_url : undefined;
+  const coverUrl = book?.coverUrl;
   if (!coverUrl) return undefined;
   if (typeof base === "string" || base == null) return resolveCoverUrl(coverUrl, base);
   return resolveCoverUrl(coverUrl, { serverBaseUrl: base.serverBaseUrl, apiBaseUrl: base.apiBaseUrl });

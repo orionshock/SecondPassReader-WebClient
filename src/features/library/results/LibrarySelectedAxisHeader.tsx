@@ -1,9 +1,9 @@
-import type { LibraryAuthor, LibrarySeries } from "@secondpass/client";
+import type { Author, Series } from "@secondpass/client";
 import { ExpandableText } from "../display/ExpandableText";
 
 type Props =
-  | { kind: "series"; series: LibrarySeries }
-  | { kind: "author"; author: LibraryAuthor };
+  | { kind: "series"; series: Series }
+  | { kind: "author"; author: Author };
 
 export function LibrarySelectedAxisHeader(props: Props) {
   const entity = props.kind === "series" ? props.series : props.author;

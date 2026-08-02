@@ -1,10 +1,10 @@
-import type { LibraryBook, SecondPassClient } from "@secondpass/client";
+import type { BookDetail, CompactBook, SecondPassClient } from "@secondpass/client";
 import { getReaderReturnTarget, saveReaderReturnTarget } from "../reader/readerReturnTarget";
 import type { OpenedBook, ReaderReturnTarget } from "../reader/types";
 
 export async function openBookForReader(input: {
   spl: SecondPassClient;
-  book: LibraryBook;
+  book: CompactBook | BookDetail;
   returnTarget?: ReaderReturnTarget | null;
 }): Promise<OpenedBook> {
   const { spl, book } = input;

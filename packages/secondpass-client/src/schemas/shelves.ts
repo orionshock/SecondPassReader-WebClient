@@ -1,5 +1,7 @@
 import type { PaginatedResponse } from "./library";
-import type { LibraryAuthorSummary, LibrarySeriesSummary, PreviewBook } from "./library";
+type ShelfPreviewBook = { id: string; title: string; cover_url: string | null };
+type ShelfAuthorSummary = { id: string | number; name: string };
+type ShelfSeriesSummary = { id: string | number; name: string; sort_name?: string; series_index?: string | number | null };
 
 export type ShelfOwnerType = "user" | "group" | string;
 export type ShelfVisibility = "private" | "listed" | string;
@@ -30,7 +32,7 @@ export type Shelf = {
   item_count?: number | null;
   matched_item_id?: string | null;
   can_edit?: boolean;
-  preview_books?: PreviewBook[];
+  preview_books?: ShelfPreviewBook[];
   created_by?: ShelfOwnerUserSummary | null;
   created_at?: string;
   updated_at?: string;
@@ -40,8 +42,8 @@ export type Shelf = {
 export type ShelfBookSummary = {
   id: string | number;
   title: string;
-  authors?: LibraryAuthorSummary[] | null;
-  series?: LibrarySeriesSummary | null;
+  authors?: ShelfAuthorSummary[] | null;
+  series?: ShelfSeriesSummary | null;
   has_file?: boolean;
   cover_url?: string | null;
   [k: string]: unknown;

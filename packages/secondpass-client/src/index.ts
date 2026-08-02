@@ -4,9 +4,13 @@ export type {
   SecondPassClient,
   SecondPassClientConfig,
   LibraryBookListParams,
+  LibrarySearchParams,
   LibraryEntityListParams,
   LibraryTagListParams,
   LibraryGroupListParams,
+  LibraryPreviewParams,
+  LibraryGroupBookListParams,
+  LibraryGroupEntityListParams,
   SaveReadingProgressInput,
   CreateHighlightInput,
   CreateBookmarkInput,
@@ -24,7 +28,7 @@ export type {
 export type { CurrentUser, CurrentUserGroup, MePayload } from "./schemas/account";
 export type { ServerInfo, ServerPublicGroup } from "./schemas/server";
 
-export type { LibraryAuthor, LibraryAuthorSummary, LibraryBook, LibraryBookFile, LibraryBookIdentifier, LibraryGroup, LibrarySeries, LibrarySeriesSummary, LibraryTag, LibraryTagSummary, PaginatedResponse, PreviewBook } from "./schemas/library";
+export type { BookDetail, BookIdentifierScheme, CatalogTag, CatalogTagSummary, CompactBook, Author, AuthorSummary, BookFile, BookGroup, BookIdentifier, LibraryGroup, Series, SeriesSummary, PaginatedResponse, PreviewBook } from "./schemas/library";
 
 export type {
   ReadingAnnotation,

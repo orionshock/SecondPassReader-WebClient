@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { SecondPassClient } from "@secondpass/client";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "../features/library/data/libraryAxisQueries";
+import { loadLibraryBooks } from "../features/library/data/libraryBookRequests";
 import { deriveLibraryRouteState, type DerivedLibraryRouteState } from "../features/library/route/libraryRouteState";
 
 describe("Library route state", () => {
@@ -62,5 +64,32 @@ describe("Library axis queries", () => {
       page: 3,
       pageSize: 50,
     });
+  });
+
+  it("uses broad search globally and the group books endpoint within a group", async () => {
+    const emptyPage = { count: 0, next: null, previous: null, results: [] };
+    const search = vi.fn().mockResolvedValue(emptyPage);
+    const list = vi.fn().mockResolvedValue(emptyPage);
+    const groupBooks = vi.fn().mockResolvedValue(emptyPage);
+    const spl = { library: { search, books: { list }, groups: { books: groupBooks } } } as unknown as SecondPassClient;
+
+    await loadLibraryBooks(spl, undefined, { q: "space", ordering: "author", page: 2, pageSize: 40 });
+    expect(search).toHaveBeenCalledWith({ q: "space", ordering: "author", page: 2, pageSize: 40 });
+    expect(list).not.toHaveBeenCalled();
+
+    await loadLibraryBooks(spl, "g1", { q: "space", tag: "classic", ordering: "title", page: 1, pageSize: 20 });
+    expect(groupBooks).toHaveBeenCalledWith("g1", { q: "space", tag: "classic", ordering: "title", page: 1, pageSize: 20 });
+  });
+
+  it("keeps tag-filtered global browsing on the books list endpoint", async () => {
+    const emptyPage = { count: 0, next: null, previous: null, results: [] };
+    const search = vi.fn().mockResolvedValue(emptyPage);
+    const list = vi.fn().mockResolvedValue(emptyPage);
+    const spl = { library: { search, books: { list }, groups: { books: vi.fn() } } } as unknown as SecondPassClient;
+
+    const params = { q: "space", tag: "classic", ordering: "title" as const, page: 1, pageSize: 20 };
+    await loadLibraryBooks(spl, undefined, params);
+    expect(list).toHaveBeenCalledWith(params);
+    expect(search).not.toHaveBeenCalled();
   });
 });

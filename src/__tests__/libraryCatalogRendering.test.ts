@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { getBookDescriptionText } from "../features/library/bookTextUtils";
 import { formatBookPublishedDate, formatBookSeries, getBookMetaItems } from "../features/library/display/bookDisplayUtils";
 import { findNextSeriesBook } from "../features/library/seriesUtils";
 
-function book(input: Partial<LibraryBook> & Pick<LibraryBook, "id" | "title">): LibraryBook {
+function book(input: Partial<CompactBook> & Pick<CompactBook, "id" | "title">): CompactBook {
   return {
-    sort_title: input.title,
-    subtitle: null,
+    sortTitle: input.title,
+    subtitle: "",
     authors: [],
     series: null,
-    tags: [],
+    catalogTags: [],
     language: null,
     publisher: null,
-    published_year: null,
-    published_month: null,
-    published_day: null,
-    published_date_precision: null,
-    cover_url: null,
-    file_format: null,
+    publishedYear: null,
+    publishedMonth: null,
+    publishedDay: null,
+    publishedDatePrecision: "",
+    coverUrl: null,
+    fileFormat: "epub",
     ...input,
   };
 }
@@ -29,10 +29,10 @@ describe("rebuilt catalog rendering helpers", () => {
       id: "b1",
       title: "Book",
       language: "en",
-      file_format: "epub",
-      published_year: 2024,
-      published_month: 3,
-      series: { id: "s1", name: "Cycle", sort_name: "Cycle", series_index: 2 },
+      fileFormat: "epub",
+      publishedYear: 2024,
+      publishedMonth: 3,
+      series: { id: "s1", name: "Cycle", sortName: "Cycle", seriesIndex: "2" },
     });
     expect(formatBookSeries(row)).toBe("Cycle #2");
     expect(formatBookPublishedDate(row)).toBe("2024-03");
@@ -45,9 +45,9 @@ describe("rebuilt catalog rendering helpers", () => {
   });
 
   it("finds the next series book without reordering the server page", () => {
-    const current = book({ id: "b1", title: "One", series: { id: "s1", name: "S", sort_name: "S", series_index: 1 } });
-    const third = book({ id: "b3", title: "Three", series: { id: "s1", name: "S", sort_name: "S", series_index: 3 } });
-    const second = book({ id: "b2", title: "Two", series: { id: "s1", name: "S", sort_name: "S", series_index: 2 } });
+    const current = book({ id: "b1", title: "One", series: { id: "s1", name: "S", sortName: "S", seriesIndex: "1" } });
+    const third = book({ id: "b3", title: "Three", series: { id: "s1", name: "S", sortName: "S", seriesIndex: "3" } });
+    const second = book({ id: "b2", title: "Two", series: { id: "s1", name: "S", sortName: "S", seriesIndex: "2" } });
     const page = [third, second];
     expect(findNextSeriesBook(current, page)?.id).toBe("b2");
     expect(page).toEqual([third, second]);

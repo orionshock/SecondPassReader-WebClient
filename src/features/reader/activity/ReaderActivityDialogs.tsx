@@ -1,4 +1,4 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSessionDialog";
 import { EndOfBookDialog } from "../EndOfBookDialog";
 import { ReaderImportModal } from "../imports/ReaderImportModal";
@@ -50,14 +50,14 @@ export function ReaderActivityDialogs({
   closeInitialNotes: string;
   closeAfterOptions: CloseSessionAfterOption[];
   defaultAfterAction: CloseSessionInput["afterAction"];
-  nextBook: LibraryBook | null;
+  nextBook: CompactBook | null;
   coverBase: { apiBaseUrl: string | null };
   onCancelCloseSession: () => void;
   onSaveAndCloseSession: (input: CloseSessionInput) => Promise<void>;
   endBookDialogOpen: boolean;
   nextBookStatus: "idle" | "loading" | "ready" | "error";
   hasSeries: boolean;
-  onStartNextBook: (book: LibraryBook) => void;
+  onStartNextBook: (book: CompactBook) => void;
   onFinishSession: () => void;
   onKeepReading: () => void;
   onGoToLibrary?: () => void;

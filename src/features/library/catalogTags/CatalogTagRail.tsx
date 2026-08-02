@@ -30,7 +30,7 @@ export function CatalogTagRail({ spl, groupId, selectedSlug, onSelect }: Props) 
       </button>
       {data?.results.map((tag) => (
         <button key={String(tag.id)} type="button" className={`catalogTagRow ${selectedSlug === tag.slug ? "catalogTagRowActive" : ""}`} onClick={() => onSelect(selectedSlug === tag.slug ? undefined : tag.slug)} aria-pressed={selectedSlug === tag.slug}>
-          <span className="catalogTagCount" aria-label={`${tag.book_count} books`}>{tag.book_count}</span><span>{tag.name}</span>
+          <span className="catalogTagCount" aria-label={`${tag.bookCount} books`}>{tag.bookCount}</span><span>{tag.name}</span>
         </button>
       ))}
       {busy && !data ? <div className="catalogTagStatus muted">Loading...</div> : null}

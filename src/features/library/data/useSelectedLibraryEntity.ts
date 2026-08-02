@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { LibraryAuthor, LibrarySeries, SecondPassClient } from "@secondpass/client";
+import type { Author, Series, SecondPassClient } from "@secondpass/client";
 
 type UseSelectedLibraryEntityInput = {
   spl: SecondPassClient | null;
@@ -9,8 +9,8 @@ type UseSelectedLibraryEntityInput = {
 };
 
 type UseSelectedLibraryEntityResult = {
-  selectedAuthorData: LibraryAuthor | null;
-  selectedSeriesData: LibrarySeries | null;
+  selectedAuthorData: Author | null;
+  selectedSeriesData: Series | null;
 };
 
 export function useSelectedLibraryEntity({
@@ -19,8 +19,8 @@ export function useSelectedLibraryEntity({
   selectedSeriesId,
   canLoad,
 }: UseSelectedLibraryEntityInput): UseSelectedLibraryEntityResult {
-  const [selectedAuthorData, setSelectedAuthorData] = useState<LibraryAuthor | null>(null);
-  const [selectedSeriesData, setSelectedSeriesData] = useState<LibrarySeries | null>(null);
+  const [selectedAuthorData, setSelectedAuthorData] = useState<Author | null>(null);
+  const [selectedSeriesData, setSelectedSeriesData] = useState<Series | null>(null);
 
   useEffect(() => {
     if (!canLoad || !spl) return;

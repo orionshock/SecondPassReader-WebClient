@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { LibraryBook, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
+import type { BookDetail, CompactBook, ReadingBookActivitySummaryRow, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailPanel } from "./BookDetailPanel";
 
@@ -22,10 +22,10 @@ export function BookDetailModal({
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
   bookId: string;
-  initialBook: LibraryBook | null;
+  initialBook: CompactBook | null;
   onClose: () => void;
-  onOpenReader: (book: LibraryBook) => void;
-  onViewSessions: (book: LibraryBook) => void;
+  onOpenReader: (book: BookDetail) => void;
+  onViewSessions: (book: BookDetail) => void;
   onViewAuthor: (authorId: string) => void;
   onViewSeries: (seriesId: string) => void;
   onViewTag: (tagSlug: string) => void;
@@ -39,7 +39,7 @@ export function BookDetailModal({
     | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
 }) {
-  const [book, setBook] = useState<LibraryBook | null>(null);
+  const [book, setBook] = useState<BookDetail | null>(null);
   const [activitySummary, setActivitySummary] = useState<ReadingBookActivitySummaryRow | null>(null);
   const [activitySummaryFailed, setActivitySummaryFailed] = useState(false);
   const [busy, setBusy] = useState(false);

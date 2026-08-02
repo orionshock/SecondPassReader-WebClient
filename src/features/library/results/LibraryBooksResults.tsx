@@ -1,17 +1,17 @@
-import type { LibraryBook, PaginatedResponse } from "@secondpass/client";
+import type { CompactBook, PaginatedResponse } from "@secondpass/client";
 import type { LibraryBooksView } from "../../../storage/libraryBooksView";
 import { BookResultsView } from "../display/BookResultsView";
 import { LibraryPaginationControls } from "../controls/LibraryPaginationControls";
 
 type Props = {
-  data: PaginatedResponse<LibraryBook> | null;
+  data: PaginatedResponse<CompactBook> | null;
   busy: boolean;
   page: number;
   pageSize: number;
   viewMode: LibraryBooksView;
   serverBaseUrl?: string;
   selectedBookId: string | null;
-  onViewBook: (book: LibraryBook) => void;
+  onViewBook: (book: CompactBook) => void;
   onPageChange: (page: number) => void;
   hasError?: boolean;
 };

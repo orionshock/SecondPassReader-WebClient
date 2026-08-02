@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import type { LibraryBooksView } from "../../../storage/libraryBooksView";
 import { BookGrid } from "./BookGrid";
 import { BookList } from "./BookList";
@@ -13,13 +13,13 @@ export function BookResultsView({
   getMetaLines,
   renderActions,
 }: {
-  books: LibraryBook[];
+  books: CompactBook[];
   viewMode: LibraryBooksView;
   selectedBookId: string | null;
-  onViewBook: (book: LibraryBook) => void;
+  onViewBook: (book: CompactBook) => void;
   serverBaseUrl?: string;
-  getMetaLines?: (book: LibraryBook) => ReactNode[];
-  renderActions?: (book: LibraryBook) => ReactNode;
+  getMetaLines?: (book: CompactBook) => ReactNode[];
+  renderActions?: (book: CompactBook) => ReactNode;
 }) {
   return viewMode === "grid" ? (
     <BookGrid

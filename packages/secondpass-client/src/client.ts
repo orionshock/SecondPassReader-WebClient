@@ -6,11 +6,12 @@ import type {
 import type { CurrentUser } from "./schemas/account";
 import type { ServerInfo } from "./schemas/server";
 import type {
-  LibraryAuthor,
-  LibraryBook,
+  BookDetail,
+  CatalogTag,
+  CompactBook,
+  Author,
   LibraryGroup,
-  LibrarySeries,
-  LibraryTag,
+  Series,
   PaginatedResponse,
 } from "./schemas/library";
 import type {
@@ -41,7 +42,7 @@ import type {
 import { createLoginRequest, discoverSecondPass, pollLoginRequest } from "./clientApiAuthApi";
 import { getCurrentUser } from "./accountApi";
 import { getServerInfo } from "./serverApi";
-import { downloadBookFile, getAuthor, getBook, getGroup, getSeries, getTag, listAuthors, listBooks, listGroupAuthors, listGroupBooks, listGroups, listGroupSeries, listGroupTags, listSeries, listTags } from "./libraryApi";
+import { downloadBookFile, getAuthor, getBook, getGroup, getSeries, getTag, listAuthors, listBooks, listGroupAuthors, listGroupBooks, listGroups, listGroupSeries, listGroupTags, listSeries, listTags, searchBooks } from "./libraryApi";
 import {
   closeReadingSession,
   getReadingBookActivitySummary,
@@ -100,14 +101,23 @@ export type SecondPassClientConfig = {
 
 export type LibraryBookListParams = {
   q?: string;
-  series?: string | number;
-  author?: string | number;
+  series?: string;
+  author?: string;
   tag?: string;
   publisher?: string;
   ordering?: "title" | "-title" | "author" | "-author" | "series" | "-series" | "series_index" | "-series_index" | "publisher" | "-publisher";
   page?: number;
   pageSize?: number;
-  excludeGroup?: string | number;
+  excludeGroup?: string;
+};
+
+export type LibrarySearchParams = {
+  q?: string;
+  ordering?: "title" | "-title" | "author" | "-author" | "series" | "-series";
+  excludeShelf?: string;
+  excludeGroup?: string;
+  page?: number;
+  pageSize?: number;
 };
 
 export type LibraryEntityListParams = {
@@ -116,6 +126,8 @@ export type LibraryEntityListParams = {
   page?: number;
   pageSize?: number;
   includePreviewBooks?: boolean;
+  previewLimit?: number;
+  excludeId?: string;
   ordering?: "name" | "-name" | "book_count" | "-book_count";
 };
 
@@ -132,7 +144,13 @@ export type LibraryGroupListParams = {
   page?: number;
   pageSize?: number;
   includePreviewBooks?: boolean;
+  previewLimit?: number;
+  book?: string;
 };
+
+export type LibraryPreviewParams = { includePreviewBooks?: boolean; previewLimit?: number };
+export type LibraryGroupBookListParams = LibraryBookListParams & { excludeShelf?: string };
+export type LibraryGroupEntityListParams = Omit<LibraryEntityListParams, "excludeId">;
 
 export type SecondPassClient = {
   readonly config: Readonly<SecondPassClientConfig>;
@@ -152,43 +170,42 @@ export type SecondPassClient = {
   };
 
   library: {
+    search(params?: LibrarySearchParams): Promise<PaginatedResponse<CompactBook>>;
     books: {
-      list(params?: LibraryBookListParams): Promise<PaginatedResponse<LibraryBook>>;
-      get(bookId: string): Promise<LibraryBook>;
+      list(params?: LibraryBookListParams): Promise<PaginatedResponse<CompactBook>>;
+      get(bookId: string): Promise<BookDetail>;
       /**
        * Returns a server-provided download URL for deliberate URL workflows.
        *
        * Normal app flows should prefer `download()` to avoid passing URLs around.
        */
-      getDownloadUrl(book: LibraryBook | string | number): Promise<string>;
+      getDownloadUrl(book: CompactBook | BookDetail | string | number): Promise<string>;
       /**
        * Download the backing book file bytes (format-neutral).
        *
        * Server convention: 1 book === 1 file.
        */
-      download(book: LibraryBook | string | number): Promise<Blob>;
+      download(book: CompactBook | BookDetail | string | number): Promise<Blob>;
     };
     series: {
-      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<LibrarySeries>>;
-      get(seriesId: string, params?: { includePreviewBooks?: boolean }): Promise<LibrarySeries>;
-      books(seriesId: string, params?: Omit<LibraryBookListParams, "series">): Promise<PaginatedResponse<LibraryBook>>;
+      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<Series>>;
+      get(seriesId: string, params?: LibraryPreviewParams): Promise<Series>;
     };
     authors: {
-      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<LibraryAuthor>>;
-      get(authorId: string, params?: { includePreviewBooks?: boolean }): Promise<LibraryAuthor>;
-      books(authorId: string, params?: Omit<LibraryBookListParams, "author">): Promise<PaginatedResponse<LibraryBook>>;
+      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<Author>>;
+      get(authorId: string, params?: LibraryPreviewParams): Promise<Author>;
     };
     tags: {
-      list(params?: LibraryTagListParams): Promise<PaginatedResponse<LibraryTag>>;
-      get(tagId: string): Promise<LibraryTag>;
+      list(params?: LibraryTagListParams): Promise<PaginatedResponse<CatalogTag>>;
+      get(tagId: string): Promise<CatalogTag>;
     };
     groups: {
       list(params?: LibraryGroupListParams): Promise<PaginatedResponse<LibraryGroup>>;
-      get(groupId: string, params?: { includePreviewBooks?: boolean }): Promise<LibraryGroup>;
-      books(groupId: string, params?: LibraryBookListParams): Promise<PaginatedResponse<LibraryBook>>;
-      authors(groupId: string, params?: Omit<LibraryEntityListParams, "includePreviewBooks">): Promise<PaginatedResponse<LibraryAuthor>>;
-      series(groupId: string, params?: Omit<LibraryEntityListParams, "includePreviewBooks">): Promise<PaginatedResponse<LibrarySeries>>;
-      tags(groupId: string, params?: LibraryTagListParams): Promise<PaginatedResponse<LibraryTag>>;
+      get(groupId: string, params?: LibraryPreviewParams): Promise<LibraryGroup>;
+      books(groupId: string, params?: LibraryGroupBookListParams): Promise<PaginatedResponse<CompactBook>>;
+      authors(groupId: string, params?: LibraryGroupEntityListParams): Promise<PaginatedResponse<Author>>;
+      series(groupId: string, params?: LibraryGroupEntityListParams): Promise<PaginatedResponse<Series>>;
+      tags(groupId: string, params?: LibraryTagListParams): Promise<PaginatedResponse<CatalogTag>>;
     };
   };
 
@@ -205,7 +222,7 @@ export type SecondPassClient = {
   };
 
   reading: {
-    openForReading(book: LibraryBook | string | number): Promise<{ open: ReadingOpenResponse; blob: Blob }>;
+    openForReading(book: CompactBook | BookDetail | string | number): Promise<{ open: ReadingOpenResponse; blob: Blob }>;
 
     books: {
       activitySummary(input: { books: Array<string | number> }): Promise<ReadingBookActivitySummaryResponse>;
@@ -254,21 +271,21 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
   const frozenConfig = Object.freeze({ ...config });
   const ctx = createClientContext(frozenConfig);
 
-  const getBookDownloadUrl = async (book: LibraryBook | string | number): Promise<string> => {
+  const getBookDownloadUrl = async (book: CompactBook | BookDetail | string | number): Promise<string> => {
     const auth = requireAuth(ctx);
     const resolved =
-      typeof book === "string" || typeof book === "number"
-        ? await getBook(auth, { bookId: String(book) })
+      typeof book === "string" || typeof book === "number" || "fileFormat" in book
+        ? await getBook(auth, String(typeof book === "object" ? book.id : book))
         : book;
-    const url = resolved.file?.download_url ?? null;
+    const url = resolved.file?.downloadUrl ?? null;
     if (!url) throw new Error("Server returned a book without a file download URL.");
     return url;
   };
 
-  const downloadBookBlob = async (book: LibraryBook | string | number): Promise<Blob> => {
+  const downloadBookBlob = async (book: CompactBook | BookDetail | string | number): Promise<Blob> => {
     const auth = requireAuth(ctx);
     const bookId = typeof book === "string" || typeof book === "number" ? String(book) : String(book.id);
-    const dl = await downloadBookFile(auth, { bookId });
+    const dl = await downloadBookFile(auth, bookId);
     return dl.blob;
   };
 
@@ -294,14 +311,18 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
     },
 
     library: {
+      search: (params) => {
+        const auth = requireAuth(ctx);
+        return searchBooks(auth, params);
+      },
       books: {
         list: (params) => {
           const auth = requireAuth(ctx);
-          return listBooks(auth, { params });
+          return listBooks(auth, params);
         },
         get: (bookId) => {
           const auth = requireAuth(ctx);
-          return getBook(auth, { bookId });
+          return getBook(auth, bookId);
         },
         getDownloadUrl: async (book) => {
           return getBookDownloadUrl(book);
@@ -320,16 +341,14 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
             page: params?.page,
             pageSize: params?.pageSize,
             includePreviewBooks: params?.includePreviewBooks,
+            previewLimit: params?.previewLimit,
+            excludeId: params?.excludeId,
             ordering: params?.ordering,
           });
         },
         get: (seriesId, params) => {
           const auth = requireAuth(ctx);
-          return getSeries(auth, { seriesId, includePreviewBooks: params?.includePreviewBooks });
-        },
-        books: (seriesId, params) => {
-          const auth = requireAuth(ctx);
-          return listBooks(auth, { params: { ...params, series: seriesId } });
+          return getSeries(auth, seriesId, params);
         },
       },
 
@@ -342,16 +361,14 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
             page: params?.page,
             pageSize: params?.pageSize,
             includePreviewBooks: params?.includePreviewBooks,
+            previewLimit: params?.previewLimit,
+            excludeId: params?.excludeId,
             ordering: params?.ordering,
           });
         },
         get: (authorId, params) => {
           const auth = requireAuth(ctx);
-          return getAuthor(auth, { authorId, includePreviewBooks: params?.includePreviewBooks });
-        },
-        books: (authorId, params) => {
-          const auth = requireAuth(ctx);
-          return listBooks(auth, { params: { ...params, author: authorId } });
+          return getAuthor(auth, authorId, params);
         },
       },
 
@@ -362,7 +379,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         },
         get: (tagId) => {
           const auth = requireAuth(ctx);
-          return getTag(auth, { tagId });
+          return getTag(auth, tagId);
         },
       },
 
@@ -374,28 +391,30 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
             page: params?.page,
             pageSize: params?.pageSize,
             includePreviewBooks: params?.includePreviewBooks,
+            previewLimit: params?.previewLimit,
+            book: params?.book,
             ordering: params?.ordering,
           });
         },
         get: (groupId, params) => {
           const auth = requireAuth(ctx);
-          return getGroup(auth, { groupId, includePreviewBooks: params?.includePreviewBooks });
+          return getGroup(auth, groupId, params);
         },
         books: (groupId, params) => {
           const auth = requireAuth(ctx);
-          return listGroupBooks(auth, { groupId, params });
+          return listGroupBooks(auth, groupId, params);
         },
         authors: (groupId, params) => {
           const auth = requireAuth(ctx);
-          return listGroupAuthors(auth, { groupId, params });
+          return listGroupAuthors(auth, groupId, params);
         },
         series: (groupId, params) => {
           const auth = requireAuth(ctx);
-          return listGroupSeries(auth, { groupId, params });
+          return listGroupSeries(auth, groupId, params);
         },
         tags: (groupId, params) => {
           const auth = requireAuth(ctx);
-          return listGroupTags(auth, { groupId, params });
+          return listGroupTags(auth, groupId, params);
         },
       },
     },
@@ -444,7 +463,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         const auth = requireAuth(ctx);
         const resolved =
           typeof book === "string" || typeof book === "number"
-            ? await getBook(auth, { bookId: String(book) })
+            ? await getBook(auth, String(book))
             : book;
         const open = await openReadingSession(auth, { bookId: resolved.id });
         const blob = await downloadBookBlob(resolved);

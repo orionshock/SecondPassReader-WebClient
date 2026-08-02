@@ -1,4 +1,6 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { BookDetail, CompactBook } from "@secondpass/client";
+
+type SeriesBook = CompactBook | BookDetail;
 
 export function normalizeSeriesIndex(value: unknown): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
@@ -9,14 +11,14 @@ export function normalizeSeriesIndex(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function findNextSeriesBook(currentBook: LibraryBook, books: LibraryBook[]): LibraryBook | null {
-  const currentIndex = normalizeSeriesIndex(currentBook.series?.series_index);
+export function findNextSeriesBook(currentBook: SeriesBook, books: CompactBook[]): CompactBook | null {
+  const currentIndex = normalizeSeriesIndex(currentBook.series?.seriesIndex);
   if (currentIndex == null) return null;
   const currentId = String(currentBook.id);
 
-  let next: { book: LibraryBook; index: number } | null = null;
+  let next: { book: CompactBook; index: number } | null = null;
   for (const book of books) {
-    const index = normalizeSeriesIndex(book.series?.series_index);
+    const index = normalizeSeriesIndex(book.series?.seriesIndex);
     if (String(book.id) === currentId || index == null || index <= currentIndex) continue;
     if (!next || index < next.index) next = { book, index };
   }

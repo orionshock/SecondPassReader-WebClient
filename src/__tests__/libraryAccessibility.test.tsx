@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { LibraryBook, SecondPassClient } from "@secondpass/client";
+import type { CompactBook, SecondPassClient } from "@secondpass/client";
 import { LibraryAxisTabs } from "../features/library/controls/LibraryAxisTabs";
 import { BookViewModeToggle } from "../features/library/display/BookViewModeToggle";
 import { LibraryScopeSelect } from "../features/library/libraryScope/LibraryScopeSelect";
@@ -56,7 +56,7 @@ describe("Library accessibility semantics", () => {
   });
 
   it("labels the book detail dialog and its close button", () => {
-    const initialBook = { id: "7", title: "Accessible Book" } as LibraryBook;
+    const initialBook = { id: "7", title: "Accessible Book" } as CompactBook;
     const html = renderToStaticMarkup(
       <BookDetailModal
         profile={null} spl={null} bookId="7" initialBook={initialBook} onClose={noop}

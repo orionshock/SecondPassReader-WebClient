@@ -1,4 +1,4 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { BookCard } from "./BookCard";
 
 export function BookGrid({
@@ -7,9 +7,9 @@ export function BookGrid({
   onViewBook,
   serverBaseUrl,
 }: {
-  books: LibraryBook[];
+  books: CompactBook[];
   selectedBookId: string | null;
-  onViewBook: (book: LibraryBook) => void;
+  onViewBook: (book: CompactBook) => void;
   serverBaseUrl?: string;
 }) {
   if (books.length === 0) return <p className="muted">No books found.</p>;

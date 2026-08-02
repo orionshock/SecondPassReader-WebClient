@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../library/coverUtils";
 import { formatSeriesIndex } from "../library/seriesUtils";
 
@@ -14,17 +14,17 @@ export function EndOfBookDialog({
   onGoToLibrary,
   returnLabel,
 }: {
-  nextBook: LibraryBook | null;
+  nextBook: CompactBook | null;
   nextBookStatus: "idle" | "loading" | "ready" | "error";
   coverBase?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null;
   hasSeries: boolean;
-  onStartNextBook: (book: LibraryBook) => void;
+  onStartNextBook: (book: CompactBook) => void;
   onFinishSession: () => void;
   onKeepReading: () => void;
   onGoToLibrary?: () => void;
   returnLabel?: string;
 }) {
-  const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.series_index) : null;
+  const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.seriesIndex) : null;
   const coverSrc = getBookCoverUrl(nextBook, coverBase);
 
   useEffect(() => {

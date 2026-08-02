@@ -1,4 +1,4 @@
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import type { ReactNode } from "react";
 import { BookListRow } from "./BookListRow";
 
@@ -10,12 +10,12 @@ export function BookList({
   getMetaLines,
   renderActions,
 }: {
-  books: LibraryBook[];
+  books: CompactBook[];
   selectedBookId: string | null;
-  onViewBook: (book: LibraryBook) => void;
+  onViewBook: (book: CompactBook) => void;
   serverBaseUrl?: string;
-  getMetaLines?: (book: LibraryBook) => ReactNode[];
-  renderActions?: (book: LibraryBook) => ReactNode;
+  getMetaLines?: (book: CompactBook) => ReactNode[];
+  renderActions?: (book: CompactBook) => ReactNode;
 }) {
   if (books.length === 0) return <p className="muted">No books found.</p>;
   return (

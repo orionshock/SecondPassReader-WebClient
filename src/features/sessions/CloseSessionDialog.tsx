@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { LibraryBook } from "@secondpass/client";
+import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../library/coverUtils";
 import { formatSeriesIndex } from "../library/seriesUtils";
 
@@ -35,7 +35,7 @@ export function CloseSessionDialog({
   initialNotes: string;
   afterOptions?: CloseSessionAfterOption[];
   defaultAfterAction?: CloseSessionAfterAction;
-  nextBook?: LibraryBook | null;
+  nextBook?: CompactBook | null;
   coverBase?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null;
   onCancel: () => void;
   onSaveAndClose: (input: CloseSessionInput) => Promise<void>;
@@ -55,7 +55,7 @@ export function CloseSessionDialog({
   const unnamed = trimmedName.length === 0;
   const showNextBookPreview = afterAction === "nextBook" && Boolean(nextBook);
   const nextBookCoverSrc = getBookCoverUrl(nextBook, coverBase);
-  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.series_index) : null;
+  const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.seriesIndex) : null;
 
   useEffect(() => {
     nameRef.current?.focus();
