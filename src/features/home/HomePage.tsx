@@ -5,6 +5,7 @@ import { navigateTo } from "../../app/navigation";
 import { RecentReadingSection } from "../library/RecentReadingSection";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { ShelvesPreviewSection } from "./ShelvesPreviewSection";
+import { getHomeLibrarySearchRoute, HOME_LIBRARY_SEARCH_LABEL, HOME_LIBRARY_SEARCH_PLACEHOLDER } from "./homeLibrarySearch";
 
 export function HomePage({
   profile,
@@ -29,24 +30,25 @@ export function HomePage({
           <div>
             <div className="panelHeaderRow" style={{ marginBottom: 8 }}>
               <div className="panelTitle" style={{ margin: 0 }}>
-                Search the Library
+                {HOME_LIBRARY_SEARCH_LABEL}
               </div>
             </div>
             <form
               className="libraryToolbar"
               onSubmit={(e) => {
                 e.preventDefault();
-                const q = homeSearch.trim();
-                navigateTo(q ? { kind: "library", q } : { kind: "library" });
+                const nextRoute = getHomeLibrarySearchRoute(homeSearch);
+                if (nextRoute) navigateTo(nextRoute);
               }}
             >
               <label className="toolbarField toolbarSearch">
-                <span className="srOnly">Search</span>
+                <span className="srOnly">{HOME_LIBRARY_SEARCH_LABEL}</span>
                 <input
                   className="input inputCompact"
                   value={homeSearch}
                   onChange={(e) => setHomeSearch(e.target.value)}
-                  placeholder="Search..."
+                  placeholder={HOME_LIBRARY_SEARCH_PLACEHOLDER}
+                  aria-label={HOME_LIBRARY_SEARCH_LABEL}
                 />
               </label>
               <button className="button buttonPrimary" type="submit">

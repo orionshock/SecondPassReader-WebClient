@@ -1,17 +1,18 @@
 type Props = {
   draft: string;
   pageSize: number;
+  placeholder: string;
   onDraftChange: (value: string) => void;
   onPageSizeChange: (pageSize: number) => void;
   onSearch: () => void;
 };
 
-export function LibrarySearchControls({ draft, pageSize, onDraftChange, onPageSizeChange, onSearch }: Props) {
+export function LibrarySearchControls({ draft, pageSize, placeholder, onDraftChange, onPageSizeChange, onSearch }: Props) {
   return (
     <div className="librarySearchSection">
       <div className="libraryToolbar">
         <label className="toolbarField toolbarSearch">
-          <span className="srOnly">Search</span>
+          <span className="srOnly">{placeholder}</span>
           <input
             className="input inputCompact"
             value={draft}
@@ -21,7 +22,8 @@ export function LibrarySearchControls({ draft, pageSize, onDraftChange, onPageSi
               event.preventDefault();
               onSearch();
             }}
-            placeholder="Search the library..."
+            placeholder={placeholder}
+            aria-label={placeholder}
           />
         </label>
         <label className="toolbarField">

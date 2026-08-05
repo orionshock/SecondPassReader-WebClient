@@ -599,6 +599,7 @@ function AppShell() {
                     spl={splClient}
                     route={{
                       q: route.q,
+                      searchMode: route.searchMode,
                       browse: route.browse,
                       seriesId: route.seriesId,
                       authorId: route.authorId,
@@ -615,10 +616,11 @@ function AppShell() {
                     }}
                     onCommitSearch={(q) => {
                       const next = q.trim();
-                      // Committing search clears browse/series/author.
+                      const browse = route.browse ?? "books";
+                      const ordering = browse === "books" ? "title" : "name";
                       navigateTo(next
-                        ? { kind: "library", q: next, groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId }
-                        : { kind: "library", browse: "books", groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
+                        ? { kind: "library", browse, q: next, searchMode: route.searchMode, groupId: route.groupId, tag: route.tag, ordering, page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId }
+                        : { kind: "library", browse, groupId: route.groupId, tag: route.tag, ordering, page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
                     }}
                     onShowBooks={() => {
                       navigateTo({ kind: "library", browse: "books", groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
@@ -639,6 +641,7 @@ function AppShell() {
                       navigateTo({
                         kind: "library",
                         q: route.q,
+                        searchMode: patch.groupId !== undefined || patch.tag !== undefined ? undefined : route.searchMode,
                         browse: route.browse ?? "books",
                         seriesId: route.seriesId,
                         authorId: route.authorId,

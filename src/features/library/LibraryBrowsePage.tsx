@@ -11,6 +11,7 @@ import { useSelectedLibraryEntity } from "./data/useSelectedLibraryEntity";
 import { deriveLibraryRouteState, type LibraryAxis, type LibraryBookOrdering, type LibraryEntityOrdering } from "./route/libraryRouteState";
 import { LibraryAxisTabs } from "./controls/LibraryAxisTabs";
 import { LibrarySearchControls } from "./controls/LibrarySearchControls";
+import { getLibrarySearchPlaceholder } from "./controls/librarySearchPlaceholder";
 import { LibrarySortViewControls } from "./controls/LibrarySortViewControls";
 import { LibraryAuthorRows } from "./results/LibraryAuthorRows";
 import { LibraryBooksResults } from "./results/LibraryBooksResults";
@@ -49,6 +50,7 @@ type Props = {
   spl: SecondPassClient | null;
   route: {
     q?: string;
+    searchMode?: "axis" | "global";
     browse?: BrowseMode;
     seriesId?: string;
     authorId?: string;
@@ -89,7 +91,7 @@ export function LibraryBrowsePage({
   const advancedGroupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
   const routeState = useMemo(
     () => deriveLibraryRouteState(route, advancedGroupsEnabled),
-    [advancedGroupsEnabled, route.authorId, route.browse, route.groupId, route.ordering, route.page, route.pageSize, route.q, route.seriesId, route.tag],
+    [advancedGroupsEnabled, route.authorId, route.browse, route.groupId, route.ordering, route.page, route.pageSize, route.q, route.searchMode, route.seriesId, route.tag],
   );
   const { axis: browseMode, effectiveGroupId, pageSize, q: qFromRoute = "", tag: tagSlug } = routeState;
   const showBookList = routeState.resultKind === "books";
@@ -99,6 +101,7 @@ export function LibraryBrowsePage({
   const authorsOrdering = routeState.resultKind === "authors" ? routeState.ordering as EntityOrdering : "name";
 
   const [qDraft, setQDraft] = useState(qFromRoute);
+  const [scopeName, setScopeName] = useState<string | undefined>();
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
 
   const axisResults = useLibraryAxisResults({ spl, state: routeState, canLoad: status === "verified" && apiReady });
@@ -166,6 +169,12 @@ export function LibraryBrowsePage({
     onCommitSearch?.(next);
   }, [onCommitSearch, qDraft]);
 
+  const searchPlaceholder = getLibrarySearchPlaceholder({
+    axis: browseMode,
+    scopeName: effectiveGroupId ? scopeName : undefined,
+    searchMode: routeState.searchMode,
+  });
+
   return (
     <section className="panel">
       {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
@@ -177,6 +186,7 @@ export function LibraryBrowsePage({
           <LibrarySearchControls
             draft={qDraft}
             pageSize={pageSize}
+            placeholder={searchPlaceholder}
             onDraftChange={setQDraft}
             onPageSizeChange={handlePageSizeChange}
             onSearch={handleCommitSearch}
@@ -188,6 +198,7 @@ export function LibraryBrowsePage({
                 <LibraryScopeControl
                   spl={spl}
                   groupId={effectiveGroupId}
+                  onSelectedNameChange={setScopeName}
                   onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
                 />
               ) : null}

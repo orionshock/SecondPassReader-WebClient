@@ -6,6 +6,7 @@ export type AppRoute =
   | {
       kind: "library";
       q?: string;
+      searchMode?: "axis" | "global";
       browse?: "books" | "series" | "authors";
       seriesId?: string;
       authorId?: string;
@@ -57,7 +58,6 @@ function nonDefaultPageSize(pageSize?: number): number | undefined {
 }
 
 function getDefaultLibraryOrdering(route: Extract<AppRoute, { kind: "library" }>): string {
-  if (route.q) return "title";
   if (route.browse === "series" && route.seriesId) return "series_index";
   if (route.browse === "series") return "name";
   if (route.browse === "authors" && route.authorId) return "title";
@@ -81,9 +81,11 @@ export function routeToHash(route: AppRoute): string {
       return `#/home${buildQuery({ book: route.bookId })}`;
     case "library": {
       const browse = route.browse ?? "books";
+      const globalSearch = route.searchMode === "global" && Boolean(route.q?.trim()) && browse === "books" && !route.groupId && !route.tag;
       return `#/library${buildQuery({
         q: route.q,
-        browse: !route.q && browse !== "books" ? browse : undefined,
+        browse: browse !== "books" ? browse : undefined,
+        search: globalSearch ? "global" : undefined,
         series: !route.q && browse === "series" ? route.seriesId : undefined,
         author: !route.q && browse === "authors" ? route.authorId : undefined,
         group: route.groupId,
@@ -158,15 +160,29 @@ export function parseCurrentRoute(): AppRoute | null {
     const authorId = queryParams.get("author")?.trim() ?? "";
     const groupId = queryParams.get("group")?.trim() ?? "";
     const tag = queryParams.get("tag")?.trim() || undefined;
+    const requestedGlobalSearch = queryParams.get("search")?.trim() === "global";
     // Old route format `#/library/<bookId>` is intentionally not supported anymore.
     if (typeof parts[1] === "string" && parts[1]) return { kind: "unknown", raw: window.location.hash };
 
-    if (q) {
-      return bookId ? { kind: "library", q, groupId: groupId || undefined, tag, view, ordering, page, pageSize, bookId } : { kind: "library", q, groupId: groupId || undefined, tag, view, ordering, page, pageSize };
-    }
-
     const effectiveBrowse: "books" | "series" | "authors" =
       browse === "series" || browse === "authors" || browse === "books" ? browse : "books";
+    const searchMode = requestedGlobalSearch && q && effectiveBrowse === "books" && !groupId && !tag ? "global" as const : undefined;
+
+    if (q) {
+      return {
+        kind: "library",
+        q,
+        browse: effectiveBrowse,
+        searchMode,
+        groupId: groupId || undefined,
+        tag,
+        view,
+        ordering,
+        page,
+        pageSize,
+        bookId: bookId || undefined,
+      };
+    }
 
     if (effectiveBrowse === "series") {
       return {

@@ -99,6 +99,20 @@ describe("navigation route ordering params", () => {
     expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "books", groupId: "g1" });
   });
 
+  it("round trips valid global search and normalizes invalid combinations", () => {
+    const hash = routeToHash({ kind: "library", browse: "books", q: "space opera", searchMode: "global" });
+    expect(hash).toBe("#/library?q=space+opera&search=global");
+
+    vi.stubGlobal("window", { location: { hash } });
+    expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "books", q: "space opera", searchMode: "global" });
+
+    vi.stubGlobal("window", { location: { hash: "#/library?browse=authors&q=space&search=global" } });
+    expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "authors", q: "space", searchMode: undefined });
+
+    expect(routeToHash({ kind: "library", browse: "books", q: "space", groupId: "g1", searchMode: "global" }))
+      .toBe("#/library?q=space&group=g1");
+  });
+
   it("omits default shelf params and keeps non-default shelf params", () => {
     expect(routeToHash({
       kind: "shelves",

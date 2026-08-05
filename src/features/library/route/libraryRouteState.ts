@@ -2,12 +2,14 @@ import { getEffectiveLibraryGroupId } from "../libraryScope/libraryScope";
 
 export type LibraryAxis = "books" | "authors" | "series";
 export type LibraryResultKind = LibraryAxis;
+export type LibrarySearchMode = "axis" | "global";
 export type LibraryBookOrdering = "title" | "author" | "series" | "series_index";
 export type LibraryEntityOrdering = "name" | "-book_count";
 export type LibraryOrdering = LibraryBookOrdering | LibraryEntityOrdering;
 
 export type LibraryRouteInput = {
   q?: string;
+  searchMode?: LibrarySearchMode;
   browse?: LibraryAxis;
   seriesId?: string;
   authorId?: string;
@@ -23,6 +25,7 @@ export type DerivedLibraryRouteState = {
   resultKind: LibraryResultKind;
   effectiveGroupId?: string;
   q?: string;
+  searchMode: LibrarySearchMode;
   tag?: string;
   page: number;
   pageSize: number;
@@ -40,11 +43,14 @@ export function deriveLibraryRouteState(
   advancedLibraryGroupsEnabled: boolean,
 ): DerivedLibraryRouteState {
   const q = route.q?.trim() || undefined;
-  const requestedAxis = route.browse === "authors" || route.browse === "series" ? route.browse : "books";
-  const axis: LibraryAxis = q ? "books" : requestedAxis;
+  const axis: LibraryAxis = route.browse === "authors" || route.browse === "series" ? route.browse : "books";
+  const effectiveGroupId = getEffectiveLibraryGroupId(route.groupId, advancedLibraryGroupsEnabled);
+  const searchMode: LibrarySearchMode = route.searchMode === "global" && q && axis === "books" && !effectiveGroupId && !route.tag?.trim()
+    ? "global"
+    : "axis";
   const selectedAuthorId = !q && axis === "authors" ? route.authorId?.trim() || undefined : undefined;
   const selectedSeriesId = !q && axis === "series" ? route.seriesId?.trim() || undefined : undefined;
-  const resultKind: LibraryResultKind = q || axis === "books" || selectedAuthorId || selectedSeriesId ? "books" : axis;
+  const resultKind: LibraryResultKind = axis === "books" || selectedAuthorId || selectedSeriesId ? "books" : axis;
 
   let ordering: LibraryOrdering;
   if (resultKind === "books") {
@@ -58,8 +64,9 @@ export function deriveLibraryRouteState(
   return {
     axis,
     resultKind,
-    effectiveGroupId: getEffectiveLibraryGroupId(route.groupId, advancedLibraryGroupsEnabled),
+    effectiveGroupId,
     q,
+    searchMode,
     tag: route.tag?.trim() || undefined,
     page: Number.isInteger(route.page) && (route.page ?? 0) > 0 ? route.page! : 1,
     pageSize: Number.isInteger(route.pageSize) && (route.pageSize ?? 0) > 0 ? route.pageSize! : 20,

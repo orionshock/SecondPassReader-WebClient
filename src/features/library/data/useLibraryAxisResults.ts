@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Author, CompactBook, LibraryBookListParams, LibraryEntityListParams, Series, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./libraryAxisQueries";
 import { loadLibraryBooks } from "./libraryBookRequests";
+import { loadLibraryAuthors, loadLibrarySeries } from "./libraryEntityRequests";
 import type { DerivedLibraryRouteState } from "../route/libraryRouteState";
 
 type Input = {
@@ -36,7 +37,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
     setBooksBusy(true);
     setBooksError(null);
     try {
-      const result = await loadLibraryBooks(spl, state.effectiveGroupId, params);
+      const result = await loadLibraryBooks(spl, state.effectiveGroupId, params, state.searchMode);
       if (requestSeq !== booksRequestSeq.current) return;
       setBooksData(result);
       setBooksPage(params.page ?? 1);
@@ -47,7 +48,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
     } finally {
       if (requestSeq === booksRequestSeq.current) setBooksBusy(false);
     }
-  }, [spl, state.effectiveGroupId]);
+  }, [spl, state.effectiveGroupId, state.searchMode]);
 
   const loadAuthors = useCallback(async (params: LibraryEntityListParams) => {
     if (!spl) return;
@@ -55,9 +56,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
     setAuthorsBusy(true);
     setAuthorsError(null);
     try {
-      const result = state.effectiveGroupId
-        ? await spl.library.groups.authors(state.effectiveGroupId, { ...params, includePreviewBooks: true })
-        : await spl.library.authors.list({ ...params, includePreviewBooks: true });
+      const result = await loadLibraryAuthors(spl, state.effectiveGroupId, params);
       if (requestSeq !== authorsRequestSeq.current) return;
       setAuthorsData(result);
       setAuthorsPage(params.page ?? 1);
@@ -75,9 +74,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
     setSeriesBusy(true);
     setSeriesError(null);
     try {
-      const result = state.effectiveGroupId
-        ? await spl.library.groups.series(state.effectiveGroupId, { ...params, includePreviewBooks: true })
-        : await spl.library.series.list({ ...params, includePreviewBooks: true });
+      const result = await loadLibrarySeries(spl, state.effectiveGroupId, params);
       if (requestSeq !== seriesRequestSeq.current) return;
       setSeriesData(result);
       setSeriesPage(params.page ?? 1);
@@ -92,7 +89,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
   useEffect(() => {
     setBooksError(null);
     setBooksBusy(false);
-  }, [state.axis, state.selectedSeriesId, state.selectedAuthorId, state.effectiveGroupId, state.q, state.tag, state.pageSize, state.ordering, state.page]);
+  }, [state.axis, state.selectedSeriesId, state.selectedAuthorId, state.effectiveGroupId, state.q, state.searchMode, state.tag, state.pageSize, state.ordering, state.page]);
 
   useEffect(() => {
     if (!canLoad || !spl) return;
