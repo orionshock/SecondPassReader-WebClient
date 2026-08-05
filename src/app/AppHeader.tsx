@@ -111,6 +111,15 @@ export function AppHeader({
       <nav className="appHeaderNav">
         {canNavigate ? (
           <>
+            <button
+              type="button"
+              className="button buttonCompact"
+              onClick={onShowHome}
+              title="Home"
+              aria-label="Home"
+            >
+              <MaterialIcon name="home" />
+            </button>
             <button type="button" className="button buttonCompact" onClick={onShowLibrary}>
               Library
             </button>
