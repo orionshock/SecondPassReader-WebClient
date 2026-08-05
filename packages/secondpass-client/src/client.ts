@@ -1,4 +1,5 @@
 import type {
+  ClientApiConsumeResponse,
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
   SecondPassDiscovery,
@@ -41,7 +42,7 @@ import type {
   MarginaliaSessionStatus,
 } from "./schemas/marginalia";
 
-import { createLoginRequest, discoverSecondPass, pollLoginRequest } from "./clientApiAuthApi";
+import { consumeLoginRequest, createLoginRequest, discoverSecondPass, pollLoginRequest } from "./clientApiAuthApi";
 import { getCurrentUser } from "./accountApi";
 import { getServerInfo } from "./serverApi";
 import { downloadBookFile, getAuthor, getBook, getGroup, getSeries, getTag, listAuthors, listBooks, listGroupAuthors, listGroupBooks, listGroups, listGroupSeries, listGroupTags, listSeries, listTags, searchBooks } from "./libraryApi";
@@ -145,6 +146,7 @@ export type SecondPassClient = {
       input?: { clientName?: string; clientType?: string },
     ): Promise<ClientApiLoginRequestResponse>;
     pollLoginRequest(pollUrl: string): Promise<ClientApiPollResponse>;
+    consumeLoginRequest(consumeUrl: string): Promise<ClientApiConsumeResponse>;
   };
 
   account: {
@@ -258,8 +260,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         return getServerInfo(auth);
       },
       createLoginRequest: (discovery: SecondPassDiscovery, input?: { clientName?: string; clientType?: string }) =>
-        createLoginRequest(discovery, input, frozenConfig.accessToken ? frozenConfig.accessToken : null),
-      pollLoginRequest: (pollUrl: string) => pollLoginRequest(pollUrl, frozenConfig.accessToken ? frozenConfig.accessToken : null),
+        createLoginRequest(discovery, input),
+      pollLoginRequest: (pollUrl: string) => pollLoginRequest(pollUrl),
+      consumeLoginRequest: (consumeUrl: string) => consumeLoginRequest(consumeUrl),
     },
 
     account: {

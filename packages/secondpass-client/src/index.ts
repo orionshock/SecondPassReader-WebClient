@@ -14,6 +14,7 @@ export type {
 } from "./client";
 
 export type {
+  ClientApiConsumeResponse,
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
   SecondPassDiscovery,

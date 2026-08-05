@@ -5,7 +5,7 @@ import { MaterialIcon } from "../../components/MaterialIcon";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
 import { isProfileLinked } from "./connectionStatus";
 import { buildDefaultDeviceName } from "./defaultDeviceName";
-import { runPairingAttempt } from "./pairingFlow";
+import { getPairingErrorMessage, runPairingAttempt } from "./pairingFlow";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -22,7 +22,7 @@ type LinkingState =
   | { phase: "error"; message: string };
 
 function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
-  if (!profile.apiBaseUrl || !profile.serverName) return null;
+  if (!profile.apiBaseUrl || !profile.serverName || !profile.clientApi) return null;
   return {
     server_name: profile.serverName,
     server_description: profile.serverDescription,
@@ -30,6 +30,13 @@ function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
     server_release: profile.serverRelease,
     server_release_date: profile.serverReleaseDate,
     api_base_url: profile.apiBaseUrl,
+    client_api: {
+      discovery_version: profile.clientApi.discoveryVersion,
+      login_request_endpoint: profile.clientApi.loginRequestEndpoint,
+      poll_endpoint_template: profile.clientApi.pollEndpointTemplate,
+      consume_endpoint_template: profile.clientApi.consumeEndpointTemplate,
+      token_type: profile.clientApi.tokenType,
+    },
   };
 }
 
@@ -91,14 +98,14 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         onPollScheduled: (nextAt) => {
           setNextPollAt(nextAt);
         },
-        onApproved: (approved) => {
+        onConsumed: (consumed) => {
           const now = new Date().toISOString();
           const updated: ConnectionProfile = {
             ...profile,
-            accessToken: approved.access_token,
-            tokenType: approved.token_type,
-            clientSessionId: approved.client_session.id,
-            clientSessionName: approved.client_session.name ?? (clientName.trim() || profile.clientSessionName),
+            accessToken: consumed.accessToken,
+            tokenType: consumed.tokenType,
+            clientSessionId: consumed.clientSession.id,
+            clientSessionName: consumed.clientSession.name || clientName.trim() || profile.clientSessionName,
             linkedAt: now,
             lastUsedAt: now,
           };
@@ -111,7 +118,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     } catch (e) {
       if (abort.signal.aborted) return;
       setNextPollAt(null);
-      setState({ phase: "error", message: e instanceof Error ? e.message : "Linking failed." });
+      setState({ phase: "error", message: getPairingErrorMessage(e) });
     }
   }
 
@@ -212,7 +219,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           <div className="formActions pairPendingActions">
             <a
               className="button buttonPrimary pairExternalLink"
-              href={state.loginRequest.authorize_url}
+              href={state.loginRequest.authorizeUrl}
               target="_blank"
               rel="noreferrer"
             >

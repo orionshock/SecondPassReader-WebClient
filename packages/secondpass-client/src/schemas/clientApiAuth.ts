@@ -1,10 +1,10 @@
 export type SecondPassWellKnown = {
-  // Future: shape defined by the server discovery document.
-  // Keep permissive until the server API is finalized.
-  issuer?: string;
-  client_api?: {
-    login_request_url?: string;
-  };
+  server_name: string;
+  server_description?: string;
+  server_version?: string;
+  server_release?: string;
+  server_release_date?: string;
+  api_base_url: string;
 };
 
 export type SecondPassDiscovery = {
@@ -14,12 +14,11 @@ export type SecondPassDiscovery = {
   server_release?: string;
   server_release_date?: string;
   api_base_url: string;
-  client_api?: {
+  client_api: {
     discovery_version: string;
-    discovery_endpoint: string;
     login_request_endpoint: string;
-    authorize_url: string;
     poll_endpoint_template: string;
+    consume_endpoint_template: string;
     token_type: "Bearer" | string;
   };
 };
@@ -27,24 +26,32 @@ export type SecondPassDiscovery = {
 export type ClientApiLoginRequestResponse = {
   id: string;
   code: string;
-  authorize_url: string;
-  poll_url: string;
-  expires_at: string;
+  authorizeUrl: string;
+  pollUrl: string;
+  consumeUrl: string;
+  expiresAt: string;
   interval: number;
 };
 
 export type ClientApiPollResponse =
   | { status: "pending" }
+  | { status: "approved" }
+  | { status: "denied" }
+  | { status: "expired" }
+  | { status: "consumed" };
+
+export type ClientApiConsumeResponse =
+  | { status: "pending" }
   | { status: "denied" }
   | { status: "expired" }
   | { status: "consumed" }
   | {
-      status: "approved";
-      access_token: string;
-      token_type: "Bearer" | string;
-      client_session: {
+      status: "consumed";
+      accessToken: string;
+      tokenType: "Bearer" | string;
+      clientSession: {
         id: string;
         name: string;
-        client_type: string;
+        clientType: string;
       };
     };

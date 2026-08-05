@@ -19,6 +19,7 @@ const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
 - `spl.server.info()`
 - `spl.server.createLoginRequest(discovery, input?)`
 - `spl.server.pollLoginRequest(pollUrl)`
+- `spl.server.consumeLoginRequest(consumeUrl)`
 
 ## account
 

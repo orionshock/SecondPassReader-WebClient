@@ -46,10 +46,10 @@ export type ConnectionProfile = {
   mustChangePassword?: boolean;
   clientApi?: {
     discoveryVersion: string;
-    discoveryEndpoint: string;
     loginRequestEndpoint: string;
-    authorizeUrl: string;
     pollEndpointTemplate: string;
+    consumeEndpointTemplate: string;
+    tokenType: string;
   };
   createdAt: string;
   lastUsedAt?: string;

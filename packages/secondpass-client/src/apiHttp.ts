@@ -4,6 +4,7 @@ export type RequestUrlOptions = {
   defaultAccessToken?: string | null;
   body?: unknown;
   headers?: Record<string, string>;
+  credentials?: RequestCredentials;
   url: string;
   /**
    * Optional override messages for specific status codes.
@@ -90,6 +91,7 @@ export async function requestJsonUrl<T>(options: RequestUrlOptions): Promise<T> 
     method: options.method ?? "GET",
     headers,
     body,
+    credentials: options.credentials,
   });
 
   if (!res.ok) {

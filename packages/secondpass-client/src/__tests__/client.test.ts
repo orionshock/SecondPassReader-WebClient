@@ -31,6 +31,16 @@ function asMockFetch() {
   return vi.mocked(globalThis.fetch);
 }
 
+function clientApiDiscoveryResponse() {
+  return {
+    discovery_version: "1",
+    login_request_endpoint: "/client-api/login-requests/",
+    poll_endpoint_template: "/client-api/login-requests/%7Bid%7D/poll/",
+    consume_endpoint_template: "/client-api/login-requests/%7Bid%7D/consume/",
+    token_type: "Bearer",
+  };
+}
+
 function expectNoStaleLiveAnnotationFields(payload: unknown) {
   const text = JSON.stringify(payload);
   expect(text).not.toContain("profile_version");
@@ -562,6 +572,7 @@ describe("@secondpass/client high-level workflows", () => {
         api_base_url: "https://api.example",
       }),
     );
+    fetchMock.mockResolvedValueOnce(jsonResponse(clientApiDiscoveryResponse()));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
     const discovery = await spl.server.discover("https://server.example");
@@ -572,7 +583,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(() => spl.library.books.list()).toThrowError(ApiError);
   });
 
-  it("server discovery and pairing use compact well-known shape and bearer-only optional auth", async () => {
+  it("server discovery and pairing use discovered endpoints without credentials", async () => {
     const fetchMock = asMockFetch();
     fetchMock
       .mockResolvedValueOnce(
@@ -585,17 +596,25 @@ describe("@secondpass/client high-level workflows", () => {
           api_base_url: "https://api.example",
         }),
       )
+      .mockResolvedValueOnce(jsonResponse(clientApiDiscoveryResponse()))
       .mockResolvedValueOnce(
         jsonResponse({
           id: "request-1",
           code: "ABCD",
           authorize_url: "https://server.example/authorize",
           poll_url: "https://api.example/client-api/login-requests/request-1/poll/",
+          consume_url: "https://api.example/client-api/login-requests/request-1/consume/",
           expires_at: "2026-06-21T12:00:00Z",
           interval: 3,
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ status: "approved", access_token: "new-token", token_type: "Bearer" }));
+      .mockResolvedValueOnce(jsonResponse({ status: "approved" }))
+      .mockResolvedValueOnce(jsonResponse({
+        status: "consumed",
+        access_token: "new-token",
+        token_type: "Bearer",
+        client_session: { id: "session-1", name: "Browser", client_type: "reader" },
+      }));
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "pairing-token" });
     const discovery = await spl.server.discover("https://server.example/");
@@ -606,27 +625,36 @@ describe("@secondpass/client high-level workflows", () => {
       server_release: "r1",
       server_release_date: "2026-07-06",
       api_base_url: "https://api.example",
+      client_api: {
+        ...clientApiDiscoveryResponse(),
+      },
     });
 
-    await spl.server.createLoginRequest(discovery);
+    const loginRequest = await spl.server.createLoginRequest(discovery);
+    expect(loginRequest.consumeUrl).toBe("https://api.example/client-api/login-requests/request-1/consume/");
     await spl.server.pollLoginRequest("https://api.example/client-api/login-requests/request-1/poll/");
+    await spl.server.consumeLoginRequest("https://api.example/client-api/login-requests/request-1/consume/");
 
     const discoverHeaders = fetchMock.mock.calls[0]![1]?.headers as Record<string, string>;
     expect(String(fetchMock.mock.calls[0]![0])).toBe("https://server.example/.well-known/secondpass");
     expect(discoverHeaders.Authorization).toBeUndefined();
 
-    const createHeaders = fetchMock.mock.calls[1]![1]?.headers as Record<string, string>;
-    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/client-api/login-requests/");
-    expect(createHeaders.Authorization).toBe("Bearer pairing-token");
-    expect(createHeaders.Authorization).not.toMatch(/^Basic /i);
-    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toEqual({
+    expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/client-api/discovery/");
+
+    const createHeaders = fetchMock.mock.calls[2]![1]?.headers as Record<string, string>;
+    expect(String(fetchMock.mock.calls[2]![0])).toBe("https://api.example/client-api/login-requests/");
+    expect(createHeaders.Authorization).toBeUndefined();
+    expect(JSON.parse(String(fetchMock.mock.calls[2]![1]?.body))).toEqual({
       client_name: "Second Pass Reader",
       client_type: "reader",
     });
 
-    const pollHeaders = fetchMock.mock.calls[2]![1]?.headers as Record<string, string>;
-    expect(pollHeaders.Authorization).toBe("Bearer pairing-token");
-    expect(pollHeaders.Authorization).not.toMatch(/^Basic /i);
+    const pollHeaders = fetchMock.mock.calls[3]![1]?.headers as Record<string, string>;
+    expect(pollHeaders.Authorization).toBeUndefined();
+    const consumeInit = fetchMock.mock.calls[4]![1];
+    expect(consumeInit?.method).toBe("POST");
+    expect(consumeInit?.body).toBeUndefined();
+    expect(consumeInit?.credentials).toBe("omit");
   });
 
   it("server.createLoginRequest submits the caller-provided editable client name", async () => {
@@ -637,6 +665,7 @@ describe("@secondpass/client high-level workflows", () => {
         code: "ABCD",
         authorize_url: "https://server.example/authorize",
         poll_url: "https://api.example/client-api/login-requests/request-1/poll/",
+        consume_url: "https://api.example/client-api/login-requests/request-1/consume/",
         expires_at: "2026-06-21T12:00:00Z",
         interval: 3,
       }),
@@ -647,6 +676,9 @@ describe("@secondpass/client high-level workflows", () => {
       {
         server_name: "Library Server",
         api_base_url: "https://api.example",
+        client_api: {
+          ...clientApiDiscoveryResponse(),
+        },
       },
       {
         clientName: "SecondPass Reader \u00b7 Firefox on Linux",
