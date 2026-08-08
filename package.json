@@ -18,7 +18,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@likecoin/epub-ts": "^0.6.6",
+    "@likecoin/epub-ts": "^0.7.1",
     "@secondpass/client": "workspace:*",
     "@types/papaparse": "^5.5.2",
     "fflate": "^0.8.3",
