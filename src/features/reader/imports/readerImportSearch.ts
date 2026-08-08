@@ -8,6 +8,8 @@ import { buildImportSearchQueryPlans } from "./readerImportSearchQueries";
 
 type ReaderImportSearchAttempt = Extract<ReaderImportAttempt, { kind: "quote-text" | "text-search" }>;
 
+const IMPORT_FRAGMENT_CANDIDATE_LIMIT = 25;
+
 export type ReaderImportSearchMatch = {
   result: ReaderSearchResult;
   matchedText: string;
@@ -81,7 +83,10 @@ export async function findImportRowSearchMatches({
   for (const plan of queryPlans) {
     if (signal.aborted) return [];
     const results = await searchBook(plan.query, {
-      maxResults: 5,
+      // Short fallback fragments can occur many times before the intended match.
+      // Collect enough raw candidates for range repair/context ranking to inspect
+      // later occurrences; only eligible matches are returned to activation.
+      maxResults: IMPORT_FRAGMENT_CANDIDATE_LIMIT,
       maxSeqEle: 8,
       repairFullText: plan.repairText,
       signal,

@@ -123,6 +123,38 @@ describe("reader import search", () => {
 
     expect(matches).toEqual([]);
   });
+
+  it("searches beyond the first five generic fragment occurrences", async () => {
+    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
+    const observedLimits: number[] = [];
+    const searchBook: ReaderSearchBookHandle = async (query, options) => {
+      if (query !== "Doroga rumbled") return [];
+      observedLimits.push(options?.maxResults ?? 0);
+      return [
+        ...Array.from({ length: 5 }, (_, index) => result({
+          id: `generic-${index}`,
+          cfi: `generic-cfi-${index}`,
+          quotePrefix: "unrelated",
+          quoteSuffix: "unrelated",
+        })),
+        result({
+          id: "intended",
+          cfi: "intended-cfi",
+          repairedText: '"It is too late to save them," Doroga rumbled.',
+        }),
+      ];
+    };
+
+    const matches = await findImportRowSearchMatches({
+      row: row({ quoteText: quote }),
+      attempt: { kind: "text-search", text: quote },
+      searchBook,
+      signal: new AbortController().signal,
+    });
+
+    expect(observedLimits).toEqual([25]);
+    expect(matches.map((match) => match.result.id)).toEqual(["intended"]);
+  });
 });
 
 function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {
