@@ -1,5 +1,5 @@
 import type { ReaderSearchResult } from "../domain/types";
-import { debugReaderImport, previewImportText } from "./readerImportDebug";
+import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
 
 export type ReaderImportQuoteContextHint = {
   prefix?: string;
@@ -33,21 +33,40 @@ export function scoreImportQuoteContextCandidate(
   const expectedSuffix = normalizeImportQuoteContextText(hint.suffix);
   const actualPrefix = normalizeImportQuoteContextText(result.quotePrefix);
   const actualSuffix = normalizeImportQuoteContextText(result.quoteSuffix);
-  const prefixScore = expectedPrefix ? scorePrefixMatch(actualPrefix, expectedPrefix) : 0;
-  const suffixScore = expectedSuffix ? scoreSuffixMatch(actualSuffix, expectedSuffix) : 0;
+  const prefixScore = expectedPrefix
+    ? Math.max(
+        scorePrefixMatch(actualPrefix, expectedPrefix),
+        scorePrefixMatch(toPunctuationLightContext(actualPrefix), toPunctuationLightContext(expectedPrefix)),
+      )
+    : 0;
+  const suffixScore = expectedSuffix
+    ? Math.max(
+        scoreSuffixMatch(actualSuffix, expectedSuffix),
+        scoreSuffixMatch(toPunctuationLightContext(actualSuffix), toPunctuationLightContext(expectedSuffix)),
+      )
+    : 0;
   return { score: prefixScore + suffixScore, prefixScore, suffixScore };
+}
+
+function toPunctuationLightContext(value: string): string {
+  return value
+    .replace(/["'\u2018\u2019\u201c\u201d]/g, "")
+    .replace(/[,;:.?!]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function rankImportQuoteContextCandidates<T extends ReaderSearchResult>(
   results: T[],
   hint: ReaderImportQuoteContextHint,
 ): T[] {
+  const verbose = isReaderImportDebugVerbose();
   const scored = results
     .map((result, index) => ({ result, index, score: scoreImportQuoteContextCandidate(result, hint) }));
   debugReaderImport("quote-context candidate scores", {
     hint: {
-      prefixPreview: previewImportText(normalizeImportQuoteContextText(hint.prefix)),
-      suffixPreview: previewImportText(normalizeImportQuoteContextText(hint.suffix)),
+      prefixPreview: verbose ? previewImportText(normalizeImportQuoteContextText(hint.prefix)) : undefined,
+      suffixPreview: verbose ? previewImportText(normalizeImportQuoteContextText(hint.suffix)) : undefined,
     },
     candidates: scored.map((item) => ({
       index: item.index,
@@ -55,8 +74,8 @@ export function rankImportQuoteContextCandidates<T extends ReaderSearchResult>(
       score: item.score.score,
       prefixScore: item.score.prefixScore,
       suffixScore: item.score.suffixScore,
-      quotePrefixPreview: previewImportText(normalizeImportQuoteContextText(item.result.quotePrefix)),
-      quoteSuffixPreview: previewImportText(normalizeImportQuoteContextText(item.result.quoteSuffix)),
+      quotePrefixPreview: verbose ? previewImportText(normalizeImportQuoteContextText(item.result.quotePrefix)) : undefined,
+      quoteSuffixPreview: verbose ? previewImportText(normalizeImportQuoteContextText(item.result.quoteSuffix)) : undefined,
     })),
   });
   return scored

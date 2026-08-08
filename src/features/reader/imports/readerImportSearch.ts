@@ -87,14 +87,16 @@ export async function findImportRowSearchMatches({
       signal,
     });
     if (signal.aborted) return [];
+    const rankedResults = rankFragmentSearchResults(results, plan);
     debugReaderImport("text search query results", {
       rowId: row.id,
       queryPreview: verbose ? previewImportText(plan.query) : undefined,
       hasRepairFullText: Boolean(plan.repairText),
       count: results.length,
-      results: results.map((result) => summarizeSearchResult(result, verbose)),
+      eligibleCount: rankedResults.length,
+      results: rankedResults.map((result) => summarizeSearchResult(result, verbose)),
     });
-    for (const result of results) {
+    for (const result of rankedResults) {
       const key = result.cfi?.trim();
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -102,6 +104,18 @@ export async function findImportRowSearchMatches({
     }
   }
   return matches;
+}
+
+function rankFragmentSearchResults(
+  results: ReaderSearchResult[],
+  hint: { prefix?: string; suffix?: string },
+): ReaderSearchResult[] {
+  if (results.length === 0) return results;
+  const repaired = results.filter((result) => Boolean(result.repairedText));
+  const unrepaired = results.filter((result) => !result.repairedText);
+  if (!hint.prefix && !hint.suffix) return [...repaired, ...unrepaired];
+  const ranked = rankImportQuoteContextCandidates(unrepaired, hint);
+  return [...repaired, ...ranked];
 }
 
 function summarizeSearchResult(result: ReaderSearchResult, verbose: boolean): Record<string, unknown> {

@@ -83,6 +83,37 @@ describe("reader import activation orchestration", () => {
     }));
   });
 
+  it("stages a repaired match found through a punctuation-light fragment", async () => {
+    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
+    const searchBook = vi.fn<ReaderSearchBookHandle>(async (query) => query === "Doroga rumbled"
+      ? [
+          {
+            id: "wrong-cfi",
+            cfi: "wrong-cfi",
+            excerpt: "Doroga rumbled",
+            quotePrefix: "unrelated words",
+            quoteSuffix: "another sentence",
+          },
+          {
+            ...searchResult("punctuation-light-cfi", "Doroga rumbled."),
+            quotePrefix: "Earlier text: \"It is too late to save them,\"",
+            quoteSuffix: ". \"This is how it begins.\" Later text.",
+          },
+        ]
+      : []);
+    const harness = createHarness(row({ quoteText: quote }), { searchBook });
+
+    await harness.activate("row-1");
+
+    expect(searchBook).toHaveBeenCalledWith("Doroga rumbled", expect.objectContaining({
+      repairFullText: "\u201cIt is too late to save them,\u201d Doroga rumbled.",
+    }));
+    expect(harness.stagedSelection.stageSelectionFromCfiRange).toHaveBeenLastCalledWith(expect.objectContaining({
+      cfiRange: "punctuation-light-cfi",
+      text: "Doroga rumbled.",
+    }));
+  });
+
   it("runs text fallback when an unusable CFI has an exhausted cursor", async () => {
     const searchBook = vi.fn<ReaderSearchBookHandle>().mockResolvedValue([]);
     const harness = createHarness(row({

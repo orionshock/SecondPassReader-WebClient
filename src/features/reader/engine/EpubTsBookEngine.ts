@@ -290,6 +290,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     async display(target?: ReaderLocationTarget) {
       if (destroyed) return;
       await rendition.display(toRenditionTarget(target));
+      if (!destroyed) highlightMarkPainter.refresh();
     },
     async next() {
       if (destroyed) return;
@@ -461,6 +462,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       safeDisplayInProgress += 1;
       try {
         await rendition.display(trimmed);
+        if (!destroyed) highlightMarkPainter.refresh();
         try {
           if (isUsableRange(rendition.getRange(trimmed))) return { ok: true, code: "displayed" };
         } catch {
