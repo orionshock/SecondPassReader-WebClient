@@ -15,6 +15,13 @@ function normalizeColor(input: string): string {
   return input.trim().toLowerCase();
 }
 
+export function resolveAnnotationColor(inputColor: string | null | undefined): string | null {
+  const raw = typeof inputColor === "string" ? inputColor : "";
+  const normalized = raw ? normalizeColor(raw) : "";
+  const resolved = normalized && (NAMED_COLORS[normalized] ?? (normalized.startsWith("#") ? normalized : ""));
+  return resolved && hexToRgb(resolved) ? resolved : null;
+}
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const h = hex.replace(/^#/, "");
   const isShort = h.length === 3;
@@ -35,11 +42,8 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
  * Unknown values fall back to a neutral theme color.
  */
 export function toAnnotationCssVars(inputColor: string | null | undefined): { color: string; bg: string } {
-  const raw = typeof inputColor === "string" ? inputColor : "";
-  const normalized = raw ? normalizeColor(raw) : "";
-  const resolved = normalized && (NAMED_COLORS[normalized] ?? (normalized.startsWith("#") ? normalized : ""));
-
-  const base = resolved && hexToRgb(resolved);
+  const resolved = resolveAnnotationColor(inputColor);
+  const base = resolved ? hexToRgb(resolved) : null;
   if (!base) {
     return {
       color: "rgba(59, 130, 246, 0.55)",

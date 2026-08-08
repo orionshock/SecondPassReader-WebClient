@@ -23,6 +23,18 @@ describe("reader highlight mark painting", () => {
     expect(remove).toHaveBeenCalledWith("epubcfi(/6/4,/1:0,/1:4)", "highlight");
     expect(highlight).toHaveBeenCalledTimes(2);
   });
+
+  it("paints pink marks with the visible application palette color", () => {
+    const { painter, highlight } = createHarness();
+
+    painter.setHighlightMarks([{ id: "highlight-1", cfiRange: "epubcfi(/6/2,/1:0,/1:4)", color: "pink" }]);
+
+    expect(highlight.mock.calls[0]?.[4]).toMatchObject({
+      fill: "#ec4899",
+      "fill-opacity": "0.42",
+      "background-color": "#ec4899",
+    });
+  });
 });
 
 function createHarness() {

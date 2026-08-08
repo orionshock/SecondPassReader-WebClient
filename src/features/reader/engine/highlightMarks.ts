@@ -1,4 +1,5 @@
 import type { Rendition } from "@likecoin/epub-ts";
+import { resolveAnnotationColor } from "../annotations/annotationColors";
 import type { ReaderHighlightMark } from "../domain/types";
 
 export type HighlightMarkPainter = {
@@ -43,6 +44,7 @@ export function createHighlightMarkPainter(args: {
   const toHighlightAttributes = (color: string | undefined): Record<string, string> | undefined => {
     const c = typeof color === "string" ? color.trim() : "";
     if (!c) return undefined;
+    const paintColor = resolveAnnotationColor(c) ?? c;
     // epub-ts will default to yellow; support simple named tokens / hex / css colors by passing them through.
     // Avoid trying to parse arbitrary strings here.
     //
@@ -50,11 +52,11 @@ export function createHighlightMarkPainter(args: {
     // others apply styles to DOM elements (background-color). Provide both so color changes reliably
     // reflect in the viewport without depending on a specific internal representation.
     return {
-      fill: c,
-      "fill-opacity": "0.22",
+      fill: paintColor,
+      "fill-opacity": "0.42",
       "mix-blend-mode": "multiply",
-      "background-color": c,
-      background: c,
+      "background-color": paintColor,
+      background: paintColor,
     };
   };
 
