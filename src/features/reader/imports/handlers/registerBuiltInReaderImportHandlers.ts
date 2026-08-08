@@ -1,2 +1,2 @@
-import "./glaspCsvImportHandler";
+import "./glaspCsv/glaspCsvImportHandler";
 import "./splMarginaliaImportHandler";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import "../features/reader/imports/handlers/registerBuiltInReaderImportHandlers";
-import { glaspCsvImportHandler } from "../features/reader/imports/handlers/glaspCsvImportHandler";
+import { glaspCsvImportHandler } from "../features/reader/imports/handlers/glaspCsv/glaspCsvImportHandler";
 import {
   getReaderImportFormat,
   getReaderImportHandlers,

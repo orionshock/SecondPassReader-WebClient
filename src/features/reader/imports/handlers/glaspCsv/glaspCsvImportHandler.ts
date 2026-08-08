@@ -1,6 +1,7 @@
 import Papa from "papaparse";
-import { registerReaderImportHandler } from "../readerImportFormats";
-import type { ReaderImportRow } from "../readerImportTypes";
+import { registerReaderImportHandler } from "../../readerImportFormats";
+import type { ReaderImportRow } from "../../readerImportTypes";
+import { decodeHtmlEntities } from "./glaspHtmlEntities";
 
 const HIGHLIGHT_TEXT_COLUMNS = ["highlight text", "highlight", "text"];
 
@@ -53,13 +54,13 @@ function parseGlaspCsv(text: string): { rows: ReaderImportRow[]; warnings: strin
   let skippedBlankRows = 0;
 
   parsed.data.forEach((record, rowOffset) => {
-    const quoteText = cell(record, textColumn);
+    const quoteText = decodeHtmlEntities(cell(record, textColumn));
     if (!quoteText) {
       skippedBlankRows += 1;
       return;
     }
     const color = cell(record, colorColumn);
-    const noteText = cell(record, noteColumn);
+    const noteText = decodeHtmlEntities(cell(record, noteColumn));
     const cfiHint = cell(record, locationColumn);
     rows.push({
       id: `glasp-row-${rowOffset + 1}`,
