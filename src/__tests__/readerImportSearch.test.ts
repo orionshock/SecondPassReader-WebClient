@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findImportRowSearchMatch } from "../features/reader/imports/readerImportSearch";
+import { findImportRowSearchMatch, findImportRowSearchMatches } from "../features/reader/imports/readerImportSearch";
 import type { ReaderSearchBookHandle } from "../features/reader/shell/types";
 import type { ReaderSearchResult } from "../features/reader/domain/types";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
@@ -38,6 +38,24 @@ describe("reader import search", () => {
 
     expect(match?.result.cfi).toBe("found");
     expect(calls[0]).toEqual({ query: "plain quote", repairFullText: undefined });
+  });
+
+  it("collects matches from multiple sentence fragments for candidate cycling", async () => {
+    const quote = "First useful sentence is long enough. Second useful sentence is also long enough.";
+    const searchBook: ReaderSearchBookHandle = async (query) => {
+      if (query === "First useful sentence is long enough") return [result({ id: "first", cfi: "first-cfi" })];
+      if (query === "Second useful sentence is also long enough") return [result({ id: "second", cfi: "second-cfi" })];
+      return [];
+    };
+
+    const matches = await findImportRowSearchMatches({
+      row: row({ quoteText: quote }),
+      attempt: { kind: "text-search", text: quote },
+      searchBook,
+      signal: new AbortController().signal,
+    });
+
+    expect(matches.map((match) => match.result.id)).toEqual(["first", "second"]);
   });
 });
 

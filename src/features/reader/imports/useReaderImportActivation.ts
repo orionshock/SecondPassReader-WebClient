@@ -3,7 +3,7 @@ import type { ReaderSearchBookHandle } from "../shell/types";
 import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
-import { debugReaderImport, previewImportText } from "./readerImportDebug";
+import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
 import { probeReaderImportBookmarkCfi } from "./readerImportBookmarkProbe";
 import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./readerImportAttempts";
 import { getNextImportCycleMatch } from "./readerImportCycle";
@@ -89,12 +89,32 @@ export function useReaderImportActivation({
       return;
     }
 
+    const attempts = buildReaderImportAttemptQueue(row);
+    const verbose = isReaderImportDebugVerbose();
+    debugReaderImport("activation attempt list created", {
+      rowId,
+      attemptKinds: attempts.map((attempt) => attempt.kind),
+      attemptCursor: row.attemptCursor,
+      resultCursor: row.resultCursor,
+      attemptPreviews: verbose ? attempts.map((attempt) => previewImportText(
+        attempt.kind === "quote-text" ? attempt.exact : attempt.kind === "text-search" ? attempt.text : attempt.cfiRange,
+      )) : undefined,
+    });
+    if (row.cfiHint?.trim() && !attempts.some((attempt) => attempt.kind === "cfi-range")) {
+      debugReaderImport("highlight CFI attempt skipped", {
+        rowId,
+        reason: "hint is not a usable range CFI",
+        hasTextFallback: attempts.some((attempt) => attempt.kind !== "cfi-range"),
+        cfiPreview: verbose ? previewImportText(row.cfiHint) : undefined,
+      });
+    }
+
     const next = getNextReaderImportAttempt(row);
     if (!next) {
       debugReaderImport("no activation attempt", {
         rowId,
         kind: row.kind,
-        quotePreview: previewImportText(row.quoteText),
+        quotePreview: verbose ? previewImportText(row.quoteText) : undefined,
         hasCfiHint: Boolean(row.cfiHint),
         attemptCursor: row.attemptCursor,
         resultCursor: row.resultCursor,
@@ -130,22 +150,17 @@ export function useReaderImportActivation({
     setRowStatus(rowId, "searching");
 
     try {
-      const attempts = buildReaderImportAttemptQueue(row);
       let activationCursor = next.cursor;
       let activationResultCursor = next.resultCursor;
+      let failedCfiAttempt = false;
       debugReaderImport("activation start", {
         rowId,
         status: row.status,
         next: { kind: next.attempt.kind, cursor: next.cursor, resultCursor: next.resultCursor },
-        attempts: attempts.map((attempt) => ({
-          kind: attempt.kind,
-          textPreview: previewImportText(attempt.kind === "quote-text" ? attempt.exact : attempt.kind === "text-search" ? attempt.text : attempt.cfiRange),
-          hasPrefix: attempt.kind === "quote-text" ? Boolean(attempt.prefix) : undefined,
-          hasSuffix: attempt.kind === "quote-text" ? Boolean(attempt.suffix) : undefined,
-        })),
-        quotePreview: previewImportText(row.quoteText),
-        preQuotePreview: previewImportText(row.preQuoteText),
-        postQuotePreview: previewImportText(row.postQuoteText),
+        attemptKinds: attempts.map((attempt) => attempt.kind),
+        quotePreview: verbose ? previewImportText(row.quoteText) : undefined,
+        preQuotePreview: verbose ? previewImportText(row.preQuoteText) : undefined,
+        postQuotePreview: verbose ? previewImportText(row.postQuoteText) : undefined,
         hasCfiHint: Boolean(row.cfiHint),
       });
 
@@ -164,7 +179,13 @@ export function useReaderImportActivation({
           setRowActivationState(rowId, "staged", { attemptCursor: next.cursor + 1, resultCursor: 0, hasMatched: true });
           return;
         }
-        debugReaderImport("highlight CFI range stage failure", { rowId, code: result.code, reason: result.error });
+        failedCfiAttempt = true;
+        debugReaderImport("highlight CFI range stage failure; continuing to text fallback", {
+          rowId,
+          code: result.code,
+          reason: result.error,
+          nextAttemptCursor: next.cursor + 1,
+        });
         activationCursor = next.cursor + 1;
         activationResultCursor = 0;
       }
@@ -200,7 +221,11 @@ export function useReaderImportActivation({
           counts: resultsByAttempt.map((results) => results.length),
           previousHasMatched: row.hasMatched,
         });
-        setRowActivationState(rowId, "not-found", { attemptCursor: attempts.length, resultCursor: 0, hasMatched: row.hasMatched });
+        setRowActivationState(rowId, "not-found", {
+          attemptCursor: failedCfiAttempt ? activationCursor : attempts.length,
+          resultCursor: 0,
+          hasMatched: row.hasMatched,
+        });
         clearTemporaryHighlight();
         setDrawerOpen(true);
         return;
@@ -216,8 +241,8 @@ export function useReaderImportActivation({
           nextResultCursor: cycle.nextResultCursor,
         },
         cfi: match.result.cfi,
-        queryPreview: previewImportText(match.query),
-        matchedPreview: previewImportText(match.matchedText),
+        queryPreview: verbose ? previewImportText(match.query) : undefined,
+        matchedPreview: verbose ? previewImportText(match.matchedText) : undefined,
         hasQuotePrefix: Boolean(match.result.quotePrefix),
         hasQuoteSuffix: Boolean(match.result.quoteSuffix),
       });

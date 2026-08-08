@@ -23,6 +23,15 @@ describe("reader import attempts", () => {
     ]);
   });
 
+  it("keeps text fallback attempts for malformed CFI hints", () => {
+    expect(buildReaderImportAttemptQueue(row({
+      quoteText: "Selected text",
+      cfiHint: "not-a-cfi",
+    }))).toEqual([
+      { kind: "text-search", text: "Selected text" },
+    ]);
+  });
+
   it("queues a highlight range CFI before text attempts", () => {
     expect(buildReaderImportAttemptQueue(row({ quoteText: "Selected text", cfiHint: "epubcfi(/6/2!/4/2,/1:0,/1:4)" }))).toEqual([
       { kind: "cfi-range", cfiRange: "epubcfi(/6/2!/4/2,/1:0,/1:4)" },
@@ -100,6 +109,18 @@ describe("reader import attempts", () => {
       attempt: { kind: "text-search", text: "Selected text" },
       cursor: 0,
       resultCursor: 0,
+    });
+  });
+
+  it("continues at text fallback after a failed CFI cursor", () => {
+    expect(getNextReaderImportAttempt(row({
+      status: "not-found",
+      quoteText: "Selected text",
+      cfiHint: "epubcfi(/6/2!/4/2,/1:0,/1:4)",
+      attemptCursor: 1,
+    }))).toMatchObject({
+      attempt: { kind: "text-search", text: "Selected text" },
+      cursor: 1,
     });
   });
 });

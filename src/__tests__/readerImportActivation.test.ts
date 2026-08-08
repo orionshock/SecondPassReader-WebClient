@@ -45,6 +45,44 @@ describe("reader import activation orchestration", () => {
     }));
   });
 
+  it("retains the text fallback cursor when failed CFI and text attempts find nothing", async () => {
+    const harness = createHarness(row({
+      quoteText: "Fallback quote",
+      cfiHint: "epubcfi(/6/2!/4/2,/1:0,/1:4)",
+    }), {
+      probeCfi: async () => ({ ok: true, code: "exists-in-book", cfiKind: "point" }),
+      searchBook: async () => [],
+    });
+
+    await harness.activate("row-1");
+
+    expect(harness.setRowActivationState).toHaveBeenLastCalledWith("row-1", "not-found", expect.objectContaining({
+      attemptCursor: 1,
+      resultCursor: 0,
+    }));
+  });
+
+  it("stages a sentence fragment when the full cross-block quote has no result", async () => {
+    const quote = "A clear line of succession might lay many of these worries to rest.\u201d "
+      + "Gaius nodded. \u201cI am addressing it. I will say no more than that.\u201d";
+    const searchBook = vi.fn<ReaderSearchBookHandle>(async (query) => query === "I am addressing it"
+      ? [searchResult("fragment-cfi", "\u201cI am addressing it.")]
+      : []);
+    const harness = createHarness(row({ quoteText: quote }), { searchBook });
+
+    await harness.activate("row-1");
+
+    expect(searchBook).toHaveBeenCalledWith(quote, expect.any(Object));
+    expect(searchBook).toHaveBeenCalledWith("I am addressing it", expect.any(Object));
+    expect(harness.stagedSelection.stageSelectionFromCfiRange).toHaveBeenLastCalledWith(expect.objectContaining({
+      cfiRange: "fragment-cfi",
+      text: "\u201cI am addressing it.",
+    }));
+    expect(harness.setRowActivationState).toHaveBeenLastCalledWith("row-1", "staged", expect.objectContaining({
+      hasMatched: true,
+    }));
+  });
+
   it("ignores an older activation after a newer activation cancels it", async () => {
     let resolveFirst: ((value: ReturnType<typeof searchResult>[]) => void) | undefined;
     const first = new Promise<ReturnType<typeof searchResult>[]>((resolve) => { resolveFirst = resolve; });
