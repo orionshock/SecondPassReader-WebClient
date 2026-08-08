@@ -3,13 +3,14 @@ import { normalizeReaderSettings, type ReaderSettings } from "../../../storage/r
 import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
-import type { ReaderSelection } from "../domain/types";
+import type { ReaderSelection, ReaderSelectionAnchor } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
 import { createHighlightMarkPainter, type HighlightMarkClick } from "./highlightMarks";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
 import { searchEpubTsBook } from "./EpubTsBookSearch";
+import { getVisibleCfiRangeAnchor } from "./visibleCfiRangeAnchor";
 import {
   getReaderEpubDisplayRules,
   getReaderEpubThemeRules,
@@ -45,6 +46,7 @@ export type EpubTsBookEngine = {
   resizeToMount(): Promise<void>;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   setTemporarySearchHighlight(cfiRange: string | null): void;
+  getVisibleCfiRangeAnchor(cfiRange: string): Promise<ReaderSelectionAnchor | null>;
   describeCfi(cfi: string): Promise<ReaderLocationDescription>;
   probeCfi(cfi: string): Promise<ReaderCfiProbeResult>;
   displayCfiSafely(cfi: string): Promise<ReaderCfiDisplayResult>;
@@ -340,6 +342,16 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     setTemporarySearchHighlight(cfiRange: string | null) {
       if (destroyed) return;
       highlightMarkPainter.setTemporarySearchHighlight(cfiRange);
+    },
+    async getVisibleCfiRangeAnchor(cfiRange: string): Promise<ReaderSelectionAnchor | null> {
+      const trimmed = cfiRange.trim();
+      if (destroyed || !trimmed) return null;
+      try {
+        const range = rendition.getRange(trimmed);
+        return range ? getVisibleCfiRangeAnchor(range) : null;
+      } catch {
+        return null;
+      }
     },
     async describeCfi(cfi: string): Promise<ReaderLocationDescription> {
       const trimmed = cfi.trim();

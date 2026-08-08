@@ -23,6 +23,28 @@ describe("reader import activation orchestration", () => {
     expect(harness.onBookmarkSuggested).not.toHaveBeenCalled();
   });
 
+  it("awaits candidate display before programmatic staging", async () => {
+    const order: string[] = [];
+    const displayCfi = vi.fn(async () => {
+      order.push("display-complete");
+      return { ok: true as const, code: "displayed" as const };
+    });
+    const stagedSelection: StagedSelectionHandle = {
+      stageSelectionFromCfiRange: vi.fn(async () => { order.push("stage"); }),
+      cancelStagedSelection: vi.fn(),
+    };
+    const harness = createHarness(row({ quoteText: "Found quote" }), {
+      searchBook: async () => [searchResult("found-cfi", "Matched text")],
+      displayCfi,
+      stagedSelection,
+    });
+
+    await harness.activate("row-1");
+
+    expect(displayCfi).toHaveBeenCalledWith("found-cfi");
+    expect(order).toEqual(["display-complete", "stage"]);
+  });
+
   it("falls through from failed CFI staging to text search in one activation", async () => {
     const searchBook = vi.fn<ReaderSearchBookHandle>().mockResolvedValue([searchResult("fallback-cfi", "Fallback text")]);
     const harness = createHarness(row({
@@ -203,10 +225,11 @@ describe("reader import activation orchestration", () => {
 function createHarness(importRow: ReaderImportRow, overrides: {
   searchBook?: ReaderSearchBookHandle | null;
   probeCfi?: Parameters<typeof useReaderImportActivation>[0]["probeCfi"];
+  displayCfi?: Parameters<typeof useReaderImportActivation>[0]["displayCfi"];
   stagedSelection?: StagedSelectionHandle | null;
 } = {}) {
   const stagedSelection = overrides.stagedSelection === undefined ? {
-    stageSelectionFromCfiRange: vi.fn(),
+    stageSelectionFromCfiRange: vi.fn(async () => undefined),
     cancelStagedSelection: vi.fn(),
   } : overrides.stagedSelection;
   const setRowActivationState = vi.fn();
@@ -222,13 +245,12 @@ function createHarness(importRow: ReaderImportRow, overrides: {
       job,
       searchBook: overrides.searchBook === undefined ? async () => [] : overrides.searchBook,
       probeCfi: overrides.probeCfi ?? null,
-      displayCfi: null,
+      displayCfi: overrides.displayCfi ?? (async () => ({ ok: true, code: "displayed" })),
       stagedSelectionHandle: stagedSelection,
       selectRow: vi.fn(),
       setRowStatus: vi.fn(),
       setRowActivationState,
       setDrawerOpen,
-      jumpToResult: vi.fn(),
       clearTemporaryHighlight: vi.fn(),
       onBookmarkSuggested,
     });

@@ -176,7 +176,6 @@ function ReaderActivityContent({
     setRowStatus: readerImport.setRowStatus,
     setRowActivationState: readerImport.setRowActivationState,
     setDrawerOpen: readerImport.setDrawerOpen,
-    jumpToResult: readerState.search.jumpToCfi,
     clearTemporaryHighlight: readerState.search.clearTemporaryHighlight,
     onBookmarkSuggested: readerImport.suggestBookmark,
   });

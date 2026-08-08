@@ -26,7 +26,6 @@ export function useReaderImportActivation({
   setRowStatus,
   setRowActivationState,
   setDrawerOpen,
-  jumpToResult,
   clearTemporaryHighlight,
   onBookmarkSuggested,
 }: {
@@ -39,7 +38,6 @@ export function useReaderImportActivation({
   setRowStatus: (rowId: string, status: ReaderImportRowStatus) => void;
   setRowActivationState: (rowId: string, status: ReaderImportRowStatus, cycle?: { attemptCursor?: number; resultCursor?: number; hasMatched?: boolean }) => void;
   setDrawerOpen: (open: boolean) => void;
-  jumpToResult: (cfi: string) => void;
   clearTemporaryHighlight: () => void;
   onBookmarkSuggested: (suggestion: { jobId: string; rowId: string; cfi: string }) => void;
 }) {
@@ -264,9 +262,11 @@ export function useReaderImportActivation({
         hasQuoteSuffix: Boolean(match.result.quoteSuffix),
       });
       try {
-        jumpToResult(match.result.cfi);
+        if (!displayCfi) throw new Error("Safe CFI display is unavailable.");
+        const display = await displayCfi(match.result.cfi);
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-        stagedSelectionHandle.stageSelectionFromCfiRange({
+        if (!display.ok) throw new Error(display.error);
+        await stagedSelectionHandle.stageSelectionFromCfiRange({
           cfiRange: match.result.cfi,
           text: match.matchedText || row.quoteText || "",
           quotePrefix: match.result.quotePrefix,
@@ -302,5 +302,5 @@ export function useReaderImportActivation({
       clearTemporaryHighlight();
       setDrawerOpen(true);
     }
-  }, [clearTemporaryHighlight, displayCfi, job, jumpToResult, onBookmarkSuggested, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
+  }, [clearTemporaryHighlight, displayCfi, job, onBookmarkSuggested, probeCfi, searchBook, selectRow, setDrawerOpen, setRowActivationState, setRowStatus, stagedSelectionHandle]);
 }

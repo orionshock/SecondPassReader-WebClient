@@ -7,6 +7,7 @@ import type {
   StagedSelectionSource,
   StagedSelectionToolbarPosition,
 } from "./stagedSelectionTypes";
+import { getStagedSelectionToolbarPosition } from "./stagedSelectionToolbarPlacement";
 
 export type StagedSelectionToolbarPos = StagedSelectionToolbarPosition;
 
@@ -108,18 +109,17 @@ export function useStagedSelectionToolbar(args: {
       const wrapper = args.mountWrapperRef.current;
       const anchor = selection.anchor;
       if (!wrapper) return fallback ?? null;
-      if (!anchor) return fallback ?? getFallbackToolbarPos();
-      const r = wrapper.getBoundingClientRect();
-      const left = Math.max(12, Math.min(r.width - 12, anchor.x - r.left));
-      const topRaw = Math.max(0, Math.min(r.height, anchor.y - r.top));
-      const placement: "above" | "below" = topRaw < 72 ? "below" : "above";
-      return { left, top: topRaw, placement };
+      return getStagedSelectionToolbarPosition({
+        wrapper: wrapper.getBoundingClientRect(),
+        anchor,
+        fallback: fallback ?? getFallbackToolbarPos(),
+      });
     },
     [args.mountWrapperRef, getFallbackToolbarPos],
   );
 
   const stageSelection = useCallback(
-    (selection: ReaderSelection, options?: { source?: StagedSelectionSource; color?: string; note?: string; toolbarPosition?: StagedSelectionToolbarPos | null }) => {
+    (selection: ReaderSelection, options?: { source?: StagedSelectionSource; color?: string; note?: string; toolbarPosition?: StagedSelectionToolbarPos | null; deferToolbar?: boolean }) => {
       // Selecting new text discards any previous uncommitted staged highlight.
       const nextColor = options?.color?.trim() || "yellow";
       const nextNote = options?.note?.trim() ?? "";
@@ -139,27 +139,42 @@ export function useStagedSelectionToolbar(args: {
       setStagedColor(nextColor);
       setNoteOpen(Boolean(nextNote));
       setNoteDraft(nextNote);
-      setToolbarPos(getToolbarPosForSelection(selection, options?.toolbarPosition ?? null));
+      setToolbarPos(options?.deferToolbar ? null : getToolbarPosForSelection(selection, options?.toolbarPosition ?? null));
     },
     [getToolbarPosForSelection],
   );
 
   const stageSelectionFromCfiRange = useCallback(
-    (input: ProgrammaticStagedSelectionInput) => {
+    async (input: ProgrammaticStagedSelectionInput) => {
       const cfiRange = input.cfiRange.trim();
       const text = input.text.trim();
       if (!cfiRange || !text) return;
+      const selection = { cfiRange, text, quotePrefix: input.quotePrefix, quoteSuffix: input.quoteSuffix };
+      const color = input.color?.trim() || "yellow";
       stageSelection(
-        { cfiRange, text, quotePrefix: input.quotePrefix, quoteSuffix: input.quoteSuffix },
+        selection,
         {
-          color: input.color,
+          color,
           note: input.note,
           source: input.source ?? { kind: "user-selection" },
-          toolbarPosition: input.toolbarPosition ?? getFallbackToolbarPos(),
+          deferToolbar: true,
         },
       );
+      const engine = args.engineRef.current;
+      engine?.setHighlightMarks([
+        ...highlightMarksRef.current,
+        { id: "__staged_selection__", cfiRange, color },
+      ]);
+      await waitForNextPaint();
+      if (stagedSelectionRef.current?.cfiRange !== cfiRange) return;
+      const anchor = await engine?.getVisibleCfiRangeAnchor(cfiRange) ?? null;
+      if (stagedSelectionRef.current?.cfiRange !== cfiRange) return;
+      setToolbarPos(getToolbarPosForSelection(
+        { ...selection, anchor: anchor ?? undefined },
+        input.toolbarPosition ?? getFallbackToolbarPos(),
+      ));
     },
-    [getFallbackToolbarPos, stageSelection],
+    [args.engineRef, getFallbackToolbarPos, getToolbarPosForSelection, stageSelection],
   );
 
   const onSelectionChanged = useCallback(
@@ -252,4 +267,8 @@ export function useStagedSelectionToolbar(args: {
     commitColor,
     commitBusy: Boolean(args.commitBusy),
   };
+}
+
+function waitForNextPaint(): Promise<void> {
+  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
 }

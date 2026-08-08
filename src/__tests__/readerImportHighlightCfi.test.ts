@@ -4,12 +4,16 @@ import type { ReaderImportRow } from "../features/reader/imports/readerImportTyp
 
 describe("reader import highlight CFI staging", () => {
   it("stages a safely resolved range", async () => {
-    const stageSelectionFromCfiRange = vi.fn();
+    const order: string[] = [];
+    const stageSelectionFromCfiRange = vi.fn(async () => { order.push("stage"); });
     const result = await stageReaderImportHighlightCfi({
       jobId: "job-1",
       row: highlightRow(),
       probeCfi: async () => ({ ok: true, code: "exists-in-book", cfiKind: "range", rangeText: "Resolved text" }),
-      displayCfi: async () => ({ ok: true, code: "displayed" }),
+      displayCfi: async () => {
+        order.push("display");
+        return { ok: true, code: "displayed" };
+      },
       stagedSelection: { stageSelectionFromCfiRange, cancelStagedSelection: vi.fn() },
     });
     expect(result).toEqual({ ok: true, code: "staged" });
@@ -18,6 +22,7 @@ describe("reader import highlight CFI staging", () => {
       text: "Resolved text",
       source: { kind: "import", importJobId: "job-1", importRowId: "row-1" },
     }));
+    expect(order).toEqual(["display", "stage"]);
   });
 
   it("rejects a point CFI without display or staging", async () => {

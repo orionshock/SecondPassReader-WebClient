@@ -38,7 +38,7 @@ export async function stageReaderImportHighlightCfi({
     if (!text) return { ok: false, code: "verification-failed", error: "Highlight CFI range has no readable text." };
     const display = await displayCfi(cfi);
     if (!display.ok) return { ok: false, code: display.code === "verification-failed" ? "verification-failed" : "stage-failed", error: display.error };
-    stagedSelection.stageSelectionFromCfiRange({
+    await stagedSelection.stageSelectionFromCfiRange({
       cfiRange: cfi,
       text,
       note: row.noteText,

@@ -37,6 +37,8 @@ export type ReaderLocation = {
   raw?: unknown;
 };
 
+export type ReaderSelectionAnchor = { x: number; y: number };
+
 export type ReaderSelection = {
   cfiRange: string;
   text: string;
@@ -52,7 +54,7 @@ export type ReaderSelection = {
    * Useful context (typically a spine href) for display/TOC matching.
    */
   href?: string;
-  anchor?: { x: number; y: number };
+  anchor?: ReaderSelectionAnchor;
 };
 
 export type ReaderTocItem = {
