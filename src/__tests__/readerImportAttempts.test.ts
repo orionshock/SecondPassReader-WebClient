@@ -98,8 +98,25 @@ describe("reader import attempts", () => {
     expect(getNextReaderImportAttempt(row({ status: "searching" }))).toBeNull();
   });
 
-  it("returns no attempt after the cursor exhausts the queue", () => {
-    expect(getNextReaderImportAttempt(row({ status: "not-found", quoteText: "Selected text", attemptCursor: 1 }))).toBeNull();
+  it("restarts an out-of-range cursor for a pending row", () => {
+    expect(getNextReaderImportAttempt(row({ quoteText: "Selected text", attemptCursor: 1, resultCursor: 3 }))).toMatchObject({
+      attempt: { kind: "text-search", text: "Selected text" },
+      cursor: 0,
+      resultCursor: 0,
+    });
+  });
+
+  it("restarts an out-of-range cursor for a not-found row", () => {
+    expect(getNextReaderImportAttempt(row({
+      status: "not-found",
+      quoteText: "Selected text",
+      attemptCursor: 1,
+      resultCursor: 2,
+    }))).toMatchObject({
+      attempt: { kind: "text-search", text: "Selected text" },
+      cursor: 0,
+      resultCursor: 0,
+    });
   });
 
   it("cycles back to the first attempt when the row has matched before", () => {

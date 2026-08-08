@@ -83,6 +83,42 @@ describe("reader import activation orchestration", () => {
     }));
   });
 
+  it("runs text fallback when an unusable CFI has an exhausted cursor", async () => {
+    const searchBook = vi.fn<ReaderSearchBookHandle>().mockResolvedValue([]);
+    const harness = createHarness(row({
+      status: "not-found",
+      quoteText: "This is how it begins.",
+      cfiHint: "2902",
+      attemptCursor: 1,
+    }), { searchBook });
+
+    await harness.activate("row-1");
+
+    expect(searchBook).toHaveBeenCalledWith("This is how it begins.", expect.any(Object));
+  });
+
+  it("stages an exact text fallback after normalizing an exhausted cursor", async () => {
+    const searchBook = vi.fn<ReaderSearchBookHandle>().mockResolvedValue([
+      searchResult("text-fallback-cfi", "This is how it begins."),
+    ]);
+    const harness = createHarness(row({
+      status: "not-found",
+      quoteText: "This is how it begins.",
+      cfiHint: "2902",
+      attemptCursor: 1,
+    }), { searchBook });
+
+    await harness.activate("row-1");
+
+    expect(harness.stagedSelection.stageSelectionFromCfiRange).toHaveBeenCalledWith(expect.objectContaining({
+      cfiRange: "text-fallback-cfi",
+      text: "This is how it begins.",
+    }));
+    expect(harness.setRowActivationState).toHaveBeenLastCalledWith("row-1", "staged", expect.objectContaining({
+      hasMatched: true,
+    }));
+  });
+
   it("ignores an older activation after a newer activation cancels it", async () => {
     let resolveFirst: ((value: ReturnType<typeof searchResult>[]) => void) | undefined;
     const first = new Promise<ReturnType<typeof searchResult>[]>((resolve) => { resolveFirst = resolve; });

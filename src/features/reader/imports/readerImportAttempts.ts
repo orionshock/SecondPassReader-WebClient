@@ -6,6 +6,12 @@ export type ReaderImportAttempt =
   | { kind: "quote-text"; exact: string; prefix?: string; suffix?: string }
   | { kind: "text-search"; text: string };
 
+export type ReaderImportAttemptCursor = {
+  cursor: number;
+  resultCursor: number;
+  normalized: boolean;
+};
+
 export function buildReaderImportAttemptQueue(row: ReaderImportRow): ReaderImportAttempt[] {
   if (row.kind !== "highlight") return [];
 
@@ -34,10 +40,22 @@ export function getNextReaderImportAttempt(row: ReaderImportRow): { attempt: Rea
   if (row.status === "accepted" || row.status === "skipped" || row.status === "searching") return null;
   const attempts = buildReaderImportAttemptQueue(row);
   if (attempts.length === 0) return null;
-  const rawCursor = Math.max(0, row.attemptCursor ?? 0);
-  const cursor = rawCursor >= attempts.length && row.hasMatched ? 0 : rawCursor;
-  const attempt = attempts[cursor];
-  return attempt ? { attempt, cursor, resultCursor: Math.max(0, row.resultCursor ?? 0) } : null;
+  const state = normalizeReaderImportAttemptCursor(row, attempts.length);
+  const attempt = attempts[state.cursor];
+  return attempt ? { attempt, cursor: state.cursor, resultCursor: state.resultCursor } : null;
+}
+
+export function normalizeReaderImportAttemptCursor(
+  row: ReaderImportRow,
+  attemptCount: number,
+): ReaderImportAttemptCursor {
+  const cursor = Math.max(0, row.attemptCursor ?? 0);
+  const resultCursor = Math.max(0, row.resultCursor ?? 0);
+  const canRestart = row.status === "pending" || row.status === "not-found" || Boolean(row.hasMatched);
+  if (attemptCount > 0 && cursor >= attemptCount && canRestart) {
+    return { cursor: 0, resultCursor: 0, normalized: true };
+  }
+  return { cursor, resultCursor, normalized: false };
 }
 
 function trimOptional(value: string | undefined): string | undefined {

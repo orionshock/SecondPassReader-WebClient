@@ -5,7 +5,11 @@ import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes
 import { normalizeImportedHighlightColor } from "./readerImportColors";
 import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
 import { probeReaderImportBookmarkCfi } from "./readerImportBookmarkProbe";
-import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "./readerImportAttempts";
+import {
+  buildReaderImportAttemptQueue,
+  getNextReaderImportAttempt,
+  normalizeReaderImportAttemptCursor,
+} from "./readerImportAttempts";
 import { getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatches } from "./readerImportSearch";
@@ -90,6 +94,7 @@ export function useReaderImportActivation({
     }
 
     const attempts = buildReaderImportAttemptQueue(row);
+    const normalizedCursor = normalizeReaderImportAttemptCursor(row, attempts.length);
     const verbose = isReaderImportDebugVerbose();
     debugReaderImport("activation attempt list created", {
       rowId,
@@ -106,6 +111,18 @@ export function useReaderImportActivation({
         reason: "hint is not a usable range CFI",
         hasTextFallback: attempts.some((attempt) => attempt.kind !== "cfi-range"),
         cfiPreview: verbose ? previewImportText(row.cfiHint) : undefined,
+      });
+    }
+    if (normalizedCursor.normalized) {
+      debugReaderImport("activation cursor normalized", {
+        rowId,
+        attemptCount: attempts.length,
+        oldAttemptCursor: row.attemptCursor,
+        newAttemptCursor: normalizedCursor.cursor,
+        oldResultCursor: row.resultCursor,
+        newResultCursor: normalizedCursor.resultCursor,
+        hasMatched: row.hasMatched,
+        status: row.status,
       });
     }
 
