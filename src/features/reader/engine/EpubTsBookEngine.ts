@@ -330,6 +330,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       if (!cfi) return;
       rendition.resize(width, height, cfi);
       if (!destroyed) await rendition.display(cfi);
+      if (!destroyed) highlightMarkPainter.refresh();
     },
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;

@@ -4,6 +4,7 @@ import type { ReaderHighlightMark } from "../domain/types";
 export type HighlightMarkPainter = {
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   setTemporarySearchHighlight(cfiRange: string | null): void;
+  refresh(): void;
   clear(): void;
 };
 
@@ -88,6 +89,29 @@ export function createHighlightMarkPainter(args: {
       } catch (err) {
         onError?.(err);
       }
+    }
+  };
+
+  const paintTemporarySearchHighlight = () => {
+    if (!temporarySearchCfiRange) return;
+    try {
+      rendition.annotations.highlight(
+        temporarySearchCfiRange,
+        { id: "sp-search-result-highlight" },
+        undefined,
+        "sp-search-result-hl",
+        {
+          fill: "#facc15",
+          "fill-opacity": "0.34",
+          "mix-blend-mode": "multiply",
+          "background-color": "rgba(250, 204, 21, 0.34)",
+          background: "rgba(250, 204, 21, 0.34)",
+          stroke: "#ca8a04",
+          "stroke-opacity": "0.7",
+        },
+      );
+    } catch (err) {
+      onError?.(err);
     }
   };
 
@@ -185,25 +209,18 @@ export function createHighlightMarkPainter(args: {
         temporarySearchCfiRange = null;
         return;
       }
-      try {
-        rendition.annotations.highlight(
-          temporarySearchCfiRange,
-          { id: "sp-search-result-highlight" },
-          undefined,
-          "sp-search-result-hl",
-          {
-            fill: "#facc15",
-            "fill-opacity": "0.34",
-            "mix-blend-mode": "multiply",
-            "background-color": "rgba(250, 204, 21, 0.34)",
-            background: "rgba(250, 204, 21, 0.34)",
-            stroke: "#ca8a04",
-            "stroke-opacity": "0.7",
-          },
-        );
-      } catch (err) {
-        onError?.(err);
+      paintTemporarySearchHighlight();
+    },
+    refresh() {
+      const durableCfiRanges = new Set(
+        [...paintedHighlightsById.values()].map((mark) => mark.cfiRange),
+      );
+      for (const cfiRange of durableCfiRanges) {
+        removeRendererHighlight(cfiRange);
+        repaintPaintedMarksAtCfi(cfiRange);
       }
+      if (temporarySearchCfiRange) removeRendererHighlight(temporarySearchCfiRange);
+      paintTemporarySearchHighlight();
     },
     clear() {
       if (temporarySearchCfiRange) {
