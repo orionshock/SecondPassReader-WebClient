@@ -92,6 +92,15 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
   - `BookSearch_Drawer.tsx`
   - `BookSearch_InputBar.tsx`
 
+### Reading/client role suffixes
+
+- New or meaningfully touched Reading files should use an explicit role suffix when practical. Use folders when they clarify real ownership; do not mass-rename existing files for cosmetics.
+- Rename a touched file only when the name materially clarifies its responsibility and the import churn is reasonable.
+- Preferred roles: `.Activity.tsx`, `.Orchestrator.tsx`, `.Controller.ts`, `.Coordinator.ts`, `.Bridge.ts`, `.Engine.ts`, `.Adapter.ts`, `.Mapper.ts`, `.Presenter.ts`, `.Types.ts`, `.State.ts`, `.Store.ts`, `.Queries.ts`, `.Actions.ts`, `.Lifecycle.ts`, `.Placement.ts`, and `.Renderer.ts`.
+- UI roles: `.Panel.tsx`, `.Drawer.tsx`, `.Toolbar.tsx`, `.Row.tsx`, `.Item.tsx`, and `.Dialog.tsx`.
+- Prefer feature-local ownership over global abstractions. Avoid vague `utils`, `helpers`, or `misc` folders when a lifecycle or domain owner exists.
+- Boundary files may include a short ownership comment when the name alone is insufficient.
+
 ## Rationale
 
 - Folder grouping is more conventional in React/TypeScript projects.

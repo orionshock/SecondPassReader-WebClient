@@ -9,7 +9,7 @@ import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocat
 import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
-import { useReadingProgressAutosave } from "./useReadingProgressAutosave";
+import { useReadingProgressAutosave } from "./ReadingProgressAutosave.Lifecycle";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import type { HighlightViewModel } from "../annotations/viewModels";
