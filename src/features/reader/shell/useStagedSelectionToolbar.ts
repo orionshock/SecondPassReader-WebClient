@@ -212,6 +212,7 @@ export function useStagedSelectionToolbar(args: {
       measuredAnchor: Boolean(anchor),
       anchorX: anchor?.x,
       anchorY: anchor?.y,
+      anchorBottom: anchor?.bottom,
       toolbarLeft: position?.left,
       toolbarTop: position?.top,
       wrapperLeft: wrapperBounds?.left,

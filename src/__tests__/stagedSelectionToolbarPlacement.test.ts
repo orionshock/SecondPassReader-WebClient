@@ -35,6 +35,14 @@ describe("staged selection toolbar placement", () => {
     })).toEqual({ left: 250, top: 5, placement: "below" });
   });
 
+  it("places below a multiline range's bottom edge instead of its first line", () => {
+    expect(getStagedSelectionToolbarPosition({
+      wrapper,
+      anchor: { x: 350, y: 100, bottom: 180 },
+      toolbarSize: { width: 200, height: 50 },
+    })).toEqual({ left: 250, top: 130, placement: "below" });
+  });
+
   it("clamps fallback geometry vertically inside the wrapper", () => {
     expect(getStagedSelectionToolbarPosition({
       wrapper,

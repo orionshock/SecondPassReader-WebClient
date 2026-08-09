@@ -39,7 +39,12 @@ export type ReaderLocation = {
   raw?: unknown;
 };
 
-export type ReaderSelectionAnchor = { x: number; y: number };
+export type ReaderSelectionAnchor = {
+  x: number;
+  y: number;
+  /** Bottom edge of a measured rendered range; omitted for point-only selection anchors. */
+  bottom?: number;
+};
 
 export type ReaderSelection = {
   cfiRange: string;

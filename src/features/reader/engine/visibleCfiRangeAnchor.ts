@@ -16,19 +16,38 @@ export function getVisibleCfiRangeAnchor(
     const visibleLocalBounds = visibleOuterBounds
       ? toFrameLocalBounds(visibleOuterBounds, frameRect)
       : undefined;
+    const clientRects = Array.from(range.getClientRects());
+    const viewport = { width: view.innerWidth, height: view.innerHeight };
     const rect = chooseVisibleRangeRect(
-      Array.from(range.getClientRects()),
+      clientRects,
       range.getBoundingClientRect(),
-      { width: view.innerWidth, height: view.innerHeight },
+      viewport,
       visibleLocalBounds,
     );
     if (!rect) return null;
+    const extent = getVisibleRangeVerticalExtent(clientRects, rect, viewport, visibleLocalBounds);
     const x = frameRect.left + rect.left + rect.width / 2;
-    const y = frameRect.top + rect.top;
-    return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+    const y = frameRect.top + extent.top;
+    const bottom = frameRect.top + extent.bottom;
+    return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(bottom) ? { x, y, bottom } : null;
   } catch {
     return null;
   }
+}
+
+export function getVisibleRangeVerticalExtent(
+  clientRects: RectLike[],
+  fallbackRect: RectLike,
+  viewport: { width: number; height: number },
+  visibleBounds?: Pick<RectLike, "bottom" | "left" | "right" | "top">,
+): { top: number; bottom: number } {
+  const bounds = getVisibleBounds(viewport, visibleBounds);
+  const visibleRects = clientRects.filter((rect) => isNonzeroRect(rect) && intersectsBounds(rect, bounds));
+  if (visibleRects.length === 0) return { top: fallbackRect.top, bottom: fallbackRect.bottom };
+  return {
+    top: Math.min(...visibleRects.map((rect) => rect.top)),
+    bottom: Math.max(...visibleRects.map((rect) => rect.bottom)),
+  };
 }
 
 export function chooseVisibleRangeRect(
@@ -37,18 +56,25 @@ export function chooseVisibleRangeRect(
   viewport: { width: number; height: number },
   visibleBounds?: Pick<RectLike, "bottom" | "left" | "right" | "top">,
 ): RectLike | null {
-  const bounds = {
-    left: Math.max(0, visibleBounds?.left ?? 0),
-    top: Math.max(0, visibleBounds?.top ?? 0),
-    right: Math.min(viewport.width, visibleBounds?.right ?? viewport.width),
-    bottom: Math.min(viewport.height, visibleBounds?.bottom ?? viewport.height),
-  };
+  const bounds = getVisibleBounds(viewport, visibleBounds);
   const nonzero = clientRects.filter(isNonzeroRect);
   const visible = nonzero.find((rect) => intersectsBounds(rect, bounds));
   if (visible) return visible;
   return boundingRect && isNonzeroRect(boundingRect) && intersectsBounds(boundingRect, bounds)
     ? boundingRect
     : null;
+}
+
+function getVisibleBounds(
+  viewport: { width: number; height: number },
+  visibleBounds?: Pick<RectLike, "bottom" | "left" | "right" | "top">,
+) {
+  return {
+    left: Math.max(0, visibleBounds?.left ?? 0),
+    top: Math.max(0, visibleBounds?.top ?? 0),
+    right: Math.min(viewport.width, visibleBounds?.right ?? viewport.width),
+    bottom: Math.min(viewport.height, visibleBounds?.bottom ?? viewport.height),
+  };
 }
 
 function isNonzeroRect(rect: RectLike): boolean {

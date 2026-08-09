@@ -21,9 +21,10 @@ export function getStagedSelectionToolbarPosition(input: {
     ? {
         left: input.anchor.x - input.wrapper.left,
         top: input.anchor.y - input.wrapper.top,
+        bottom: (input.anchor.bottom ?? input.anchor.y) - input.wrapper.top,
         placement: "above" as const,
       }
-    : input.fallback;
+    : input.fallback ? { ...input.fallback, bottom: input.fallback.top } : null;
   if (!desired) return null;
 
   const visible = getVisibleWrapperBounds(input.wrapper, input.viewport);
@@ -39,11 +40,11 @@ export function getStagedSelectionToolbarPosition(input: {
   const minVisualTop = visible.top + TOOLBAR_MARGIN;
   const maxVisualTop = visible.bottom - TOOLBAR_MARGIN - height;
   const aboveVisualTop = desired.top - TOOLBAR_GAP - height;
-  const belowVisualTop = desired.top + TOOLBAR_GAP;
+  const belowVisualTop = desired.bottom + TOOLBAR_GAP;
   const aboveFits = aboveVisualTop >= minVisualTop && aboveVisualTop <= maxVisualTop;
   const belowFits = belowVisualTop >= minVisualTop && belowVisualTop <= maxVisualTop;
   const aboveSpace = desired.top - TOOLBAR_GAP - minVisualTop;
-  const belowSpace = visible.bottom - TOOLBAR_MARGIN - desired.top - TOOLBAR_GAP;
+  const belowSpace = visible.bottom - TOOLBAR_MARGIN - desired.bottom - TOOLBAR_GAP;
   const placement = aboveFits
     ? "above"
     : belowFits

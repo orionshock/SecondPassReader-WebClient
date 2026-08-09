@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   chooseVisibleRangeRect,
   getVisibleCfiRangeAnchor,
+  getVisibleRangeVerticalExtent,
 } from "../features/reader/engine/visibleCfiRangeAnchor";
 
 describe("visible CFI range anchor", () => {
@@ -56,7 +57,18 @@ describe("visible CFI range anchor", () => {
       getBoundingClientRect: () => rect({ left: 20, top: 30, width: 80, height: 14 }),
     } as unknown as Range;
 
-    expect(getVisibleCfiRangeAnchor(range)).toEqual({ x: 160, y: 230 });
+    expect(getVisibleCfiRangeAnchor(range)).toEqual({ x: 160, y: 230, bottom: 244 });
+  });
+
+  it("measures the full visible vertical extent of a multiline range", () => {
+    const firstLine = rect({ left: 20, top: 30, width: 80, height: 14 });
+    const lastLine = rect({ left: 20, top: 72, width: 120, height: 14 });
+
+    expect(getVisibleRangeVerticalExtent(
+      [firstLine, lastLine],
+      firstLine,
+      { width: 300, height: 200 },
+    )).toEqual({ top: 30, bottom: 86 });
   });
 
   it("converts outer reader mount bounds before selecting iframe-local geometry", () => {
@@ -77,7 +89,7 @@ describe("visible CFI range anchor", () => {
     } as unknown as Range;
     const readerMount = rect({ left: 100, top: 200, width: 500, height: 400 });
 
-    expect(getVisibleCfiRangeAnchor(range, readerMount)).toEqual({ x: 270, y: 240 });
+    expect(getVisibleCfiRangeAnchor(range, readerMount)).toEqual({ x: 270, y: 240, bottom: 254 });
   });
 
   it("returns null when range geometry cannot be resolved", () => {
