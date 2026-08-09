@@ -1,4 +1,5 @@
 import type {
+  MarginaliaAnnotation,
   MarginaliaAnnotationBatchOperation,
   MarginaliaHighlight,
   MarginaliaHighlightColor,
@@ -88,5 +89,45 @@ export function buildHighlightUpdate(annotation: MarginaliaHighlight, input: {
         note: input.note,
       },
     },
+  };
+}
+
+export function buildCurrentSessionHighlightCommit(input: {
+  currentAnnotations: MarginaliaAnnotation[];
+  createClientId: () => string;
+  cfi: string;
+  locationLabel?: string;
+  text: string;
+  prefix?: string;
+  suffix?: string;
+  color: MarginaliaHighlightColor;
+  note?: string;
+}): { kind: "created" | "updated"; operation: MarginaliaAnnotationBatchOperation } {
+  const existing = input.currentAnnotations.find(
+    (annotation): annotation is MarginaliaHighlight =>
+      annotation.kind === "highlight" && annotation.location.cfi === input.cfi,
+  );
+  if (existing) {
+    return {
+      kind: "updated",
+      operation: buildHighlightUpdate(existing, {
+        color: input.color,
+        note: input.note ?? existing.body.note ?? "",
+      }),
+    };
+  }
+
+  return {
+    kind: "created",
+    operation: buildHighlightUpsert({
+      clientId: input.createClientId(),
+      cfi: input.cfi,
+      locationLabel: input.locationLabel,
+      text: input.text,
+      prefix: input.prefix,
+      suffix: input.suffix,
+      color: input.color,
+      note: input.note,
+    }),
   };
 }

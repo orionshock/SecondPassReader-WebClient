@@ -4,7 +4,7 @@ import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient }
 import type { ReaderLocation, ReaderSelection } from "../domain/types";
 import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
 import { getAnnotationColor } from "../display/ReaderAnnotation.Presenter";
-import { buildBookmarkUpsert, buildHighlightUpdate, buildHighlightUpsert } from "./marginaliaMutations";
+import { buildBookmarkUpsert, buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "./marginaliaMutations";
 import {
   CurrentSessionAnnotationController,
   CurrentSessionAnnotationStaleGenerationError,
@@ -79,13 +79,18 @@ export function useCurrentSessionAnnotationActions(args: {
   canMutate?: boolean;
 }) {
   const [annotationBusy, setAnnotationBusy] = useState(false);
+  const annotationsRawRef = useRef(args.annotationsRaw);
+  annotationsRawRef.current = args.annotationsRaw;
   const controllerRef = useRef<CurrentSessionAnnotationController | null>(null);
   if (!controllerRef.current) controllerRef.current = new CurrentSessionAnnotationController();
   const controller = controllerRef.current;
 
   useEffect(() => {
     controller.activate(args.identity, {
-      setAnnotations: args.setAnnotationsRaw,
+      setAnnotations: (annotations) => {
+        annotationsRawRef.current = annotations;
+        args.setAnnotationsRaw(annotations);
+      },
       setBusy: setAnnotationBusy,
       setError: args.setAnnotationError,
     });
@@ -193,8 +198,9 @@ export function useCurrentSessionAnnotationActions(args: {
       await controller.mutate({
         run: async () => {
           const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
-            buildHighlightUpsert({
-              clientId: crypto.randomUUID(),
+            buildCurrentSessionHighlightCommit({
+              currentAnnotations: annotationsRawRef.current,
+              createClientId: () => crypto.randomUUID(),
               cfi: sel.cfiRange,
               locationLabel: args.locationLabel,
               text: sel.text,
@@ -202,7 +208,7 @@ export function useCurrentSessionAnnotationActions(args: {
               note: input.note,
               prefix: sel.quotePrefix,
               suffix: sel.quoteSuffix,
-            }),
+            }).operation,
           ]);
           return { value: undefined, annotations: response.annotations };
         },
