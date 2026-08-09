@@ -1,0 +1,15 @@
+diff --git a/node_modules/@likecoin/epub-ts/dist/epub.js b/node_modules/@likecoin/epub-ts/dist/epub.js
+index 1e11d77..f6e82db 100644
+--- a/node_modules/@likecoin/epub-ts/dist/epub.js
++++ b/node_modules/@likecoin/epub-ts/dist/epub.js
+@@ -1329,7 +1329,9 @@ class De {
+     let l, c = [];
+     for (; l = h.nextNode(); )
+       c.push(l), c.length === e && (o(c.slice(0, e)), c = c.slice(1, e));
+-    return c.length > 0 && o(c), i;
++    for (; c.length > 0; )
++      o(c), c = c.slice(1);
++    return i;
+   }
+   /**
+   * Reconciles the current chapters layout properties with

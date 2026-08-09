@@ -27,7 +27,7 @@ Audit baseline:
 
 | ID | Finding | Classification | Impact | Current client mitigation |
 | --- | --- | --- | --- | --- |
-| EPUBTS-001 | `Section.search()` misses some matches at the end of a section | Confirmed defect | High | None beyond smaller import fragments |
+| EPUBTS-001 | `Section.search()` misses some matches at the end of a section | Confirmed defect; locally patched | High | `patch-package` drains every residual tail window |
 | EPUBTS-002 | `Rendition.display()` can settle before visible range geometry and relocation settle | Confirmed lifecycle limitation | High | Re-anchor staged toolbar after protected relocation |
 | EPUBTS-003 | One display/reflow can emit multiple relocations with different CFIs and no operation identity | Confirmed lifecycle limitation | High | Operation-owned relocation protection |
 | EPUBTS-004 | Initial resize/reflow can report or redisplay an earlier page-start CFI | Observed; partly addressed in 0.7.1 | High | Bootstrap restore CFI preservation and progress quarantine |
@@ -44,6 +44,10 @@ Audit baseline:
 
 **Classification:** Confirmed defect
 
+**Local status:** Patched for the browser ESM entry point in
+`patches/@likecoin+epub-ts+0.7.1.patch`. The patch is reapplied by the root `postinstall` script and
+is guarded by `src/__tests__/epubTsSectionSearchPatch.test.ts`.
+
 **Impact:** Exact visible prose near the end of a chapter can return no result from built-in search.
 This affects normal reader search and guided import matching.
 
@@ -51,7 +55,9 @@ This affects normal reader search and guided import matching.
 
 We reproduced exact text that was visible and selectable at the end of a chapter but was not found
 by `Section.search()`. Manually selecting the text produced a valid range CFI, proving the content
-was present in the rendered section.
+was present in the rendered section. A minimal package-level reproduction using three text nodes,
+a three-node window, and a query beginning in the final node returned an empty result on unpatched
+0.7.1.
 
 Upstream source: `src/section.ts`, `Section.search()`, approximately lines 180-235 in 0.7.1.
 
@@ -74,7 +80,7 @@ Client references:
 - `src/features/reader/imports/readerImportSearchQueries.ts`
 - `src/features/reader/imports/readerImportSearch.ts`
 
-### Suggested upstream fix
+### Local patch and suggested upstream fix
 
 Drain every residual start position instead of searching the final residual list once:
 
@@ -84,6 +90,19 @@ while (nodeList.length > 0) {
   nodeList = nodeList.slice(1);
 }
 ```
+
+This is low risk for the current algorithm because the inner search accepts only matches beginning
+in the first node of its window. Draining the residual list gives each previously unsearched tail
+node exactly one turn as the first node; it does not repeat the starts already searched by full
+windows. The local patch intentionally does not change literal matching, the one-occurrence-per-
+start behavior, window size, CFI construction, result order, or any Second Pass search logic.
+
+The published package ships generated bundles rather than TypeScript source. Second Pass imports
+the package's browser ESM export (`dist/epub.js`), so the local patch changes that entry point only.
+The CommonJS, Node, and UMD entry points remain unpatched because this browser application does not
+execute them; patching their minified generated output would add disproportionate maintenance risk.
+An upstream fix should instead change `src/section.ts`, rebuild every distribution target, and add
+the regression coverage below.
 
 A more maintainable implementation would collect searchable text nodes once, then build one window
 per possible start node. Search all occurrences that begin in the first node and map offsets back to
