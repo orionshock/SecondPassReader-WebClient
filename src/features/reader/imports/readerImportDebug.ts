@@ -1,22 +1,23 @@
-export const IMPORT_DEBUG_KEY = "secondpass.debug.imports";
-export const IMPORT_DEBUG_VERBOSE_KEY = "secondpass.debug.imports.verbose";
+import {
+  DEBUG_IMPORT_VERBOSE_STORAGE_KEY,
+  debugLog,
+} from "../../../lib/debug/DebugLogger";
+
 const DEFAULT_PREVIEW_LENGTH = 120;
 
 /**
  * Enable import diagnostics from DevTools:
- * localStorage.setItem("secondpass.debug.imports", "1")
+ * localStorage.setItem("secondpass.debug.logs", "imports")
  *
  * Enable full text previews only when needed:
- * localStorage.setItem("secondpass.debug.imports.verbose", "1")
+ * localStorage.setItem("secondpass.debug.logs.imports.verbose", "1")
  */
 export function debugReaderImport(event: string, data?: Record<string, unknown>): void {
-  if (!isReaderImportDebugEnabled()) return;
-  // eslint-disable-next-line no-console
-  console.debug(`[SPR import] ${event}`, data);
+  debugLog("imports", event, data);
 }
 
 export function isReaderImportDebugVerbose(): boolean {
-  return readDebugFlag(IMPORT_DEBUG_VERBOSE_KEY);
+  return readDebugFlag(DEBUG_IMPORT_VERBOSE_STORAGE_KEY);
 }
 
 export function previewImportText(
@@ -29,10 +30,6 @@ export function previewImportText(
   if (!compact) return "";
   if (verbose || compact.length <= maxLength) return compact;
   return `${compact.slice(0, maxLength)}...`;
-}
-
-function isReaderImportDebugEnabled(): boolean {
-  return readDebugFlag(IMPORT_DEBUG_KEY);
 }
 
 function readDebugFlag(key: string): boolean {

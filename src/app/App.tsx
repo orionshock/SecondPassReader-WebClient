@@ -36,9 +36,9 @@ import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/read
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
 import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
+import { debugLog } from "../lib/debug/DebugLogger";
 
 function AppShell() {
-  const DEBUG_NAV = import.meta.env.DEV;
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
   const activeOpenedBookRef = useRef<OpenedBook | null>(null);
@@ -98,9 +98,10 @@ function AppShell() {
   }, [appTheme]);
 
   useEffect(() => {
-    if (!DEBUG_NAV) return;
-    // eslint-disable-next-line no-console
-    console.log("[nav] route", route);
+    debugLog("reader", "route changed", {
+      kind: route?.kind ?? null,
+      bookId: route?.kind === "reader" ? route.bookId : undefined,
+    });
   }, [route]);
 
   const checkMe = useCallback(async () => {
@@ -353,10 +354,7 @@ function AppShell() {
   }
 
   function handleCloseReader() {
-    if (DEBUG_NAV) {
-      // eslint-disable-next-line no-console
-      console.log("[nav] handleCloseReader()");
-    }
+    debugLog("reader", "reader closed");
     const active = activeOpenedBookRef.current;
     activeOpenedBookRef.current = null;
     releaseOpenedBook(active);

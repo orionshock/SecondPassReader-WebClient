@@ -17,7 +17,7 @@ import {
   type MarginaliaSplitResult,
 } from "../features/settings/marginaliaSplitExport";
 import { createMarginaliaZipBlob } from "../features/settings/marginaliaZipExport";
-import { IMPORT_DEBUG_KEY, IMPORT_DEBUG_VERBOSE_KEY } from "../features/reader/imports/readerImportDebug";
+import { DebugLoggingSettingsPanel } from "../features/devtools/DebugLoggingSettings.Panel";
 import { ApiError } from "@secondpass/client";
 import { getTechnicalErrorDetail, isAuthorizationError } from "./userFacingErrors";
 import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
@@ -54,8 +54,6 @@ export function SettingsPanel({
   const [state, setState] = useState<ActionState>({ phase: "idle" });
   const [marginaliaState, setMarginaliaState] = useState<MarginaliaToolState>({ phase: "idle" });
   const [hideEmptyMarginaliaSessions, setHideEmptyMarginaliaSessions] = useState(false);
-  const [importDebugEnabled, setImportDebugEnabled] = useState(() => readLocalStorageFlag(IMPORT_DEBUG_KEY));
-  const [importDebugVerbose, setImportDebugVerbose] = useState(() => readLocalStorageFlag(IMPORT_DEBUG_VERBOSE_KEY));
   const activeTab = route.tab ?? "appearance";
 
   useEffect(() => {
@@ -195,20 +193,6 @@ export function SettingsPanel({
 
   function downloadAllMarginaliaZip(groups: MarginaliaBookGroup[]) {
     downloadBlob(createMarginaliaZipBlob(buildAllZipEntries(groups)), "secondpass-marginalia-sessions.zip");
-  }
-
-  function updateImportDebugEnabled(enabled: boolean) {
-    setImportDebugEnabled(enabled);
-    writeLocalStorageFlag(IMPORT_DEBUG_KEY, enabled);
-    if (!enabled) {
-      setImportDebugVerbose(false);
-      writeLocalStorageFlag(IMPORT_DEBUG_VERBOSE_KEY, false);
-    }
-  }
-
-  function updateImportDebugVerbose(enabled: boolean) {
-    setImportDebugVerbose(enabled);
-    writeLocalStorageFlag(IMPORT_DEBUG_VERBOSE_KEY, enabled);
   }
 
   const status = getConnectionStatus(profile);
@@ -452,35 +436,7 @@ export function SettingsPanel({
             </div>
           ) : null}
         </section>
-        <section className="panel settingsCard settingsDiagnostics">
-          <div className="settingsSectionHeader">
-            <h2 className="panelTitle">Diagnostics</h2>
-          </div>
-          <div className="settingsControlBlock">
-            <label className="settingsCheckboxRow">
-              <input
-                type="checkbox"
-                checked={importDebugEnabled}
-                onChange={(event) => updateImportDebugEnabled(event.currentTarget.checked)}
-              />
-              <span>Enable import search debug logging</span>
-            </label>
-            <p className="muted">Writes compact import search diagnostics to the browser console.</p>
-            {importDebugEnabled ? (
-              <>
-                <label className="settingsCheckboxRow">
-                  <input
-                    type="checkbox"
-                    checked={importDebugVerbose}
-                    onChange={(event) => updateImportDebugVerbose(event.currentTarget.checked)}
-                  />
-                  <span>Verbose import search logging</span>
-                </label>
-                <p className="muted">Includes short text/query previews. Use only while debugging.</p>
-              </>
-            ) : null}
-          </div>
-        </section>
+        <DebugLoggingSettingsPanel />
       </div>
       ) : null}
     </div>
@@ -517,24 +473,4 @@ function formatTimestamp(value?: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
-
-function readLocalStorageFlag(key: string): boolean {
-  try {
-    return window.localStorage.getItem(key) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeLocalStorageFlag(key: string, enabled: boolean): void {
-  try {
-    if (enabled) {
-      window.localStorage.setItem(key, "1");
-    } else {
-      window.localStorage.removeItem(key);
-    }
-  } catch {
-    // Ignore unavailable browser storage.
-  }
 }

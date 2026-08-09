@@ -130,6 +130,23 @@
   margin: 0;
 }
 
+.debugLoggingCategoryGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.debugLoggingSuboption {
+  margin-left: 24px;
+  align-items: flex-start;
+}
+
+.debugLoggingSuboptionText {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+
 .settingsStatFilter {
   min-height: 0;
 }
