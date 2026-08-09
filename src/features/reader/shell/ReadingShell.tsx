@@ -21,7 +21,7 @@ import { displayReaderCfiSafely } from "./readerCfiDisplay";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
-import { stabilizeReaderReflow } from "./ReaderReflow.Coordinator";
+import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -64,6 +64,9 @@ type DurableToolbarAnchor = {
 
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
+  const runtimeControllerRef = useRef<ReaderRuntimeController | null>(null);
+  if (!runtimeControllerRef.current) runtimeControllerRef.current = new ReaderRuntimeController();
+  const runtimeController = runtimeControllerRef.current;
   const mountWrapperRef = useRef<HTMLDivElement | null>(null);
   const lastHandledCommandSeqRef = useRef<number | null>(null);
   const deferredCommandRef = useRef<ReadingShellCommand | null>(null);
@@ -204,50 +207,64 @@ export function ReadingShell(props: ReadingShellProps) {
     onEventRef.current?.({ type: "displayError", error: err });
   }, []);
 
-  const runCommandOnEngine = useCallback(
-    async (engine: EpubTsBookEngine, command: ReadingShellCommandValue, commandSeq?: number) => {
+  const runRuntimeCommand = useCallback(
+    async (command: ReadingShellCommandValue, commandSeq?: number) => {
       switch (command.type) {
         case "display":
-          await engine.display(command.target);
-          await reanchorStagedToolbarRef.current();
+          await runtimeController.run({
+            kind: "display",
+            run: ({ engine }) => engine.display(command.target),
+            after: () => reanchorStagedToolbarRef.current(),
+          });
           return;
         case "displaySearchResult": {
-          await engine.display({ type: "cfi", cfi: command.cfi });
-          const latestSearch = latestSearchResultCommandRef.current;
-          if (commandSeq != null && latestSearch && latestSearch.seq !== commandSeq) {
-            await engine.display({ type: "cfi", cfi: latestSearch.cfi });
-            await reanchorStagedToolbarRef.current();
-            return;
-          }
-          // Search result flashes are temporary visual state. Paint them only
-          // after display settles so the mark is attached to the target view.
-          if (commandSeq != null && lastHandledCommandSeqRef.current !== commandSeq) return;
-          engine.setTemporarySearchHighlight(command.cfi);
-          onEventRef.current?.({ type: "searchResultDisplayed", cfi: command.cfi });
-          await reanchorStagedToolbarRef.current();
+          await runtimeController.run({
+            kind: "display-search-result",
+            run: ({ engine }) => engine.display({ type: "cfi", cfi: command.cfi }),
+            after: async (_value, context) => {
+              const latestSearch = latestSearchResultCommandRef.current;
+              if (commandSeq != null && latestSearch && latestSearch.seq !== commandSeq) {
+                await context.engine.display({ type: "cfi", cfi: latestSearch.cfi });
+                if (context.isCurrent()) await reanchorStagedToolbarRef.current();
+                return;
+              }
+              // Search result flashes are temporary visual state. Paint them only
+              // after display settles so the mark is attached to the target view.
+              if (commandSeq != null && lastHandledCommandSeqRef.current !== commandSeq) return;
+              context.engine.setTemporarySearchHighlight(command.cfi);
+              onEventRef.current?.({ type: "searchResultDisplayed", cfi: command.cfi });
+              await reanchorStagedToolbarRef.current();
+            },
+          });
           return;
         }
         case "next":
-          await engine.next();
-          await reanchorStagedToolbarRef.current();
+          await runtimeController.run({
+            kind: "next",
+            run: ({ engine }) => engine.next(),
+            after: () => reanchorStagedToolbarRef.current(),
+          });
           return;
         case "previous":
-          await engine.previous();
-          await reanchorStagedToolbarRef.current();
+          await runtimeController.run({
+            kind: "previous",
+            run: ({ engine }) => engine.previous(),
+            after: () => reanchorStagedToolbarRef.current(),
+          });
           return;
         case "resize":
-          await stabilizeReaderReflow({
-            reflow: async () => {
+          await runtimeController.stabilizeReflow("resize", {
+            reflow: async (engine) => {
               await waitForReaderLayout();
               await engine.resizeToMount();
             },
-            refreshMarks: () => engine.refreshHighlightMarks(),
+            refreshMarks: (engine) => engine.refreshHighlightMarks(),
             reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
           });
           return;
       }
     },
-    [],
+    [runtimeController],
   );
 
   useEffect(() => {
@@ -298,6 +315,7 @@ export function ReadingShell(props: ReadingShellProps) {
         }
 
         engineRef.current = engine;
+        runtimeController.attach(engine, generation);
         setStatus("ready");
         props.onDescribeCfiReady?.((cfi) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
@@ -315,7 +333,13 @@ export function ReadingShell(props: ReadingShellProps) {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
             return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
           }
-          return displayReaderCfiSafely((candidate) => engine.displayCfiSafely(candidate), cfi);
+          return displayReaderCfiSafely(
+            (candidate) => runtimeController.run({
+              kind: "safe-display",
+              run: ({ engine: activeEngine }) => activeEngine.displayCfiSafely(candidate),
+            }),
+            cfi,
+          );
         });
         props.onSearchReady?.((query, options) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
@@ -332,7 +356,7 @@ export function ReadingShell(props: ReadingShellProps) {
           deferredCommandRef.current = null;
           if (cmd) {
             try {
-              await runCommandOnEngine(engine, cmd.value, cmd.seq);
+              await runRuntimeCommand(cmd.value, cmd.seq);
             } catch (err) {
               reportCommandError(err, "Command failed.", generation);
             }
@@ -341,7 +365,10 @@ export function ReadingShell(props: ReadingShellProps) {
 
         if (!initialDisplayTargetRef.current) {
           try {
-            await engine.display();
+            await runtimeController.run({
+              kind: "initial-display",
+              run: ({ engine: activeEngine }) => activeEngine.display(),
+            });
           } catch (err) {
             reportCommandError(err, "Display failed.", generation);
           }
@@ -358,6 +385,7 @@ export function ReadingShell(props: ReadingShellProps) {
       deferredCommandRef.current = null;
       const engine = engineRef.current;
       engineRef.current = null;
+      runtimeController.detach(generation);
       props.onDescribeCfiReady?.(null);
       props.onProbeCfiReady?.(null);
       props.onDisplayCfiReady?.(null);
@@ -375,7 +403,8 @@ export function ReadingShell(props: ReadingShellProps) {
     props.onDisplayCfiReady,
     props.onSearchReady,
     reportCommandError,
-    runCommandOnEngine,
+    runRuntimeCommand,
+    runtimeController,
     shouldCancelOnLocationChange,
     toToolbarPosition,
   ]);
@@ -397,12 +426,12 @@ export function ReadingShell(props: ReadingShellProps) {
           deferredCommandRef.current = cmd;
           return;
         }
-        await runCommandOnEngine(engine, cmd.value, cmd.seq);
+        await runRuntimeCommand(cmd.value, cmd.seq);
       } catch (err) {
         reportTransientCommandError(err, generation);
       }
     })();
-  }, [props.command, reportTransientCommandError, runCommandOnEngine]);
+  }, [props.command, reportTransientCommandError, runRuntimeCommand]);
 
   useEffect(() => {
     if (!props.settings) return;
@@ -412,16 +441,16 @@ export function ReadingShell(props: ReadingShellProps) {
 
     void (async () => {
       try {
-        await stabilizeReaderReflow({
-          reflow: () => engine.applyDisplaySettings(props.settings!),
-          refreshMarks: () => engine.refreshHighlightMarks(),
+        await runtimeController.stabilizeReflow("settings", {
+          reflow: (activeEngine) => activeEngine.applyDisplaySettings(props.settings!),
+          refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
           reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
         });
       } catch (err) {
         reportCommandError(err, "Display settings failed.", generation);
       }
     })();
-  }, [props.settings, reportCommandError]);
+  }, [props.settings, reportCommandError, runtimeController]);
 
   useEffect(() => {
     const readerWidth = props.settings?.readerWidth;
@@ -436,14 +465,14 @@ export function ReadingShell(props: ReadingShellProps) {
 
     void (async () => {
       try {
-        await stabilizeReaderReflow({
-          reflow: async () => {
+        await runtimeController.stabilizeReflow("resize", {
+          reflow: async (activeEngine) => {
             await waitForReaderLayout();
             if (cancelled) return;
-            await engine.resizeToMount();
+            await activeEngine.resizeToMount();
           },
-          refreshMarks: () => {
-            if (!cancelled) engine.refreshHighlightMarks();
+          refreshMarks: (activeEngine) => {
+            if (!cancelled) activeEngine.refreshHighlightMarks();
           },
           reanchorStagedToolbar: () => cancelled ? Promise.resolve() : reanchorStagedToolbarRef.current(),
         });
@@ -456,7 +485,7 @@ export function ReadingShell(props: ReadingShellProps) {
     return () => {
       cancelled = true;
     };
-  }, [props.settings?.readerWidth, reportCommandError]);
+  }, [props.settings?.readerWidth, reportCommandError, runtimeController]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
@@ -465,7 +494,7 @@ export function ReadingShell(props: ReadingShellProps) {
     try {
       const engine = engineRef.current;
       if (!engine) return;
-      await runCommandOnEngine(engine, { type: "previous" });
+      await runRuntimeCommand({ type: "previous" });
     } catch (err) {
       reportTransientCommandError(err, generation);
     }
@@ -476,7 +505,7 @@ export function ReadingShell(props: ReadingShellProps) {
     try {
       const engine = engineRef.current;
       if (!engine) return;
-      await runCommandOnEngine(engine, { type: "next" });
+      await runRuntimeCommand({ type: "next" });
     } catch (err) {
       reportTransientCommandError(err, generation);
     }
