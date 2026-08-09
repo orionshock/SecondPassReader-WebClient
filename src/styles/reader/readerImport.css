@@ -62,7 +62,7 @@
   width: min(92vw, clamp(360px, 28vw, 480px));
   height: 100vh;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
   background: var(--sp-reader-surface-strong);
   border-left: 1px solid var(--sp-reader-border);
   box-shadow: -20px 0 50px var(--sp-reader-shadow);
@@ -71,15 +71,19 @@
 }
 
 .spReaderImportDrawerHeader,
-.spReaderImportSummary,
 .spReaderImportDrawerFooter {
   padding: 12px;
   border-bottom: 1px solid var(--sp-reader-border);
 }
 
 .spReaderImportDrawerHeader {
+  display: grid;
+  gap: 3px;
+}
+
+.spReaderImportDrawerTitleRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
@@ -92,16 +96,14 @@
 .spReaderImportFileName,
 .spReaderImportWarnings {
   font-size: 12px;
-  margin-top: 4px;
 }
 
-.spReaderImportSourceSummary {
-  display: grid;
-  gap: 3px;
-}
-
-.spReaderImportSourceTitle {
+.spReaderImportFileName {
   font-weight: 700;
+}
+
+.spReaderImportWarnings {
+  margin-top: 3px;
 }
 
 .spReaderImportCountSummary {

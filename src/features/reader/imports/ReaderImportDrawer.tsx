@@ -40,7 +40,6 @@ export function ReaderImportDrawer({
 
   if (!open || !job) return null;
 
-  const summaryTitle = job.summaryDisplay ?? job.fileName;
   const countSummary = [
     `${counts.pending} pending`,
     `${counts.accepted} accepted`,
@@ -57,20 +56,14 @@ export function ReaderImportDrawer({
       aria-labelledby="sp-reader-import-drawer-title"
     >
       <div className="spReaderImportDrawerHeader">
-        <div>
-          <h2 id="sp-reader-import-drawer-title" className="spReaderImportDrawerTitle">Marginalia import</h2>
-          <div className="muted spReaderImportFileName">{job.fileName}</div>
+        <div className="spReaderImportDrawerTitleRow">
+          <h2 id="sp-reader-import-drawer-title" className="spReaderImportDrawerTitle">Marginalia Import</h2>
+          <button type="button" className="button buttonCompact spReaderImportIconButton" onClick={onClose} aria-label="Close import" title="Close">
+            <MaterialIcon name="close" />
+          </button>
         </div>
-        <button type="button" className="button buttonCompact spReaderImportIconButton" onClick={onClose} aria-label="Close import" title="Close">
-          <MaterialIcon name="close" />
-        </button>
-      </div>
-
-      <div className="spReaderImportSummary">
-        <div className="spReaderImportSourceSummary">
-          <div className="spReaderImportSourceTitle">{summaryTitle}</div>
-          <div className="muted spReaderImportCountSummary">{countSummary}</div>
-        </div>
+        <div className="spReaderImportFileName">{job.fileName}</div>
+        <div className="muted spReaderImportCountSummary">{countSummary}</div>
         {job.warnings?.length ? <div className="muted spReaderImportWarnings">{job.warnings.join(" ")}</div> : null}
       </div>
 
