@@ -16,15 +16,36 @@ export type SelectionHighlightToolbarProps = {
   onToggleNote: () => void;
   onChangeNoteDraft: (value: string) => void;
   onCancel: () => void;
+  onSizeChange?: (size: { width: number; height: number }) => void;
 };
 
 export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps) {
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const lastSizeRef = useRef({ width: 0, height: 0 });
 
   useEffect(() => {
     if (!props.open || !props.noteOpen) return;
     noteRef.current?.focus?.();
   }, [props.noteOpen, props.open]);
+
+  useEffect(() => {
+    if (!props.open || !props.onSizeChange) return;
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+    const reportSize = () => {
+      const rect = toolbar.getBoundingClientRect();
+      const next = { width: Math.ceil(rect.width), height: Math.ceil(rect.height) };
+      if (next.width === lastSizeRef.current.width && next.height === lastSizeRef.current.height) return;
+      lastSizeRef.current = next;
+      props.onSizeChange?.(next);
+    };
+    reportSize();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(reportSize);
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, [props.onSizeChange, props.open]);
 
   const style = useMemo(() => {
     return {
@@ -37,7 +58,7 @@ export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps)
   if (!props.open) return null;
 
   return (
-    <div className="spSelectionToolbar" style={style} role="dialog" aria-label="Highlight selection">
+    <div ref={toolbarRef} className="spSelectionToolbar" style={style} role="dialog" aria-label="Highlight selection">
       <div className="spSelectionToolbarRow">
         <div className="spSelectionToolbarChips" aria-label="Highlight color">
           {ANNOTATION_COLOR_TOKENS.map((token) => {

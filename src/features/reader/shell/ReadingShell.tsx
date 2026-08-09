@@ -122,6 +122,8 @@ export function ReadingShell(props: ReadingShellProps) {
     commitBusy: props.highlightCommitBusy,
   });
   const { onSelectionChanged, cancelStaged, shouldCancelOnLocationChange } = staged;
+  const reanchorStagedToolbarRef = useRef(staged.reanchorStagedToolbar);
+  reanchorStagedToolbarRef.current = staged.reanchorStagedToolbar;
 
   const closeDurableToolbar = useCallback(() => {
     setDurableToolbar(null);
@@ -206,12 +208,14 @@ export function ReadingShell(props: ReadingShellProps) {
       switch (command.type) {
         case "display":
           await engine.display(command.target);
+          await reanchorStagedToolbarRef.current();
           return;
         case "displaySearchResult": {
           await engine.display({ type: "cfi", cfi: command.cfi });
           const latestSearch = latestSearchResultCommandRef.current;
           if (commandSeq != null && latestSearch && latestSearch.seq !== commandSeq) {
             await engine.display({ type: "cfi", cfi: latestSearch.cfi });
+            await reanchorStagedToolbarRef.current();
             return;
           }
           // Search result flashes are temporary visual state. Paint them only
@@ -219,17 +223,21 @@ export function ReadingShell(props: ReadingShellProps) {
           if (commandSeq != null && lastHandledCommandSeqRef.current !== commandSeq) return;
           engine.setTemporarySearchHighlight(command.cfi);
           onEventRef.current?.({ type: "searchResultDisplayed", cfi: command.cfi });
+          await reanchorStagedToolbarRef.current();
           return;
         }
         case "next":
           await engine.next();
+          await reanchorStagedToolbarRef.current();
           return;
         case "previous":
           await engine.previous();
+          await reanchorStagedToolbarRef.current();
           return;
         case "resize":
           await waitForReaderLayout();
           await engine.resizeToMount();
+          await reanchorStagedToolbarRef.current();
           return;
       }
     },
@@ -399,6 +407,7 @@ export function ReadingShell(props: ReadingShellProps) {
     void (async () => {
       try {
         await engine.applyDisplaySettings(props.settings!);
+        await reanchorStagedToolbarRef.current();
       } catch (err) {
         reportCommandError(err, "Display settings failed.", generation);
       }
@@ -421,6 +430,8 @@ export function ReadingShell(props: ReadingShellProps) {
         await waitForReaderLayout();
         if (cancelled) return;
         await engine.resizeToMount();
+        if (cancelled) return;
+        await reanchorStagedToolbarRef.current();
       } catch (err) {
         if (cancelled) return;
         reportCommandError(err, "Reader resize failed.", generation);
@@ -537,6 +548,7 @@ export function ReadingShell(props: ReadingShellProps) {
                 onToggleNote={staged.toggleNote}
                 onChangeNoteDraft={staged.setNoteDraft}
                 onCancel={staged.cancelStaged}
+                onSizeChange={staged.onToolbarSizeChange}
               />
             ) : null}
             {durableToolbar && durableToolbarItem ? (
