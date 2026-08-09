@@ -376,6 +376,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     toggleBookmarkAtCurrentLocation,
     createHighlight,
   } = useCurrentSessionAnnotationActions({
+    identity: `${activeBookKey}|${sessionId ?? ""}`,
     spl: props.spl,
     sessionId,
     location,

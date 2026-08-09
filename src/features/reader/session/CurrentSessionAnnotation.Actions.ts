@@ -1,10 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation, ReaderSelection } from "../domain/types";
 import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
 import { getAnnotationColor } from "../display/ReaderAnnotation.Presenter";
 import { buildBookmarkUpsert, buildHighlightUpdate, buildHighlightUpsert } from "./marginaliaMutations";
+import {
+  CurrentSessionAnnotationController,
+  CurrentSessionAnnotationStaleGenerationError,
+} from "./CurrentSessionAnnotation.Controller";
 
 export type ReaderBookmarkMutationResult =
   | { ok: true; action: "created" | "deleted" }
@@ -63,6 +67,7 @@ export async function executeReaderBookmarkMutation(args: {
 }
 
 export function useCurrentSessionAnnotationActions(args: {
+  identity: string;
   spl?: SecondPassClient | null;
   sessionId: string | null;
   location: ReaderLocation | null;
@@ -74,28 +79,41 @@ export function useCurrentSessionAnnotationActions(args: {
   canMutate?: boolean;
 }) {
   const [annotationBusy, setAnnotationBusy] = useState(false);
+  const controllerRef = useRef<CurrentSessionAnnotationController | null>(null);
+  if (!controllerRef.current) controllerRef.current = new CurrentSessionAnnotationController();
+  const controller = controllerRef.current;
+
+  useEffect(() => {
+    controller.activate(args.identity, {
+      setAnnotations: args.setAnnotationsRaw,
+      setBusy: setAnnotationBusy,
+      setError: args.setAnnotationError,
+    });
+    return () => controller.detach(args.identity);
+  }, [args.identity, args.setAnnotationError, args.setAnnotationsRaw, controller]);
 
   const removeById = useCallback(
     async (annotationId: string) => {
       if (!args.spl) return;
       if (args.canMutate === false) return;
       if (!annotationId) return;
-      setAnnotationBusy(true);
-      args.setAnnotationError(null);
       try {
         const annotation = args.annotationsRaw.find((item) => item.id === annotationId);
         if (!annotation) return;
-        const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId!, [
-          { action: "delete", clientId: annotation.clientId },
-        ]);
-        args.setAnnotationsRaw(response.annotations);
-      } catch (e) {
-        args.setAnnotationError(e instanceof Error ? e.message : "Failed to remove annotation.");
-      } finally {
-        setAnnotationBusy(false);
+        await controller.mutate({
+          run: async () => {
+            const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
+              { action: "delete", clientId: annotation.clientId },
+            ]);
+            return { value: undefined, annotations: response.annotations };
+          },
+          getErrorMessage: (error) => error instanceof Error ? error.message : "Failed to remove annotation.",
+        });
+      } catch {
+        // Delete already reports active-session failures through the controller.
       }
     },
-    [args.annotationsRaw, args.canMutate, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
+    [args.annotationsRaw, args.canMutate, args.sessionId, args.spl, controller],
   );
 
   const updateHighlight = useCallback(
@@ -110,45 +128,48 @@ export function useCurrentSessionAnnotationActions(args: {
       const nextColor = update.color.trim() || (getAnnotationColor(raw) ?? "").trim() || "yellow";
       const nextNote = update.note;
 
-      setAnnotationBusy(true);
-      args.setAnnotationError(null);
-      try {
-        const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId!, [
-          buildHighlightUpdate(raw, { color: nextColor as MarginaliaHighlightColor, note: nextNote }),
-        ]);
-        args.setAnnotationsRaw(response.annotations);
-      } catch (e) {
-        args.setAnnotationError(e instanceof Error ? e.message : "Failed to update highlight.");
-        throw e;
-      } finally {
-        setAnnotationBusy(false);
-      }
+      await controller.mutate({
+        run: async () => {
+          const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
+            buildHighlightUpdate(raw, { color: nextColor as MarginaliaHighlightColor, note: nextNote }),
+          ]);
+          return { value: undefined, annotations: response.annotations };
+        },
+        getErrorMessage: (error) => error instanceof Error ? error.message : "Failed to update highlight.",
+      });
     },
-    [args.annotationsRaw, args.canMutate, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
+    [args.annotationsRaw, args.canMutate, args.sessionId, args.spl, controller],
   );
 
   const toggleBookmarkAtCurrentLocation = useCallback(async (): Promise<ReaderBookmarkMutationResult> => {
     if (args.canMutate === false) return { ok: false, reason: "not-allowed" };
     if (!args.spl || !args.sessionId || !args.location?.cfi?.trim()) return { ok: false, reason: "missing-state" };
 
-    setAnnotationBusy(true);
-    args.setAnnotationError(null);
     try {
-      const execution = await executeReaderBookmarkMutation(args);
-      const result = execution.result;
-      if (result.ok) {
-        if (execution.annotations) args.setAnnotationsRaw(execution.annotations);
-      } else if (result.reason === "mutation-failed") {
-        const message = result.error instanceof Error
-          ? result.error.message
-          : args.currentBookmark
-            ? "Failed to remove bookmark."
-            : "Failed to create bookmark.";
-        args.setAnnotationError(message);
+      return await controller.mutate({
+        run: async () => {
+          const execution = await executeReaderBookmarkMutation(args);
+          const result = execution.result;
+          const errorMessage = !result.ok && result.reason === "mutation-failed"
+            ? result.error instanceof Error
+              ? result.error.message
+              : args.currentBookmark
+                ? "Failed to remove bookmark."
+                : "Failed to create bookmark."
+            : undefined;
+          return {
+            value: result,
+            annotations: result.ok ? execution.annotations : undefined,
+            errorMessage,
+          };
+        },
+        getErrorMessage: (error) => error instanceof Error ? error.message : "Bookmark mutation failed.",
+      });
+    } catch (error) {
+      if (error instanceof CurrentSessionAnnotationStaleGenerationError) {
+        return { ok: false, reason: "missing-state" };
       }
-      return result;
-    } finally {
-      setAnnotationBusy(false);
+      return { ok: false, reason: "mutation-failed", error };
     }
   }, [
     args.annotationsRaw,
@@ -158,8 +179,7 @@ export function useCurrentSessionAnnotationActions(args: {
     args.locationLabel,
     args.sessionId,
     args.spl,
-    args.setAnnotationError,
-    args.setAnnotationsRaw,
+    controller,
   ]);
 
   const createHighlight = useCallback(
@@ -170,30 +190,26 @@ export function useCurrentSessionAnnotationActions(args: {
       const sel = input.selection;
       if (!sel?.cfiRange || !sel.text) throw new Error("Missing selection.");
 
-      setAnnotationBusy(true);
-      args.setAnnotationError(null);
-      try {
-        const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId, [
-          buildHighlightUpsert({
-            clientId: crypto.randomUUID(),
-            cfi: sel.cfiRange,
-            locationLabel: args.locationLabel,
-            text: sel.text,
-            color: input.color as MarginaliaHighlightColor,
-            note: input.note,
-            prefix: sel.quotePrefix,
-            suffix: sel.quoteSuffix,
-          }),
-        ]);
-        args.setAnnotationsRaw(response.annotations);
-      } catch (e) {
-        args.setAnnotationError(e instanceof Error ? e.message : "Failed to create highlight.");
-        throw e;
-      } finally {
-        setAnnotationBusy(false);
-      }
+      await controller.mutate({
+        run: async () => {
+          const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
+            buildHighlightUpsert({
+              clientId: crypto.randomUUID(),
+              cfi: sel.cfiRange,
+              locationLabel: args.locationLabel,
+              text: sel.text,
+              color: input.color as MarginaliaHighlightColor,
+              note: input.note,
+              prefix: sel.quotePrefix,
+              suffix: sel.quoteSuffix,
+            }),
+          ]);
+          return { value: undefined, annotations: response.annotations };
+        },
+        getErrorMessage: (error) => error instanceof Error ? error.message : "Failed to create highlight.",
+      });
     },
-    [args.canMutate, args.locationLabel, args.sessionId, args.spl, args.setAnnotationError, args.setAnnotationsRaw],
+    [args.canMutate, args.locationLabel, args.sessionId, args.spl, controller],
   );
 
   return {
