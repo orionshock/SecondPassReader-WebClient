@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { getAnnotationColor, getAnnotationDescribingText, getAnnotationFragmentCfi, getAnnotationNoteText, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/annotationUtils";
+import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/annotationSelectors";
+import {
+  getAnnotationColor,
+  getAnnotationDescribingText,
+  getAnnotationNoteText,
+} from "../features/reader/display/ReaderAnnotation.Presenter";
 
 const bookmark = { id: "b", clientId: "cb", kind: "bookmark", location: { cfi: "epubcfi(/6/2)", locationLabel: "Location 08 - 42%" }, createdAt: "now", updatedAt: "now" } satisfies MarginaliaAnnotation;
 const highlight = { id: "h", clientId: "ch", kind: "highlight", location: { cfi: "epubcfi(/6/4,/2,/8)", locationLabel: "Chapter 08 - 42%" }, body: { text: "Hello", prefix: "Before", suffix: "After", color: "yellow", note: "Note here" }, createdAt: "now", updatedAt: "now" } satisfies MarginaliaAnnotation;

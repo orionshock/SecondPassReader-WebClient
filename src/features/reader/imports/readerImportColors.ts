@@ -1,5 +1,7 @@
-import { ANNOTATION_COLOR_TOKENS } from "../annotations/annotationColors";
-import type { AnnotationColorToken } from "../annotations/annotationColors";
+import {
+  ANNOTATION_COLOR_TOKENS,
+  type AnnotationColorToken,
+} from "../display/ReaderAnnotation.Presenter";
 
 const ANNOTATION_COLOR_TOKEN_SET = new Set<string>(ANNOTATION_COLOR_TOKENS);
 

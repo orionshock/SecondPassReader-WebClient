@@ -1,5 +1,5 @@
 import type { ReaderImportRow } from "./readerImportTypes";
-import { toAnnotationCssVars } from "../annotations/annotationColors";
+import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
 
 export function ReaderImportRowItem({
   row,

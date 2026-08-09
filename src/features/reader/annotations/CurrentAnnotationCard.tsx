@@ -1,8 +1,12 @@
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
-import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "./annotationColors";
+import {
+  ANNOTATION_COLOR_TOKENS,
+  BOOKMARK_DISPLAY,
+  getHighlightAnnotationDisplay,
+  toAnnotationCssVars,
+} from "../display/ReaderAnnotation.Presenter";
 import { ANNOTATION_LIMITS } from "./annotationLimits";
-import { BOOKMARK_DISPLAY, getHighlightAnnotationDisplay } from "./annotationDisplay";
 import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./viewModels";
 
 function normalizeQuoteTextForDisplay(text: string): string {

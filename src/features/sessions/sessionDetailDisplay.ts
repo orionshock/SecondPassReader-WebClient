@@ -28,9 +28,3 @@ export function formatAnnotationCount(n?: number | null): string | null {
   const count = Math.max(0, Math.floor(n));
   return count === 1 ? "1 annotation" : `${count} annotations`;
 }
-
-export function getAnnotationTexts(annotation: import("@secondpass/client").MarginaliaAnnotation): { quote: string | null; note: string | null } {
-  return annotation.kind === "highlight"
-    ? { quote: annotation.body.text || null, note: annotation.body.note || null }
-    : { quote: null, note: null };
-}

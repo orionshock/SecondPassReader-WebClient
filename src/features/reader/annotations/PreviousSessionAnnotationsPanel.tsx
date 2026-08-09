@@ -1,9 +1,12 @@
 import { useMemo } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
-import { BOOKMARK_DISPLAY, getHighlightAnnotationDisplay } from "./annotationDisplay";
+import {
+  BOOKMARK_DISPLAY,
+  getHighlightAnnotationDisplay,
+  toAnnotationCssVars,
+} from "../display/ReaderAnnotation.Presenter";
 import type { PreviousSessionAnnotationGroup, PreviousSessionAnnotationItem } from "../session/usePreviousSessionLayers";
-import { toAnnotationCssVars } from "./annotationColors";
 
 function normalizeQuoteTextForDisplay(text: string): string {
   return text.replace(/\s+/g, " ").trim();

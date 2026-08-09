@@ -7,6 +7,8 @@ import {
   getAnnotationColor,
   getAnnotationNoteText,
   getAnnotationTimestamp,
+} from "../display/ReaderAnnotation.Presenter";
+import {
   isHighlightAnnotation,
   toReaderAnnotation,
 } from "../annotations/annotationUtils";

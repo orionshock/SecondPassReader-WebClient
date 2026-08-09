@@ -1,16 +1,9 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderAnnotation } from "../domain/types";
 import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
+import { getAnnotationDescribingText } from "../display/ReaderAnnotation.Presenter";
 
 export { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
-
-export function getAnnotationDescribingText(annotation: MarginaliaAnnotation): string | null { return annotation.kind === "highlight" ? annotation.body.text : null; }
-
-export function getAnnotationNoteText(annotation: MarginaliaAnnotation): string | null { return annotation.kind === "highlight" ? annotation.body.note || null : null; }
-
-export function getAnnotationColor(annotation: MarginaliaAnnotation): string | null { return annotation.kind === "highlight" ? annotation.body.color : null; }
-
-export function getAnnotationTimestamp(annotation: MarginaliaAnnotation): string | null { return annotation.updatedAt || annotation.createdAt || null; }
 
 export function toReaderAnnotation(annotation: MarginaliaAnnotation): ReaderAnnotation | null {
   if (isBookmarkAnnotation(annotation)) {

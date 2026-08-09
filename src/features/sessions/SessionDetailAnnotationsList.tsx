@@ -1,10 +1,13 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
 import { InlineMeta } from "../../components/MetaSeparator";
 import { MaterialIcon } from "../../components/MaterialIcon";
-import { getAnnotationColor } from "../reader/annotations/annotationUtils";
-import { toAnnotationCssVars } from "../reader/annotations/annotationColors";
-import { getRawAnnotationDisplay } from "../reader/annotations/annotationDisplay";
-import { formatIso, getAnnotationTexts } from "./sessionDetailDisplay";
+import {
+  getAnnotationColor,
+  getAnnotationDisplayTexts,
+  getRawAnnotationDisplay,
+  toAnnotationCssVars,
+} from "../reader/display/ReaderAnnotation.Presenter";
+import { formatIso } from "./sessionDetailDisplay";
 
 export function SessionDetailAnnotationsList({
   annotations,
@@ -31,7 +34,7 @@ export function SessionDetailAnnotationsList({
         <div className="sessionAnnoList">
           {annotations.map((a) => {
             const when = formatIso(a.updatedAt);
-            const { quote, note } = getAnnotationTexts(a);
+            const { quote, note } = getAnnotationDisplayTexts(a);
             const { iconName, label } = getRawAnnotationDisplay(a, note);
             const metaBits = [when ? when : null].filter(Boolean);
             const color = quote ? getAnnotationColor(a) : null;

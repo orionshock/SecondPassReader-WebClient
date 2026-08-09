@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation, ReaderSelection } from "../domain/types";
 import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
-import { getAnnotationColor } from "../annotations/annotationUtils";
+import { getAnnotationColor } from "../display/ReaderAnnotation.Presenter";
 import { buildBookmarkUpsert, buildHighlightUpdate, buildHighlightUpsert } from "./marginaliaMutations";
 
 export type ReaderBookmarkMutationResult =

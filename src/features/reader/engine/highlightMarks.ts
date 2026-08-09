@@ -1,5 +1,5 @@
 import type { Rendition } from "@likecoin/epub-ts";
-import { resolveAnnotationColor } from "../annotations/annotationColors";
+import { resolveAnnotationColor } from "../display/ReaderAnnotation.Presenter";
 import type { ReaderHighlightMark } from "../domain/types";
 
 export type HighlightMarkPainter = {

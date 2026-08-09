@@ -3,9 +3,11 @@ import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } fr
 import {
   getAnnotationColor,
   getAnnotationDescribingText,
-  getAnnotationFragmentCfi,
   getAnnotationNoteText,
   getAnnotationTimestamp,
+} from "../display/ReaderAnnotation.Presenter";
+import {
+  getAnnotationFragmentCfi,
   isBookmarkAnnotation,
   isHighlightAnnotation,
   toReaderAnnotation,
