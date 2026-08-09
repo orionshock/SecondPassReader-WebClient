@@ -22,23 +22,39 @@ describe("reader import manual completion", () => {
     expect(markRowManuallyCompleted).toHaveBeenCalledWith("row-1");
   });
 
-  it("does not manually complete a row without an active staged hint", () => {
+  it.each(["pending", "not-found"] as const)("manually completes a %s row without clearing unrelated reader state", (status) => {
     const cancelStagedSelection = vi.fn();
     const clearTemporaryHighlight = vi.fn();
     const markRowManuallyCompleted = vi.fn();
 
     const completed = completeReaderImportRowManually({
-      row: row({ status: "not-found" }),
+      row: row({ status }),
       cancelStagedSelection,
       clearTemporaryHighlight,
       markRowManuallyCompleted,
     });
 
-    expect(completed).toBe(false);
+    expect(completed).toBe(true);
     expect(cancelStagedSelection).not.toHaveBeenCalled();
     expect(clearTemporaryHighlight).not.toHaveBeenCalled();
-    expect(markRowManuallyCompleted).not.toHaveBeenCalled();
+    expect(markRowManuallyCompleted).toHaveBeenCalledWith("row-1");
   });
+
+  it.each(["searching", "accepted", "skipped", "manually-completed"] as const)(
+    "does not manually complete a %s row",
+    (status) => {
+      const markRowManuallyCompleted = vi.fn();
+      const completed = completeReaderImportRowManually({
+        row: row({ status }),
+        cancelStagedSelection: vi.fn(),
+        clearTemporaryHighlight: vi.fn(),
+        markRowManuallyCompleted,
+      });
+
+      expect(completed).toBe(false);
+      expect(markRowManuallyCompleted).not.toHaveBeenCalled();
+    },
+  );
 });
 
 function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {

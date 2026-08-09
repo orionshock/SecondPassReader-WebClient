@@ -28,12 +28,20 @@ describe("reader import row item", () => {
     expect(markup).not.toContain(">Skip<");
   });
 
-  it("offers a clearly labelled manual completion action only for staged rows", () => {
+  it("offers a clearly labelled manual completion action for reviewable rows", () => {
     const stagedMarkup = renderRow({ status: "staged" });
     const pendingMarkup = renderRow({ status: "pending" });
+    const notFoundMarkup = renderRow({ status: "not-found" });
     expect(stagedMarkup).toContain('aria-label="Mark manually completed"');
     expect(stagedMarkup).toContain("task_alt");
-    expect(pendingMarkup).not.toContain("Mark manually completed");
+    expect(pendingMarkup).toContain('aria-label="Mark manually completed"');
+    expect(notFoundMarkup).toContain('aria-label="Mark manually completed"');
+  });
+
+  it("shows manual completion disabled while matching is in flight", () => {
+    const markup = renderRow({ status: "searching" });
+    expect(markup).toContain('aria-label="Mark manually completed"');
+    expect(markup).toContain("disabled");
   });
 });
 

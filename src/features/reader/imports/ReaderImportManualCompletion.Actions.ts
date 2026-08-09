@@ -1,4 +1,5 @@
 import type { ReaderImportRow } from "./readerImportTypes";
+import { isReaderImportRowTerminal } from "./readerImportJobState";
 
 export function completeReaderImportRowManually({
   row,
@@ -11,10 +12,12 @@ export function completeReaderImportRowManually({
   clearTemporaryHighlight: () => void;
   markRowManuallyCompleted: (rowId: string) => void;
 }): boolean {
-  if (row?.status !== "staged") return false;
+  if (!row || isReaderImportRowTerminal(row.status) || row.status === "searching") return false;
 
-  cancelStagedSelection();
-  clearTemporaryHighlight();
+  if (row.status === "staged") {
+    cancelStagedSelection();
+    clearTemporaryHighlight();
+  }
   markRowManuallyCompleted(row.id);
   return true;
 }

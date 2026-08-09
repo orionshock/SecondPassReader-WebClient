@@ -22,6 +22,9 @@ export function ReaderImportRowItem({
   const quoteText = row.quoteText?.trim() ?? "";
   const cfiHint = row.cfiHint?.trim() ?? "";
   const candidateLabel = getCandidateLabel(row);
+  const showManualCompletion = row.status !== "accepted"
+    && row.status !== "skipped"
+    && row.status !== "manually-completed";
 
   return (
     <article
@@ -42,13 +45,14 @@ export function ReaderImportRowItem({
           ) : (
             <>
               {row.status === "searching" ? <span className="muted spReaderImportRowActionText">Searching...</span> : null}
-              {row.status === "staged" ? (
+              {showManualCompletion ? (
                 <button
                   type="button"
                   className="button buttonCompact spReaderImportRowActionButton"
                   onClick={onMarkManuallyCompleted}
                   aria-label="Mark manually completed"
                   title="Mark manually completed"
+                  disabled={row.status === "searching"}
                 >
                   <MaterialIcon name="task_alt" className="spReaderImportRowActionIcon" />
                   <span>Manual</span>
