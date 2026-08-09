@@ -23,6 +23,7 @@ import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelection
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
+import { observeReaderMountResize } from "./ReaderMountResize.Lifecycle";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -515,6 +516,21 @@ export function ReadingShell(props: ReadingShellProps) {
       cancelled = true;
     };
   }, [props.settings?.readerWidth, reportCommandError, runtimeController, stagedLifecycle]);
+
+  useEffect(() => {
+    if (!mountEl || status !== "ready") return;
+    const generation = engineGenerationRef.current;
+    return observeReaderMountResize(mountEl, () => {
+      void runtimeController.stabilizeReflow("resize", {
+        reflow: (activeEngine) => stagedLifecycle.runNavigation(
+          "layout-reflow",
+          () => activeEngine.resizeToMount(),
+        ),
+        refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
+        reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+      }).catch((err) => reportCommandError(err, "Reader resize failed.", generation));
+    });
+  }, [mountEl, props.blob, reportCommandError, runtimeController, stagedLifecycle, status]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
