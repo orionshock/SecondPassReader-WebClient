@@ -17,6 +17,28 @@ export type ReaderImportSearchMatch = {
   query: string;
 };
 
+export async function findImportRowSearchMatchesByAttempt({
+  row,
+  attempts,
+  searchBook,
+  signal,
+}: {
+  row: ReaderImportRow;
+  attempts: ReaderImportAttempt[];
+  searchBook: ReaderSearchBookHandle;
+  signal: AbortSignal;
+}): Promise<ReaderImportSearchMatch[][]> {
+  const results: ReaderImportSearchMatch[][] = [];
+  for (const attempt of attempts) {
+    if (attempt.kind === "cfi-range" || signal.aborted) {
+      results.push([]);
+      continue;
+    }
+    results.push(await findImportRowSearchMatches({ row, attempt, searchBook, signal }));
+  }
+  return results;
+}
+
 export async function findImportRowSearchMatch({
   row,
   attempt,

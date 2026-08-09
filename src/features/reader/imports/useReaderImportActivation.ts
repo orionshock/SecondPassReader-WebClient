@@ -12,7 +12,7 @@ import {
 } from "./readerImportAttempts";
 import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
-import { findImportRowSearchMatches } from "./readerImportSearch";
+import { findImportRowSearchMatchesByAttempt } from "./readerImportSearch";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
 import { stageReaderImportHighlightCfi } from "./readerImportHighlightCfi";
 
@@ -216,11 +216,12 @@ export function useReaderImportActivation({
         setDrawerOpen(true);
         return;
       }
-      const resultsByAttempt = await Promise.all(
-        attempts.map((attempt) => attempt.kind === "cfi-range"
-          ? Promise.resolve([])
-          : findImportRowSearchMatches({ row, attempt, searchBook, signal: controller.signal })),
-      );
+      const resultsByAttempt = await findImportRowSearchMatchesByAttempt({
+        row,
+        attempts,
+        searchBook,
+        signal: controller.signal,
+      });
       if (requestIdRef.current !== requestId || controller.signal.aborted) return;
       debugReaderImport("activation search results", {
         rowId,

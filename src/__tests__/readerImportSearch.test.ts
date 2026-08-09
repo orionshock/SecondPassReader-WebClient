@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findImportRowSearchMatch, findImportRowSearchMatches } from "../features/reader/imports/readerImportSearch";
+import { findImportRowSearchMatch, findImportRowSearchMatches, findImportRowSearchMatchesByAttempt } from "../features/reader/imports/readerImportSearch";
 import type { ReaderSearchBookHandle } from "../features/reader/shell/types";
 import type { ReaderSearchResult } from "../features/reader/domain/types";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
@@ -55,6 +55,37 @@ describe("reader import search", () => {
     });
 
     expect(hasDiagnosticHandler).toBe(true);
+  });
+
+  it("searches import fallback attempts sequentially while preserving attempt result order", async () => {
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const calls: string[] = [];
+    const searchBook: ReaderSearchBookHandle = async (query) => {
+      calls.push(query);
+      if (query === "first quote") await firstGate;
+      return [result({ id: query, cfi: `${query}-cfi`, quotePrefix: "matching context" })];
+    };
+    const matches = findImportRowSearchMatchesByAttempt({
+      row: row({ quoteText: "first quote" }),
+      attempts: [
+        { kind: "quote-text", exact: "first quote", prefix: "matching context" },
+        { kind: "quote-text", exact: "second quote", prefix: "matching context" },
+      ],
+      searchBook,
+      signal: new AbortController().signal,
+    });
+
+    await Promise.resolve();
+    expect(calls).toEqual(["first quote"]);
+    releaseFirst();
+    const resultsByAttempt = await matches;
+
+    expect(calls).toEqual(["first quote", "second quote"]);
+    expect(resultsByAttempt.map((matchesForAttempt) => matchesForAttempt[0]?.result.id)).toEqual([
+      "first quote",
+      "second quote",
+    ]);
   });
 
   it("collects matches from multiple sentence fragments for candidate cycling", async () => {

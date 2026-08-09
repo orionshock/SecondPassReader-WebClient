@@ -10,6 +10,7 @@ import { createHighlightMarkPainter, type HighlightMarkClick } from "./highlight
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
 import { searchEpubTsBook } from "./EpubTsBookSearch";
+import { ReaderSearchController } from "./ReaderSearch.Controller";
 import { getVisibleCfiRangeAnchor } from "./visibleCfiRangeAnchor";
 import {
   getReaderEpubDisplayRules,
@@ -117,6 +118,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   }
 
   let destroyed = false;
+  const searchController = new ReaderSearchController();
   let locationsReady = false;
   let lastRelocatedLoc: Location | null = null;
 
@@ -497,7 +499,10 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     },
     async searchBook(query: string, options?: ReaderSearchOptions): Promise<ReaderSearchResult[]> {
       if (destroyed) throw new Error("Engine is destroyed.");
-      return searchEpubTsBook(book, query, readerToc, options);
+      return searchController.search(() => {
+        if (destroyed) throw new Error("Engine is destroyed.");
+        return searchEpubTsBook(book, query, readerToc, options);
+      }, options?.signal);
     },
     destroy() {
       if (destroyed) return;
