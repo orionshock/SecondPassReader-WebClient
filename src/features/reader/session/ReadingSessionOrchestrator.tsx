@@ -358,17 +358,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     }
   }, [activeBookKey, onLocationsReady, sendCommand]);
 
-  // Restore saved location via the same command path used for future navigation.
-  // Best-effort: this command may be deferred by the shell until the engine exists.
-  const lastRestoreKeyRef = useRef<string>("");
-  useEffect(() => {
-    if (!initialDisplayTarget) return;
-    const key = `${props.openedBook.objectUrl}|${JSON.stringify(initialDisplayTarget)}`;
-    if (lastRestoreKeyRef.current === key) return;
-    lastRestoreKeyRef.current = key;
-    sendCommand({ type: "display", target: initialDisplayTarget });
-  }, [initialDisplayTarget, props.openedBook.objectUrl, sendCommand]);
-
   const {
     annotationBusy,
     removeById,

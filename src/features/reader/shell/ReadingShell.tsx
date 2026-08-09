@@ -32,6 +32,11 @@ import {
   classifyReaderOperationError,
   type ReaderOperationFailureKind,
 } from "./ReaderOperationError.Policy";
+import {
+  isReaderFullyReady,
+  toReaderViewportStatus,
+  type ReaderReadinessState,
+} from "./ReaderReadiness.State";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -91,7 +96,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
-  const [status, setStatus] = useState<"empty" | "loading" | "ready" | "error">("empty");
+  const [readiness, setReadiness] = useState<ReaderReadinessState>("empty");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -188,13 +193,17 @@ export function ReadingShell(props: ReadingShellProps) {
   }, []);
 
   useEffect(() => {
+    if (!isReaderFullyReady(readiness)) {
+      props.onStagedSelectionReady?.(null);
+      return;
+    }
     props.onStagedSelectionReady?.({
       stageSelectionFromCfiRange: staged.stageSelectionFromCfiRange,
       runStagingTransaction: (operation) => stagedLifecycle.runNavigation("import-staging", operation),
       cancelStagedSelection: staged.cancelStaged,
     });
     return () => props.onStagedSelectionReady?.(null);
-  }, [props.onStagedSelectionReady, staged.cancelStaged, staged.stageSelectionFromCfiRange, stagedLifecycle]);
+  }, [props.onStagedSelectionReady, readiness, staged.cancelStaged, staged.stageSelectionFromCfiRange, stagedLifecycle]);
 
   useEffect(() => {
     if (!durableToolbar) return;
@@ -218,11 +227,22 @@ export function ReadingShell(props: ReadingShellProps) {
     };
   }, [closeDurableToolbar, durableToolbar]);
 
+  const recordReadableViewport = useCallback((generation: number) => {
+    if (engineGenerationRef.current !== generation) return;
+    hasReadableViewportRef.current = true;
+  }, []);
+
+  const markReadableViewport = useCallback((generation: number) => {
+    if (engineGenerationRef.current !== generation) return;
+    hasReadableViewportRef.current = true;
+    setReadiness("ready");
+  }, []);
+
   const reportOperationError = useCallback(
     (err: unknown, fallback: string, generation: number, kind: ReaderOperationFailureKind) => {
       if (engineGenerationRef.current !== generation) return;
       if (classifyReaderOperationError(kind, hasReadableViewportRef.current) === "fatal") {
-        setStatus("error");
+        setReadiness("error");
         setErrorMessage(err instanceof Error ? err.message : fallback);
       }
       onEventRef.current?.({ type: "displayError", error: err });
@@ -232,6 +252,7 @@ export function ReadingShell(props: ReadingShellProps) {
 
   const runRuntimeCommand = useCallback(
     async (command: ReadingShellCommandValue, commandSeq?: number) => {
+      const generation = engineGenerationRef.current;
       switch (command.type) {
         case "display":
           await runtimeController.run({
@@ -239,7 +260,7 @@ export function ReadingShell(props: ReadingShellProps) {
             run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.display(command.target)),
             after: () => reanchorStagedToolbarRef.current(),
           });
-          hasReadableViewportRef.current = true;
+          markReadableViewport(generation);
           return;
         case "displaySearchResult": {
           await runtimeController.run({
@@ -263,7 +284,7 @@ export function ReadingShell(props: ReadingShellProps) {
               await reanchorStagedToolbarRef.current();
             },
           });
-          hasReadableViewportRef.current = true;
+          markReadableViewport(generation);
           return;
         }
         case "next":
@@ -272,7 +293,7 @@ export function ReadingShell(props: ReadingShellProps) {
             run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.next()),
             after: () => reanchorStagedToolbarRef.current(),
           });
-          hasReadableViewportRef.current = true;
+          markReadableViewport(generation);
           return;
         case "previous":
           await runtimeController.run({
@@ -280,7 +301,7 @@ export function ReadingShell(props: ReadingShellProps) {
             run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.previous()),
             after: () => reanchorStagedToolbarRef.current(),
           });
-          hasReadableViewportRef.current = true;
+          markReadableViewport(generation);
           return;
         case "resize":
           await runtimeController.stabilizeReflow("resize", {
@@ -296,14 +317,14 @@ export function ReadingShell(props: ReadingShellProps) {
           return;
       }
     },
-    [runtimeController, stagedLifecycle],
+    [markReadableViewport, runtimeController, stagedLifecycle],
   );
 
   useEffect(() => {
     if (!mountEl) return;
 
     let cancelled = false;
-    setStatus("loading");
+    setReadiness("loading-engine");
     setErrorMessage(null);
     hasReadableViewportRef.current = false;
     engineGenerationRef.current += 1;
@@ -319,7 +340,7 @@ export function ReadingShell(props: ReadingShellProps) {
            enableLocationsGeneration: true,
            displaySettings: settingsRef.current,
            onLocationChanged: (location) => {
-             hasReadableViewportRef.current = true;
+             recordReadableViewport(generation);
              closeDurableToolbar();
              stagedLifecycle.handleLocationChanged();
              onEventRef.current?.({ type: "locationChanged", location });
@@ -350,7 +371,25 @@ export function ReadingShell(props: ReadingShellProps) {
 
         engineRef.current = engine;
         runtimeController.attach(engine, generation);
-        setStatus("ready");
+        setReadiness("engine-attached");
+
+        // Apply any highlight marks that loaded before the engine became available.
+        engine.setHighlightMarks(highlightMarksRef.current);
+
+        let initialDisplaySucceeded = false;
+        try {
+          await runtimeController.run({
+            kind: "initial-display",
+            run: ({ engine: activeEngine }) => activeEngine.display(initialDisplayTargetRef.current),
+          });
+          initialDisplaySucceeded = true;
+        } catch (err) {
+          reportOperationError(err, "Display failed.", generation, "display");
+        }
+
+        if (initialDisplaySucceeded || hasReadableViewportRef.current) markReadableViewport(generation);
+        if (!hasReadableViewportRef.current) return;
+
         props.onDescribeCfiReady?.((cfi) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
             return Promise.reject(new Error("Reader engine is not ready."));
@@ -368,18 +407,14 @@ export function ReadingShell(props: ReadingShellProps) {
             return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
           }
           return displayReaderCfiSafely(
-              async (candidate) => {
-                const result = await runtimeController.run({
-                  kind: "safe-display",
-                  run: ({ engine: activeEngine }) => stagedLifecycle.runNavigation(
-                    options?.navigationIntent ?? "unrelated",
-                    () => activeEngine.displayCfiSafely(candidate),
-                  ),
-                });
-                if (result.ok) hasReadableViewportRef.current = true;
-                return result;
-              },
-              cfi,
+            (candidate) => runtimeController.run({
+              kind: "safe-display",
+              run: ({ engine: activeEngine }) => stagedLifecycle.runNavigation(
+                options?.navigationIntent ?? "unrelated",
+                () => activeEngine.displayCfiSafely(candidate),
+              ),
+            }),
+            cfi,
           );
         });
         props.onSearchReady?.((query, options) => {
@@ -389,35 +424,18 @@ export function ReadingShell(props: ReadingShellProps) {
           return engine.searchBook(query, options);
         });
 
-        // Apply any highlight marks that loaded before the engine became available.
-        engine.setHighlightMarks(highlightMarksRef.current);
-
-        if (deferredCommandRef.current) {
-          const cmd = deferredCommandRef.current;
-          deferredCommandRef.current = null;
-          if (cmd) {
-            try {
-              await runRuntimeCommand(cmd.value, cmd.seq);
-            } catch (err) {
-              reportOperationError(
-                err,
-                "Command failed.",
-                generation,
-                getCommandFailureKind(cmd.value),
-              );
-            }
-          }
-        }
-
-        if (!initialDisplayTargetRef.current) {
+        const deferredCommand = deferredCommandRef.current;
+        deferredCommandRef.current = null;
+        if (deferredCommand) {
           try {
-            await runtimeController.run({
-              kind: "initial-display",
-              run: ({ engine: activeEngine }) => activeEngine.display(),
-            });
-            hasReadableViewportRef.current = true;
+            await runRuntimeCommand(deferredCommand.value, deferredCommand.seq);
           } catch (err) {
-            reportOperationError(err, "Display failed.", generation, "display");
+            reportOperationError(
+              err,
+              "Command failed.",
+              generation,
+              getCommandFailureKind(deferredCommand.value),
+            );
           }
         }
       } catch (err) {
@@ -449,6 +467,8 @@ export function ReadingShell(props: ReadingShellProps) {
     props.onProbeCfiReady,
     props.onDisplayCfiReady,
     props.onSearchReady,
+    markReadableViewport,
+    recordReadableViewport,
     reportOperationError,
     runRuntimeCommand,
     runtimeController,
@@ -469,7 +489,7 @@ export function ReadingShell(props: ReadingShellProps) {
         if (cmd.value.type === "displaySearchResult") {
           latestSearchResultCommandRef.current = { seq: cmd.seq, cfi: cmd.value.cfi };
         }
-        if (!engine) {
+        if (!engine || !isReaderFullyReady(readiness)) {
           deferredCommandRef.current = cmd;
           return;
         }
@@ -483,10 +503,11 @@ export function ReadingShell(props: ReadingShellProps) {
         );
       }
     })();
-  }, [props.command, reportOperationError, runRuntimeCommand]);
+  }, [props.command, readiness, reportOperationError, runRuntimeCommand]);
 
   useEffect(() => {
     if (!props.settings) return;
+    if (!isReaderFullyReady(readiness)) return;
     const engine = engineRef.current;
     if (!engine) return;
     const generation = engineGenerationRef.current;
@@ -505,11 +526,12 @@ export function ReadingShell(props: ReadingShellProps) {
         reportOperationError(err, "Display settings failed.", generation, "reflow");
       }
     })();
-  }, [props.settings, reportOperationError, runtimeController, stagedLifecycle]);
+  }, [props.settings, readiness, reportOperationError, runtimeController, stagedLifecycle]);
 
   useEffect(() => {
     const readerWidth = props.settings?.readerWidth;
     if (!readerWidth) return;
+    if (!isReaderFullyReady(readiness)) return;
     if (lastHandledReaderWidthRef.current === readerWidth) return;
     lastHandledReaderWidthRef.current = readerWidth;
 
@@ -542,10 +564,10 @@ export function ReadingShell(props: ReadingShellProps) {
     return () => {
       cancelled = true;
     };
-  }, [props.settings?.readerWidth, reportOperationError, runtimeController, stagedLifecycle]);
+  }, [props.settings?.readerWidth, readiness, reportOperationError, runtimeController, stagedLifecycle]);
 
   useEffect(() => {
-    if (!mountEl || status !== "ready") return;
+    if (!mountEl || !isReaderFullyReady(readiness)) return;
     const generation = engineGenerationRef.current;
     return observeReaderMountResize(mountEl, () => {
       void runtimeController.stabilizeReflow("resize", {
@@ -557,7 +579,7 @@ export function ReadingShell(props: ReadingShellProps) {
         reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
       }).catch((err) => reportOperationError(err, "Reader resize failed.", generation, "reflow"));
     });
-  }, [mountEl, props.blob, reportOperationError, runtimeController, stagedLifecycle, status]);
+  }, [mountEl, props.blob, readiness, reportOperationError, runtimeController, stagedLifecycle]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
@@ -593,7 +615,7 @@ export function ReadingShell(props: ReadingShellProps) {
       <ReaderViewport
         ref={mountRef}
         mountWrapperRef={mountWrapperRef}
-        status={status}
+        status={toReaderViewportStatus(readiness)}
         errorMessage={errorMessage ?? undefined}
         overlay={
           <>
@@ -601,7 +623,7 @@ export function ReadingShell(props: ReadingShellProps) {
               type="button"
               className="spReaderTocButton"
               onClick={() => setTocOpen(true)}
-              disabled={status !== "ready"}
+              disabled={!isReaderFullyReady(readiness)}
               aria-label="Table of Contents"
               title="Table of Contents"
             >
@@ -621,7 +643,7 @@ export function ReadingShell(props: ReadingShellProps) {
             {props.settings && props.onSettingsChange ? (
               <ReaderDisplaySettingsMenu
                 open={settingsOpen}
-                disabled={status !== "ready"}
+                disabled={!isReaderFullyReady(readiness)}
                 settings={props.settings}
                 onOpen={() => setSettingsOpen(true)}
                 onClose={() => setSettingsOpen(false)}
@@ -633,7 +655,7 @@ export function ReadingShell(props: ReadingShellProps) {
               type="button"
               className="spReaderPageNav spReaderPageNavPrev"
               onClick={goPrev}
-              disabled={status !== "ready"}
+              disabled={!isReaderFullyReady(readiness)}
               aria-label="Previous page"
               title="Previous page"
             >
@@ -643,7 +665,7 @@ export function ReadingShell(props: ReadingShellProps) {
               type="button"
               className="spReaderPageNav spReaderPageNavNext"
               onClick={goNext}
-              disabled={status !== "ready"}
+              disabled={!isReaderFullyReady(readiness)}
               aria-label="Next page"
               title="Next page"
             >
