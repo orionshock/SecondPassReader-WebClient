@@ -13,6 +13,11 @@ export type ReaderImportCycleMatch<T> = {
   hasMatched: true;
 };
 
+export type ReaderImportCandidatePosition = {
+  candidateIndex: number;
+  candidateCount: number;
+};
+
 export function getNextImportCycleMatch<T>(
   state: ReaderImportCycleState,
   resultsByAttempt: T[][],
@@ -45,6 +50,21 @@ export function getNextImportCycleMatch<T>(
   }
 
   return null;
+}
+
+export function getImportCycleCandidatePosition<T>(
+  match: Pick<ReaderImportCycleMatch<T>, "attemptIndex" | "resultIndex">,
+  resultsByAttempt: T[][],
+): ReaderImportCandidatePosition | null {
+  const candidateCount = resultsByAttempt.reduce((total, results) => total + results.length, 0);
+  if (candidateCount <= 1) return null;
+  const previousCount = resultsByAttempt
+    .slice(0, match.attemptIndex)
+    .reduce((total, results) => total + results.length, 0);
+  return {
+    candidateIndex: previousCount + match.resultIndex + 1,
+    candidateCount,
+  };
 }
 
 function clampIndex(index: number, length: number): number {

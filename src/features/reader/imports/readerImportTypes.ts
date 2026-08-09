@@ -15,6 +15,8 @@ export type ReaderImportRow = {
   attemptCursor?: number;
   resultCursor?: number;
   hasMatched?: boolean;
+  candidateIndex?: number;
+  candidateCount?: number;
 };
 
 export type ReaderImportJob = {

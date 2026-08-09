@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, hasOtherStagedRows, resetOtherStagedRowsForActivation } from "../features/reader/imports/readerImportJobState";
+import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, hasOtherStagedRows, resetOtherStagedRowsForActivation, setReaderImportRowStatus } from "../features/reader/imports/readerImportJobState";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
 
 describe("reader import job state", () => {
@@ -47,6 +47,20 @@ describe("reader import job state", () => {
     const result = acceptSuggestedBookmarkRow(rows, { jobId: "job-1", rowId: "bookmark", cfi: "epubcfi(/6/2)" });
     expect(result.map((item) => [item.id, item.status])).toEqual([["bookmark", "accepted"], ["other", "pending"]]);
   });
+
+  it.each(["pending", "searching", "accepted", "skipped", "not-found"] as const)(
+    "clears candidate metadata when a row becomes %s",
+    (status) => {
+      const result = setReaderImportRowStatus(row({
+        status: "staged",
+        candidateIndex: 3,
+        candidateCount: 25,
+      }), status);
+
+      expect(result).not.toHaveProperty("candidateIndex");
+      expect(result).not.toHaveProperty("candidateCount");
+    },
+  );
 });
 
 function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {

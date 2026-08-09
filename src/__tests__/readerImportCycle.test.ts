@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getNextImportCycleMatch } from "../features/reader/imports/readerImportCycle";
+import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "../features/reader/imports/readerImportCycle";
 
 describe("reader import cycle state", () => {
   it("uses the first available result on first activation", () => {
@@ -35,5 +35,16 @@ describe("reader import cycle state", () => {
 
   it("returns null when no attempt has any result", () => {
     expect(getNextImportCycleMatch({}, [[], []])).toBeNull();
+  });
+
+  it("reports the current position across the final cycleable result lists", () => {
+    expect(getImportCycleCandidatePosition(
+      { attemptIndex: 1, resultIndex: 1 },
+      [["a"], ["b", "c"], ["d"]],
+    )).toEqual({ candidateIndex: 3, candidateCount: 4 });
+  });
+
+  it("omits position metadata for a single candidate", () => {
+    expect(getImportCycleCandidatePosition({ attemptIndex: 0, resultIndex: 0 }, [["a"]])).toBeNull();
   });
 });

@@ -45,6 +45,58 @@ describe("reader import activation orchestration", () => {
     expect(order).toEqual(["display-complete", "stage"]);
   });
 
+  it("stores the staged position for multiple cycleable candidates", async () => {
+    const results = [
+      searchResult("first-cfi", "First match"),
+      searchResult("second-cfi", "Second match"),
+      searchResult("third-cfi", "Third match"),
+    ];
+    const harness = createHarness(row({ quoteText: "Found quote" }), { searchBook: async () => results });
+
+    await harness.activate("row-1");
+
+    expect(harness.setRowActivationState).toHaveBeenLastCalledWith("row-1", "staged", expect.objectContaining({
+      candidateIndex: 1,
+      candidateCount: 3,
+    }));
+  });
+
+  it("updates the staged position when cycling to another candidate", async () => {
+    const results = [
+      searchResult("first-cfi", "First match"),
+      searchResult("second-cfi", "Second match"),
+      searchResult("third-cfi", "Third match"),
+    ];
+    const harness = createHarness(row({
+      status: "staged",
+      quoteText: "Found quote",
+      attemptCursor: 0,
+      resultCursor: 2,
+      hasMatched: true,
+      candidateIndex: 2,
+      candidateCount: 3,
+    }), { searchBook: async () => results });
+
+    await harness.activate("row-1");
+
+    expect(harness.setRowActivationState).toHaveBeenLastCalledWith("row-1", "staged", expect.objectContaining({
+      candidateIndex: 3,
+      candidateCount: 3,
+    }));
+  });
+
+  it("does not store candidate position for a single match", async () => {
+    const harness = createHarness(row({ quoteText: "Found quote" }), {
+      searchBook: async () => [searchResult("only-cfi", "Only match")],
+    });
+
+    await harness.activate("row-1");
+
+    const activation = harness.setRowActivationState.mock.calls.at(-1)?.[2];
+    expect(activation).not.toHaveProperty("candidateIndex");
+    expect(activation).not.toHaveProperty("candidateCount");
+  });
+
   it("falls through from failed CFI staging to text search in one activation", async () => {
     const searchBook = vi.fn<ReaderSearchBookHandle>().mockResolvedValue([searchResult("fallback-cfi", "Fallback text")]);
     const harness = createHarness(row({

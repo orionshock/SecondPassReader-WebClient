@@ -10,7 +10,7 @@ import {
   getNextReaderImportAttempt,
   normalizeReaderImportAttemptCursor,
 } from "./readerImportAttempts";
-import { getNextImportCycleMatch } from "./readerImportCycle";
+import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatches } from "./readerImportSearch";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
@@ -36,7 +36,13 @@ export function useReaderImportActivation({
   stagedSelectionHandle: StagedSelectionHandle | null;
   selectRow: (rowId: string) => void;
   setRowStatus: (rowId: string, status: ReaderImportRowStatus) => void;
-  setRowActivationState: (rowId: string, status: ReaderImportRowStatus, cycle?: { attemptCursor?: number; resultCursor?: number; hasMatched?: boolean }) => void;
+  setRowActivationState: (rowId: string, status: ReaderImportRowStatus, cycle?: {
+    attemptCursor?: number;
+    resultCursor?: number;
+    hasMatched?: boolean;
+    candidateIndex?: number;
+    candidateCount?: number;
+  }) => void;
   setDrawerOpen: (open: boolean) => void;
   clearTemporaryHighlight: () => void;
   onBookmarkSuggested: (suggestion: { jobId: string; rowId: string; cfi: string }) => void;
@@ -247,6 +253,7 @@ export function useReaderImportActivation({
       }
 
       const match = cycle.result;
+      const candidatePosition = getImportCycleCandidatePosition(cycle, resultsByAttempt);
       debugReaderImport("activation staging match", {
         rowId,
         cycle: {
@@ -279,6 +286,7 @@ export function useReaderImportActivation({
           attemptCursor: cycle.nextAttemptCursor,
           resultCursor: cycle.nextResultCursor,
           hasMatched: true,
+          ...candidatePosition ?? {},
         });
       } catch {
         debugReaderImport("activation staging failed", {

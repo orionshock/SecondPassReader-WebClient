@@ -17,6 +17,7 @@ export function ReaderImportRowItem({
   const colorVars = toAnnotationCssVars(row.color ?? "yellow");
   const quoteText = row.quoteText?.trim() ?? "";
   const cfiHint = row.cfiHint?.trim() ?? "";
+  const candidateLabel = getCandidateLabel(row);
 
   return (
     <article
@@ -27,7 +28,9 @@ export function ReaderImportRowItem({
         <span className="spReaderImportRowMeta" aria-current={selected ? "true" : undefined}>
           <span>#{row.index}</span>
           {row.kind === "bookmark" ? <span>Bookmark</span> : null}
-          <span className={`spReaderImportStatus spReaderImportStatus-${row.status}`}>{statusLabel(row.status)}</span>
+          <span className={`spReaderImportStatus spReaderImportStatus-${row.status}`}>
+            {statusLabel(row.status)}{candidateLabel ? ` - ${candidateLabel}` : ""}
+          </span>
         </span>
         <div className="spReaderImportRowActions">
           {row.status === "accepted" ? null : row.status === "skipped" ? (
@@ -69,6 +72,14 @@ export function ReaderImportRowItem({
       </div>
     </article>
   );
+}
+
+function getCandidateLabel(row: ReaderImportRow): string | null {
+  if (row.status !== "staged") return null;
+  const index = row.candidateIndex;
+  const count = row.candidateCount;
+  if (!Number.isInteger(index) || !Number.isInteger(count) || !index || !count || count <= 1 || index > count) return null;
+  return `Match ${index} of ${count}`;
 }
 
 function statusLabel(status: ReaderImportRow["status"]): string {

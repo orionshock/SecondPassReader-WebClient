@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportFormat } from "./readerImportFormats";
-import { acceptSuggestedBookmarkRow, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation } from "./readerImportJobState";
-import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
+import { acceptSuggestedBookmarkRow, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, setReaderImportRowStatus } from "./readerImportJobState";
+import type { ReaderImportJob, ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
   const [job, setJob] = useState<ReaderImportJob | null>(null);
@@ -20,20 +20,20 @@ export function useReaderImportJob() {
   const startGlaspCsvImport = useCallback((file: File) => startImport("glasp-csv", file), [startImport]);
 
   const setRowStatus = useCallback((rowId: string, status: ReaderImportRowStatus) => {
-    setJob((prev) => prev ? { ...prev, rows: prev.rows.map((row) => row.id === rowId ? { ...row, status } : row) } : prev);
+    setJob((prev) => prev ? { ...prev, rows: prev.rows.map((row) => row.id === rowId ? setReaderImportRowStatus(row, status) : row) } : prev);
   }, []);
 
-  const setRowActivationState = useCallback((rowId: string, status: ReaderImportRowStatus, cycle?: { attemptCursor?: number; resultCursor?: number; hasMatched?: boolean }) => {
+  const setRowActivationState = useCallback((rowId: string, status: ReaderImportRowStatus, cycle?: Pick<ReaderImportRow, "attemptCursor" | "resultCursor" | "hasMatched" | "candidateIndex" | "candidateCount">) => {
     setJob((prev) => prev ? {
       ...prev,
-      rows: prev.rows.map((row) => row.id === rowId ? { ...row, status, ...cycle } : row),
+      rows: prev.rows.map((row) => row.id === rowId ? setReaderImportRowStatus(row, status, cycle) : row),
     } : prev);
   }, []);
 
   const setSourcedRowStatus = useCallback((jobId: string, rowId: string, status: ReaderImportRowStatus) => {
     setJob((prev) => {
       if (!prev || prev.id !== jobId) return prev;
-      return { ...prev, rows: prev.rows.map((row) => row.id === rowId ? { ...row, status } : row) };
+      return { ...prev, rows: prev.rows.map((row) => row.id === rowId ? setReaderImportRowStatus(row, status) : row) };
     });
   }, []);
 
