@@ -19,6 +19,29 @@ describe("visible CFI range anchor", () => {
     expect(chooseVisibleRangeRect([], bounding, { width: 300, height: 200 })).toBe(bounding);
   });
 
+  it("rejects an offscreen column rect and chooses a later rect inside the reader mount", () => {
+    const offscreen = rect({ left: 620, top: 30, width: 80, height: 14 });
+    const visible = rect({ left: 120, top: 40, width: 100, height: 14 });
+
+    expect(chooseVisibleRangeRect(
+      [offscreen, visible],
+      rect({ left: 120, top: 30, width: 580, height: 24 }),
+      { width: 800, height: 400 },
+      { left: 0, top: 0, right: 500, bottom: 400 },
+    )).toBe(visible);
+  });
+
+  it("returns null when neither client nor bounding geometry intersects the reader mount", () => {
+    const offscreen = rect({ left: 620, top: 30, width: 80, height: 14 });
+
+    expect(chooseVisibleRangeRect(
+      [offscreen],
+      offscreen,
+      { width: 800, height: 400 },
+      { left: 0, top: 0, right: 500, bottom: 400 },
+    )).toBeNull();
+  });
+
   it("adds the iframe viewport offset", () => {
     const doc = {
       defaultView: {
@@ -34,6 +57,27 @@ describe("visible CFI range anchor", () => {
     } as unknown as Range;
 
     expect(getVisibleCfiRangeAnchor(range)).toEqual({ x: 160, y: 230 });
+  });
+
+  it("converts outer reader mount bounds before selecting iframe-local geometry", () => {
+    const doc = {
+      defaultView: {
+        innerWidth: 900,
+        innerHeight: 400,
+        frameElement: { getBoundingClientRect: () => rect({ left: 100, top: 200, width: 900, height: 400 }) },
+      },
+    };
+    const range = {
+      startContainer: { ownerDocument: doc },
+      getClientRects: () => [
+        rect({ left: 700, top: 30, width: 80, height: 14 }),
+        rect({ left: 120, top: 40, width: 100, height: 14 }),
+      ],
+      getBoundingClientRect: () => rect({ left: 120, top: 30, width: 660, height: 24 }),
+    } as unknown as Range;
+    const readerMount = rect({ left: 100, top: 200, width: 500, height: 400 });
+
+    expect(getVisibleCfiRangeAnchor(range, readerMount)).toEqual({ x: 270, y: 240 });
   });
 
   it("returns null when range geometry cannot be resolved", () => {

@@ -356,7 +356,9 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       if (destroyed || !trimmed) return null;
       try {
         const range = rendition.getRange(trimmed);
-        return range ? getVisibleCfiRangeAnchor(range) : null;
+        return range
+          ? getVisibleCfiRangeAnchor(range, init.mountEl.getBoundingClientRect())
+          : null;
       } catch {
         return null;
       }

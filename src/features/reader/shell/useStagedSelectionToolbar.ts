@@ -201,12 +201,25 @@ export function useStagedSelectionToolbar(args: {
       return;
     }
     toolbarAnchorRef.current = anchor ?? undefined;
-    setToolbarPos(getToolbarPosForAnchor(anchor ?? undefined, toolbarFallbackRef.current ?? getFallbackToolbarPos()));
+    const position = getToolbarPosForAnchor(
+      anchor ?? undefined,
+      toolbarFallbackRef.current ?? getFallbackToolbarPos(),
+    );
+    setToolbarPos(position);
+    const wrapperBounds = args.mountWrapperRef.current?.getBoundingClientRect();
     debugStagedSelection("toolbar reanchor complete", {
       request,
       measuredAnchor: Boolean(anchor),
+      anchorX: anchor?.x,
+      anchorY: anchor?.y,
+      toolbarLeft: position?.left,
+      toolbarTop: position?.top,
+      wrapperLeft: wrapperBounds?.left,
+      wrapperTop: wrapperBounds?.top,
+      wrapperWidth: wrapperBounds?.width,
+      wrapperHeight: wrapperBounds?.height,
     });
-  }, [args.engineRef, getFallbackToolbarPos, getToolbarPosForAnchor]);
+  }, [args.engineRef, args.mountWrapperRef, getFallbackToolbarPos, getToolbarPosForAnchor]);
 
   const stageSelectionFromCfiRange = useCallback(
     async (input: ProgrammaticStagedSelectionInput) => {
