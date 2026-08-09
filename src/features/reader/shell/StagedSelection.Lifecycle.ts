@@ -4,6 +4,11 @@ import {
   previewStagedSelectionCfi,
 } from "./StagedSelectionDebug.Diagnostics";
 
+export type StagedSelectionRelocationResult = {
+  action: "preserved" | "canceled" | "ignored";
+  shouldReanchor: boolean;
+};
+
 export class StagedSelectionLifecycle {
   private activeNavigationCount = 0;
   private protectedNavigationDepth = 0;
@@ -13,6 +18,7 @@ export class StagedSelectionLifecycle {
 
   constructor(private readonly actions: {
     cancelStagedSelection: () => void;
+    hasStagedSelection: () => boolean;
     onUnrelatedNavigation: () => void;
   }) {}
 
@@ -79,27 +85,46 @@ export class StagedSelectionLifecycle {
     }
   }
 
-  handleLocationChanged(cfi?: string): void {
+  handleLocationChanged(cfi?: string): StagedSelectionRelocationResult {
     if (this.activeNavigationCount > 0) {
+      const shouldReanchor = this.protectedNavigationDepth > 0 && this.actions.hasStagedSelection();
       debugStagedSelection("relocation preserved during active navigation", {
         cfiPreview: previewStagedSelectionCfi(cfi),
         activeNavigationCount: this.activeNavigationCount,
         navigationEpoch: this.navigationEpoch,
+        shouldReanchor,
       });
-      return;
+      if (shouldReanchor) this.logRelocationReanchorRequest(cfi, "active-protected-operation");
+      return {
+        action: this.protectedNavigationDepth > 0 ? "preserved" : "ignored",
+        shouldReanchor,
+      };
     }
     if (this.protectedOperationEpoch !== null) {
+      const shouldReanchor = this.actions.hasStagedSelection();
       debugStagedSelection("relocation preserved by protected operation", {
         cfiPreview: previewStagedSelectionCfi(cfi),
         protectedEpoch: this.protectedOperationEpoch,
+        shouldReanchor,
       });
-      return;
+      if (shouldReanchor) this.logRelocationReanchorRequest(cfi, "trailing-protected-operation");
+      return { action: "preserved", shouldReanchor };
     }
     debugStagedSelection("unprotected relocation cancels staging", {
       cfiPreview: previewStagedSelectionCfi(cfi),
       navigationEpoch: this.navigationEpoch,
     });
     this.cancelForUnrelatedNavigation("unprotected-relocation");
+    return { action: "canceled", shouldReanchor: false };
+  }
+
+  private logRelocationReanchorRequest(cfi: string | undefined, reason: string): void {
+    debugStagedSelection("protected relocation requests toolbar reanchor", {
+      cfiPreview: previewStagedSelectionCfi(cfi),
+      reason,
+      navigationEpoch: this.navigationEpoch,
+      protectedOperationEpoch: this.protectedOperationEpoch,
+    });
   }
 
   private cancelForUnrelatedNavigation(reason: string): void {

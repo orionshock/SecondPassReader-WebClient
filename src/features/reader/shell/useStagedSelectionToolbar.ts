@@ -191,12 +191,22 @@ export function useStagedSelectionToolbar(args: {
       cfiPreview: previewStagedSelectionCfi(cfiRange),
     });
     await waitForNextPaint();
-    if (request !== reanchorRequestRef.current || stagedSelectionRef.current?.cfiRange !== cfiRange) {
+    if (!isStagedToolbarReanchorRequestCurrent(
+      request,
+      reanchorRequestRef.current,
+      cfiRange,
+      stagedSelectionRef.current?.cfiRange,
+    )) {
       debugStagedSelection("toolbar reanchor abandoned before measurement", { request });
       return;
     }
     const anchor = await args.engineRef.current?.getVisibleCfiRangeAnchor(cfiRange) ?? null;
-    if (request !== reanchorRequestRef.current || stagedSelectionRef.current?.cfiRange !== cfiRange) {
+    if (!isStagedToolbarReanchorRequestCurrent(
+      request,
+      reanchorRequestRef.current,
+      cfiRange,
+      stagedSelectionRef.current?.cfiRange,
+    )) {
       debugStagedSelection("toolbar reanchor abandoned after measurement", { request });
       return;
     }
@@ -261,6 +271,8 @@ export function useStagedSelectionToolbar(args: {
     if (!stagedSelectionRef.current) return;
     setToolbarPos(getToolbarPosForAnchor(toolbarAnchorRef.current, toolbarFallbackRef.current));
   }, [getToolbarPosForAnchor]);
+
+  const hasStagedSelection = useCallback(() => Boolean(stagedSelectionRef.current), []);
 
   const onSelectionChanged = useCallback(
     (selection: ReaderSelection | null) => {
@@ -345,6 +357,7 @@ export function useStagedSelectionToolbar(args: {
     toolbarPos,
     onSelectionChanged,
     cancelStaged,
+    hasStagedSelection,
     stageSelectionFromCfiRange,
     reanchorStagedToolbar,
     onToolbarSizeChange,
@@ -353,6 +366,15 @@ export function useStagedSelectionToolbar(args: {
     commitColor,
     commitBusy: Boolean(args.commitBusy),
   };
+}
+
+export function isStagedToolbarReanchorRequestCurrent(
+  request: number,
+  currentRequest: number,
+  requestedCfiRange: string,
+  currentCfiRange: string | undefined,
+): boolean {
+  return request === currentRequest && requestedCfiRange === currentCfiRange;
 }
 
 function waitForNextPaint(): Promise<void> {

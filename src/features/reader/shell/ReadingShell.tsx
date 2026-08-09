@@ -161,6 +161,7 @@ export function ReadingShell(props: ReadingShellProps) {
   if (!stagedLifecycleRef.current) {
     stagedLifecycleRef.current = new StagedSelectionLifecycle({
       cancelStagedSelection: cancelStaged,
+      hasStagedSelection: staged.hasStagedSelection,
       onUnrelatedNavigation: () => onUnrelatedNavigationRef.current?.(),
     });
   }
@@ -361,12 +362,13 @@ export function ReadingShell(props: ReadingShellProps) {
            onLocationChanged: (location) => {
              recordReadableViewport(generation);
              closeDurableToolbar();
-             stagedLifecycle.handleLocationChanged(location.cfi);
+             const stagedRelocation = stagedLifecycle.handleLocationChanged(location.cfi);
              onEventRef.current?.({
                type: "locationChanged",
                location,
                publishProgress: bootstrapProgressGuard.shouldPublishRelocation(generation, location.cfi),
              });
+             if (stagedRelocation.shouldReanchor) void reanchorStagedToolbarRef.current();
            },
           onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
           onLocationsReady: () => onEventRef.current?.({ type: "locationsReady" }),
