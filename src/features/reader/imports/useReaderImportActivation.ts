@@ -284,6 +284,10 @@ export function useReaderImportActivation({
             source: { kind: "import", importJobId: job.id, importRowId: row.id },
           });
         });
+        debugReaderImport("activation staged selection transaction complete", {
+          rowId,
+          cfi: verbose ? match.result.cfi : undefined,
+        });
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
         setRowActivationState(rowId, "staged", {
           attemptCursor: cycle.nextAttemptCursor,

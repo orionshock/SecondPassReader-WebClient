@@ -9,6 +9,10 @@ import type {
 } from "../domain/ReaderBridge.Types";
 import { getStagedSelectionToolbarPosition } from "./stagedSelectionToolbarPlacement";
 import type { StagedSelectionToolbarSize } from "./stagedSelectionToolbarPlacement";
+import {
+  debugStagedSelection,
+  previewStagedSelectionCfi,
+} from "./StagedSelectionDebug.Diagnostics";
 
 export type StagedSelectionToolbarPos = StagedSelectionToolbarPosition;
 
@@ -79,6 +83,13 @@ export function useStagedSelectionToolbar(args: {
 
   const clearStaged = useCallback((options?: { notifyCancel?: boolean }) => {
     const source = stagedSourceRef.current;
+    debugStagedSelection("clearing staged selection", {
+      hadSelection: Boolean(stagedSelectionRef.current),
+      sourceKind: source.kind,
+      importRowId: source.kind === "import" ? source.importRowId : undefined,
+      cfiPreview: previewStagedSelectionCfi(stagedSelectionRef.current?.cfiRange),
+      notifyCancel: Boolean(options?.notifyCancel),
+    });
     stagedSelectionRef.current = null;
     stagedSourceRef.current = { kind: "user-selection" };
     noteDraftRef.current = "";
@@ -140,6 +151,14 @@ export function useStagedSelectionToolbar(args: {
       const nextNote = options?.note?.trim() ?? "";
       const nextSource = options?.source ?? { kind: "user-selection" };
       const previousSource = stagedSourceRef.current;
+      debugStagedSelection("staging selection state", {
+        sourceKind: nextSource.kind,
+        importRowId: nextSource.kind === "import" ? nextSource.importRowId : undefined,
+        cfiPreview: previewStagedSelectionCfi(selection.cfiRange),
+        textLength: selection.text.length,
+        color: nextColor,
+        deferToolbar: Boolean(options?.deferToolbar),
+      });
       // Search flash and staged preview both render through epub-ts "highlight".
       // Clear search first so the staged mark does not collide on CFI+renderer type.
       args.engineRef.current?.setTemporarySearchHighlight(null);
@@ -167,12 +186,26 @@ export function useStagedSelectionToolbar(args: {
     if (!selection?.cfiRange) return;
     const cfiRange = selection.cfiRange;
     const request = ++reanchorRequestRef.current;
+    debugStagedSelection("toolbar reanchor start", {
+      request,
+      cfiPreview: previewStagedSelectionCfi(cfiRange),
+    });
     await waitForNextPaint();
-    if (request !== reanchorRequestRef.current || stagedSelectionRef.current?.cfiRange !== cfiRange) return;
+    if (request !== reanchorRequestRef.current || stagedSelectionRef.current?.cfiRange !== cfiRange) {
+      debugStagedSelection("toolbar reanchor abandoned before measurement", { request });
+      return;
+    }
     const anchor = await args.engineRef.current?.getVisibleCfiRangeAnchor(cfiRange) ?? null;
-    if (request !== reanchorRequestRef.current || stagedSelectionRef.current?.cfiRange !== cfiRange) return;
+    if (request !== reanchorRequestRef.current || stagedSelectionRef.current?.cfiRange !== cfiRange) {
+      debugStagedSelection("toolbar reanchor abandoned after measurement", { request });
+      return;
+    }
     toolbarAnchorRef.current = anchor ?? undefined;
     setToolbarPos(getToolbarPosForAnchor(anchor ?? undefined, toolbarFallbackRef.current ?? getFallbackToolbarPos()));
+    debugStagedSelection("toolbar reanchor complete", {
+      request,
+      measuredAnchor: Boolean(anchor),
+    });
   }, [args.engineRef, getFallbackToolbarPos, getToolbarPosForAnchor]);
 
   const stageSelectionFromCfiRange = useCallback(
@@ -196,6 +229,11 @@ export function useStagedSelectionToolbar(args: {
         ...highlightMarksRef.current,
         { id: "__staged_selection__", cfiRange, color },
       ]);
+      debugStagedSelection("staged mark paint requested", {
+        cfiPreview: previewStagedSelectionCfi(cfiRange),
+        durableMarkCount: highlightMarksRef.current.length,
+        color,
+      });
       toolbarFallbackRef.current = input.toolbarPosition ?? getFallbackToolbarPos();
       await reanchorStagedToolbar();
     },
@@ -235,6 +273,10 @@ export function useStagedSelectionToolbar(args: {
   useEffect(() => {
     const engine = args.engineRef.current;
     if (!engine) return;
+    debugStagedSelection("synchronizing highlight marks", {
+      markCount: combinedMarks.length,
+      includesStagedMark: combinedMarks.some((mark) => mark.id === "__staged_selection__"),
+    });
     engine.setHighlightMarks(combinedMarks);
   }, [args.engineRef, combinedMarks]);
 

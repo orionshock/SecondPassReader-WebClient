@@ -361,7 +361,7 @@ export function ReadingShell(props: ReadingShellProps) {
            onLocationChanged: (location) => {
              recordReadableViewport(generation);
              closeDurableToolbar();
-             stagedLifecycle.handleLocationChanged();
+             stagedLifecycle.handleLocationChanged(location.cfi);
              onEventRef.current?.({
                type: "locationChanged",
                location,
