@@ -9,9 +9,7 @@ export class StagedSelectionLifecycle {
   private protectedNavigationDepth = 0;
   private navigationEpoch = 0;
   private activeProtectedEpoch: number | null = null;
-  private pendingProtectedRelocationEpoch: number | null = null;
-  private protectedRelocationSettled = false;
-  private protectedSettledCfi: string | null = null;
+  private protectedOperationEpoch: number | null = null;
 
   constructor(private readonly actions: {
     cancelStagedSelection: () => void;
@@ -27,14 +25,14 @@ export class StagedSelectionLifecycle {
       activeNavigationCount: this.activeNavigationCount,
       protectedNavigationDepth: this.protectedNavigationDepth,
       navigationEpoch: this.navigationEpoch,
-      pendingProtectedRelocationEpoch: this.pendingProtectedRelocationEpoch,
+      protectedOperationEpoch: this.protectedOperationEpoch,
     });
 
     if (intent === "unrelated") {
       this.navigationEpoch += 1;
-      const invalidatedEpoch = this.pendingProtectedRelocationEpoch;
-      this.clearProtectedRelocationSettlement();
-      debugStagedSelection("unrelated navigation invalidated protection", {
+      const invalidatedEpoch = this.protectedOperationEpoch;
+      this.protectedOperationEpoch = null;
+      debugStagedSelection("protection invalidated by explicit navigation", {
         navigationEpoch: this.navigationEpoch,
         invalidatedEpoch,
       });
@@ -43,8 +41,8 @@ export class StagedSelectionLifecycle {
       if (this.protectedNavigationDepth === 0) {
         this.navigationEpoch += 1;
         this.activeProtectedEpoch = this.navigationEpoch;
-        this.clearProtectedRelocationSettlement();
-        debugStagedSelection("protected navigation token started", {
+        this.protectedOperationEpoch = this.activeProtectedEpoch;
+        debugStagedSelection("operation-owned relocation protection armed", {
           intent,
           protectedEpoch: this.activeProtectedEpoch,
         });
@@ -62,10 +60,8 @@ export class StagedSelectionLifecycle {
         this.protectedNavigationDepth -= 1;
         if (this.protectedNavigationDepth === 0) {
           if (protectedEpoch !== null && this.navigationEpoch === protectedEpoch) {
-            this.pendingProtectedRelocationEpoch = protectedEpoch;
-            this.protectedRelocationSettled = false;
-            this.protectedSettledCfi = null;
-            debugStagedSelection("trailing relocation protection armed", {
+            this.protectedOperationEpoch = protectedEpoch;
+            debugStagedSelection("operation-owned relocation protection retained", {
               intent,
               protectedEpoch,
             });
@@ -78,7 +74,7 @@ export class StagedSelectionLifecycle {
         activeNavigationCount: this.activeNavigationCount,
         protectedNavigationDepth: this.protectedNavigationDepth,
         navigationEpoch: this.navigationEpoch,
-        pendingProtectedRelocationEpoch: this.pendingProtectedRelocationEpoch,
+        protectedOperationEpoch: this.protectedOperationEpoch,
       });
     }
   }
@@ -92,31 +88,12 @@ export class StagedSelectionLifecycle {
       });
       return;
     }
-    if (this.pendingProtectedRelocationEpoch !== null) {
-      const protectedEpoch = this.pendingProtectedRelocationEpoch;
-      const normalizedCfi = normalizeRelocationCfi(cfi);
-      if (!this.protectedRelocationSettled) {
-        this.protectedRelocationSettled = true;
-        this.protectedSettledCfi = normalizedCfi;
-        debugStagedSelection("trailing relocation settlement established", {
-          cfiPreview: previewStagedSelectionCfi(cfi),
-          protectedEpoch,
-        });
-        return;
-      }
-      if (normalizedCfi === this.protectedSettledCfi) {
-        debugStagedSelection("equivalent trailing relocation preserved", {
-          cfiPreview: previewStagedSelectionCfi(cfi),
-          protectedEpoch,
-        });
-        return;
-      }
-      debugStagedSelection("different relocation ended protection", {
+    if (this.protectedOperationEpoch !== null) {
+      debugStagedSelection("relocation preserved by protected operation", {
         cfiPreview: previewStagedSelectionCfi(cfi),
-        protectedEpoch,
-        settledCfiPreview: previewStagedSelectionCfi(this.protectedSettledCfi),
+        protectedEpoch: this.protectedOperationEpoch,
       });
-      this.clearProtectedRelocationSettlement();
+      return;
     }
     debugStagedSelection("unprotected relocation cancels staging", {
       cfiPreview: previewStagedSelectionCfi(cfi),
@@ -130,15 +107,4 @@ export class StagedSelectionLifecycle {
     this.actions.cancelStagedSelection();
     this.actions.onUnrelatedNavigation();
   }
-
-  private clearProtectedRelocationSettlement(): void {
-    this.pendingProtectedRelocationEpoch = null;
-    this.protectedRelocationSettled = false;
-    this.protectedSettledCfi = null;
-  }
-}
-
-function normalizeRelocationCfi(value?: string): string | null {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  return normalized || null;
 }

@@ -15,7 +15,7 @@ describe("StagedSelectionLifecycle", () => {
     expect(onUnrelatedNavigation).toHaveBeenCalledOnce();
   });
 
-  it("preserves repeated same-CFI trailing relocations after import staging", async () => {
+  it("preserves different-CFI trailing relocations owned by import staging", async () => {
     const cancelStagedSelection = vi.fn();
     const onUnrelatedNavigation = vi.fn();
     const lifecycle = new StagedSelectionLifecycle({ cancelStagedSelection, onUnrelatedNavigation });
@@ -25,23 +25,23 @@ describe("StagedSelectionLifecycle", () => {
     });
     expect(cancelStagedSelection).not.toHaveBeenCalled();
 
-    lifecycle.handleLocationChanged("epubcfi(/6/20)");
+    lifecycle.handleLocationChanged("epubcfi(/6/22)");
     expect(cancelStagedSelection).not.toHaveBeenCalled();
 
-    lifecycle.handleLocationChanged("epubcfi(/6/20)");
-    lifecycle.handleLocationChanged("epubcfi(/6/20)");
+    lifecycle.handleLocationChanged("epubcfi(/6/30)");
+    lifecycle.handleLocationChanged("epubcfi(/6/44)");
     expect(cancelStagedSelection).not.toHaveBeenCalled();
     expect(onUnrelatedNavigation).not.toHaveBeenCalled();
   });
 
-  it("cancels when a relocation differs from the protected settled CFI", async () => {
+  it("explicit display navigation invalidates import protection and cancels immediately", async () => {
     const cancelStagedSelection = vi.fn();
     const onUnrelatedNavigation = vi.fn();
     const lifecycle = new StagedSelectionLifecycle({ cancelStagedSelection, onUnrelatedNavigation });
 
     await lifecycle.runNavigation("import-staging", async () => undefined);
     lifecycle.handleLocationChanged("epubcfi(/6/20)");
-    lifecycle.handleLocationChanged("epubcfi(/6/22)");
+    await lifecycle.runNavigation("unrelated", async () => undefined);
 
     expect(cancelStagedSelection).toHaveBeenCalledOnce();
     expect(onUnrelatedNavigation).toHaveBeenCalledOnce();
@@ -64,7 +64,7 @@ describe("StagedSelectionLifecycle", () => {
     expect(cancelStagedSelection).toHaveBeenCalledTimes(2);
   });
 
-  it("replaces settled relocation protection when cycling import candidates", async () => {
+  it("replaces operation-owned protection when cycling import candidates", async () => {
     const cancelStagedSelection = vi.fn();
     const lifecycle = new StagedSelectionLifecycle({
       cancelStagedSelection,
@@ -75,14 +75,14 @@ describe("StagedSelectionLifecycle", () => {
     lifecycle.handleLocationChanged("epubcfi(/6/20)");
     await lifecycle.runNavigation("import-staging", async () => undefined);
     lifecycle.handleLocationChanged("epubcfi(/6/30)");
-    lifecycle.handleLocationChanged("epubcfi(/6/30)");
+    lifecycle.handleLocationChanged("epubcfi(/6/40)");
 
     expect(cancelStagedSelection).not.toHaveBeenCalled();
     lifecycle.handleLocationChanged("epubcfi(/6/20)");
-    expect(cancelStagedSelection).toHaveBeenCalledOnce();
+    expect(cancelStagedSelection).not.toHaveBeenCalled();
   });
 
-  it("preserves staged state during layout reflow", async () => {
+  it("preserves staged state across different-CFI layout relocations", async () => {
     const cancelStagedSelection = vi.fn();
     const lifecycle = new StagedSelectionLifecycle({
       cancelStagedSelection,
@@ -94,9 +94,23 @@ describe("StagedSelectionLifecycle", () => {
     });
 
     expect(cancelStagedSelection).not.toHaveBeenCalled();
-    lifecycle.handleLocationChanged("epubcfi(/6/40)");
-    lifecycle.handleLocationChanged("epubcfi(/6/40)");
+    lifecycle.handleLocationChanged("epubcfi(/6/42)");
+    lifecycle.handleLocationChanged("epubcfi(/6/48)");
     expect(cancelStagedSelection).not.toHaveBeenCalled();
+  });
+
+  it("manual staged state preserves on layout reflow and cancels on explicit navigation", async () => {
+    const cancelStagedSelection = vi.fn();
+    const onUnrelatedNavigation = vi.fn();
+    const lifecycle = new StagedSelectionLifecycle({ cancelStagedSelection, onUnrelatedNavigation });
+
+    await lifecycle.runNavigation("layout-reflow", async () => undefined);
+    lifecycle.handleLocationChanged("epubcfi(/6/50)");
+    expect(cancelStagedSelection).not.toHaveBeenCalled();
+
+    await lifecycle.runNavigation("unrelated", async () => undefined);
+    expect(cancelStagedSelection).toHaveBeenCalledOnce();
+    expect(onUnrelatedNavigation).toHaveBeenCalledOnce();
   });
 
   it("still cancels an ordinary staged selection on an unprotected relocation", () => {
