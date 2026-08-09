@@ -1,16 +1,20 @@
+import { MaterialIcon } from "../../../components/MaterialIcon";
 import type { ReaderImportRow } from "./readerImportTypes";
 import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
+import { isReaderImportRowTerminal } from "./readerImportJobState";
 
 export function ReaderImportRowItem({
   row,
   selected,
   onActivate,
+  onMarkManuallyCompleted,
   onSkip,
   onUnskip,
 }: {
   row: ReaderImportRow;
   selected: boolean;
   onActivate: () => void;
+  onMarkManuallyCompleted: () => void;
   onSkip: () => void;
   onUnskip: () => void;
 }) {
@@ -33,12 +37,27 @@ export function ReaderImportRowItem({
           </span>
         </span>
         <div className="spReaderImportRowActions">
-          {row.status === "accepted" ? null : row.status === "skipped" ? (
+          {row.status === "accepted" || row.status === "manually-completed" ? null : row.status === "skipped" ? (
             <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onUnskip}>Unskip</button>
           ) : (
             <>
               {row.status === "searching" ? <span className="muted spReaderImportRowActionText">Searching...</span> : null}
-              <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onSkip}>Skip</button>
+              {row.status === "staged" ? (
+                <button
+                  type="button"
+                  className="button buttonCompact spReaderImportRowActionButton"
+                  onClick={onMarkManuallyCompleted}
+                  aria-label="Mark manually completed"
+                  title="Mark manually completed"
+                >
+                  <MaterialIcon name="task_alt" className="spReaderImportRowActionIcon" />
+                  <span>Manual</span>
+                </button>
+              ) : null}
+              <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onSkip}>
+                <MaterialIcon name="block" className="spReaderImportRowActionIcon" />
+                <span>Skip</span>
+              </button>
             </>
           )}
         </div>
@@ -49,7 +68,7 @@ export function ReaderImportRowItem({
             type="button"
             className={`spReaderImportQuoteButton${quoteText ? "" : " spReaderImportQuoteButtonEmpty"}`}
             onClick={onActivate}
-            disabled={row.status === "accepted" || row.status === "skipped" || row.status === "searching"}
+            disabled={isReaderImportRowTerminal(row.status) || row.status === "searching"}
           >
             {quoteText ? (
               <span className="spAnnotationQuote spReaderImportQuote">{row.quoteText}</span>
@@ -64,7 +83,7 @@ export function ReaderImportRowItem({
             type="button"
             className={`spReaderImportLocationButton${cfiHint ? "" : " spReaderImportLocationButtonEmpty"}`}
             onClick={onActivate}
-            disabled={row.status === "accepted" || row.status === "skipped" || row.status === "searching"}
+            disabled={isReaderImportRowTerminal(row.status) || row.status === "searching"}
           >
             <span>{cfiHint ? `Location hint: ${cfiHint}` : "No location hint"}</span>
           </button>
@@ -84,6 +103,7 @@ function getCandidateLabel(row: ReaderImportRow): string | null {
 
 function statusLabel(status: ReaderImportRow["status"]): string {
   if (status === "not-found") return "Not found";
+  if (status === "manually-completed") return "Manually completed";
   if (status === "staged") return "Staged";
   return status[0].toUpperCase() + status.slice(1);
 }

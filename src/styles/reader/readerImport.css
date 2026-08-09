@@ -203,6 +203,14 @@
   font-weight: 700;
 }
 
+.spReaderImportStatus-manually-completed {
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-muted);
+}
+
 .spReaderImportQuote {
   display: block;
   width: auto;
@@ -263,9 +271,27 @@
   flex: 0 0 auto;
 }
 
-.spReaderImportRowActionButton {
+.spReaderImportRowActionButton.buttonCompact {
+  box-sizing: border-box;
+  height: 28px;
   min-height: 28px;
-  padding: 4px 8px;
+  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.spReaderImportRowActionIcon.material-symbols-outlined {
+  display: inline-flex;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 16px;
 }
 
 .spReaderImportRowActionText {

@@ -20,6 +20,21 @@ describe("reader import row item", () => {
     const markup = renderRow({ status: "staged", candidateIndex: 1, candidateCount: 1 });
     expect(markup).not.toContain("Match 1 of 1");
   });
+
+  it("renders manual completion as a terminal status without retry actions", () => {
+    const markup = renderRow({ status: "manually-completed" });
+    expect(markup).toContain("Manually completed");
+    expect(markup).not.toContain("Mark manually completed");
+    expect(markup).not.toContain(">Skip<");
+  });
+
+  it("offers a clearly labelled manual completion action only for staged rows", () => {
+    const stagedMarkup = renderRow({ status: "staged" });
+    const pendingMarkup = renderRow({ status: "pending" });
+    expect(stagedMarkup).toContain('aria-label="Mark manually completed"');
+    expect(stagedMarkup).toContain("task_alt");
+    expect(pendingMarkup).not.toContain("Mark manually completed");
+  });
 });
 
 function renderRow(overrides: Partial<ReaderImportRow>): string {
@@ -35,6 +50,7 @@ function renderRow(overrides: Partial<ReaderImportRow>): string {
     row,
     selected: false,
     onActivate: vi.fn(),
+    onMarkManuallyCompleted: vi.fn(),
     onSkip: vi.fn(),
     onUnskip: vi.fn(),
   }));

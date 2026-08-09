@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, hasOtherStagedRows, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus } from "../features/reader/imports/readerImportJobState";
+import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, getReaderImportJobCounts, hasOtherStagedRows, isReaderImportRowResolved, isReaderImportRowTerminal, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus } from "../features/reader/imports/readerImportJobState";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
 
 describe("reader import job state", () => {
@@ -66,7 +66,7 @@ describe("reader import job state", () => {
     expect(result.map((item) => [item.id, item.status])).toEqual([["bookmark", "accepted"], ["other", "pending"]]);
   });
 
-  it.each(["pending", "searching", "accepted", "skipped", "not-found"] as const)(
+  it.each(["pending", "searching", "accepted", "skipped", "not-found", "manually-completed"] as const)(
     "clears candidate metadata when a row becomes %s",
     (status) => {
       const result = setReaderImportRowStatus(row({
@@ -79,6 +79,30 @@ describe("reader import job state", () => {
       expect(result).not.toHaveProperty("candidateCount");
     },
   );
+
+  it("treats manual completion as terminal and not-found as resolved but retryable", () => {
+    expect(isReaderImportRowTerminal("manually-completed")).toBe(true);
+    expect(isReaderImportRowResolved("manually-completed")).toBe(true);
+    expect(isReaderImportRowTerminal("not-found")).toBe(false);
+    expect(isReaderImportRowResolved("not-found")).toBe(true);
+  });
+
+  it("counts manually completed rows as resolved without counting them as pending or accepted", () => {
+    const counts = getReaderImportJobCounts([
+      row({ id: "pending", status: "pending" }),
+      row({ id: "accepted", status: "accepted" }),
+      row({ id: "manual-highlight", status: "manually-completed" }),
+      row({ id: "manual-bookmark", kind: "bookmark", status: "manually-completed" }),
+    ]);
+
+    expect(counts).toEqual({
+      pending: 1,
+      accepted: 1,
+      skipped: 0,
+      notFound: 0,
+      manuallyCompleted: 2,
+    });
+  });
 });
 
 function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {

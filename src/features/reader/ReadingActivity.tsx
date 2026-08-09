@@ -14,6 +14,7 @@ import { buildReturnLabel, saveReaderReturnTarget } from "./readerReturnTarget";
 import { ReaderActivityDialogs } from "./activity/ReaderActivityDialogs";
 import { ReaderActivityHeader } from "./activity/ReaderActivityHeader";
 import { ReaderActivitySidePanels } from "./activity/ReaderActivitySidePanels";
+import { completeReaderImportRowManually } from "./imports/ReaderImportManualCompletion.Actions";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/readerActivityTypes";
 import {
   canMutateReaderBookmark,
@@ -213,6 +214,15 @@ function ReaderActivityContent({
     readerImport.skipRow(rowId);
   };
 
+  const markImportRowManuallyCompleted = (rowId: string) => {
+    completeReaderImportRowManually({
+      row: readerImport.job?.rows.find((item) => item.id === rowId),
+      cancelStagedSelection: () => readerState.stagedSelection.handle?.cancelStagedSelection(),
+      clearTemporaryHighlight: readerState.search.clearTemporaryHighlight,
+      markRowManuallyCompleted: readerImport.markRowManuallyCompleted,
+    });
+  };
+
   useEffect(() => {
     if (!initialSearchQuery?.trim()) return;
     setSearchOpen(true);
@@ -364,6 +374,7 @@ function ReaderActivityContent({
         onSelectImportRow={(rowId) => {
           void activateImportRow(rowId);
         }}
+        onMarkImportRowManuallyCompleted={markImportRowManuallyCompleted}
         onSkipImportRow={skipImportRow}
       />
 

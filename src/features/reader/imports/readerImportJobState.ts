@@ -1,4 +1,12 @@
-import type { ReaderImportRow } from "./readerImportTypes";
+import type { ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
+
+export type ReaderImportJobCounts = {
+  pending: number;
+  accepted: number;
+  skipped: number;
+  notFound: number;
+  manuallyCompleted: number;
+};
 
 export type ReaderImportBookmarkSuggestion = {
   jobId: string;
@@ -38,6 +46,32 @@ export function setReaderImportRowStatus(
   return status === "staged"
     ? { ...rest, status, ...activation }
     : { ...rest, status, ...withoutCandidatePosition(activation) };
+}
+
+export function isReaderImportRowTerminal(status: ReaderImportRowStatus): boolean {
+  return status === "accepted" || status === "skipped" || status === "manually-completed";
+}
+
+export function isReaderImportRowResolved(status: ReaderImportRowStatus): boolean {
+  return isReaderImportRowTerminal(status) || status === "not-found";
+}
+
+export function getReaderImportJobCounts(rows: ReaderImportRow[]): ReaderImportJobCounts {
+  const counts: ReaderImportJobCounts = {
+    pending: 0,
+    accepted: 0,
+    skipped: 0,
+    notFound: 0,
+    manuallyCompleted: 0,
+  };
+  for (const row of rows) {
+    if (row.status === "accepted") counts.accepted += 1;
+    else if (row.status === "skipped") counts.skipped += 1;
+    else if (row.status === "not-found") counts.notFound += 1;
+    else if (row.status === "manually-completed") counts.manuallyCompleted += 1;
+    else counts.pending += 1;
+  }
+  return counts;
 }
 
 function withoutCandidatePosition(

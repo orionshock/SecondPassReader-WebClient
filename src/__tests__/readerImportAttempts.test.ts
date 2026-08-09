@@ -92,9 +92,10 @@ describe("reader import attempts", () => {
     });
   });
 
-  it("does not activate accepted, skipped, or searching rows", () => {
+  it("does not activate terminal or searching rows", () => {
     expect(getNextReaderImportAttempt(row({ status: "accepted" }))).toBeNull();
     expect(getNextReaderImportAttempt(row({ status: "skipped" }))).toBeNull();
+    expect(getNextReaderImportAttempt(row({ status: "manually-completed" }))).toBeNull();
     expect(getNextReaderImportAttempt(row({ status: "searching" }))).toBeNull();
   });
 

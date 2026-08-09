@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
+import type { ReaderImportJobCounts } from "./readerImportJobState";
 import type { ReaderImportJob } from "./readerImportTypes";
 import { ReaderImportRowList } from "./ReaderImportRowList";
 
@@ -10,15 +11,17 @@ export function ReaderImportDrawer({
   onClose,
   onClear,
   onActivateRow,
+  onMarkManuallyCompleted,
   onSkipRow,
   onUnskipRow,
 }: {
   open: boolean;
   job: ReaderImportJob | null;
-  counts: { pending: number; accepted: number; skipped: number; notFound: number };
+  counts: ReaderImportJobCounts;
   onClose: () => void;
   onClear: () => void;
   onActivateRow: (rowId: string) => void;
+  onMarkManuallyCompleted: (rowId: string) => void;
   onSkipRow: (rowId: string) => void;
   onUnskipRow: (rowId: string) => void;
 }) {
@@ -41,6 +44,7 @@ export function ReaderImportDrawer({
     `${counts.accepted} accepted`,
     `${counts.skipped} skipped`,
     `${counts.notFound} not found`,
+    `${counts.manuallyCompleted} manually completed`,
   ].join(" / ");
 
   return (
@@ -71,6 +75,7 @@ export function ReaderImportDrawer({
       <ReaderImportRowList
         job={job}
         onActivateRow={onActivateRow}
+        onMarkManuallyCompleted={onMarkManuallyCompleted}
         onSkipRow={onSkipRow}
         onUnskipRow={onUnskipRow}
       />

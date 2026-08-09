@@ -1,4 +1,11 @@
-export type ReaderImportRowStatus = "pending" | "searching" | "staged" | "accepted" | "skipped" | "not-found";
+export type ReaderImportRowStatus =
+  | "pending"
+  | "searching"
+  | "staged"
+  | "accepted"
+  | "skipped"
+  | "not-found"
+  | "manually-completed";
 export type ReaderImportRowKind = "highlight" | "bookmark";
 
 export type ReaderImportRow = {

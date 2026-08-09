@@ -18,6 +18,7 @@ export function ReaderActivitySidePanels({
   onClearImport,
   onCloseImport,
   onSelectImportRow,
+  onMarkImportRowManuallyCompleted,
   onSkipImportRow,
 }: {
   importDrawerInLayout: boolean;
@@ -32,6 +33,7 @@ export function ReaderActivitySidePanels({
   onClearImport: () => void;
   onCloseImport: () => void;
   onSelectImportRow: (rowId: string) => void;
+  onMarkImportRowManuallyCompleted: (rowId: string) => void;
   onSkipImportRow: (rowId: string) => void;
 }) {
   return (
@@ -67,6 +69,7 @@ export function ReaderActivitySidePanels({
         onClose={onCloseImport}
         onClear={onClearImport}
         onActivateRow={onSelectImportRow}
+        onMarkManuallyCompleted={onMarkImportRowManuallyCompleted}
         onSkipRow={onSkipImportRow}
         onUnskipRow={readerImport.unskipRow}
       />

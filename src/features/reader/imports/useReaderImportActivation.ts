@@ -10,7 +10,7 @@ import {
   normalizeReaderImportAttemptCursor,
 } from "./readerImportAttempts";
 import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "./readerImportCycle";
-import { hasOtherStagedRows } from "./readerImportJobState";
+import { hasOtherStagedRows, isReaderImportRowTerminal } from "./readerImportJobState";
 import { findImportRowSearchMatchesByAttempt } from "./readerImportSearch";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 import { stageReaderImportHighlightCfi } from "./readerImportHighlightCfi";
@@ -53,7 +53,7 @@ export function useReaderImportActivation({
 
   return useCallback(async (rowId: string) => {
     const row = job?.rows.find((r) => r.id === rowId);
-    if (!job || !row || row.status === "accepted" || row.status === "skipped" || row.status === "searching") {
+    if (!job || !row || isReaderImportRowTerminal(row.status) || row.status === "searching") {
       debugReaderImport("activation skipped", {
         rowId,
         hasJob: Boolean(job),

@@ -1,5 +1,6 @@
 import type { ReaderImportRow } from "./readerImportTypes";
 import { isReaderCfiRange } from "../engine/ReaderCfiClassifier.Engine";
+import { isReaderImportRowTerminal } from "./readerImportJobState";
 
 export type ReaderImportAttempt =
   | { kind: "cfi-range"; cfiRange: string }
@@ -37,7 +38,7 @@ export function buildReaderImportAttemptQueue(row: ReaderImportRow): ReaderImpor
 }
 
 export function getNextReaderImportAttempt(row: ReaderImportRow): { attempt: ReaderImportAttempt; cursor: number; resultCursor: number } | null {
-  if (row.status === "accepted" || row.status === "skipped" || row.status === "searching") return null;
+  if (isReaderImportRowTerminal(row.status) || row.status === "searching") return null;
   const attempts = buildReaderImportAttemptQueue(row);
   if (attempts.length === 0) return null;
   const state = normalizeReaderImportAttemptCursor(row, attempts.length);
