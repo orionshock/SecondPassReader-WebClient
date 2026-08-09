@@ -64,6 +64,7 @@ export class ReadingProgressAutosaveController {
   private scheduledPayloadKey: string | null = null;
   private inFlightGeneration: number | null = null;
   private lastSavedPayloadKey: string | null = null;
+  private seededGeneration: number | null = null;
   private activeDrain: ActiveDrain | null = null;
   private notifyStateChanges = true;
 
@@ -111,7 +112,31 @@ export class ReadingProgressAutosaveController {
     this.generation += 1;
     this.clearTimer();
     this.inFlightGeneration = null;
+    this.seededGeneration = null;
     this.activeDrain = null;
+  }
+
+  seedSavedProgress(sessionId: string, progress: MarginaliaProgress): void {
+    if (sessionId !== this.input.sessionId || this.seededGeneration === this.generation) return;
+    const cfi = progress.cfi.trim();
+    if (!cfi) return;
+
+    const savedPayload = { cfi, locationLabel: progress.locationLabel };
+    const savedKey = payloadKey(savedPayload);
+    this.seededGeneration = this.generation;
+    this.lastSavedPayloadKey = savedKey;
+
+    const currentPayloadKey = payloadKey(this.input.progress);
+    if (currentPayloadKey !== null && currentPayloadKey !== savedKey) return;
+
+    this.clearTimer();
+    this.publish({
+      status: "saved",
+      lastSavedAt: progress.updatedAt,
+      lastSavedCfi: cfi,
+      dirty: false,
+      progress,
+    });
   }
 
   flushNow(options?: { silent?: boolean }): Promise<void> {
@@ -136,6 +161,7 @@ export class ReadingProgressAutosaveController {
     this.generation += 1;
     this.clearTimer();
     this.inFlightGeneration = null;
+    this.seededGeneration = null;
     this.activeDrain = null;
     this.lastSavedPayloadKey = null;
     this.input = { ...this.input, sessionId: nextSessionId, progress: null };

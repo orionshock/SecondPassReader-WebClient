@@ -201,6 +201,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     spl: props.spl,
     sessionId: state.sessionId,
     location: progressLocation,
+    savedProgress: bootstrapSession?.progress ?? null,
   });
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
+import type { MarginaliaProgress } from "@secondpass/client";
 import type { ReaderLocation } from "../domain/types";
 import {
   READING_PROGRESS_AUTOSAVE_DELAY_MS,
@@ -27,6 +28,7 @@ export function useReadingProgressAutosave(input: {
   spl?: SecondPassClient | null;
   sessionId: string | null;
   location: ReaderLocation | null;
+  savedProgress?: MarginaliaProgress | null;
 }) {
   const [autosave, setAutosave] = useState<ReadingProgressAutosaveState>({ status: "idle" });
   const controllerRef = useRef<ReadingProgressAutosaveController | null>(null);
@@ -55,7 +57,10 @@ export function useReadingProgressAutosave(input: {
       progress,
       saveProgress: input.spl ? saveProgress : null,
     });
-  }, [controller, input.autosaveDelayMs, input.enabled, input.sessionId, input.spl, progress, saveProgress]);
+    if (input.sessionId && input.savedProgress) {
+      controller.seedSavedProgress(input.sessionId, input.savedProgress);
+    }
+  }, [controller, input.autosaveDelayMs, input.enabled, input.savedProgress, input.sessionId, input.spl, progress, saveProgress]);
 
   useEffect(() => {
     lifecycleGenerationRef.current += 1;

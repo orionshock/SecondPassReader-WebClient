@@ -58,6 +58,83 @@ describe("ReadingProgressAutosaveController", () => {
     expect(save).toHaveBeenCalledOnce();
   });
 
+  it("treats opened progress and its identical initial relocation as already saved", async () => {
+    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
+      savedProgress(progress.cfi, progress.locationLabel));
+    const controller = new ReadingProgressAutosaveController(() => undefined);
+    const openedProgress = savedProgress("epubcfi(/6/8)", "Chapter 04 - 40%");
+
+    controller.update({
+      enabled: true,
+      autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
+      sessionId: "session-1",
+      progress: { cfi: openedProgress.cfi, locationLabel: openedProgress.locationLabel },
+      saveProgress: save,
+    });
+    controller.seedSavedProgress("session-1", openedProgress);
+    await vi.advanceTimersByTimeAsync(READING_PROGRESS_AUTOSAVE_DELAY_MS);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(controller.getState()).toMatchObject({ status: "saved", dirty: false, lastSavedCfi: openedProgress.cfi });
+  });
+
+  it("saves a different relocation after opened progress seeds the saved baseline", async () => {
+    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
+      savedProgress(progress.cfi, progress.locationLabel));
+    const controller = new ReadingProgressAutosaveController(() => undefined);
+    const common = {
+      enabled: true,
+      autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
+      sessionId: "session-1",
+      saveProgress: save,
+    };
+
+    controller.update({ ...common, progress: { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" } });
+    controller.seedSavedProgress("session-1", savedProgress("epubcfi(/6/8)", "Chapter 04 - 40%"));
+    controller.update({ ...common, progress: { cfi: "epubcfi(/6/10)", locationLabel: "Chapter 05 - 50%" } });
+    await vi.advanceTimersByTimeAsync(READING_PROGRESS_AUTOSAVE_DELAY_MS);
+
+    expect(save).toHaveBeenCalledOnce();
+    expect(save).toHaveBeenCalledWith("session-1", {
+      cfi: "epubcfi(/6/10)",
+      locationLabel: "Chapter 05 - 50%",
+    });
+  });
+
+  it("does not carry a saved-progress seed into another session generation", async () => {
+    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
+      savedProgress(progress.cfi, progress.locationLabel));
+    const controller = new ReadingProgressAutosaveController(() => undefined);
+    const payload = { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" };
+
+    controller.update({ enabled: true, autosaveDelayMs: 10, sessionId: "session-1", progress: payload, saveProgress: save });
+    controller.seedSavedProgress("session-1", savedProgress(payload.cfi, payload.locationLabel));
+    controller.update({ enabled: true, autosaveDelayMs: 10, sessionId: "session-2", progress: payload, saveProgress: save });
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(save).toHaveBeenCalledOnce();
+    expect(save).toHaveBeenCalledWith("session-2", payload);
+  });
+
+  it("does not exit-flush unchanged progress that was seeded from open", async () => {
+    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
+      savedProgress(progress.cfi, progress.locationLabel));
+    const controller = new ReadingProgressAutosaveController(() => undefined);
+    const openedProgress = savedProgress("epubcfi(/6/8)", "Chapter 04 - 40%");
+
+    controller.update({
+      enabled: true,
+      autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
+      sessionId: "session-1",
+      progress: { cfi: openedProgress.cfi, locationLabel: openedProgress.locationLabel },
+      saveProgress: save,
+    });
+    controller.seedSavedProgress("session-1", openedProgress);
+    await controller.flushNow({ silent: true });
+
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("resets on session swap and ignores the old session timer", async () => {
     const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
       savedProgress(progress.cfi, progress.locationLabel));
