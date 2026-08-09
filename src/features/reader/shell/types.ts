@@ -18,7 +18,7 @@ export type ReadingShellCommand = {
 };
 
 export type ReadingShellEvent =
-  | { type: "locationChanged"; location: ReaderLocation }
+  | { type: "locationChanged"; location: ReaderLocation; publishProgress: boolean }
   | { type: "selectionChanged"; selection: ReaderSelection | null }
   | { type: "tocReady"; toc: ReaderTocItem[] }
   | { type: "locationsReady" }

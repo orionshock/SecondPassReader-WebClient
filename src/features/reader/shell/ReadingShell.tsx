@@ -37,6 +37,10 @@ import {
   toReaderViewportStatus,
   type ReaderReadinessState,
 } from "./ReaderReadiness.State";
+import {
+  isExplicitProgressNavigationCommand,
+  ReaderBootstrapProgressGuard,
+} from "./ReaderBootstrapProgressGuard.State";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -88,6 +92,11 @@ export function ReadingShell(props: ReadingShellProps) {
   const deferredCommandRef = useRef<ReadingShellCommand | null>(null);
   const engineGenerationRef = useRef(0);
   const hasReadableViewportRef = useRef(false);
+  const bootstrapProgressGuardRef = useRef<ReaderBootstrapProgressGuard | null>(null);
+  if (!bootstrapProgressGuardRef.current) {
+    bootstrapProgressGuardRef.current = new ReaderBootstrapProgressGuard();
+  }
+  const bootstrapProgressGuard = bootstrapProgressGuardRef.current;
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
@@ -253,6 +262,9 @@ export function ReadingShell(props: ReadingShellProps) {
   const runRuntimeCommand = useCallback(
     async (command: ReadingShellCommandValue, commandSeq?: number) => {
       const generation = engineGenerationRef.current;
+      if (isExplicitProgressNavigationCommand(command)) {
+        bootstrapProgressGuard.recordExplicitNavigation(generation);
+      }
       switch (command.type) {
         case "display":
           await runtimeController.run({
@@ -317,7 +329,7 @@ export function ReadingShell(props: ReadingShellProps) {
           return;
       }
     },
-    [markReadableViewport, runtimeController, stagedLifecycle],
+    [bootstrapProgressGuard, markReadableViewport, runtimeController, stagedLifecycle],
   );
 
   useEffect(() => {
@@ -329,6 +341,11 @@ export function ReadingShell(props: ReadingShellProps) {
     hasReadableViewportRef.current = false;
     engineGenerationRef.current += 1;
     const generation = engineGenerationRef.current;
+    const initialTarget = initialDisplayTargetRef.current;
+    bootstrapProgressGuard.reset(
+      generation,
+      initialTarget?.type === "cfi" ? initialTarget.cfi : null,
+    );
 
     void (async () => {
       try {
@@ -343,7 +360,11 @@ export function ReadingShell(props: ReadingShellProps) {
              recordReadableViewport(generation);
              closeDurableToolbar();
              stagedLifecycle.handleLocationChanged();
-             onEventRef.current?.({ type: "locationChanged", location });
+             onEventRef.current?.({
+               type: "locationChanged",
+               location,
+               publishProgress: bootstrapProgressGuard.shouldPublishRelocation(generation, location.cfi),
+             });
            },
           onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
           onLocationsReady: () => onEventRef.current?.({ type: "locationsReady" }),
@@ -406,6 +427,7 @@ export function ReadingShell(props: ReadingShellProps) {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
             return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
           }
+          bootstrapProgressGuard.recordExplicitNavigation(generation);
           return displayReaderCfiSafely(
             (candidate) => runtimeController.run({
               kind: "safe-display",
@@ -467,6 +489,7 @@ export function ReadingShell(props: ReadingShellProps) {
     props.onProbeCfiReady,
     props.onDisplayCfiReady,
     props.onSearchReady,
+    bootstrapProgressGuard,
     markReadableViewport,
     recordReadableViewport,
     reportOperationError,

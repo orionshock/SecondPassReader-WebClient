@@ -85,6 +85,7 @@ export type ReadingSessionOrchestratorProps = {
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
   const activeBookKey = `${props.openedBook.book.id}|${props.openedBook.objectUrl}`;
   const [locationEntry, setLocationEntry] = useState<{ bookKey: string; location: ReaderLocation } | null>(null);
+  const [progressLocationEntry, setProgressLocationEntry] = useState<{ bookKey: string; location: ReaderLocation } | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
   const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
@@ -96,13 +97,22 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const commandSeqRef = useRef(0);
   const lastActiveBookKeyRef = useRef(activeBookKey);
   const location = locationEntry?.bookKey === activeBookKey ? locationEntry.location : null;
+  const progressLocation = progressLocationEntry?.bookKey === activeBookKey
+    ? progressLocationEntry.location
+    : null;
   const generatedLocationLabel = useMemo(
     () => buildReaderLocationLabel(location),
     [location],
   );
+  const progressLocationLabel = useMemo(
+    () => buildReaderLocationLabel(progressLocation),
+    [progressLocation],
+  );
   const finalProgress = useMemo(
-    () => location?.cfi ? { cfi: location.cfi, locationLabel: generatedLocationLabel } : undefined,
-    [generatedLocationLabel, location?.cfi],
+    () => progressLocation?.cfi
+      ? { cfi: progressLocation.cfi, locationLabel: progressLocationLabel }
+      : undefined,
+    [progressLocation?.cfi, progressLocationLabel],
   );
   const bootstrapSession = props.openedBook.marginaliaBootstrap?.session ?? null;
   const sessionId = bootstrapSession?.id ?? null;
@@ -161,6 +171,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     if (lastActiveBookKeyRef.current === activeBookKey) return;
     lastActiveBookKeyRef.current = activeBookKey;
     setLocationEntry(null);
+    setProgressLocationEntry(null);
     setToc(null);
     setPendingCommand(null);
     setSearchBook(null);
@@ -189,7 +200,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
     spl: props.spl,
     sessionId: state.sessionId,
-    location: state.location,
+    location: progressLocation,
   });
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -337,6 +348,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     switch (event.type) {
       case "locationChanged":
         setLocationEntry({ bookKey: activeBookKey, location: event.location });
+        if (event.publishProgress) {
+          setProgressLocationEntry({ bookKey: activeBookKey, location: event.location });
+        }
         return;
       case "displayError":
         // Keep errors visible in the browser console; avoid a permanent reader debug panel in the UI.
