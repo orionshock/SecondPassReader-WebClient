@@ -33,6 +33,31 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 - Keep layers explicit; avoid "magic" abstractions.
 - If a change would introduce a large new dependency or framework, ask first and explain why.
 
+## Testing policy
+
+- Tests protect executable behavior, contracts, and invariants.
+- Prefer the smallest set of tests that strongly protects the important behavior; test volume and coverage percentage are not goals by themselves.
+- Do not add tests for documentation, copy, repository layout, implementation details, generated artifacts, or configuration text merely because those things changed.
+- Tooling and deployment code warrant tests only when they contain meaningful executable behavior whose failure would materially affect the product or delivery process.
+- Do not edit existing tests merely as part of implementation cleanup or to make the suite pass. Preserve existing tests by default. If an implementation intentionally changes a tested contract or invariant, evaluate and justify the test change separately before editing it.
+- Every new test or materially new test case requires a substantive justification that explains both:
+  - exactly what executable behavior, contract, or invariant the test covers
+  - why protecting that behavior is important to the product or delivery process
+- A test justification must be specific enough to review. A one-word label or one-line restatement of the test name is not sufficient.
+- When an existing test fails after a change, evaluate before editing code or the test:
+  - what behavior, contract, or invariant the test is intended to protect
+  - whether the underlying behavior actually changed
+  - whether the current testing approach is still the best way to protect that behavior
+  - whether the test remains necessary
+- If changing an existing test is justified after that evaluation, document what behavior changed, why the old expectation is no longer correct, and why the revised test remains valuable. Do not change expectations merely to match the current implementation.
+- Do not write production code solely to make a test pass when that code does not serve the intended product behavior or contract.
+- Do not weaken, rewrite, or delete a test solely to make the suite green. A green suite is useful only when its tests still protect meaningful behavior.
+- Implementation reports must include:
+  - existing test commands run and their results
+  - each new test's specific coverage and why that coverage matters
+  - any existing test failures encountered and the evaluation performed
+  - any justified existing-test changes, including the behavioral reason for each change
+
 ## Refactor conventions
 
 - When adding non-trivial new behavior, prefer a dedicated file/module/hook/component instead of growing an already-large file.
