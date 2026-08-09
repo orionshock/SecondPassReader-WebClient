@@ -96,8 +96,31 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 
 - New or meaningfully touched Reading files should use an explicit role suffix when practical. Use folders when they clarify real ownership; do not mass-rename existing files for cosmetics.
 - Rename a touched file only when the name materially clarifies its responsibility and the import churn is reasonable.
-- Preferred roles: `.Activity.tsx`, `.Orchestrator.tsx`, `.Controller.ts`, `.Coordinator.ts`, `.Bridge.ts`, `.Engine.ts`, `.Adapter.ts`, `.Mapper.ts`, `.Presenter.ts`, `.Types.ts`, `.State.ts`, `.Store.ts`, `.Queries.ts`, `.Actions.ts`, `.Lifecycle.ts`, `.Placement.ts`, and `.Renderer.ts`.
-- UI roles: `.Panel.tsx`, `.Drawer.tsx`, `.Toolbar.tsx`, `.Row.tsx`, `.Item.tsx`, and `.Dialog.tsx`.
+- Preferred roles:
+  - `.Activity.tsx`: route-level product entry that connects navigation, loading, and major feature composition.
+  - `.Orchestrator.tsx`: composition root that coordinates multiple domain owners without implementing their internals.
+  - `.Controller.ts`: imperative sequencing or stateful operation ownership for one feature lifecycle.
+  - `.Coordinator.ts`: ordering and synchronization across multiple systems or lifecycles.
+  - `.Bridge.ts`: stable renderer-neutral or service-neutral capability contract.
+  - `.Engine.ts`: concrete renderer or processing-engine implementation behind a bridge.
+  - `.Adapter.ts`: translation at an external schema, library, or service contract boundary.
+  - `.Mapper.ts`: pure conversion between internal data shapes.
+  - `.Presenter.ts`: view-model construction and user-facing text or display formatting.
+  - `.Types.ts`: shared types only; no runtime behavior.
+  - `.State.ts`: reducers, state transitions, and state invariants.
+  - `.Store.ts`: persisted local-storage ownership and serialization.
+  - `.Queries.ts`: query generation and other read-side helpers.
+  - `.Actions.ts`: mutation construction and other write-side operations.
+  - `.Lifecycle.ts`: setup, teardown, subscription, and lifecycle state-machine behavior.
+  - `.Placement.ts`: pure geometry and layout-position calculation.
+  - `.Renderer.ts`: visual mark, canvas, or renderer-output creation and cleanup.
+- UI roles:
+  - `.Panel.tsx`: persistent or docked feature surface.
+  - `.Drawer.tsx`: dismissible edge-attached feature surface.
+  - `.Toolbar.tsx`: compact action controls for a current context or selection.
+  - `.Row.tsx`: one row in a table-like or metadata-heavy collection.
+  - `.Item.tsx`: one general collection entry when row semantics do not apply.
+  - `.Dialog.tsx`: modal interaction requiring focused user action.
 - Prefer feature-local ownership over global abstractions. Avoid vague `utils`, `helpers`, or `misc` folders when a lifecycle or domain owner exists.
 - Boundary files may include a short ownership comment when the name alone is insufficient.
 
