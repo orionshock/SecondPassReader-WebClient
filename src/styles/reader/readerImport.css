@@ -110,6 +110,51 @@
   font-size: 12px;
 }
 
+.spReaderImportStatusFilters {
+  min-height: 25px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.spReaderImportStatusFilter {
+  min-height: 25px;
+  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--sp-reader-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--sp-reader-muted);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.spReaderImportStatusFilter[aria-pressed="true"] {
+  border-color: var(--sp-reader-accent);
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-text);
+  box-shadow: inset 0 0 0 1px var(--sp-reader-accent);
+}
+
+.spReaderImportStatusFilter:focus-visible {
+  outline: 2px solid var(--sp-reader-accent);
+  outline-offset: 1px;
+}
+
+.spReaderImportStatusFilter:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.spReaderImportStatusFilterShowAll {
+  margin-left: auto;
+}
+
 .spReaderImportIconButton {
   width: 34px;
   height: 34px;

@@ -1,8 +1,9 @@
-import type { ReaderImportJob } from "./readerImportTypes";
+import type { ReaderImportJob, ReaderImportRow } from "./readerImportTypes";
 import { ReaderImportRowItem } from "./ReaderImportRowItem";
 
 export function ReaderImportRowList({
   job,
+  rows,
   onActivateRow,
   onMarkManuallyCompleted,
   onSkipRow,
@@ -10,6 +11,7 @@ export function ReaderImportRowList({
   onUnskipRow,
 }: {
   job: ReaderImportJob;
+  rows: ReaderImportRow[];
   onActivateRow: (rowId: string) => void;
   onMarkManuallyCompleted: (rowId: string) => void;
   onSkipRow: (rowId: string) => void;
@@ -19,7 +21,8 @@ export function ReaderImportRowList({
   return (
     <div className="spReaderImportRows">
       {job.rows.length === 0 ? <div className="muted spReaderImportEmpty">No importable highlights found.</div> : null}
-      {job.rows.map((row) => (
+      {job.rows.length > 0 && rows.length === 0 ? <div className="muted spReaderImportEmpty">No rows match the selected filters.</div> : null}
+      {rows.map((row) => (
         <ReaderImportRowItem
           key={row.id}
           row={row}
