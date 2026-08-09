@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, getReaderImportJobCounts, hasOtherStagedRows, isReaderImportRowResolved, isReaderImportRowTerminal, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus } from "../features/reader/imports/readerImportJobState";
+import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, getReaderImportJobCounts, hasOtherStagedRows, isReaderImportRowResolved, isReaderImportRowTerminal, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "../features/reader/imports/readerImportJobState";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
 
 describe("reader import job state", () => {
@@ -85,6 +85,13 @@ describe("reader import job state", () => {
     expect(isReaderImportRowResolved("manually-completed")).toBe(true);
     expect(isReaderImportRowTerminal("not-found")).toBe(false);
     expect(isReaderImportRowResolved("not-found")).toBe(true);
+  });
+
+  it("reopens only manually completed rows as pending", () => {
+    expect(undoReaderImportManualCompletion(row({ status: "manually-completed" })).status).toBe("pending");
+
+    const accepted = row({ status: "accepted" });
+    expect(undoReaderImportManualCompletion(accepted)).toBe(accepted);
   });
 
   it("counts manually completed rows as resolved without counting them as pending or accepted", () => {

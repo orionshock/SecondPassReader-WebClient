@@ -6,12 +6,14 @@ export function ReaderImportRowList({
   onActivateRow,
   onMarkManuallyCompleted,
   onSkipRow,
+  onUndoManualCompletion,
   onUnskipRow,
 }: {
   job: ReaderImportJob;
   onActivateRow: (rowId: string) => void;
   onMarkManuallyCompleted: (rowId: string) => void;
   onSkipRow: (rowId: string) => void;
+  onUndoManualCompletion: (rowId: string) => void;
   onUnskipRow: (rowId: string) => void;
 }) {
   return (
@@ -25,6 +27,7 @@ export function ReaderImportRowList({
           onActivate={() => onActivateRow(row.id)}
           onMarkManuallyCompleted={() => onMarkManuallyCompleted(row.id)}
           onSkip={() => onSkipRow(row.id)}
+          onUndoManualCompletion={() => onUndoManualCompletion(row.id)}
           onUnskip={() => onUnskipRow(row.id)}
         />
       ))}

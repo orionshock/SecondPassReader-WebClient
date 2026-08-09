@@ -9,6 +9,7 @@ export function ReaderImportRowItem({
   onActivate,
   onMarkManuallyCompleted,
   onSkip,
+  onUndoManualCompletion,
   onUnskip,
 }: {
   row: ReaderImportRow;
@@ -16,6 +17,7 @@ export function ReaderImportRowItem({
   onActivate: () => void;
   onMarkManuallyCompleted: () => void;
   onSkip: () => void;
+  onUndoManualCompletion: () => void;
   onUnskip: () => void;
 }) {
   const colorVars = toAnnotationCssVars(row.color ?? "yellow");
@@ -40,7 +42,18 @@ export function ReaderImportRowItem({
           </span>
         </span>
         <div className="spReaderImportRowActions">
-          {row.status === "accepted" || row.status === "manually-completed" ? null : row.status === "skipped" ? (
+          {row.status === "accepted" ? null : row.status === "manually-completed" ? (
+            <button
+              type="button"
+              className="button buttonCompact spReaderImportRowActionButton"
+              onClick={onUndoManualCompletion}
+              aria-label="Undo manual completion"
+              title="Undo manual completion"
+            >
+              <MaterialIcon name="undo" className="spReaderImportRowActionIcon" />
+              <span>Undo</span>
+            </button>
+          ) : row.status === "skipped" ? (
             <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onUnskip}>Unskip</button>
           ) : (
             <>

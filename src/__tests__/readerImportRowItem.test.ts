@@ -21,11 +21,13 @@ describe("reader import row item", () => {
     expect(markup).not.toContain("Match 1 of 1");
   });
 
-  it("renders manual completion as a terminal status without retry actions", () => {
+  it("renders manual completion as a terminal status with an explicit undo action", () => {
     const markup = renderRow({ status: "manually-completed" });
     expect(markup).toContain("Manually completed");
     expect(markup).not.toContain("Mark manually completed");
     expect(markup).not.toContain(">Skip<");
+    expect(markup).toContain('aria-label="Undo manual completion"');
+    expect(markup).toContain("undo");
   });
 
   it("offers a clearly labelled manual completion action for reviewable rows", () => {
@@ -60,6 +62,7 @@ function renderRow(overrides: Partial<ReaderImportRow>): string {
     onActivate: vi.fn(),
     onMarkManuallyCompleted: vi.fn(),
     onSkip: vi.fn(),
+    onUndoManualCompletion: vi.fn(),
     onUnskip: vi.fn(),
   }));
 }

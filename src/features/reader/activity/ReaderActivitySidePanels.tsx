@@ -71,6 +71,7 @@ export function ReaderActivitySidePanels({
         onActivateRow={onSelectImportRow}
         onMarkManuallyCompleted={onMarkImportRowManuallyCompleted}
         onSkipRow={onSkipImportRow}
+        onUndoManualCompletion={readerImport.undoManualCompletion}
         onUnskipRow={readerImport.unskipRow}
       />
     </div>

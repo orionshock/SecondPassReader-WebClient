@@ -13,6 +13,7 @@ export function ReaderImportDrawer({
   onActivateRow,
   onMarkManuallyCompleted,
   onSkipRow,
+  onUndoManualCompletion,
   onUnskipRow,
 }: {
   open: boolean;
@@ -23,6 +24,7 @@ export function ReaderImportDrawer({
   onActivateRow: (rowId: string) => void;
   onMarkManuallyCompleted: (rowId: string) => void;
   onSkipRow: (rowId: string) => void;
+  onUndoManualCompletion: (rowId: string) => void;
   onUnskipRow: (rowId: string) => void;
 }) {
   useEffect(() => {
@@ -77,6 +79,7 @@ export function ReaderImportDrawer({
         onActivateRow={onActivateRow}
         onMarkManuallyCompleted={onMarkManuallyCompleted}
         onSkipRow={onSkipRow}
+        onUndoManualCompletion={onUndoManualCompletion}
         onUnskipRow={onUnskipRow}
       />
 

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportFormat } from "./readerImportFormats";
-import { acceptSuggestedBookmarkRow, getReaderImportJobCounts, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus } from "./readerImportJobState";
+import { acceptSuggestedBookmarkRow, getReaderImportJobCounts, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "./readerImportJobState";
 import type { ReaderImportJob, ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
@@ -81,6 +81,13 @@ export function useReaderImportJob() {
     setRowStatus(rowId, "manually-completed");
   }, [setRowStatus]);
 
+  const undoManualCompletion = useCallback((rowId: string) => {
+    setJob((prev) => prev ? {
+      ...prev,
+      rows: prev.rows.map((row) => row.id === rowId ? undoReaderImportManualCompletion(row) : row),
+    } : prev);
+  }, []);
+
   const counts = useMemo(() => getReaderImportJobCounts(job?.rows ?? []), [job?.rows]);
 
   return {
@@ -102,6 +109,7 @@ export function useReaderImportJob() {
     markRowPending: (jobId: string, rowId: string) => setSourcedRowStatus(jobId, rowId, "pending"),
     skipRow,
     markRowManuallyCompleted,
+    undoManualCompletion,
     unskipRow: (rowId: string) => setRowStatus(rowId, "pending"),
   };
 }

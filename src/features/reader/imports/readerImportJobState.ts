@@ -37,6 +37,10 @@ export function resetStagedRowsForNavigation(rows: ReaderImportRow[]): ReaderImp
   return rows.map((row) => row.status === "staged" ? setReaderImportRowStatus(row, "pending") : row);
 }
 
+export function undoReaderImportManualCompletion(row: ReaderImportRow): ReaderImportRow {
+  return row.status === "manually-completed" ? setReaderImportRowStatus(row, "pending") : row;
+}
+
 export function setReaderImportRowStatus(
   row: ReaderImportRow,
   status: ReaderImportRow["status"],
