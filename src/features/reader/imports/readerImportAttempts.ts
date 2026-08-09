@@ -1,5 +1,5 @@
 import type { ReaderImportRow } from "./readerImportTypes";
-import { isReaderCfiRange } from "../shell/readerCfiKind";
+import { isReaderCfiRange } from "../engine/ReaderCfiClassifier.Engine";
 
 export type ReaderImportAttempt =
   | { kind: "cfi-range"; cfiRange: string }
