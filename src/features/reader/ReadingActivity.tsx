@@ -78,6 +78,7 @@ export function ReadingActivity({
           readerImport.markRowPending(source.importJobId, source.importRowId);
           readerImport.setDrawerOpen(true);
         }}
+        onUnrelatedNavigation={readerImport.cancelStagedRowsForNavigation}
         onOpenAnnotationInWorkspace={(annotationId, mode) => {
           setWorkspaceFocusRequest((prev) => ({ annotationId, mode, seq: (prev?.seq ?? 0) + 1 }));
         }}

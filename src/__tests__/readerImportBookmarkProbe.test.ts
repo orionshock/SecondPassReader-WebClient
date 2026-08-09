@@ -9,7 +9,7 @@ describe("reader import bookmark CFI probe", () => {
     const result = await probeReaderImportBookmarkCfi({ cfiHint: " epubcfi(/6/2) ", probeCfi, displayCfi });
 
     expect(probeCfi).toHaveBeenCalledWith("epubcfi(/6/2)");
-    expect(displayCfi).toHaveBeenCalledWith("epubcfi(/6/2)");
+    expect(displayCfi).toHaveBeenCalledWith("epubcfi(/6/2)", { navigationIntent: "import-staging" });
     expect(result).toEqual({ status: "staged", result: { ok: true, code: "displayed" } });
   });
 

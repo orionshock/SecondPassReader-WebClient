@@ -14,7 +14,11 @@ describe("reader import highlight CFI staging", () => {
         order.push("display");
         return { ok: true, code: "displayed" };
       },
-      stagedSelection: { stageSelectionFromCfiRange, cancelStagedSelection: vi.fn() },
+      stagedSelection: {
+        stageSelectionFromCfiRange,
+        runStagingTransaction: (operation) => operation(),
+        cancelStagedSelection: vi.fn(),
+      },
     });
     expect(result).toEqual({ ok: true, code: "staged" });
     expect(stageSelectionFromCfiRange).toHaveBeenCalledWith(expect.objectContaining({
@@ -33,7 +37,11 @@ describe("reader import highlight CFI staging", () => {
       row: highlightRow(),
       probeCfi: async () => ({ ok: true, code: "exists-in-book", cfiKind: "point" }),
       displayCfi,
-      stagedSelection: { stageSelectionFromCfiRange, cancelStagedSelection: vi.fn() },
+      stagedSelection: {
+        stageSelectionFromCfiRange,
+        runStagingTransaction: (operation) => operation(),
+        cancelStagedSelection: vi.fn(),
+      },
     });
     expect(result.ok).toBe(false);
     expect(displayCfi).not.toHaveBeenCalled();
@@ -46,7 +54,11 @@ describe("reader import highlight CFI staging", () => {
       row: highlightRow(),
       probeCfi: async () => ({ ok: true, code: "exists-in-book", cfiKind: "range", rangeText: "Resolved text" }),
       displayCfi: async () => ({ ok: false, code: "display-failed", error: "No display" }),
-      stagedSelection: { stageSelectionFromCfiRange: vi.fn(), cancelStagedSelection: vi.fn() },
+      stagedSelection: {
+        stageSelectionFromCfiRange: vi.fn(),
+        runStagingTransaction: (operation) => operation(),
+        cancelStagedSelection: vi.fn(),
+      },
     });
     expect(result).toEqual({ ok: false, code: "stage-failed", error: "No display" });
   });

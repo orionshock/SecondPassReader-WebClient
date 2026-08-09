@@ -22,6 +22,7 @@ import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
+import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -36,6 +37,7 @@ export type ReadingShellProps = {
   onStagedSelectionReady?: (handle: StagedSelectionHandle | null) => void;
   onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
   onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
+  onUnrelatedNavigation?: () => void;
   annotationToolbarItems?: DurableAnnotationToolbarItem[];
   onUpdateHighlight?: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
   onRemoveAnnotation?: (annotationId: string) => Promise<void>;
@@ -74,6 +76,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
+  const onUnrelatedNavigationRef = useRef<ReadingShellProps["onUnrelatedNavigation"]>(props.onUnrelatedNavigation);
   const latestSearchResultCommandRef = useRef<{ seq: number; cfi: string } | null>(null);
   const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
@@ -93,6 +96,10 @@ export function ReadingShell(props: ReadingShellProps) {
   useEffect(() => {
     onEventRef.current = props.onEvent;
   }, [props.onEvent]);
+
+  useEffect(() => {
+    onUnrelatedNavigationRef.current = props.onUnrelatedNavigation;
+  }, [props.onUnrelatedNavigation]);
 
   useEffect(() => {
     initialDisplayTargetRef.current = props.initialDisplayTarget;
@@ -125,7 +132,15 @@ export function ReadingShell(props: ReadingShellProps) {
     onStagedSelectionCanceled: props.onStagedSelectionCanceled,
     commitBusy: props.highlightCommitBusy,
   });
-  const { onSelectionChanged, cancelStaged, shouldCancelOnLocationChange } = staged;
+  const { onSelectionChanged, cancelStaged } = staged;
+  const stagedLifecycleRef = useRef<StagedSelectionLifecycle | null>(null);
+  if (!stagedLifecycleRef.current) {
+    stagedLifecycleRef.current = new StagedSelectionLifecycle({
+      cancelStagedSelection: cancelStaged,
+      onUnrelatedNavigation: () => onUnrelatedNavigationRef.current?.(),
+    });
+  }
+  const stagedLifecycle = stagedLifecycleRef.current;
   const reanchorStagedToolbarRef = useRef(staged.reanchorStagedToolbar);
   reanchorStagedToolbarRef.current = staged.reanchorStagedToolbar;
 
@@ -165,10 +180,11 @@ export function ReadingShell(props: ReadingShellProps) {
   useEffect(() => {
     props.onStagedSelectionReady?.({
       stageSelectionFromCfiRange: staged.stageSelectionFromCfiRange,
+      runStagingTransaction: (operation) => stagedLifecycle.runNavigation("import-staging", operation),
       cancelStagedSelection: staged.cancelStaged,
     });
     return () => props.onStagedSelectionReady?.(null);
-  }, [props.onStagedSelectionReady, staged.cancelStaged, staged.stageSelectionFromCfiRange]);
+  }, [props.onStagedSelectionReady, staged.cancelStaged, staged.stageSelectionFromCfiRange, stagedLifecycle]);
 
   useEffect(() => {
     if (!durableToolbar) return;
@@ -213,14 +229,17 @@ export function ReadingShell(props: ReadingShellProps) {
         case "display":
           await runtimeController.run({
             kind: "display",
-            run: ({ engine }) => engine.display(command.target),
+            run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.display(command.target)),
             after: () => reanchorStagedToolbarRef.current(),
           });
           return;
         case "displaySearchResult": {
           await runtimeController.run({
             kind: "display-search-result",
-            run: ({ engine }) => engine.display({ type: "cfi", cfi: command.cfi }),
+            run: ({ engine }) => stagedLifecycle.runNavigation(
+              "unrelated",
+              () => engine.display({ type: "cfi", cfi: command.cfi }),
+            ),
             after: async (_value, context) => {
               const latestSearch = latestSearchResultCommandRef.current;
               if (commandSeq != null && latestSearch && latestSearch.seq !== commandSeq) {
@@ -241,22 +260,24 @@ export function ReadingShell(props: ReadingShellProps) {
         case "next":
           await runtimeController.run({
             kind: "next",
-            run: ({ engine }) => engine.next(),
+            run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.next()),
             after: () => reanchorStagedToolbarRef.current(),
           });
           return;
         case "previous":
           await runtimeController.run({
             kind: "previous",
-            run: ({ engine }) => engine.previous(),
+            run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.previous()),
             after: () => reanchorStagedToolbarRef.current(),
           });
           return;
         case "resize":
           await runtimeController.stabilizeReflow("resize", {
             reflow: async (engine) => {
-              await waitForReaderLayout();
-              await engine.resizeToMount();
+              await stagedLifecycle.runNavigation("layout-reflow", async () => {
+                await waitForReaderLayout();
+                await engine.resizeToMount();
+              });
             },
             refreshMarks: (engine) => engine.refreshHighlightMarks(),
             reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
@@ -264,7 +285,7 @@ export function ReadingShell(props: ReadingShellProps) {
           return;
       }
     },
-    [runtimeController],
+    [runtimeController, stagedLifecycle],
   );
 
   useEffect(() => {
@@ -287,7 +308,7 @@ export function ReadingShell(props: ReadingShellProps) {
            displaySettings: settingsRef.current,
            onLocationChanged: (location) => {
              closeDurableToolbar();
-             if (shouldCancelOnLocationChange()) cancelStaged();
+             stagedLifecycle.handleLocationChanged();
              onEventRef.current?.({ type: "locationChanged", location });
            },
           onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
@@ -329,16 +350,19 @@ export function ReadingShell(props: ReadingShellProps) {
           }
           return probeReaderCfi((candidate) => engine.probeCfi(candidate), cfi);
         });
-        props.onDisplayCfiReady?.((cfi) => {
+        props.onDisplayCfiReady?.((cfi, options) => {
           if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
             return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
           }
           return displayReaderCfiSafely(
-            (candidate) => runtimeController.run({
-              kind: "safe-display",
-              run: ({ engine: activeEngine }) => activeEngine.displayCfiSafely(candidate),
-            }),
-            cfi,
+              (candidate) => runtimeController.run({
+                kind: "safe-display",
+                run: ({ engine: activeEngine }) => stagedLifecycle.runNavigation(
+                  options?.navigationIntent ?? "unrelated",
+                  () => activeEngine.displayCfiSafely(candidate),
+                ),
+              }),
+              cfi,
           );
         });
         props.onSearchReady?.((query, options) => {
@@ -405,7 +429,7 @@ export function ReadingShell(props: ReadingShellProps) {
     reportCommandError,
     runRuntimeCommand,
     runtimeController,
-    shouldCancelOnLocationChange,
+    stagedLifecycle,
     toToolbarPosition,
   ]);
 
@@ -442,7 +466,10 @@ export function ReadingShell(props: ReadingShellProps) {
     void (async () => {
       try {
         await runtimeController.stabilizeReflow("settings", {
-          reflow: (activeEngine) => activeEngine.applyDisplaySettings(props.settings!),
+          reflow: (activeEngine) => stagedLifecycle.runNavigation(
+            "layout-reflow",
+            () => activeEngine.applyDisplaySettings(props.settings!),
+          ),
           refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
           reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
         });
@@ -450,7 +477,7 @@ export function ReadingShell(props: ReadingShellProps) {
         reportCommandError(err, "Display settings failed.", generation);
       }
     })();
-  }, [props.settings, reportCommandError, runtimeController]);
+  }, [props.settings, reportCommandError, runtimeController, stagedLifecycle]);
 
   useEffect(() => {
     const readerWidth = props.settings?.readerWidth;
@@ -467,9 +494,11 @@ export function ReadingShell(props: ReadingShellProps) {
       try {
         await runtimeController.stabilizeReflow("resize", {
           reflow: async (activeEngine) => {
-            await waitForReaderLayout();
-            if (cancelled) return;
-            await activeEngine.resizeToMount();
+            await stagedLifecycle.runNavigation("layout-reflow", async () => {
+              await waitForReaderLayout();
+              if (cancelled) return;
+              await activeEngine.resizeToMount();
+            });
           },
           refreshMarks: (activeEngine) => {
             if (!cancelled) activeEngine.refreshHighlightMarks();
@@ -485,7 +514,7 @@ export function ReadingShell(props: ReadingShellProps) {
     return () => {
       cancelled = true;
     };
-  }, [props.settings?.readerWidth, reportCommandError, runtimeController]);
+  }, [props.settings?.readerWidth, reportCommandError, runtimeController, stagedLifecycle]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 

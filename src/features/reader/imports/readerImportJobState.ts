@@ -25,6 +25,10 @@ export function resetOtherStagedRowsForActivation(rows: ReaderImportRow[], activ
   });
 }
 
+export function resetStagedRowsForNavigation(rows: ReaderImportRow[]): ReaderImportRow[] {
+  return rows.map((row) => row.status === "staged" ? setReaderImportRowStatus(row, "pending") : row);
+}
+
 export function setReaderImportRowStatus(
   row: ReaderImportRow,
   status: ReaderImportRow["status"],

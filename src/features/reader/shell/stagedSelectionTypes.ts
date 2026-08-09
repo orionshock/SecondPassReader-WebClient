@@ -27,6 +27,7 @@ export type ProgrammaticStagedSelectionInput = {
 
 export type StagedSelectionHandle = {
   stageSelectionFromCfiRange(input: ProgrammaticStagedSelectionInput): Promise<void>;
+  runStagingTransaction<T>(operation: () => Promise<T>): Promise<T>;
   cancelStagedSelection(): void;
 };
 

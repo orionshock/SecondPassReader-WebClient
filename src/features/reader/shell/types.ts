@@ -9,6 +9,7 @@ import type {
   ReaderSelection,
   ReaderTocItem,
 } from "../domain/types";
+import type { StagedSelectionNavigationIntent } from "./StagedSelection.Lifecycle";
 
 export type ReadingShellCommandValue =
   | { type: "display"; target: ReaderLocationTarget }
@@ -24,7 +25,10 @@ export type ReadingShellCommand = {
 
 export type ReaderDescribeCfiHandle = (cfi: string) => Promise<ReaderLocationDescription>;
 export type ReaderProbeCfiHandle = (cfi: string) => Promise<ReaderCfiProbeResult>;
-export type ReaderDisplayCfiHandle = (cfi: string) => Promise<ReaderCfiDisplayResult>;
+export type ReaderDisplayCfiHandle = (
+  cfi: string,
+  options?: { navigationIntent?: StagedSelectionNavigationIntent },
+) => Promise<ReaderCfiDisplayResult>;
 export type ReaderSearchBookHandle = (query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>;
 export type { ReaderCfiProbeResult };
 

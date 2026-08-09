@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, hasOtherStagedRows, resetOtherStagedRowsForActivation, setReaderImportRowStatus } from "../features/reader/imports/readerImportJobState";
+import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, hasOtherStagedRows, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus } from "../features/reader/imports/readerImportJobState";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
 
 describe("reader import job state", () => {
@@ -32,6 +32,24 @@ describe("reader import job state", () => {
 
     expect(hasOtherStagedRows(rows, "next")).toBe(true);
     expect(hasOtherStagedRows(rows, "staged")).toBe(false);
+  });
+
+  it("returns staged rows to pending on navigation without changing terminal rows", () => {
+    const rows = [
+      row({ id: "staged", status: "staged", candidateIndex: 3, candidateCount: 25 }),
+      row({ id: "accepted", status: "accepted" }),
+      row({ id: "skipped", status: "skipped" }),
+    ];
+
+    const result = resetStagedRowsForNavigation(rows);
+
+    expect(result.map((item) => [item.id, item.status])).toEqual([
+      ["staged", "pending"],
+      ["accepted", "accepted"],
+      ["skipped", "skipped"],
+    ]);
+    expect(result[0]).not.toHaveProperty("candidateIndex");
+    expect(result[0]).not.toHaveProperty("candidateCount");
   });
 
   it("creates a suggestion for a staged bookmark", () => {

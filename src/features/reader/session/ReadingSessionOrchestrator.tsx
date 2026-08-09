@@ -32,6 +32,7 @@ export type ReadingSessionOrchestratorProps = {
   onSettingsReset?: () => void;
   onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
   onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
+  onUnrelatedNavigation?: () => void;
   onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
   children: (arg: {
     state: ReadingSessionState;
@@ -406,6 +407,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onStagedSelectionReady={handleStagedSelectionReady}
         onStagedSelectionCommitted={handleStagedSelectionCommitted}
         onStagedSelectionCanceled={handleStagedSelectionCanceled}
+        onUnrelatedNavigation={props.onUnrelatedNavigation}
         annotationToolbarItems={annotationToolbarItems}
         onUpdateHighlight={updateHighlight}
         onRemoveAnnotation={removeById}

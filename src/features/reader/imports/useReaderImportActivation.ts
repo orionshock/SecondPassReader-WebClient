@@ -270,18 +270,21 @@ export function useReaderImportActivation({
       });
       try {
         if (!displayCfi) throw new Error("Safe CFI display is unavailable.");
-        const display = await displayCfi(match.result.cfi);
-        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-        if (!display.ok) throw new Error(display.error);
-        await stagedSelectionHandle.stageSelectionFromCfiRange({
-          cfiRange: match.result.cfi,
-          text: match.matchedText || row.quoteText || "",
-          quotePrefix: match.result.quotePrefix,
-          quoteSuffix: match.result.quoteSuffix,
-          note: row.noteText,
-          color: normalizeImportedHighlightColor(row.color),
-          source: { kind: "import", importJobId: job.id, importRowId: row.id },
+        await stagedSelectionHandle.runStagingTransaction(async () => {
+          const display = await displayCfi(match.result.cfi, { navigationIntent: "import-staging" });
+          if (requestIdRef.current !== requestId || controller.signal.aborted) return;
+          if (!display.ok) throw new Error(display.error);
+          await stagedSelectionHandle.stageSelectionFromCfiRange({
+            cfiRange: match.result.cfi,
+            text: match.matchedText || row.quoteText || "",
+            quotePrefix: match.result.quotePrefix,
+            quoteSuffix: match.result.quoteSuffix,
+            note: row.noteText,
+            color: normalizeImportedHighlightColor(row.color),
+            source: { kind: "import", importJobId: job.id, importRowId: row.id },
+          });
         });
+        if (requestIdRef.current !== requestId || controller.signal.aborted) return;
         setRowActivationState(rowId, "staged", {
           attemptCursor: cycle.nextAttemptCursor,
           resultCursor: cycle.nextResultCursor,

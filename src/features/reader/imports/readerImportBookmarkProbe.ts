@@ -45,7 +45,7 @@ export async function probeReaderImportBookmarkCfi({
 
   debugReaderImport("bookmark CFI display start", { rowId, cfiPreview: previewImportText(cfi) });
   try {
-    const displayResult = await displayCfi(cfi);
+    const displayResult = await displayCfi(cfi, { navigationIntent: "import-staging" });
     if (displayResult.ok) {
       debugReaderImport("bookmark CFI display success", {
         rowId,

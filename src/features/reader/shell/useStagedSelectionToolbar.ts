@@ -221,10 +221,6 @@ export function useStagedSelectionToolbar(args: {
     [cancelStaged, stageSelection],
   );
 
-  const shouldCancelOnLocationChange = useCallback(() => {
-    return Boolean(stagedSelectionRef.current && stagedSourceRef.current.kind === "user-selection");
-  }, []);
-
   const stagedMark: ReaderHighlightMark[] = useMemo(() => {
     return stagedSelection?.cfiRange
       ? [{ id: "__staged_selection__", cfiRange: stagedSelection.cfiRange, color: stagedColor }]
@@ -292,7 +288,6 @@ export function useStagedSelectionToolbar(args: {
     noteDraft,
     toolbarPos,
     onSelectionChanged,
-    shouldCancelOnLocationChange,
     cancelStaged,
     stageSelectionFromCfiRange,
     reanchorStagedToolbar,

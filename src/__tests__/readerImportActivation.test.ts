@@ -31,6 +31,7 @@ describe("reader import activation orchestration", () => {
     });
     const stagedSelection: StagedSelectionHandle = {
       stageSelectionFromCfiRange: vi.fn(async () => { order.push("stage"); }),
+      runStagingTransaction: (operation) => operation(),
       cancelStagedSelection: vi.fn(),
     };
     const harness = createHarness(row({ quoteText: "Found quote" }), {
@@ -41,7 +42,7 @@ describe("reader import activation orchestration", () => {
 
     await harness.activate("row-1");
 
-    expect(displayCfi).toHaveBeenCalledWith("found-cfi");
+    expect(displayCfi).toHaveBeenCalledWith("found-cfi", { navigationIntent: "import-staging" });
     expect(order).toEqual(["display-complete", "stage"]);
   });
 
@@ -282,6 +283,7 @@ function createHarness(importRow: ReaderImportRow, overrides: {
 } = {}) {
   const stagedSelection = overrides.stagedSelection === undefined ? {
     stageSelectionFromCfiRange: vi.fn(async () => undefined),
+    runStagingTransaction: <T,>(operation: () => Promise<T>) => operation(),
     cancelStagedSelection: vi.fn(),
   } : overrides.stagedSelection;
   const setRowActivationState = vi.fn();

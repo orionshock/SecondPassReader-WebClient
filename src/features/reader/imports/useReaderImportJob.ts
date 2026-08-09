@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import "./handlers/registerBuiltInReaderImportHandlers";
 import { getReaderImportFormat } from "./readerImportFormats";
-import { acceptSuggestedBookmarkRow, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, setReaderImportRowStatus } from "./readerImportJobState";
+import { acceptSuggestedBookmarkRow, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus } from "./readerImportJobState";
 import type { ReaderImportJob, ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
 
 export function useReaderImportJob() {
@@ -46,6 +46,11 @@ export function useReaderImportJob() {
     setBookmarkSuggestion(null);
     setJob(null);
     setDrawerOpen(false);
+  }, []);
+
+  const cancelStagedRowsForNavigation = useCallback(() => {
+    setBookmarkSuggestion(null);
+    setJob((prev) => prev ? { ...prev, rows: resetStagedRowsForNavigation(prev.rows) } : prev);
   }, []);
 
   const setImportDrawerOpen = useCallback((open: boolean) => {
@@ -93,6 +98,7 @@ export function useReaderImportJob() {
     startImport,
     startGlaspCsvImport,
     clearJob,
+    cancelStagedRowsForNavigation,
     selectRow,
     setRowStatus,
     setRowActivationState,
