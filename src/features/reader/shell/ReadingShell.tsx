@@ -28,6 +28,10 @@ import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type Durab
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
 import { observeReaderMountResize } from "./ReaderMountResize.Lifecycle";
+import {
+  classifyReaderOperationError,
+  type ReaderOperationFailureKind,
+} from "./ReaderOperationError.Policy";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -78,6 +82,7 @@ export function ReadingShell(props: ReadingShellProps) {
   const lastHandledCommandSeqRef = useRef<number | null>(null);
   const deferredCommandRef = useRef<ReadingShellCommand | null>(null);
   const engineGenerationRef = useRef(0);
+  const hasReadableViewportRef = useRef(false);
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
@@ -213,20 +218,17 @@ export function ReadingShell(props: ReadingShellProps) {
     };
   }, [closeDurableToolbar, durableToolbar]);
 
-  const reportCommandError = useCallback(
-    (err: unknown, fallback: string, generation: number) => {
+  const reportOperationError = useCallback(
+    (err: unknown, fallback: string, generation: number, kind: ReaderOperationFailureKind) => {
       if (engineGenerationRef.current !== generation) return;
-      setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : fallback);
+      if (classifyReaderOperationError(kind, hasReadableViewportRef.current) === "fatal") {
+        setStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : fallback);
+      }
       onEventRef.current?.({ type: "displayError", error: err });
     },
     [],
   );
-
-  const reportTransientCommandError = useCallback((err: unknown, generation: number) => {
-    if (engineGenerationRef.current !== generation) return;
-    onEventRef.current?.({ type: "displayError", error: err });
-  }, []);
 
   const runRuntimeCommand = useCallback(
     async (command: ReadingShellCommandValue, commandSeq?: number) => {
@@ -237,6 +239,7 @@ export function ReadingShell(props: ReadingShellProps) {
             run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.display(command.target)),
             after: () => reanchorStagedToolbarRef.current(),
           });
+          hasReadableViewportRef.current = true;
           return;
         case "displaySearchResult": {
           await runtimeController.run({
@@ -260,6 +263,7 @@ export function ReadingShell(props: ReadingShellProps) {
               await reanchorStagedToolbarRef.current();
             },
           });
+          hasReadableViewportRef.current = true;
           return;
         }
         case "next":
@@ -268,6 +272,7 @@ export function ReadingShell(props: ReadingShellProps) {
             run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.next()),
             after: () => reanchorStagedToolbarRef.current(),
           });
+          hasReadableViewportRef.current = true;
           return;
         case "previous":
           await runtimeController.run({
@@ -275,6 +280,7 @@ export function ReadingShell(props: ReadingShellProps) {
             run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.previous()),
             after: () => reanchorStagedToolbarRef.current(),
           });
+          hasReadableViewportRef.current = true;
           return;
         case "resize":
           await runtimeController.stabilizeReflow("resize", {
@@ -299,6 +305,7 @@ export function ReadingShell(props: ReadingShellProps) {
     let cancelled = false;
     setStatus("loading");
     setErrorMessage(null);
+    hasReadableViewportRef.current = false;
     engineGenerationRef.current += 1;
     const generation = engineGenerationRef.current;
 
@@ -312,6 +319,7 @@ export function ReadingShell(props: ReadingShellProps) {
            enableLocationsGeneration: true,
            displaySettings: settingsRef.current,
            onLocationChanged: (location) => {
+             hasReadableViewportRef.current = true;
              closeDurableToolbar();
              stagedLifecycle.handleLocationChanged();
              onEventRef.current?.({ type: "locationChanged", location });
@@ -360,13 +368,17 @@ export function ReadingShell(props: ReadingShellProps) {
             return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
           }
           return displayReaderCfiSafely(
-              (candidate) => runtimeController.run({
-                kind: "safe-display",
-                run: ({ engine: activeEngine }) => stagedLifecycle.runNavigation(
-                  options?.navigationIntent ?? "unrelated",
-                  () => activeEngine.displayCfiSafely(candidate),
-                ),
-              }),
+              async (candidate) => {
+                const result = await runtimeController.run({
+                  kind: "safe-display",
+                  run: ({ engine: activeEngine }) => stagedLifecycle.runNavigation(
+                    options?.navigationIntent ?? "unrelated",
+                    () => activeEngine.displayCfiSafely(candidate),
+                  ),
+                });
+                if (result.ok) hasReadableViewportRef.current = true;
+                return result;
+              },
               cfi,
           );
         });
@@ -387,7 +399,12 @@ export function ReadingShell(props: ReadingShellProps) {
             try {
               await runRuntimeCommand(cmd.value, cmd.seq);
             } catch (err) {
-              reportCommandError(err, "Command failed.", generation);
+              reportOperationError(
+                err,
+                "Command failed.",
+                generation,
+                getCommandFailureKind(cmd.value),
+              );
             }
           }
         }
@@ -398,13 +415,14 @@ export function ReadingShell(props: ReadingShellProps) {
               kind: "initial-display",
               run: ({ engine: activeEngine }) => activeEngine.display(),
             });
+            hasReadableViewportRef.current = true;
           } catch (err) {
-            reportCommandError(err, "Display failed.", generation);
+            reportOperationError(err, "Display failed.", generation, "display");
           }
         }
       } catch (err) {
         if (cancelled) return;
-        reportCommandError(err, "Failed to initialize epub-ts engine.", generation);
+        reportOperationError(err, "Failed to initialize epub-ts engine.", generation, "initialization");
       }
     })();
 
@@ -431,7 +449,7 @@ export function ReadingShell(props: ReadingShellProps) {
     props.onProbeCfiReady,
     props.onDisplayCfiReady,
     props.onSearchReady,
-    reportCommandError,
+    reportOperationError,
     runRuntimeCommand,
     runtimeController,
     stagedLifecycle,
@@ -457,10 +475,15 @@ export function ReadingShell(props: ReadingShellProps) {
         }
         await runRuntimeCommand(cmd.value, cmd.seq);
       } catch (err) {
-        reportTransientCommandError(err, generation);
+        reportOperationError(
+          err,
+          "Command failed.",
+          generation,
+          getCommandFailureKind(cmd.value),
+        );
       }
     })();
-  }, [props.command, reportTransientCommandError, runRuntimeCommand]);
+  }, [props.command, reportOperationError, runRuntimeCommand]);
 
   useEffect(() => {
     if (!props.settings) return;
@@ -479,10 +502,10 @@ export function ReadingShell(props: ReadingShellProps) {
           reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
         });
       } catch (err) {
-        reportCommandError(err, "Display settings failed.", generation);
+        reportOperationError(err, "Display settings failed.", generation, "reflow");
       }
     })();
-  }, [props.settings, reportCommandError, runtimeController, stagedLifecycle]);
+  }, [props.settings, reportOperationError, runtimeController, stagedLifecycle]);
 
   useEffect(() => {
     const readerWidth = props.settings?.readerWidth;
@@ -512,14 +535,14 @@ export function ReadingShell(props: ReadingShellProps) {
         });
       } catch (err) {
         if (cancelled) return;
-        reportCommandError(err, "Reader resize failed.", generation);
+        reportOperationError(err, "Reader resize failed.", generation, "reflow");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [props.settings?.readerWidth, reportCommandError, runtimeController, stagedLifecycle]);
+  }, [props.settings?.readerWidth, reportOperationError, runtimeController, stagedLifecycle]);
 
   useEffect(() => {
     if (!mountEl || status !== "ready") return;
@@ -532,9 +555,9 @@ export function ReadingShell(props: ReadingShellProps) {
         ),
         refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
         reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
-      }).catch((err) => reportCommandError(err, "Reader resize failed.", generation));
+      }).catch((err) => reportOperationError(err, "Reader resize failed.", generation, "reflow"));
     });
-  }, [mountEl, props.blob, reportCommandError, runtimeController, stagedLifecycle, status]);
+  }, [mountEl, props.blob, reportOperationError, runtimeController, stagedLifecycle, status]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
@@ -545,7 +568,7 @@ export function ReadingShell(props: ReadingShellProps) {
       if (!engine) return;
       await runRuntimeCommand({ type: "previous" });
     } catch (err) {
-      reportTransientCommandError(err, generation);
+      reportOperationError(err, "Previous page failed.", generation, "navigation");
     }
   };
 
@@ -556,7 +579,7 @@ export function ReadingShell(props: ReadingShellProps) {
       if (!engine) return;
       await runRuntimeCommand({ type: "next" });
     } catch (err) {
-      reportTransientCommandError(err, generation);
+      reportOperationError(err, "Next page failed.", generation, "navigation");
     }
   };
 
@@ -681,6 +704,20 @@ function waitForReaderLayout(): Promise<void> {
       window.requestAnimationFrame(() => resolve());
     });
   });
+}
+
+function getCommandFailureKind(command: ReadingShellCommandValue): ReaderOperationFailureKind {
+  switch (command.type) {
+    case "display":
+      return "display";
+    case "displaySearchResult":
+      return "search-result";
+    case "next":
+    case "previous":
+      return "navigation";
+    case "resize":
+      return "reflow";
+  }
 }
 
 function chooseClickToolbarPlacement({
