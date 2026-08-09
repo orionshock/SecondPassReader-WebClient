@@ -2,7 +2,6 @@ export type ReaderTheme = "light" | "sepia" | "dark";
 export type ReaderWidth = "narrow" | "normal" | "wide";
 export type ReaderLineHeight = "compact" | "normal" | "spacious";
 export type ReaderFontFamily = "publisher" | "serif" | "sans";
-export type ReaderPageMargin = "compact" | "normal" | "wide";
 
 export type ReaderSettings = {
   fontSizePercent: number;
@@ -10,7 +9,6 @@ export type ReaderSettings = {
   readerWidth: ReaderWidth;
   lineHeight: ReaderLineHeight;
   fontFamily: ReaderFontFamily;
-  pageMargin: ReaderPageMargin;
 };
 
 const STORAGE_KEY = "secondpass.readerSettings.v1";
@@ -21,7 +19,6 @@ const DEFAULTS: ReaderSettings = {
   readerWidth: "normal",
   lineHeight: "normal",
   fontFamily: "publisher",
-  pageMargin: "normal",
 };
 
 export const READER_FONT_SIZE_OPTIONS = [90, 100, 110, 120, 140] as const;
@@ -54,10 +51,6 @@ function isFontFamily(value: unknown): value is ReaderFontFamily {
   return value === "publisher" || value === "serif" || value === "sans";
 }
 
-function isPageMargin(value: unknown): value is ReaderPageMargin {
-  return value === "compact" || value === "normal" || value === "wide";
-}
-
 export function normalizeReaderSettings(input: Partial<ReaderSettings> | null | undefined): ReaderSettings {
   return {
     fontSizePercent: clampFontSizePercent(input?.fontSizePercent),
@@ -65,7 +58,6 @@ export function normalizeReaderSettings(input: Partial<ReaderSettings> | null | 
     readerWidth: isWidth(input?.readerWidth) ? input.readerWidth : DEFAULTS.readerWidth,
     lineHeight: normalizeLineHeight((input as any)?.lineHeight),
     fontFamily: isFontFamily((input as any)?.fontFamily) ? (input as any).fontFamily : DEFAULTS.fontFamily,
-    pageMargin: isPageMargin((input as any)?.pageMargin) ? (input as any).pageMargin : DEFAULTS.pageMargin,
   };
 }
 
