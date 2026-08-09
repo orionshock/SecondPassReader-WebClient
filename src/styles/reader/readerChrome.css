@@ -2,7 +2,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   min-width: 0;
 }
@@ -24,7 +24,7 @@
   color: var(--sp-reader-text);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .spReaderTopBar {
     grid-template-columns: 1fr;
   }
@@ -35,6 +35,12 @@
 
   .spReaderActions {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .spReaderActions {
+    flex-wrap: wrap;
   }
 }
 
@@ -159,4 +165,3 @@
   line-height: 1.35;
   resize: vertical;
 }
-
