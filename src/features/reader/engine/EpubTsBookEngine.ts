@@ -17,10 +17,7 @@ import {
 } from "./ReaderReflowTarget.Engine";
 import { getVisibleCfiRangeAnchor } from "./visibleCfiRangeAnchor";
 import {
-  getReaderEpubDisplayRules,
-  getReaderEpubThemeRules,
-  getReaderFontFamilyCssValue,
-  getReaderLineHeightCssValue,
+  getReaderSettingsPresentation,
 } from "../settings/readerDisplaySettings";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
@@ -126,12 +123,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   let locationsReady = false;
   let lastRelocatedLoc: Location | null = null;
 
-  const registerReaderThemes = () => {
-    rendition.themes.registerRules("light", getReaderEpubThemeRules("light"));
-    rendition.themes.registerRules("sepia", getReaderEpubThemeRules("sepia"));
-    rendition.themes.registerRules("dark", getReaderEpubThemeRules("dark"));
-  };
-
   let lastAppliedDisplaySettingsKey = "";
 
   const getCurrentCfi = (): string | null => {
@@ -163,15 +154,15 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     const reanchorCfi = options?.reanchor
       ? resolveReaderReflowCfi(options.preserveCfi, getCurrentCfi)
       : null;
-    const lineHeight = getReaderLineHeightCssValue(normalized.lineHeight);
-    const fontFamily = getReaderFontFamilyCssValue(normalized.fontFamily);
+    const presentation = getReaderSettingsPresentation(normalized);
 
-    rendition.themes.registerRules("default", getReaderEpubDisplayRules(normalized));
-    rendition.themes.select(normalized.theme);
-    rendition.themes.fontSize(`${normalized.fontSizePercent}%`);
-    rendition.themes.override("line-height", lineHeight, true);
+    // One replaceable stylesheet avoids stale rules from previously selected themes.
+    rendition.themes.registerRules("secondpass-reader-settings", presentation.epub.rules);
+    rendition.themes.select("secondpass-reader-settings");
+    rendition.themes.fontSize(presentation.epub.fontSize);
+    rendition.themes.override("line-height", presentation.epub.lineHeight, true);
 
-    if (fontFamily) rendition.themes.font(fontFamily);
+    if (presentation.epub.fontFamily) rendition.themes.font(presentation.epub.fontFamily);
     else rendition.themes.removeOverride("font-family");
 
     lastAppliedDisplaySettingsKey = key;
@@ -187,7 +178,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     }
   };
 
-  registerReaderThemes();
   if (init.displaySettings) {
     try {
       await applyDisplaySettingsInternal(init.displaySettings, { reanchor: false });

@@ -76,7 +76,7 @@
 
 .spReaderActivity .spReaderViewportRegion {
   width: 100%;
-  max-width: var(--sp-reader-viewport-max);
+  max-width: var(--sp-reader-epub-viewport-max);
   margin: 0 auto;
 }
 
@@ -96,4 +96,3 @@
   background: var(--sp-reader-control-bg);
   border-color: var(--sp-reader-border);
 }
-

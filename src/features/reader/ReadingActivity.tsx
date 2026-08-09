@@ -1,12 +1,11 @@
-import type { ReaderSettings } from "../../storage/readerSettings";
+import type { ReaderSettings, ReaderWidth } from "../../storage/readerSettings";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { CompactBook, SecondPassClient } from "@secondpass/client";
 import { useReaderImportActivation } from "./imports/useReaderImportActivation";
 import { useReaderImportJob } from "./imports/useReaderImportJob";
-import { getReaderFontSizeScale } from "./settings/readerDisplaySettings";
+import { getReaderSettingsPresentation } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
 import type { CloseSessionAfterOption, CloseSessionInput } from "../sessions/CloseSessionDialog";
 import { navigateTo } from "../../app/navigation";
@@ -51,16 +50,12 @@ export function ReadingActivity({
   const readerImport = useReaderImportJob();
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
+  const settingsPresentation = getReaderSettingsPresentation(displaySettings);
 
   return (
     <div
       className="spReaderActivity"
-      data-reader-theme={displaySettings.theme}
-      data-reader-width={displaySettings.readerWidth}
-      data-reader-line-height={displaySettings.lineHeight}
-      data-reader-font-size={displaySettings.fontSizePercent}
-      data-reader-font={displaySettings.fontFamily}
-      style={{ "--sp-reader-font-scale": getReaderFontSizeScale(displaySettings) } as CSSProperties}
+      data-reader-theme={settingsPresentation.activity.theme}
     >
       <ReadingSessionOrchestrator
         openedBook={openedBook}
@@ -102,6 +97,7 @@ export function ReadingActivity({
             workspaceFocusRequest={workspaceFocusRequest}
             spl={spl}
             initialSearchQuery={initialSearchQuery}
+            readerWidth={settingsPresentation.viewport.width}
           />
         )}
       </ReadingSessionOrchestrator>
@@ -127,6 +123,7 @@ function ReaderActivityContent({
   workspaceFocusRequest,
   spl,
   initialSearchQuery,
+  readerWidth,
 }: {
   readerState: ReaderActivityRenderState;
   openedBook: OpenedBook;
@@ -145,6 +142,7 @@ function ReaderActivityContent({
   workspaceFocusRequest: { annotationId: string; mode: "editable" | "readonly"; seq: number } | null;
   spl?: SecondPassClient | null;
   initialSearchQuery?: string | null;
+  readerWidth: ReaderWidth;
 }) {
   const { state, statusLine, autosaveStatus, shell, annotations, marginalia } = readerState;
   const currentSessionId = state.sessionId;
@@ -360,6 +358,7 @@ function ReaderActivityContent({
         onJumpToCfi={readerState.search.jumpToCfi}
         onJumpToCfiRange={readerState.search.jumpToCfiRange}
         readerImport={readerImport}
+        readerWidth={readerWidth}
         onClearImport={clearImportJob}
         onCloseImport={closeImportDrawer}
         onSelectImportRow={(rowId) => {

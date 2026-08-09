@@ -28,10 +28,6 @@ export const READER_WIDTH_OPTIONS: Array<{ value: ReaderWidth; label: string }> 
   { value: "wide", label: "Wide" },
 ];
 
-export function getReaderFontSizeScale(settings: ReaderSettings): string {
-  return String(settings.fontSizePercent / 100);
-}
-
 export function getReaderLineHeightCssValue(lineHeight: ReaderLineHeight): string {
   switch (lineHeight) {
     case "compact":
@@ -93,15 +89,35 @@ export function getReaderEpubDisplayRules(settings: ReaderSettings): Record<stri
   const lineHeight = getReaderLineHeightCssValue(settings.lineHeight);
   const fontFamily = getReaderFontFamilyCssValue(settings.fontFamily);
   const textRules: Record<string, string> = {
-    "line-height": lineHeight,
+    "line-height": `${lineHeight} !important`,
   };
 
-  if (fontFamily) textRules["font-family"] = fontFamily;
+  if (fontFamily) textRules["font-family"] = `${fontFamily} !important`;
 
   return {
     "body, p, li, blockquote, dd, dt, div": textRules,
     "h1, h2, h3, h4, h5, h6": {
-      "line-height": settings.lineHeight === "compact" ? "1.15" : settings.lineHeight === "spacious" ? "1.35" : "1.25",
+      "line-height": `${settings.lineHeight === "compact" ? "1.15" : settings.lineHeight === "spacious" ? "1.35" : "1.25"} !important`,
+    },
+  };
+}
+
+export function getReaderSettingsPresentation(settings: ReaderSettings) {
+  return {
+    activity: {
+      theme: settings.theme,
+    },
+    viewport: {
+      width: settings.readerWidth,
+    },
+    epub: {
+      rules: {
+        ...getReaderEpubThemeRules(settings.theme),
+        ...getReaderEpubDisplayRules(settings),
+      },
+      fontSize: `${settings.fontSizePercent}%`,
+      lineHeight: getReaderLineHeightCssValue(settings.lineHeight),
+      fontFamily: getReaderFontFamilyCssValue(settings.fontFamily),
     },
   };
 }

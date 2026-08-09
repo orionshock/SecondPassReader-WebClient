@@ -280,7 +280,7 @@
 
 @media (min-width: 1024px) {
   .spReaderActivity > .spReaderContentFrameImportOpen {
-    width: min(100%, calc(var(--sp-reader-viewport-max) + clamp(360px, 28vw, 480px) + 12px));
+    width: min(100%, calc(var(--sp-reader-workspace-max) + clamp(360px, 28vw, 480px) + 12px));
     grid-template-columns: minmax(520px, 1fr) min(32vw, 480px);
   }
 

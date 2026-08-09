@@ -27,10 +27,9 @@
   --sp-reader-danger-bg: #fee2e2;
   --sp-reader-danger-text: #7f1d1d;
   --sp-reader-danger-border: rgba(185, 28, 28, 0.55);
-  --sp-reader-viewport-max: 1200px;
-  --sp-reader-line-height: 1.5;
-  --sp-reader-font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --sp-reader-font-scale: 1;
+  --sp-reader-shell-max: 1200px;
+  --sp-reader-workspace-max: 1500px;
+  --sp-reader-epub-viewport-max: 1200px;
   display: grid;
   gap: 12px;
   min-height: 100vh;
@@ -38,16 +37,17 @@
   padding: 18px 24px 28px;
   background: var(--sp-reader-bg);
   color: var(--sp-reader-text);
-  font-family: var(--sp-reader-font-family);
-  font-size: calc(1rem * var(--sp-reader-font-scale));
-  line-height: var(--sp-reader-line-height);
   /* Keep default overflow behavior so sticky chrome can work reliably. */
 }
 
 .spReaderActivity > .spReaderChrome,
-.spReaderActivity > .spReaderLayout,
+.spReaderActivity > .spReaderLayout {
+  width: min(100%, var(--sp-reader-shell-max));
+  margin-inline: auto;
+}
+
 .spReaderActivity > .spReaderContentFrame {
-  width: min(100%, var(--sp-reader-viewport-max));
+  width: min(100%, var(--sp-reader-workspace-max));
   margin-inline: auto;
 }
 
@@ -85,28 +85,17 @@
   --sp-reader-danger-border: rgba(248, 113, 113, 0.5);
 }
 
-.spReaderActivity[data-reader-width="narrow"] {
-  --sp-reader-viewport-max: 900px;
+.spReaderViewportRegion[data-reader-width="narrow"] {
+  --sp-reader-epub-viewport-max: 900px;
 }
 
-.spReaderActivity[data-reader-width="wide"] {
-  --sp-reader-viewport-max: 1500px;
+.spReaderViewportRegion[data-reader-width="wide"] {
+  --sp-reader-epub-viewport-max: 1500px;
 }
 
-.spReaderActivity[data-reader-line-height="compact"] {
-  --sp-reader-line-height: 1.3;
-}
-
-.spReaderActivity[data-reader-line-height="spacious"] {
-  --sp-reader-line-height: 1.7;
-}
-
-.spReaderActivity[data-reader-font="serif"] {
-  --sp-reader-font-family: Georgia, "Times New Roman", Times, serif;
-}
-
-.spReaderActivity[data-reader-font="sans"] {
-  --sp-reader-font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+.spReaderAnnotationsRegion {
+  width: min(100%, var(--sp-reader-shell-max));
+  margin-inline: auto;
 }
 
 .spReaderChrome {

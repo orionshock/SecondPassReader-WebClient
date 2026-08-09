@@ -3,6 +3,7 @@ import { AnnotationWorkspace } from "../annotations/AnnotationWorkspace";
 import { ReaderImportDrawer } from "../imports/ReaderImportDrawer";
 import type { useReaderImportJob } from "../imports/useReaderImportJob";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./readerActivityTypes";
+import type { ReaderWidth } from "../../../storage/readerSettings";
 
 export function ReaderActivitySidePanels({
   importDrawerInLayout,
@@ -13,6 +14,7 @@ export function ReaderActivitySidePanels({
   onJumpToCfi,
   onJumpToCfiRange,
   readerImport,
+  readerWidth,
   onClearImport,
   onCloseImport,
   onSelectImportRow,
@@ -26,6 +28,7 @@ export function ReaderActivitySidePanels({
   onJumpToCfi: (cfi: string) => void;
   onJumpToCfiRange: (cfiRange: string) => void;
   readerImport: ReturnType<typeof useReaderImportJob>;
+  readerWidth: ReaderWidth;
   onClearImport: () => void;
   onCloseImport: () => void;
   onSelectImportRow: (rowId: string) => void;
@@ -34,7 +37,7 @@ export function ReaderActivitySidePanels({
   return (
     <div className={`spReaderContentFrame${importDrawerInLayout ? " spReaderContentFrameImportOpen" : ""}`}>
       <div className="spReaderLayout">
-        <div className="spReaderViewportRegion">{shell}</div>
+        <div className="spReaderViewportRegion" data-reader-width={readerWidth}>{shell}</div>
         <div className="spReaderAnnotationsRegion">
           <AnnotationWorkspace
             annotations={annotations.items}
