@@ -44,6 +44,7 @@ export type EpubTsBookEngine = {
   clearSelection(): void;
   applyDisplaySettings(settings: ReaderSettings): Promise<void>;
   resizeToMount(): Promise<void>;
+  refreshHighlightMarks(): void;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   setTemporarySearchHighlight(cfiRange: string | null): void;
   getVisibleCfiRangeAnchor(cfiRange: string): Promise<ReaderSelectionAnchor | null>;
@@ -333,7 +334,10 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       if (!cfi) return;
       rendition.resize(width, height, cfi);
       if (!destroyed) await rendition.display(cfi);
-      if (!destroyed) highlightMarkPainter.refresh();
+    },
+    refreshHighlightMarks() {
+      if (destroyed) return;
+      highlightMarkPainter.refresh();
     },
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;

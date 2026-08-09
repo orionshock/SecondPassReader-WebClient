@@ -21,6 +21,7 @@ import { displayReaderCfiSafely } from "./readerCfiDisplay";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
+import { stabilizeReaderReflow } from "./ReaderReflow.Coordinator";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -235,9 +236,14 @@ export function ReadingShell(props: ReadingShellProps) {
           await reanchorStagedToolbarRef.current();
           return;
         case "resize":
-          await waitForReaderLayout();
-          await engine.resizeToMount();
-          await reanchorStagedToolbarRef.current();
+          await stabilizeReaderReflow({
+            reflow: async () => {
+              await waitForReaderLayout();
+              await engine.resizeToMount();
+            },
+            refreshMarks: () => engine.refreshHighlightMarks(),
+            reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+          });
           return;
       }
     },
@@ -406,8 +412,11 @@ export function ReadingShell(props: ReadingShellProps) {
 
     void (async () => {
       try {
-        await engine.applyDisplaySettings(props.settings!);
-        await reanchorStagedToolbarRef.current();
+        await stabilizeReaderReflow({
+          reflow: () => engine.applyDisplaySettings(props.settings!),
+          refreshMarks: () => engine.refreshHighlightMarks(),
+          reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+        });
       } catch (err) {
         reportCommandError(err, "Display settings failed.", generation);
       }
@@ -427,11 +436,17 @@ export function ReadingShell(props: ReadingShellProps) {
 
     void (async () => {
       try {
-        await waitForReaderLayout();
-        if (cancelled) return;
-        await engine.resizeToMount();
-        if (cancelled) return;
-        await reanchorStagedToolbarRef.current();
+        await stabilizeReaderReflow({
+          reflow: async () => {
+            await waitForReaderLayout();
+            if (cancelled) return;
+            await engine.resizeToMount();
+          },
+          refreshMarks: () => {
+            if (!cancelled) engine.refreshHighlightMarks();
+          },
+          reanchorStagedToolbar: () => cancelled ? Promise.resolve() : reanchorStagedToolbarRef.current(),
+        });
       } catch (err) {
         if (cancelled) return;
         reportCommandError(err, "Reader resize failed.", generation);
