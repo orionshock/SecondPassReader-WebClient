@@ -9,6 +9,8 @@ import {
 import { buildMarginaliaProgressInput } from "./marginaliaMutations";
 import { buildReaderLocationLabel } from "../display/ReaderLocation.Presenter";
 
+const READING_PROGRESS_EXIT_FLUSH_TIMEOUT_MS = 3000;
+
 export function buildReadingProgressSaveInput(location: ReaderLocation | null): {
   cfi: string;
   locationLabel: string;
@@ -28,6 +30,7 @@ export function useReadingProgressAutosave(input: {
 }) {
   const [autosave, setAutosave] = useState<ReadingProgressAutosaveState>({ status: "idle" });
   const controllerRef = useRef<ReadingProgressAutosaveController | null>(null);
+  const lifecycleGenerationRef = useRef(0);
   if (!controllerRef.current) controllerRef.current = new ReadingProgressAutosaveController(setAutosave);
   const controller = controllerRef.current;
 
@@ -54,7 +57,32 @@ export function useReadingProgressAutosave(input: {
     });
   }, [controller, input.autosaveDelayMs, input.enabled, input.sessionId, input.spl, progress, saveProgress]);
 
-  useEffect(() => () => controller.pause(), [controller]);
+  useEffect(() => {
+    lifecycleGenerationRef.current += 1;
+    const lifecycleGeneration = lifecycleGenerationRef.current;
+    return () => {
+      queueMicrotask(() => {
+        if (lifecycleGenerationRef.current !== lifecycleGeneration) return;
+        void settleExitFlush(controller).finally(() => {
+          if (lifecycleGenerationRef.current === lifecycleGeneration) controller.pause();
+        });
+      });
+    };
+  }, [controller]);
 
   return { autosave };
+}
+
+async function settleExitFlush(controller: ReadingProgressAutosaveController): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timeoutId = setTimeout(resolve, READING_PROGRESS_EXIT_FLUSH_TIMEOUT_MS);
+  });
+  try {
+    await Promise.race([controller.flushNow({ silent: true }), timeout]);
+  } catch {
+    // Exit persistence is best-effort and must not reject into React cleanup.
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 }

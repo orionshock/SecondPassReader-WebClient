@@ -30,6 +30,11 @@ type AutosaveInput = {
   saveProgress: SaveProgress | null;
 };
 
+type ActiveDrain = {
+  generation: number;
+  promise: Promise<void>;
+};
+
 function payloadKey(payload: ReadingProgressSavePayload | null): string | null {
   return payload ? `${payload.cfi}\u0000${payload.locationLabel}` : null;
 }
@@ -59,10 +64,13 @@ export class ReadingProgressAutosaveController {
   private scheduledPayloadKey: string | null = null;
   private inFlightGeneration: number | null = null;
   private lastSavedPayloadKey: string | null = null;
+  private activeDrain: ActiveDrain | null = null;
+  private notifyStateChanges = true;
 
   constructor(private readonly onStateChange: (state: ReadingProgressAutosaveState) => void) {}
 
   update(next: AutosaveInput): void {
+    this.notifyStateChanges = true;
     const sessionChanged = next.sessionId !== this.input.sessionId;
     const previousEnabled = this.input.enabled;
     const previousPayloadKey = payloadKey(this.input.progress);
@@ -103,6 +111,21 @@ export class ReadingProgressAutosaveController {
     this.generation += 1;
     this.clearTimer();
     this.inFlightGeneration = null;
+    this.activeDrain = null;
+  }
+
+  flushNow(options?: { silent?: boolean }): Promise<void> {
+    if (options?.silent) this.notifyStateChanges = false;
+    this.clearTimer();
+
+    const generation = this.generation;
+    const { enabled, progress, saveProgress, sessionId } = this.input;
+    if (!enabled || !sessionId || !progress || !saveProgress) return Promise.resolve();
+
+    const currentDrain = this.activeDrain;
+    if (currentDrain?.generation === generation) return currentDrain.promise;
+    if (payloadKey(progress) === this.lastSavedPayloadKey) return Promise.resolve();
+    return this.startDrain(generation);
   }
 
   getState(): ReadingProgressAutosaveState {
@@ -113,6 +136,7 @@ export class ReadingProgressAutosaveController {
     this.generation += 1;
     this.clearTimer();
     this.inFlightGeneration = null;
+    this.activeDrain = null;
     this.lastSavedPayloadKey = null;
     this.input = { ...this.input, sessionId: nextSessionId, progress: null };
     this.publish({ status: "idle" });
@@ -131,8 +155,22 @@ export class ReadingProgressAutosaveController {
       if (generation !== this.generation || key !== this.scheduledPayloadKey) return;
       this.timer = null;
       this.scheduledPayloadKey = null;
-      void this.drain(generation);
+      void this.startDrain(generation);
     }, this.input.autosaveDelayMs);
+  }
+
+  private startDrain(generation: number): Promise<void> {
+    const currentDrain = this.activeDrain;
+    if (currentDrain?.generation === generation) return currentDrain.promise;
+
+    const promise = this.drain(generation);
+    const activeDrain = { generation, promise };
+    this.activeDrain = activeDrain;
+    const clearActiveDrain = () => {
+      if (this.activeDrain === activeDrain) this.activeDrain = null;
+    };
+    void promise.then(clearActiveDrain, clearActiveDrain);
+    return promise;
   }
 
   private async drain(generation: number): Promise<void> {
@@ -189,6 +227,6 @@ export class ReadingProgressAutosaveController {
 
   private publish(state: ReadingProgressAutosaveState): void {
     this.state = state;
-    this.onStateChange(state);
+    if (this.notifyStateChanges) this.onStateChange(state);
   }
 }
