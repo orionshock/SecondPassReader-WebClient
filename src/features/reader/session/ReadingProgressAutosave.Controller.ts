@@ -1,6 +1,8 @@
 import { ApiError } from "@secondpass/client";
 import type { MarginaliaProgress } from "@secondpass/client";
 
+export const READING_PROGRESS_AUTOSAVE_DELAY_MS = 3000;
+
 export type ReadingProgressSavePayload = {
   cfi: string;
   locationLabel: string;
@@ -47,7 +49,7 @@ export class ReadingProgressAutosaveController {
   private state: ReadingProgressAutosaveState = { status: "idle" };
   private input: AutosaveInput = {
     enabled: false,
-    autosaveDelayMs: 5000,
+    autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
     sessionId: null,
     progress: null,
     saveProgress: null,

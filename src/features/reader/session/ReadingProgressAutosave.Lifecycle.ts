@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation } from "../domain/types";
 import {
+  READING_PROGRESS_AUTOSAVE_DELAY_MS,
   ReadingProgressAutosaveController,
   type ReadingProgressAutosaveState,
 } from "./ReadingProgressAutosave.Controller";
@@ -46,7 +47,7 @@ export function useReadingProgressAutosave(input: {
   useEffect(() => {
     controller.update({
       enabled: input.enabled !== false,
-      autosaveDelayMs: input.autosaveDelayMs ?? 5000,
+      autosaveDelayMs: input.autosaveDelayMs ?? READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: input.sessionId,
       progress,
       saveProgress: input.spl ? saveProgress : null,

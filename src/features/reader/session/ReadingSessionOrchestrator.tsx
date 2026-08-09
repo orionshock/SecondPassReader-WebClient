@@ -10,6 +10,7 @@ import type { ReaderTocItem } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./ReadingProgressAutosave.Lifecycle";
+import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./ReadingProgressAutosave.Controller";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import type { HighlightViewModel } from "../annotations/viewModels";
@@ -184,7 +185,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const { autosave } = useReadingProgressAutosave({
     enabled: canMutateSession,
-    autosaveDelayMs: 5000,
+    autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
     spl: props.spl,
     sessionId: state.sessionId,
     location: state.location,
