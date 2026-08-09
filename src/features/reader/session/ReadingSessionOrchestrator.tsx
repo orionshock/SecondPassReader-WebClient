@@ -18,7 +18,10 @@ import { useSessionAnnotations } from "./useSessionAnnotations";
 import { usePreviousSessionLayers, type PreviousSessionAnnotationGroup } from "./usePreviousSessionLayers";
 import { useCurrentSessionMeta } from "./useCurrentSessionMeta";
 import { buildReaderLocationLabel, buildReaderStatusLine } from "./readerSessionLabels";
-import { useCurrentSessionAnnotationActions } from "./useCurrentSessionAnnotationActions";
+import {
+  useCurrentSessionAnnotationActions,
+  type ReaderBookmarkMutationResult,
+} from "./CurrentSessionAnnotation.Actions";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -31,6 +34,7 @@ export type ReadingSessionOrchestratorProps = {
   onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
   children: (arg: {
     state: ReadingSessionState;
+    canMutateSession: boolean;
     statusLine: string[];
     autosaveStatus: { text: string; title?: string } | null;
     shell: ReactNode;
@@ -62,7 +66,7 @@ export type ReadingSessionOrchestratorProps = {
       status: "idle" | "loading" | "ready" | "error";
       error: string | null;
       busy: boolean;
-      toggleBookmarkAtCurrentLocation: () => Promise<void>;
+      toggleBookmarkAtCurrentLocation: () => Promise<ReaderBookmarkMutationResult>;
       createHighlight: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
       removeById: (annotationId: string) => Promise<void>;
       updateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
@@ -383,6 +387,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   return props.children({
     state,
+    canMutateSession,
     statusLine,
     autosaveStatus,
     shell: (

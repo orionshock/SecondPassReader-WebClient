@@ -16,8 +16,16 @@ import { ReaderActivityDialogs } from "./activity/ReaderActivityDialogs";
 import { ReaderActivityHeader } from "./activity/ReaderActivityHeader";
 import { ReaderActivitySidePanels } from "./activity/ReaderActivitySidePanels";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/readerActivityTypes";
+import {
+  canMutateReaderBookmark,
+  type ReaderBookmarkMutationResult,
+} from "./session/CurrentSessionAnnotation.Actions";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
+
+export function shouldAcceptImportedBookmarkMutation(result: ReaderBookmarkMutationResult): boolean {
+  return result.ok && result.action === "created";
+}
 
 export function ReadingActivity({
   openedBook,
@@ -143,7 +151,11 @@ function ReaderActivityContent({
   const progress = state.location?.bookProgress;
   const nearEnd = typeof progress === "number" && Number.isFinite(progress) && progress >= READER_FINISH_PROGRESS_THRESHOLD;
   const showFinishControls = Boolean(currentSessionId && nearEnd);
-  const canBookmark = Boolean(openedBook.marginaliaBootstrap?.session?.id && state.location?.cfi);
+  const canBookmark = canMutateReaderBookmark({
+    canMutateSession: readerState.canMutateSession,
+    sessionId: state.sessionId,
+    cfi: state.location?.cfi,
+  });
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
   const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
   const [nextSeriesBook, setNextSeriesBook] = useState<CompactBook | null>(null);
@@ -315,9 +327,10 @@ function ReaderActivityContent({
         bookmarkSuggested={Boolean(readerImport.bookmarkSuggestion)}
         onToggleBookmark={() => {
           const suggestion = readerImport.bookmarkSuggestion;
-          const createsBookmark = !isBookmarked;
-          void annotations.toggleBookmarkAtCurrentLocation().then(() => {
-            if (suggestion && createsBookmark) readerImport.acceptBookmarkSuggestion(suggestion.cfi);
+          void annotations.toggleBookmarkAtCurrentLocation().then((result) => {
+            if (suggestion && shouldAcceptImportedBookmarkMutation(result)) {
+              readerImport.acceptBookmarkSuggestion(suggestion.cfi);
+            }
           });
         }}
         marginaliaOpen={marginaliaOpen}
