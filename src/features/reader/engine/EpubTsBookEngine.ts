@@ -11,6 +11,10 @@ import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubL
 import { extractSelectionTextAndContext } from "./selectionExtraction";
 import { searchEpubTsBook } from "./EpubTsBookSearch";
 import { ReaderSearchController } from "./ReaderSearch.Controller";
+import {
+  resolveReaderReflowCfi,
+  type ReaderReflowTargetOptions,
+} from "./ReaderReflowTarget.Engine";
 import { getVisibleCfiRangeAnchor } from "./visibleCfiRangeAnchor";
 import {
   getReaderEpubDisplayRules,
@@ -43,8 +47,8 @@ export type EpubTsBookEngine = {
   next(): Promise<void>;
   previous(): Promise<void>;
   clearSelection(): void;
-  applyDisplaySettings(settings: ReaderSettings): Promise<void>;
-  resizeToMount(): Promise<void>;
+  applyDisplaySettings(settings: ReaderSettings, options?: ReaderReflowTargetOptions): Promise<void>;
+  resizeToMount(options?: ReaderReflowTargetOptions): Promise<void>;
   refreshHighlightMarks(): void;
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   setTemporarySearchHighlight(cfiRange: string | null): void;
@@ -142,7 +146,10 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     return typeof relocatedCfi === "string" && relocatedCfi.trim() ? relocatedCfi.trim() : null;
   };
 
-  const applyDisplaySettingsInternal = async (settings: ReaderSettings, options?: { reanchor?: boolean }) => {
+  const applyDisplaySettingsInternal = async (
+    settings: ReaderSettings,
+    options?: { reanchor?: boolean; preserveCfi?: string | null },
+  ) => {
     if (destroyed) return;
     const normalized = normalizeReaderSettings(settings);
     const key = JSON.stringify({
@@ -153,7 +160,9 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     });
     if (lastAppliedDisplaySettingsKey === key) return;
 
-    const reanchorCfi = options?.reanchor ? getCurrentCfi() : null;
+    const reanchorCfi = options?.reanchor
+      ? resolveReaderReflowCfi(options.preserveCfi, getCurrentCfi)
+      : null;
     const lineHeight = getReaderLineHeightCssValue(normalized.lineHeight);
     const fontFamily = getReaderFontFamilyCssValue(normalized.fontFamily);
 
@@ -324,15 +333,18 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         // ignore
       }
     },
-    async applyDisplaySettings(settings: ReaderSettings) {
+    async applyDisplaySettings(settings: ReaderSettings, options?: ReaderReflowTargetOptions) {
       if (destroyed) return;
-      await applyDisplaySettingsInternal(settings, { reanchor: true });
+      await applyDisplaySettingsInternal(settings, {
+        reanchor: true,
+        preserveCfi: options?.preserveCfi,
+      });
     },
-    async resizeToMount() {
+    async resizeToMount(options?: ReaderReflowTargetOptions) {
       if (destroyed) return;
       const { width, height } = measureMount();
       if (width <= 0 || height <= 0) return;
-      const cfi = getCurrentCfi();
+      const cfi = resolveReaderReflowCfi(options?.preserveCfi, getCurrentCfi);
       if (!cfi) return;
       rendition.resize(width, height, cfi);
       if (!destroyed) await rendition.display(cfi);

@@ -17,6 +17,11 @@ export class ReaderBootstrapProgressGuard {
     this.protectionActive = false;
   }
 
+  getProtectedRestoreCfi(generation: number): string | null {
+    if (generation !== this.generation || !this.protectionActive) return null;
+    return this.initialCfi;
+  }
+
   shouldPublishRelocation(generation: number, cfi?: string): boolean {
     if (generation !== this.generation) return false;
     if (!this.protectionActive) return true;

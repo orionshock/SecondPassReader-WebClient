@@ -320,7 +320,9 @@ export function ReadingShell(props: ReadingShellProps) {
             reflow: async (engine) => {
               await stagedLifecycle.runNavigation("layout-reflow", async () => {
                 await waitForReaderLayout();
-                await engine.resizeToMount();
+                await engine.resizeToMount({
+                  preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
+                });
               });
             },
             refreshMarks: (engine) => engine.refreshHighlightMarks(),
@@ -540,7 +542,9 @@ export function ReadingShell(props: ReadingShellProps) {
         await runtimeController.stabilizeReflow("settings", {
           reflow: (activeEngine) => stagedLifecycle.runNavigation(
             "layout-reflow",
-            () => activeEngine.applyDisplaySettings(props.settings!),
+            () => activeEngine.applyDisplaySettings(props.settings!, {
+              preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
+            }),
           ),
           refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
           reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
@@ -549,7 +553,14 @@ export function ReadingShell(props: ReadingShellProps) {
         reportOperationError(err, "Display settings failed.", generation, "reflow");
       }
     })();
-  }, [props.settings, readiness, reportOperationError, runtimeController, stagedLifecycle]);
+  }, [
+    bootstrapProgressGuard,
+    props.settings,
+    readiness,
+    reportOperationError,
+    runtimeController,
+    stagedLifecycle,
+  ]);
 
   useEffect(() => {
     const readerWidth = props.settings?.readerWidth;
@@ -570,7 +581,9 @@ export function ReadingShell(props: ReadingShellProps) {
             await stagedLifecycle.runNavigation("layout-reflow", async () => {
               await waitForReaderLayout();
               if (cancelled) return;
-              await activeEngine.resizeToMount();
+              await activeEngine.resizeToMount({
+                preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
+              });
             });
           },
           refreshMarks: (activeEngine) => {
@@ -587,7 +600,14 @@ export function ReadingShell(props: ReadingShellProps) {
     return () => {
       cancelled = true;
     };
-  }, [props.settings?.readerWidth, readiness, reportOperationError, runtimeController, stagedLifecycle]);
+  }, [
+    bootstrapProgressGuard,
+    props.settings?.readerWidth,
+    readiness,
+    reportOperationError,
+    runtimeController,
+    stagedLifecycle,
+  ]);
 
   useEffect(() => {
     if (!mountEl || !isReaderFullyReady(readiness)) return;
@@ -596,13 +616,23 @@ export function ReadingShell(props: ReadingShellProps) {
       void runtimeController.stabilizeReflow("resize", {
         reflow: (activeEngine) => stagedLifecycle.runNavigation(
           "layout-reflow",
-          () => activeEngine.resizeToMount(),
+          () => activeEngine.resizeToMount({
+            preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
+          }),
         ),
         refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
         reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
       }).catch((err) => reportOperationError(err, "Reader resize failed.", generation, "reflow"));
     });
-  }, [mountEl, props.blob, readiness, reportOperationError, runtimeController, stagedLifecycle]);
+  }, [
+    bootstrapProgressGuard,
+    mountEl,
+    props.blob,
+    readiness,
+    reportOperationError,
+    runtimeController,
+    stagedLifecycle,
+  ]);
 
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
