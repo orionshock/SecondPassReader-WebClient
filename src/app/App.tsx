@@ -32,6 +32,7 @@ import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } f
 import type { SecondPassClient } from "@secondpass/client";
 import { saveReaderReturnTarget } from "../features/reader/readerReturnTarget";
 import type { ReaderReturnTarget } from "../features/reader/types";
+import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
 import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
@@ -40,6 +41,7 @@ function AppShell() {
   const DEBUG_NAV = import.meta.env.DEV;
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
+  const activeOpenedBookRef = useRef<OpenedBook | null>(null);
   const [view, setView] = useState<"main" | "settings">("main");
   const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
   const [readerRestoreError, setReaderRestoreError] = useState<string | null>(null);
@@ -66,6 +68,8 @@ function AppShell() {
 
   const openingBookRef = useRef<string | null>(null);
   const navSeqRef = useRef(0);
+  const routeRef = useRef<AppRoute | null>(route);
+  routeRef.current = route;
   const lastMeCheckRef = useRef<Record<string, number>>({});
   const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
 
@@ -282,9 +286,16 @@ function AppShell() {
         if (cancelled) return;
         if (seq !== navSeqRef.current) return;
         const opened = await openBookForReader({ spl: splClient, book });
-        if (cancelled) return;
-        if (seq !== navSeqRef.current) return;
-        handleBookOpened(opened);
+        const currentRoute = routeRef.current;
+        const currentOpened = resolveReaderOpenCompletion(
+          opened,
+          !cancelled
+            && seq === navSeqRef.current
+            && currentRoute?.kind === "reader"
+            && currentRoute.bookId === requestedBookId,
+        );
+        if (!currentOpened) return;
+        handleBookOpened(currentOpened);
       } catch (e) {
         if (cancelled) return;
         reportAuthorizationFailure(e);
@@ -330,11 +341,14 @@ function AppShell() {
 
   function handleBookOpened(opened: OpenedBook) {
     // If the user navigated away from the reader route while this book was opening, do not re-open it.
-    if (route?.kind !== "reader") return;
-    setOpenedBook((prev) => {
-      if (prev) URL.revokeObjectURL(prev.objectUrl);
-      return opened;
-    });
+    if (route?.kind !== "reader") {
+      releaseOpenedBook(opened);
+      return;
+    }
+    const previous = activeOpenedBookRef.current;
+    activeOpenedBookRef.current = opened;
+    releaseOpenedBook(previous);
+    setOpenedBook(opened);
     navigateTo({ kind: "reader", bookId: String(opened.book.id), search: route.search });
   }
 
@@ -343,10 +357,10 @@ function AppShell() {
       // eslint-disable-next-line no-console
       console.log("[nav] handleCloseReader()");
     }
-    setOpenedBook((prev) => {
-      if (prev) URL.revokeObjectURL(prev.objectUrl);
-      return null;
-    });
+    const active = activeOpenedBookRef.current;
+    activeOpenedBookRef.current = null;
+    releaseOpenedBook(active);
+    setOpenedBook(null);
     openingBookRef.current = null;
   }
 
