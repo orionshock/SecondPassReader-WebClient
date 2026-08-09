@@ -1,5 +1,8 @@
 import { EpubCFI } from "@likecoin/epub-ts";
-import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "../imports/readerImportDebug";
+import type {
+  ReaderRangeRepairDiagnostic,
+  ReaderRangeRepairDiagnosticHandler,
+} from "../domain/ReaderRangeRepair.Diagnostics";
 
 type RepairableSection = {
   document?: Document;
@@ -24,6 +27,7 @@ export function repairImportedHighlightRangeInSection({
   fullText,
   signal,
   windowRadius = 2000,
+  onDiagnostic,
 }: {
   section: RepairableSection;
   anchorCfi: string;
@@ -31,15 +35,18 @@ export function repairImportedHighlightRangeInSection({
   fullText: string;
   signal?: AbortSignal;
   windowRadius?: number;
+  onDiagnostic?: ReaderRangeRepairDiagnosticHandler;
 }): ImportedHighlightRangeRepair | null {
   throwIfAborted(signal);
   const doc = section.document;
   if (!doc) {
-    debugReaderImport("range repair skipped", {
-      reason: "missing document",
-      anchorCfi,
-      fragmentPreview: previewImportText(fragmentText),
-      fullPreview: previewImportText(fullText),
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair skipped",
+      data: { reason: "missing document", anchorCfi },
+      previews: [
+        { key: "fragmentPreview", value: fragmentText },
+        { key: "fullPreview", value: fullText },
+      ],
     });
     return null;
   }
@@ -47,26 +54,33 @@ export function repairImportedHighlightRangeInSection({
   const normalizedFullText = normalizeImportRepairText(fullText);
   const normalizedFragment = normalizeImportRepairText(fragmentText);
   if (!normalizedFullText || !normalizedFragment || normalizedFullText === normalizedFragment) {
-    debugReaderImport("range repair skipped", {
-      reason: "invalid text",
-      anchorCfi,
-      fullPreview: previewImportText(normalizedFullText),
-      fragmentPreview: previewImportText(normalizedFragment),
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair skipped",
+      data: { reason: "invalid text", anchorCfi },
+      previews: [
+        { key: "fullPreview", value: normalizedFullText },
+        { key: "fragmentPreview", value: normalizedFragment },
+      ],
     });
     return null;
   }
 
   const flat = flattenSectionText(doc);
   if (!flat.text || flat.map.length === 0) {
-    debugReaderImport("range repair skipped", { reason: "empty flattened section", anchorCfi });
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair skipped",
+      data: { reason: "empty flattened section", anchorCfi },
+    });
     return null;
   }
-  debugReaderImport("range repair start", {
-    anchorCfi,
-    fragmentPreview: previewImportText(normalizedFragment),
-    fullPreview: previewImportText(normalizedFullText),
-    flatLength: flat.text.length,
-    flatPreview: previewImportText(flat.text.slice(0, 240)),
+  emitDiagnostic(onDiagnostic, {
+    event: "range repair start",
+    data: { anchorCfi, flatLength: flat.text.length },
+    previews: [
+      { key: "fragmentPreview", value: normalizedFragment },
+      { key: "fullPreview", value: normalizedFullText },
+      { key: "flatPreview", value: flat.text.slice(0, 240) },
+    ],
   });
 
   // The fragment match is an anchor inside this section. Repair stays same-section
@@ -78,13 +92,16 @@ export function repairImportedHighlightRangeInSection({
     anchorCfi,
     fragmentText: normalizedFragment,
     windowRadius,
+    onDiagnostic,
   });
   if (fragmentAt < 0) {
-    debugReaderImport("range repair failed", {
-      reason: "anchor fragment not found",
-      anchorCfi,
-      fragmentPreview: previewImportText(normalizedFragment),
-      fullPreview: previewImportText(normalizedFullText),
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair failed",
+      data: { reason: "anchor fragment not found", anchorCfi },
+      previews: [
+        { key: "fragmentPreview", value: normalizedFragment },
+        { key: "fullPreview", value: normalizedFullText },
+      ],
     });
     return null;
   }
@@ -97,25 +114,29 @@ export function repairImportedHighlightRangeInSection({
     ? findPunctuationTolerantRepairRange(windowText, normalizedFullText)
     : null;
   if (exactAt < 0 && !tolerantRange) {
-    const verbose = isReaderImportDebugVerbose();
     const anchorContextStart = Math.max(0, fragmentAt - 180);
     const anchorContextEnd = Math.min(flat.text.length, fragmentAt + normalizedFragment.length + 260);
     const anchorContext = flat.text.slice(anchorContextStart, anchorContextEnd);
-    debugReaderImport("range repair failed", {
-      reason: "full text not found near fragment",
-      anchorCfi,
-      fragmentAt,
-      windowStart,
-      windowEnd,
-      fragmentPreview: previewImportText(normalizedFragment),
-      fullPreview: previewImportText(normalizedFullText),
-      anchorContextPreview: verbose ? previewImportText(anchorContext, 500) : undefined,
-      punctuationLightFullPreview: verbose
-        ? previewImportText(projectPunctuationLightText(normalizedFullText).text, 500)
-        : undefined,
-      punctuationLightAnchorPreview: verbose
-        ? previewImportText(projectPunctuationLightText(anchorContext).text, 500)
-        : undefined,
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair failed",
+      data: { reason: "full text not found near fragment", anchorCfi, fragmentAt, windowStart, windowEnd },
+      previews: [
+        { key: "fragmentPreview", value: normalizedFragment },
+        { key: "fullPreview", value: normalizedFullText },
+        { key: "anchorContextPreview", value: anchorContext, maxLength: 500, verboseOnly: true },
+        {
+          key: "punctuationLightFullPreview",
+          value: projectPunctuationLightText(normalizedFullText).text,
+          maxLength: 500,
+          verboseOnly: true,
+        },
+        {
+          key: "punctuationLightAnchorPreview",
+          value: projectPunctuationLightText(anchorContext).text,
+          maxLength: 500,
+          verboseOnly: true,
+        },
+      ],
     });
     return null;
   }
@@ -125,7 +146,10 @@ export function repairImportedHighlightRangeInSection({
   const startPoint = flat.map[start];
   const endPoint = flat.map[end - 1];
   if (!startPoint || !endPoint) {
-    debugReaderImport("range repair failed", { reason: "map points missing", start, end });
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair failed",
+      data: { reason: "map points missing", start, end },
+    });
     return null;
   }
 
@@ -134,18 +158,24 @@ export function repairImportedHighlightRangeInSection({
     range.setStart(startPoint.node, startPoint.offset);
     range.setEnd(endPoint.node, endPoint.endOffset);
     const repaired = { cfiRange: section.cfiFromRange(range), matchedText: flat.text.slice(start, end) };
-    debugReaderImport("range repair success", {
-      anchorCfi,
-      fragmentAt,
-      start,
-      end,
-      mode: exactAt >= 0 ? "exact" : "punctuation-tolerant",
-      cfiRange: repaired.cfiRange,
-      matchedPreview: previewImportText(repaired.matchedText),
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair success",
+      data: {
+        anchorCfi,
+        fragmentAt,
+        start,
+        end,
+        mode: exactAt >= 0 ? "exact" : "punctuation-tolerant",
+        cfiRange: repaired.cfiRange,
+      },
+      previews: [{ key: "matchedPreview", value: repaired.matchedText }],
     });
     return repaired;
   } catch {
-    debugReaderImport("range repair failed", { reason: "cfiFromRange threw", start, end });
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair failed",
+      data: { reason: "cfiFromRange threw", start, end },
+    });
     return null;
   }
 }
@@ -256,6 +286,7 @@ function findAnchoredFragmentOffset({
   anchorCfi,
   fragmentText,
   windowRadius,
+  onDiagnostic,
 }: {
   flatText: string;
   map: TextSourcePoint[];
@@ -263,19 +294,23 @@ function findAnchoredFragmentOffset({
   anchorCfi: string;
   fragmentText: string;
   windowRadius: number;
+  onDiagnostic?: ReaderRangeRepairDiagnosticHandler;
 }): number {
-  const anchorOffset = findNormalizedOffsetForCfi({ anchorCfi, doc, map });
+  const anchorOffset = findNormalizedOffsetForCfi({ anchorCfi, doc, map, onDiagnostic });
   if (anchorOffset == null) {
     const fallback = flatText.indexOf(fragmentText);
-    debugReaderImport("range repair anchor fallback", {
-      anchorCfi,
-      fragmentPreview: previewImportText(fragmentText),
-      fallback,
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair anchor fallback",
+      data: { anchorCfi, fallback },
+      previews: [{ key: "fragmentPreview", value: fragmentText }],
     });
     return fallback;
   }
   if (flatText.slice(anchorOffset, anchorOffset + fragmentText.length) === fragmentText) {
-    debugReaderImport("range repair anchor direct match", { anchorCfi, anchorOffset });
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair anchor direct match",
+      data: { anchorCfi, anchorOffset },
+    });
     return anchorOffset;
   }
 
@@ -283,13 +318,10 @@ function findAnchoredFragmentOffset({
   const end = Math.min(flatText.length, anchorOffset + fragmentText.length + windowRadius);
   const found = flatText.slice(start, end).indexOf(fragmentText);
   const offset = found >= 0 ? start + found : -1;
-  debugReaderImport("range repair anchor window search", {
-    anchorCfi,
-    anchorOffset,
-    fragmentPreview: previewImportText(fragmentText),
-    windowStart: start,
-    windowEnd: end,
-    found: offset,
+  emitDiagnostic(onDiagnostic, {
+    event: "range repair anchor window search",
+    data: { anchorCfi, anchorOffset, windowStart: start, windowEnd: end, found: offset },
+    previews: [{ key: "fragmentPreview", value: fragmentText }],
   });
   return offset;
 }
@@ -298,10 +330,12 @@ function findNormalizedOffsetForCfi({
   anchorCfi,
   doc,
   map,
+  onDiagnostic,
 }: {
   anchorCfi: string;
   doc: Document;
   map: TextSourcePoint[];
+  onDiagnostic?: ReaderRangeRepairDiagnosticHandler;
 }): number | null {
   try {
     const range = new EpubCFI(anchorCfi).toRange(doc);
@@ -314,9 +348,23 @@ function findNormalizedOffsetForCfi({
     }
   } catch {
     // Fall back to a plain fragment search.
-    debugReaderImport("range repair CFI anchor lookup failed", { anchorCfi });
+    emitDiagnostic(onDiagnostic, {
+      event: "range repair CFI anchor lookup failed",
+      data: { anchorCfi },
+    });
   }
   return null;
+}
+
+function emitDiagnostic(
+  onDiagnostic: ReaderRangeRepairDiagnosticHandler | undefined,
+  diagnostic: ReaderRangeRepairDiagnostic,
+): void {
+  try {
+    onDiagnostic?.(diagnostic);
+  } catch {
+    // Diagnostics must not alter repair behavior.
+  }
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {

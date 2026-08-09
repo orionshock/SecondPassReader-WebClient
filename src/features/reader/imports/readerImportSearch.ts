@@ -5,6 +5,7 @@ import type { ReaderImportAttempt } from "./readerImportAttempts";
 import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
 import { rankImportQuoteContextCandidates } from "./readerImportQuoteContext";
 import { buildImportSearchQueryPlans } from "./readerImportSearchQueries";
+import { debugReaderRangeRepairDiagnostic } from "./ReaderRangeRepairDebug.Adapter";
 
 type ReaderImportSearchAttempt = Extract<ReaderImportAttempt, { kind: "quote-text" | "text-search" }>;
 
@@ -90,6 +91,7 @@ export async function findImportRowSearchMatches({
       maxSeqEle: 8,
       repairFullText: plan.repairText,
       signal,
+      onRangeRepairDiagnostic: debugReaderRangeRepairDiagnostic,
     });
     if (signal.aborted) return [];
     const rankedResults = rankFragmentSearchResults(results, plan);

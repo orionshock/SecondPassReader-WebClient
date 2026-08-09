@@ -19,11 +19,15 @@ export function isReaderImportDebugVerbose(): boolean {
   return readDebugFlag(IMPORT_DEBUG_VERBOSE_KEY);
 }
 
-export function previewImportText(value: unknown, maxLength = DEFAULT_PREVIEW_LENGTH): string | undefined {
+export function previewImportText(
+  value: unknown,
+  maxLength = DEFAULT_PREVIEW_LENGTH,
+  verbose = isReaderImportDebugVerbose(),
+): string | undefined {
   if (typeof value !== "string") return undefined;
   const compact = value.replace(/\s+/g, " ").trim();
   if (!compact) return "";
-  if (isReaderImportDebugVerbose() || compact.length <= maxLength) return compact;
+  if (verbose || compact.length <= maxLength) return compact;
   return `${compact.slice(0, maxLength)}...`;
 }
 

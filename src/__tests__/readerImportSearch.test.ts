@@ -40,6 +40,23 @@ describe("reader import search", () => {
     expect(calls[0]).toEqual({ query: "plain quote", repairFullText: undefined });
   });
 
+  it("passes the import range-repair diagnostic adapter to fragment searches", async () => {
+    let hasDiagnosticHandler = false;
+    const searchBook: ReaderSearchBookHandle = async (_query, options) => {
+      hasDiagnosticHandler ||= typeof options?.onRangeRepairDiagnostic === "function";
+      return [];
+    };
+
+    await findImportRowSearchMatches({
+      row: row({ quoteText: "First useful sentence is long enough. Second useful sentence is also long enough." }),
+      attempt: { kind: "text-search", text: "First useful sentence is long enough. Second useful sentence is also long enough." },
+      searchBook,
+      signal: new AbortController().signal,
+    });
+
+    expect(hasDiagnosticHandler).toBe(true);
+  });
+
   it("collects matches from multiple sentence fragments for candidate cycling", async () => {
     const quote = "First useful sentence is long enough. Second useful sentence is also long enough.";
     const searchBook: ReaderSearchBookHandle = async (query) => {

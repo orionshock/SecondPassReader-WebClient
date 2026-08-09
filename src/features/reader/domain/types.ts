@@ -3,6 +3,8 @@
 // These are allowed to flow between orchestrator <-> shell and UI components.
 // Engine-specific types from @likecoin/epub-ts should not appear above the engine layer.
 
+import type { ReaderRangeRepairDiagnosticHandler } from "./ReaderRangeRepair.Diagnostics";
+
 export type ReaderLocation = {
   /**
    * Canonical restore anchor / primary persisted reading position (EPUB CFI).
@@ -113,6 +115,7 @@ export type ReaderSearchOptions = {
   repairFullText?: string;
   signal?: AbortSignal;
   onProgress?: (results: ReaderSearchResult[]) => void;
+  onRangeRepairDiagnostic?: ReaderRangeRepairDiagnosticHandler;
 };
 
 export type ReaderLocationTarget =

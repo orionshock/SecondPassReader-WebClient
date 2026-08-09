@@ -2,7 +2,7 @@ import type { Book } from "@likecoin/epub-ts";
 import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import { findTocLabelForHref } from "../display/ReaderLocation.Presenter";
-import { repairImportedHighlightRangeInSection } from "./EpubTsImportRangeRepair";
+import { repairImportedHighlightRangeInSection } from "./EpubTsImportRangeRepair.Engine";
 
 type SectionRequest = (
   url: string,
@@ -48,6 +48,7 @@ export async function searchEpubTsBook(
               fragmentText: trimmed,
               fullText: options.repairFullText,
               signal: options.signal,
+              onDiagnostic: options.onRangeRepairDiagnostic,
             })
           : null;
         const resultCfi = repaired?.cfiRange ?? match.cfi;
