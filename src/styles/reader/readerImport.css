@@ -62,7 +62,7 @@
   width: min(92vw, clamp(360px, 28vw, 480px));
   height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   background: var(--sp-reader-surface-strong);
   border-left: 1px solid var(--sp-reader-border);
   box-shadow: -20px 0 50px var(--sp-reader-shadow);
@@ -70,8 +70,7 @@
   z-index: 115;
 }
 
-.spReaderImportDrawerHeader,
-.spReaderImportDrawerFooter {
+.spReaderImportDrawerHeader {
   padding: 12px;
   border-bottom: 1px solid var(--sp-reader-border);
 }
@@ -176,6 +175,30 @@
   padding: 0;
   display: grid;
   place-items: center;
+}
+
+.spReaderImportHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spReaderActivity .button.spReaderImportClearButton {
+  border-color: color-mix(in srgb, var(--sp-reader-danger-border) 55%, var(--sp-reader-border));
+  background: color-mix(in srgb, var(--sp-reader-danger-bg) 35%, var(--sp-reader-control-bg));
+  color: var(--sp-reader-danger-text);
+}
+
+.spReaderActivity .button.spReaderImportClearButton:hover,
+.spReaderActivity .button.spReaderImportClearButton:focus-visible {
+  border-color: var(--sp-reader-danger-border);
+  background: color-mix(in srgb, var(--sp-reader-danger-bg) 70%, var(--sp-reader-control-bg));
+  color: var(--sp-reader-danger-text);
+}
+
+.spReaderActivity .button.spReaderImportClearButton:focus-visible {
+  outline: 2px solid var(--sp-reader-danger-border);
+  outline-offset: 2px;
 }
 
 .spReaderImportRows {
@@ -359,11 +382,6 @@
 .spReaderImportRowActionText {
   font-size: 12px;
   font-weight: 700;
-}
-
-.spReaderImportDrawerFooter {
-  border-top: 1px solid var(--sp-reader-border);
-  border-bottom: 0;
 }
 
 @media (min-width: 1024px) {

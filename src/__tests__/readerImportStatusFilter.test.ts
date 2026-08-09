@@ -1,11 +1,15 @@
-import { createElement } from "react";
+import { Children, createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ReaderImportDrawer } from "../features/reader/imports/ReaderImportDrawer";
+import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features/reader/imports/ReaderImportDrawer";
 import { getReaderImportJobCounts } from "../features/reader/imports/readerImportJobState";
 import { createDefaultReaderImportStatusFilters, filterReaderImportRows, getReaderImportStatusGroup, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter } from "../features/reader/imports/ReaderImportStatusFilter.State";
 import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("reader import status filters", () => {
   it("shows unresolved and reviewable rows by default", () => {
@@ -64,6 +68,51 @@ describe("reader import status filters", () => {
 
   it("shows a filter-specific empty state when default filters hide every row", () => {
     expect(renderDrawer(statuses("accepted"))).toContain("No rows match the selected filters.");
+  });
+
+  it("renders distinct accessible hide and clear header actions without the old footer control", () => {
+    const markup = renderDrawer(statuses("pending"));
+
+    expect(markup).toContain('aria-label="Hide import drawer"');
+    expect(markup).toContain('title="Hide import drawer"');
+    expect(markup).toContain('aria-label="Clear import"');
+    expect(markup).toContain('title="Clear import"');
+    expect(markup).toContain("delete_sweep");
+    expect(markup).not.toContain(">Clear import</button>");
+    expect(markup).toContain("Filter import rows by status");
+  });
+
+  it("keeps hide and clear callbacks semantically separate", () => {
+    const onHide = vi.fn();
+    const onClear = vi.fn();
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("window", { confirm });
+    const actions = ReaderImportDrawerHeaderActions({ onHide, onClear });
+    const buttons = Children.toArray(actions.props.children)
+      .filter(isValidElement) as ReactElement<{ onClick: () => void }>[];
+
+    buttons[0]?.props.onClick();
+    expect(onHide).toHaveBeenCalledOnce();
+    expect(onClear).not.toHaveBeenCalled();
+
+    buttons[1]?.props.onClick();
+    expect(onHide).toHaveBeenCalledOnce();
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+
+  it("leaves the import job untouched when clear confirmation is canceled", () => {
+    const onClear = vi.fn();
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal("window", { confirm });
+    const actions = ReaderImportDrawerHeaderActions({ onHide: vi.fn(), onClear });
+    const buttons = Children.toArray(actions.props.children)
+      .filter(isValidElement) as ReactElement<{ onClick: () => void }>[];
+
+    buttons[1]?.props.onClick();
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(onClear).not.toHaveBeenCalled();
   });
 });
 

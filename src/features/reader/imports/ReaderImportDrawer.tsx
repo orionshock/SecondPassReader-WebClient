@@ -96,9 +96,7 @@ export function ReaderImportDrawer({
       <div className="spReaderImportDrawerHeader">
         <div className="spReaderImportDrawerTitleRow">
           <h2 id="sp-reader-import-drawer-title" className="spReaderImportDrawerTitle">Marginalia Import</h2>
-          <button type="button" className="button buttonCompact spReaderImportIconButton" onClick={onClose} aria-label="Close import" title="Close">
-            <MaterialIcon name="close" />
-          </button>
+          <ReaderImportDrawerHeaderActions onHide={onClose} onClear={onClear} />
         </div>
         <div className="spReaderImportFileName">{job.fileName}</div>
         <div className="spReaderImportStatusFilters" aria-label="Filter import rows by status">
@@ -137,10 +135,41 @@ export function ReaderImportDrawer({
         onUndoManualCompletion={onUndoManualCompletion}
         onUnskipRow={onUnskipRow}
       />
-
-      <div className="spReaderImportDrawerFooter">
-        <button type="button" className="button buttonCompact" onClick={onClear}>Clear import</button>
-      </div>
     </aside>
+  );
+}
+
+export function ReaderImportDrawerHeaderActions({
+  onHide,
+  onClear,
+}: {
+  onHide: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="spReaderImportHeaderActions">
+      <button
+        type="button"
+        className="button buttonCompact spReaderImportIconButton"
+        onClick={onHide}
+        aria-label="Hide import drawer"
+        title="Hide import drawer"
+      >
+        <MaterialIcon name="close" />
+      </button>
+      <button
+        type="button"
+        className="button buttonCompact spReaderImportIconButton spReaderImportClearButton"
+        onClick={() => {
+          if (window.confirm("Clear this import review? The current import rows and review progress will be removed.")) {
+            onClear();
+          }
+        }}
+        aria-label="Clear import"
+        title="Clear import"
+      >
+        <MaterialIcon name="delete_sweep" />
+      </button>
+    </div>
   );
 }
