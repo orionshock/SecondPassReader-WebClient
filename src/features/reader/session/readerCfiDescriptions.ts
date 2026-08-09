@@ -1,5 +1,5 @@
 import type { ReaderLocationDescription, ReaderTocItem } from "../domain/types";
-import { getReaderLocationTocLabel } from "./readerSessionLabels";
+import { getReaderLocationTocLabel } from "../display/ReaderLocation.Presenter";
 
 export type ReaderDescribeCfi = (cfi: string) => Promise<ReaderLocationDescription>;
 

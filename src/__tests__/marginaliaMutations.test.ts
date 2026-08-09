@@ -8,7 +8,7 @@ import {
   normalizeOptionalHighlightContext,
   toMarginaliaLocationLabel,
 } from "../features/reader/session/marginaliaMutations";
-import { buildReaderLocationLabel } from "../features/reader/session/readerSessionLabels";
+import { buildReaderLocationLabel } from "../features/reader/display/ReaderLocation.Presenter";
 
 describe("Reader marginalia mutations", () => {
   it("maps progress location labels without changing their text", () => {

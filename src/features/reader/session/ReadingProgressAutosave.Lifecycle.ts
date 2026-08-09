@@ -6,7 +6,7 @@ import {
   type ReadingProgressAutosaveState,
 } from "./ReadingProgressAutosave.Controller";
 import { buildMarginaliaProgressInput } from "./marginaliaMutations";
-import { buildReaderLocationLabel } from "./readerSessionLabels";
+import { buildReaderLocationLabel } from "../display/ReaderLocation.Presenter";
 
 export function buildReadingProgressSaveInput(location: ReaderLocation | null): {
   cfi: string;
