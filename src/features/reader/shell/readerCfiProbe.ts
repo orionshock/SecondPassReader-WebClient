@@ -1,4 +1,5 @@
-import type { ReaderCfiProbeResult, ReaderProbeCfiHandle } from "./types";
+import type { ReaderCfiProbeResult } from "../domain/types";
+import type { ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 
 export async function probeReaderCfi(probeCfi: ReaderProbeCfiHandle, cfi: string): Promise<ReaderCfiProbeResult> {
   const trimmed = cfi.trim();

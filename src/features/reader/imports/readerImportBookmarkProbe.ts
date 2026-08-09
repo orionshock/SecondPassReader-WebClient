@@ -1,5 +1,5 @@
 import type { ReaderCfiDisplayResult, ReaderCfiProbeResult } from "../domain/types";
-import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
+import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderImportRowStatus } from "./readerImportTypes";
 import { debugReaderImport, previewImportText } from "./readerImportDebug";
 

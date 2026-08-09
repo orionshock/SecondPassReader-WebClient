@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { MaterialIcon } from "../../../../components/MaterialIcon";
-import type { ReaderSearchOptions, ReaderSearchResult } from "../../domain/types";
+import type { ReaderSearchResult } from "../../domain/types";
+import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
 import { BookSearchInputBar } from "./BookSearchInputBar";
 import { BookSearchResultList } from "./BookSearchResultList";
 import { useBookSearchController } from "./useBookSearchController";
@@ -16,7 +17,7 @@ export function BookSearchDrawer({
 }: {
   open: boolean;
   ready: boolean;
-  searchBook: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null;
+  searchBook: ReaderSearchBookHandle | null;
   bookTitle?: string | null;
   initialSearchQuery?: string | null;
   onClose: () => void;

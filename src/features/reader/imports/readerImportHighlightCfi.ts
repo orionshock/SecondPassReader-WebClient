@@ -1,6 +1,5 @@
 import type { ReaderCfiRangeStageResult } from "../domain/types";
-import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
-import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
+import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle, StagedSelectionHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderImportRow } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
 

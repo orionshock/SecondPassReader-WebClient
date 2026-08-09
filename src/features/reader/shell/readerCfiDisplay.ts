@@ -1,5 +1,5 @@
 import type { ReaderCfiDisplayResult } from "../domain/types";
-import type { ReaderDisplayCfiHandle } from "./types";
+import type { ReaderDisplayCfiHandle } from "../domain/ReaderBridge.Types";
 
 export async function displayReaderCfiSafely(displayCfi: ReaderDisplayCfiHandle, cfi: string): Promise<ReaderCfiDisplayResult> {
   const trimmed = cfi.trim();

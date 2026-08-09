@@ -1,4 +1,4 @@
-import type { ReaderSearchBookHandle } from "../shell/types";
+import type { ReaderSearchBookHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderSearchResult } from "../domain/types";
 import type { ReaderImportRow } from "./readerImportTypes";
 import type { ReaderImportAttempt } from "./readerImportAttempts";

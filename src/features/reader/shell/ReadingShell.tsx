@@ -4,14 +4,19 @@ import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
 import type {
-  ReaderDescribeCfiHandle,
-  ReaderDisplayCfiHandle,
-  ReaderProbeCfiHandle,
-  ReaderSearchBookHandle,
   ReadingShellCommand,
   ReadingShellCommandValue,
   ReadingShellEvent,
 } from "./types";
+import type {
+  ReaderDescribeCfiHandle,
+  ReaderDisplayCfiHandle,
+  ReaderProbeCfiHandle,
+  ReaderSearchBookHandle,
+  StagedSelectionCommitInput,
+  StagedSelectionHandle,
+  StagedSelectionSource,
+} from "../domain/ReaderBridge.Types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
@@ -19,7 +24,6 @@ import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
 import { probeReaderCfi } from "./readerCfiProbe";
 import { displayReaderCfiSafely } from "./readerCfiDisplay";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
-import type { StagedSelectionCommitInput, StagedSelectionHandle, StagedSelectionSource } from "./stagedSelectionTypes";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";

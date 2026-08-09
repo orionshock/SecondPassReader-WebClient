@@ -6,7 +6,7 @@ import type {
   StagedSelectionCommitInput,
   StagedSelectionSource,
   StagedSelectionToolbarPosition,
-} from "./stagedSelectionTypes";
+} from "../domain/ReaderBridge.Types";
 import { getStagedSelectionToolbarPosition } from "./stagedSelectionToolbarPlacement";
 import type { StagedSelectionToolbarSize } from "./stagedSelectionToolbarPlacement";
 

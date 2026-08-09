@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ReaderSearchOptions, ReaderSearchResult } from "../../domain/types";
+import type { ReaderSearchResult } from "../../domain/types";
+import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
 import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./bookSearchConstants";
 import { useInitialBookSearch } from "./useInitialBookSearch";
 
@@ -11,7 +12,7 @@ export function useBookSearchController({
 }: {
   open: boolean;
   ready: boolean;
-  searchBook: ((query: string, options?: ReaderSearchOptions) => Promise<ReaderSearchResult[]>) | null;
+  searchBook: ReaderSearchBookHandle | null;
   initialSearchQuery?: string | null;
 }) {
   const [query, setQuery] = useState("");

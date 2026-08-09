@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { ReaderSearchBookHandle } from "../shell/types";
-import type { StagedSelectionHandle } from "../shell/stagedSelectionTypes";
+import type { ReaderSearchBookHandle, StagedSelectionHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
 import { normalizeImportedHighlightColor } from "./readerImportColors";
 import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
@@ -13,7 +12,7 @@ import {
 import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "./readerImportCycle";
 import { hasOtherStagedRows } from "./readerImportJobState";
 import { findImportRowSearchMatchesByAttempt } from "./readerImportSearch";
-import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../shell/types";
+import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 import { stageReaderImportHighlightCfi } from "./readerImportHighlightCfi";
 
 export function useReaderImportActivation({

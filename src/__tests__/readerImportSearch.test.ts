@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { findImportRowSearchMatch, findImportRowSearchMatches, findImportRowSearchMatchesByAttempt } from "../features/reader/imports/readerImportSearch";
-import type { ReaderSearchBookHandle } from "../features/reader/shell/types";
+import type { ReaderSearchBookHandle } from "../features/reader/domain/ReaderBridge.Types";
 import type { ReaderSearchResult } from "../features/reader/domain/types";
 import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
 

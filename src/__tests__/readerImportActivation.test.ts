@@ -3,8 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { useReaderImportActivation } from "../features/reader/imports/useReaderImportActivation";
 import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/readerImportTypes";
-import type { ReaderSearchBookHandle } from "../features/reader/shell/types";
-import type { StagedSelectionHandle } from "../features/reader/shell/stagedSelectionTypes";
+import type { ReaderSearchBookHandle, StagedSelectionHandle } from "../features/reader/domain/ReaderBridge.Types";
 
 describe("reader import activation orchestration", () => {
   it("stages a found highlight without accepting it", async () => {

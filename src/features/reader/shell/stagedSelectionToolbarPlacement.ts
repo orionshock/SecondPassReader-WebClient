@@ -1,5 +1,5 @@
 import type { ReaderSelectionAnchor } from "../domain/types";
-import type { StagedSelectionToolbarPosition } from "./stagedSelectionTypes";
+import type { StagedSelectionToolbarPosition } from "../domain/ReaderBridge.Types";
 
 export type StagedSelectionToolbarSize = {
   width: number;

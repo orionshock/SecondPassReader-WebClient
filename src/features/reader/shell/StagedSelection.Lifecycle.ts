@@ -1,4 +1,4 @@
-export type StagedSelectionNavigationIntent = "unrelated" | "import-staging" | "layout-reflow";
+import type { StagedSelectionNavigationIntent } from "../domain/ReaderBridge.Types";
 
 export class StagedSelectionLifecycle {
   private activeNavigationCount = 0;
