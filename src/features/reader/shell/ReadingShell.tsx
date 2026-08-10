@@ -3,7 +3,7 @@ import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
 import type { HighlightMarkClick } from "../engine/highlightMarks";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
 import type {
   ReadingShellCommand,
   ReadingShellEvent,
@@ -21,10 +21,8 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
-import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
-import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
 import { observeReaderMountResize } from "./ReaderMountResize.Lifecycle";
 import {
   classifyReaderOperationError,
@@ -39,6 +37,7 @@ import { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.Sta
 import { useReaderEngineBootstrapLifecycle } from "./ReaderEngineBootstrap.Lifecycle";
 import { useReaderCommandRoutingLifecycle } from "./ReaderCommandRouting.Lifecycle";
 import { useReaderSettingsReflowLifecycle } from "./ReaderSettingsReflow.Lifecycle";
+import { useReaderStagedToolbarController } from "./ReaderStagedToolbar.Controller";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -96,7 +95,6 @@ export function ReadingShell(props: ReadingShellProps) {
   const settingsRef = useRef<ReaderSettings | undefined>(props.settings);
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
-  const onUnrelatedNavigationRef = useRef<ReadingShellProps["onUnrelatedNavigation"]>(props.onUnrelatedNavigation);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [readiness, setReadiness] = useState<ReaderReadinessState>("empty");
@@ -114,10 +112,6 @@ export function ReadingShell(props: ReadingShellProps) {
   useEffect(() => {
     onEventRef.current = props.onEvent;
   }, [props.onEvent]);
-
-  useEffect(() => {
-    onUnrelatedNavigationRef.current = props.onUnrelatedNavigation;
-  }, [props.onUnrelatedNavigation]);
 
   useEffect(() => {
     initialDisplayTargetRef.current = props.initialDisplayTarget;
@@ -141,31 +135,29 @@ export function ReadingShell(props: ReadingShellProps) {
     setMountEl(el);
   }, []);
 
-  const staged = useStagedSelectionToolbar({
-    engineRef,
-    mountWrapperRef,
-    highlightMarks: props.highlightMarks,
-    onCommitHighlight: props.onCommitHighlight,
-    onStagedSelectionCommitted: props.onStagedSelectionCommitted,
-    onStagedSelectionCanceled: props.onStagedSelectionCanceled,
-    commitBusy: props.highlightCommitBusy,
-  });
-  const { onSelectionChanged, cancelStaged } = staged;
-  const stagedLifecycleRef = useRef<StagedSelectionLifecycle | null>(null);
-  if (!stagedLifecycleRef.current) {
-    stagedLifecycleRef.current = new StagedSelectionLifecycle({
-      cancelStagedSelection: cancelStaged,
-      hasStagedSelection: staged.hasStagedSelection,
-      onUnrelatedNavigation: () => onUnrelatedNavigationRef.current?.(),
-    });
-  }
-  const stagedLifecycle = stagedLifecycleRef.current;
-  const reanchorStagedToolbarRef = useRef(staged.reanchorStagedToolbar);
-  reanchorStagedToolbarRef.current = staged.reanchorStagedToolbar;
-
   const closeDurableToolbar = useCallback(() => {
     setDurableToolbar(null);
   }, []);
+
+  const {
+    cancelStaged,
+    onEngineSelectionChanged,
+    reanchorStagedToolbarRef,
+    stagedSelectionLifecycle: stagedLifecycle,
+    toolbarProps: stagedToolbarProps,
+  } = useReaderStagedToolbarController({
+    engineRef,
+    mountWrapperRef,
+    readiness,
+    highlightMarks: props.highlightMarks,
+    onCommitHighlight: props.onCommitHighlight,
+    commitBusy: props.highlightCommitBusy,
+    onStagedSelectionReady: props.onStagedSelectionReady,
+    onStagedSelectionCommitted: props.onStagedSelectionCommitted,
+    onStagedSelectionCanceled: props.onStagedSelectionCanceled,
+    onUnrelatedNavigation: props.onUnrelatedNavigation,
+    onSelectionStarted: closeDurableToolbar,
+  });
 
   const toToolbarPosition = useCallback((anchor?: DurableToolbarAnchor): DurableAnnotationToolbarPosition | null => {
     const margin = 12;
@@ -196,11 +188,6 @@ export function ReadingShell(props: ReadingShellProps) {
     });
   }, []);
 
-  const onEngineSelectionChanged = useCallback((selection: ReaderSelection | null) => {
-    if (selection) closeDurableToolbar();
-    onSelectionChanged(selection);
-  }, [closeDurableToolbar, onSelectionChanged]);
-
   const onEngineHighlightClick = useCallback((click: HighlightMarkClick) => {
     const id = click.annotationId.trim();
     if (!id) return;
@@ -211,19 +198,6 @@ export function ReadingShell(props: ReadingShellProps) {
     cancelStaged();
     setDurableToolbar({ annotationId: id, position });
   }, [cancelStaged, toToolbarPosition]);
-
-  useEffect(() => {
-    if (!isReaderFullyReady(readiness)) {
-      props.onStagedSelectionReady?.(null);
-      return;
-    }
-    props.onStagedSelectionReady?.({
-      stageSelectionFromCfiRange: staged.stageSelectionFromCfiRange,
-      runStagingTransaction: (operation) => stagedLifecycle.runNavigation("import-staging", operation),
-      cancelStagedSelection: staged.cancelStaged,
-    });
-    return () => props.onStagedSelectionReady?.(null);
-  }, [props.onStagedSelectionReady, readiness, staged.cancelStaged, staged.stageSelectionFromCfiRange, stagedLifecycle]);
 
   useEffect(() => {
     if (!durableToolbar) return;
@@ -357,8 +331,6 @@ export function ReadingShell(props: ReadingShellProps) {
     stagedLifecycle,
   ]);
 
-  // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
-
   const goPrev = async () => {
     await runImmediateCommand({ type: "previous" }, "Previous page failed.");
   };
@@ -434,23 +406,7 @@ export function ReadingShell(props: ReadingShellProps) {
               <MaterialIcon name="chevron_right" className="spReaderPageNavIcon" />
             </button>
 
-            {staged.stagedSelection && staged.toolbarPos ? (
-              <SelectionHighlightToolbar
-                open={true}
-                left={staged.toolbarPos.left}
-                top={staged.toolbarPos.top}
-                placement={staged.toolbarPos.placement}
-                color={staged.stagedColor}
-                noteOpen={staged.noteOpen}
-                noteDraft={staged.noteDraft}
-                busy={staged.commitBusy}
-                onPickColorAndCommit={staged.commitColor}
-                onToggleNote={staged.toggleNote}
-                onChangeNoteDraft={staged.setNoteDraft}
-                onCancel={staged.cancelStaged}
-                onSizeChange={staged.onToolbarSizeChange}
-              />
-            ) : null}
+            {stagedToolbarProps ? <SelectionHighlightToolbar {...stagedToolbarProps} /> : null}
             {durableToolbar && durableToolbarItem ? (
               <DurableAnnotationToolbar
                 item={durableToolbarItem}
