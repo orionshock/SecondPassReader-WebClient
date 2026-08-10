@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
 import { getUserFacingErrorMessage } from "../app/AppUserFacingErrors.Mapper";
-import { RecentReadingLoadFailure } from "../features/library/RecentReadingSection";
+import { RecentReadingLoadFailure } from "../features/library/RecentReading.Panel";
 
 describe("recent reading errors", () => {
   it("does not render an HTML API error body and keeps Retry available", () => {

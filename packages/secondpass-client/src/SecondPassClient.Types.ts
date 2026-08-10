@@ -3,9 +3,9 @@ import type {
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
   SecondPassDiscovery,
-} from "./schemas/clientApiAuth";
-import type { CurrentUser } from "./schemas/account";
-import type { ServerInfo } from "./schemas/server";
+} from "./schemas/ClientApiAuth.Types";
+import type { CurrentUser } from "./schemas/Account.Types";
+import type { ServerInfo } from "./schemas/Server.Types";
 import type {
   Author,
   BookDetail,
@@ -14,7 +14,7 @@ import type {
   LibraryGroup,
   PaginatedResponse,
   Series,
-} from "./schemas/library";
+} from "./schemas/Library.Types";
 import type {
   AddShelfItemInput,
   CreateShelfInput,
@@ -25,7 +25,7 @@ import type {
   ShelfListParams,
   UpdateShelfInput,
   UpdateShelfItemInput,
-} from "./schemas/shelves";
+} from "./schemas/Shelves.Types";
 import type {
   MarginaliaAnnotationBatchOperation,
   MarginaliaAnnotationCollection,
@@ -40,7 +40,7 @@ import type {
   MarginaliaSessionListItem,
   MarginaliaSessionMetadataInput,
   MarginaliaSessionStatus,
-} from "./schemas/marginalia";
+} from "./schemas/Marginalia.Types";
 
 export type SecondPassClientConfig = {
   apiBaseUrl: string;

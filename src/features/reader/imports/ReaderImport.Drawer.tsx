@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MaterialIcon } from "../../../components/MaterialIcon";
+import { MaterialIcon } from "../../../components/Material.Icon";
 import type { ReaderImportJobCounts } from "./ReaderImportJob.State";
 import type { ReaderImportJob } from "./ReaderImport.Types";
 import { ReaderImportRowList } from "./ReaderImportRow.List";

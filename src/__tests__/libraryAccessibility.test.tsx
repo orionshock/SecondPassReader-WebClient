@@ -1,14 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { CompactBook, SecondPassClient } from "@secondpass/client";
-import { LibraryAxisTabs } from "../features/library/controls/LibraryAxisTabs";
-import { BookViewModeToggle } from "../features/library/display/BookViewModeToggle";
-import { LibraryScopeSelect } from "../features/library/libraryScope/LibraryScopeSelect";
-import { CatalogTagRail } from "../features/library/catalogTags/CatalogTagRail";
-import { BookDetailModal } from "../features/library/BookDetailModal";
-import { AddToShelfMenu } from "../features/library/bookDetail/AddToShelfMenu";
+import { LibraryAxisTabs } from "../features/library/controls/LibraryAxis.Tabs";
+import { BookViewModeToggle } from "../features/library/display/BookViewMode.Control";
+import { LibraryScopeSelect } from "../features/library/libraryScope/LibraryScope.Select";
+import { CatalogTagRail } from "../features/library/catalogTags/CatalogTag.Rail";
+import { BookDetailModal } from "../features/library/BookDetail.Modal";
+import { AddToShelfMenu } from "../features/library/bookDetail/AddToShelf.Menu";
 
-vi.mock("../features/library/catalogTags/useCatalogTags", () => ({
+vi.mock("../features/library/catalogTags/CatalogTags.Controller", () => ({
   useCatalogTags: () => ({
     data: { results: [{ id: 1, slug: "fiction", name: "Fiction", book_count: 3 }], previous: null, next: null },
     busy: false,

@@ -1,5 +1,5 @@
-import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { getConnectionStatus, getConnectionStatusLabel } from "../../features/connection/connectionStatus";
+import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { getConnectionStatus, getConnectionStatusLabel } from "../../features/connection/ConnectionStatus.Presenter";
 import { SettingsDetailRow } from "./SettingsDetail.Row";
 
 export type SettingsLibraryServerActionState =

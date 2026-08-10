@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MaterialIcon } from "../../../components/MaterialIcon";
-import { InlineMeta } from "../../../components/MetaSeparator";
+import { MaterialIcon } from "../../../components/Material.Icon";
+import { InlineMeta } from "../../../components/Metadata.Presenter";
 
 export type MarginaliaLayerSummary = {
   sessionId: string;

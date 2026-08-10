@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadServerPresets, parseServerPresets } from "../features/connection/serverPresets";
+import { loadServerPresets, parseServerPresets } from "../features/connection/ServerPresets.Queries";
 
 describe("server presets", () => {
   it("normalizes valid entries and rejects invalid entries", () => {

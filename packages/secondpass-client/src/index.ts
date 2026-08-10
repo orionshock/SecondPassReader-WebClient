@@ -1,4 +1,4 @@
-export { ApiError, type ApiErrorKind } from "./apiHttp";
+export { ApiError, type ApiErrorKind } from "./ApiHttp.Adapter";
 export { createSecondPassClient } from "./SecondPassClient.Factory";
 export type {
   SecondPassClient,
@@ -18,11 +18,11 @@ export type {
   ClientApiLoginRequestResponse,
   ClientApiPollResponse,
   SecondPassDiscovery,
-} from "./schemas/clientApiAuth";
-export type { CurrentUser, CurrentUserGroup, MePayload } from "./schemas/account";
-export type { ServerInfo, ServerPublicGroup } from "./schemas/server";
+} from "./schemas/ClientApiAuth.Types";
+export type { CurrentUser, CurrentUserGroup, MePayload } from "./schemas/Account.Types";
+export type { ServerInfo, ServerPublicGroup } from "./schemas/Server.Types";
 
-export type { BookDetail, BookIdentifierScheme, CatalogTag, CatalogTagSummary, CompactBook, Author, AuthorSummary, BookFile, BookGroup, BookIdentifier, LibraryGroup, Series, SeriesSummary, PaginatedResponse, PreviewBook } from "./schemas/library";
+export type { BookDetail, BookIdentifierScheme, CatalogTag, CatalogTagSummary, CompactBook, Author, AuthorSummary, BookFile, BookGroup, BookIdentifier, LibraryGroup, Series, SeriesSummary, PaginatedResponse, PreviewBook } from "./schemas/Library.Types";
 
 export type {
   BoundedSessionBook,
@@ -49,7 +49,7 @@ export type {
   MarginaliaSessionMetadataInput,
   MarginaliaSessionSummary,
   MarginaliaSessionStatus,
-} from "./schemas/marginalia";
+} from "./schemas/Marginalia.Types";
 
 export type {
   AddShelfItemInput,
@@ -61,4 +61,4 @@ export type {
   ShelfListParams,
   UpdateShelfInput,
   UpdateShelfItemInput,
-} from "./schemas/shelves";
+} from "./schemas/Shelves.Types";

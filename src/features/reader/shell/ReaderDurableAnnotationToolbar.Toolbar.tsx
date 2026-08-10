@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MaterialIcon } from "../../../components/MaterialIcon";
+import { MaterialIcon } from "../../../components/Material.Icon";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
 import { ANNOTATION_LIMITS } from "../annotations/ReaderAnnotationLimits.Policy";
 

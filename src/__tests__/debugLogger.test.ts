@@ -5,7 +5,7 @@ import {
   getEnabledDebugCategories,
   isDebugEnabled,
   setEnabledDebugCategories,
-} from "../lib/debug/DebugLogger";
+} from "../lib/debug/DebugLogger.Diagnostics";
 
 describe("DebugLogger", () => {
   afterEach(() => {

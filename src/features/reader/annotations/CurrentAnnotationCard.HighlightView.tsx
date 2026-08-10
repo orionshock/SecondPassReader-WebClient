@@ -1,4 +1,4 @@
-import { InlineMeta } from "../../../components/MetaSeparator";
+import { InlineMeta } from "../../../components/Metadata.Presenter";
 
 export function CurrentAnnotationCardHighlightView({
   descriptionStatus,

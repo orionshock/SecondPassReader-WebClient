@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { verifySecondPassServer } from "../features/connection/connectionUtils";
+import { verifySecondPassServer } from "../features/connection/ConnectionServer.Queries";
 
 describe("preset connection verification", () => {
   it("discovers a selected preset through the well-known flow", async () => {

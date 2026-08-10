@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import { getAnnotationFragmentCfi } from "../../annotations/ReaderAnnotation.Mapper";
-import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../../storage/marginaliaLayerPreferences";
+import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../../storage/MarginaliaLayerPreferences.Store";
 import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
 import {
   toPreviousSessionHighlightMarks,

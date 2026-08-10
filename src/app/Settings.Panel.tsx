@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { ApiError } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
-import { saveConnectionProfile } from "../storage/connectionProfiles";
-import type { AppTheme } from "../storage/appTheme";
-import { discoverSecondPass } from "../features/connection/connectionUtils";
-import { applyAuthenticatedContextToProfile } from "../features/connection/accountProfile";
-import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { AppTheme } from "../storage/AppTheme.Store";
+import { discoverSecondPass } from "../features/connection/ConnectionServer.Queries";
+import { applyAuthenticatedContextToProfile } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import { createSplClientFromProfile } from "./AppSplClient.Factory";
 import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
 import { getTechnicalErrorDetail, isAuthorizationError } from "./AppUserFacingErrors.Mapper";

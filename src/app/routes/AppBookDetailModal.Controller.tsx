@@ -1,6 +1,6 @@
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { BookDetailModal } from "../../features/library/BookDetailModal";
+import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { BookDetailModal } from "../../features/library/BookDetail.Modal";
 import { saveReaderReturnTarget } from "../../features/reader/ReaderReturnTarget.Store";
 import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
 import type { AppRoute } from "../AppNavigation.Router";

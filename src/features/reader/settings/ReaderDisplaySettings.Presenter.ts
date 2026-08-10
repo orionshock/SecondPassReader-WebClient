@@ -1,5 +1,5 @@
-import type { ReaderFontFamily, ReaderLineHeight, ReaderSettings, ReaderTheme, ReaderWidth } from "../../../storage/readerSettings";
-import { READER_FONT_SIZE_OPTIONS } from "../../../storage/readerSettings";
+import type { ReaderFontFamily, ReaderLineHeight, ReaderSettings, ReaderTheme, ReaderWidth } from "../../../storage/ReaderSettings.Store";
+import { READER_FONT_SIZE_OPTIONS } from "../../../storage/ReaderSettings.Store";
 
 export const READER_THEME_OPTIONS: Array<{ value: ReaderTheme; label: string }> = [
   { value: "light", label: "Light" },

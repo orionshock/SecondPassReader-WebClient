@@ -1,4 +1,4 @@
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 export type AppWorkflowStep = "connect_server" | "pair_device" | "verify_connection" | "library_home";
 

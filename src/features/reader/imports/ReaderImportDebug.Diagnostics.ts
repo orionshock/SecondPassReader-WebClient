@@ -1,7 +1,7 @@
 import {
   DEBUG_IMPORT_VERBOSE_STORAGE_KEY,
   debugLog,
-} from "../../../lib/debug/DebugLogger";
+} from "../../../lib/debug/DebugLogger.Diagnostics";
 
 const DEFAULT_PREVIEW_LENGTH = 120;
 

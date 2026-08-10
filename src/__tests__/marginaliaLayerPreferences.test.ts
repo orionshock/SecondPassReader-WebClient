@@ -4,7 +4,7 @@ import {
   loadMarginaliaLayerPreferences,
   marginaliaLayerPreferencesStorageKey,
   saveMarginaliaLayerPreferences,
-} from "../storage/marginaliaLayerPreferences";
+} from "../storage/MarginaliaLayerPreferences.Store";
 
 function createStorageMock(): Storage {
   const store = new Map<string, string>();

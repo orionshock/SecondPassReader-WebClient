@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, createSecondPassClient } from "../index";
 import type { CompactBook } from "../index";
-import { buildAuthHeaders, requestBlob, requestJsonUrl, resolveUrl, tryParseFilename } from "../apiHttp";
+import { buildAuthHeaders, requestBlob, requestJsonUrl, resolveUrl, tryParseFilename } from "../ApiHttp.Adapter";
 
 function jsonResponse(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
   return new Response(JSON.stringify(body), {

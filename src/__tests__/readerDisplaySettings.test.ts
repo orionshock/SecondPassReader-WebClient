@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ReaderSettings } from "../storage/readerSettings";
+import type { ReaderSettings } from "../storage/ReaderSettings.Store";
 import { getReaderSettingsPresentation } from "../features/reader/settings/ReaderDisplaySettings.Presenter";
 
 describe("reader display settings presentation", () => {

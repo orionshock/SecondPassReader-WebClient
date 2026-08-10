@@ -6,9 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "../app/App.Header";
 import { SettingsPanel } from "../app/Settings.Panel";
 import { isAuthorizationError } from "../app/AppUserFacingErrors.Mapper";
-import { applyAuthenticatedContextToProfile } from "../features/connection/accountProfile";
-import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import { applyAuthenticatedContextToProfile } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 describe("authenticated bootstrap context", () => {
   it("loads current user and server info concurrently", async () => {

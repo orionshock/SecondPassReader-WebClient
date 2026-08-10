@@ -1,5 +1,5 @@
 import type { CompactBook } from "@secondpass/client";
-import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSessionDialog";
+import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSession.Dialog";
 import { EndOfBookDialog } from "../ReaderEndOfBook.Dialog";
 import { ReaderImportModal } from "../imports/ReaderImport.Modal";
 import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.Registry";

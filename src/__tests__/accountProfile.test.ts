@@ -4,8 +4,8 @@ import {
   applyAuthenticatedContextToProfile,
   applyCurrentAccountToProfile,
   hasCurrentAccountProfileChanged,
-} from "../features/connection/accountProfile";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+} from "../features/connection/ConnectionAccountProfile.Mapper";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 function baseProfile(): ConnectionProfile {
   return {

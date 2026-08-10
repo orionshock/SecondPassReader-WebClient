@@ -7,8 +7,8 @@ import {
   type MarginaliaBookGroup,
   parseAndSplitMarginaliaExport,
   type MarginaliaSplitResult,
-} from "../../features/settings/marginaliaSplitExport";
-import { createMarginaliaZipBlob } from "../../features/settings/marginaliaZipExport";
+} from "../../features/settings/MarginaliaSplitExport.Actions";
+import { createMarginaliaZipBlob } from "../../features/settings/MarginaliaZipExport.Actions";
 import { DebugLoggingSettingsPanel } from "../../features/devtools/DebugLoggingSettings.Panel";
 import { SettingsDetailRow } from "./SettingsDetail.Row";
 

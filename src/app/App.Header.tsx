@@ -1,7 +1,7 @@
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import type { AppRoute } from "./AppNavigation.Router";
-import { MaterialIcon } from "../components/MaterialIcon";
-import { MetaSeparator } from "../components/MetaSeparator";
+import { MaterialIcon } from "../components/Material.Icon";
+import { MetaSeparator } from "../components/Metadata.Presenter";
 
 export function AppHeader({
   profile,

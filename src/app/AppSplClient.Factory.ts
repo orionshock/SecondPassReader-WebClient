@@ -1,5 +1,5 @@
 import { createSecondPassClient, type SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 export function createSplClientFromProfile(profile: ConnectionProfile): SecondPassClient {
   if (!profile.apiBaseUrl) throw new Error("Library connection is missing apiBaseUrl. Connect again.");

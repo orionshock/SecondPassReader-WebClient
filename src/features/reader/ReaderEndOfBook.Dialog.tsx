@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { CompactBook } from "@secondpass/client";
-import { getBookCoverUrl } from "../library/coverUtils";
-import { formatSeriesIndex } from "../library/seriesUtils";
+import { getBookCoverUrl } from "../library/BookCover.Mapper";
+import { formatSeriesIndex } from "../library/SeriesMetadata.Presenter";
 
 export function EndOfBookDialog({
   nextBook,

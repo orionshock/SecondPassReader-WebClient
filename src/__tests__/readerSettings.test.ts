@@ -3,7 +3,7 @@ import {
   getReaderSettings,
   normalizeReaderSettings,
   saveReaderSettings,
-} from "../storage/readerSettings";
+} from "../storage/ReaderSettings.Store";
 
 function installLocalStorage(initialValue: string | null = null) {
   let value = initialValue;

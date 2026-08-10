@@ -1,4 +1,4 @@
-import { debugLog } from "../../../lib/debug/DebugLogger";
+import { debugLog } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 export function debugStagedSelection(event: string, data?: Record<string, unknown>): void {
   debugLog("staged-selection", event, data);

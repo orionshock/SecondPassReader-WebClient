@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { consumeLoginRequest, createLoginRequest, pollLoginRequest } from "../clientApiAuthApi";
-import type { SecondPassDiscovery } from "../schemas/clientApiAuth";
+import { consumeLoginRequest, createLoginRequest, pollLoginRequest } from "../ClientApiAuth.Api";
+import type { SecondPassDiscovery } from "../schemas/ClientApiAuth.Types";
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });

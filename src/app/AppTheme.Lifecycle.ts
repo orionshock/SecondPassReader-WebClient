@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAppTheme, saveAppTheme, type AppTheme } from "../storage/appTheme";
+import { getAppTheme, saveAppTheme, type AppTheme } from "../storage/AppTheme.Store";
 
 export function useAppThemeLifecycle() {
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getAppTheme());

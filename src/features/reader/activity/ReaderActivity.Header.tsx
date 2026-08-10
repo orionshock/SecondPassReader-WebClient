@@ -1,5 +1,5 @@
-import { MaterialIcon } from "../../../components/MaterialIcon";
-import { InlineMeta } from "../../../components/MetaSeparator";
+import { MaterialIcon } from "../../../components/Material.Icon";
+import { InlineMeta } from "../../../components/Metadata.Presenter";
 import { MarginaliaMenu } from "../shell/ReaderMarginalia.Menu";
 import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 

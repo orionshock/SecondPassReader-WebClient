@@ -1,5 +1,5 @@
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 export function DebugDetails({
   step,

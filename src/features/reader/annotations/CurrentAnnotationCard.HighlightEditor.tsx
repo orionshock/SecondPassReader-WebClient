@@ -1,6 +1,6 @@
 import type { FormEventHandler } from "react";
-import { MaterialIcon } from "../../../components/MaterialIcon";
-import { InlineMeta } from "../../../components/MetaSeparator";
+import { MaterialIcon } from "../../../components/Material.Icon";
+import { InlineMeta } from "../../../components/Metadata.Presenter";
 import {
   ANNOTATION_COLOR_TOKENS,
   toAnnotationCssVars,

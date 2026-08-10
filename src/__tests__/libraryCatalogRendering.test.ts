@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { CompactBook } from "@secondpass/client";
-import { getBookDescriptionText } from "../features/library/bookTextUtils";
-import { formatBookPublishedDate, formatBookSeries, getBookMetaItems } from "../features/library/display/bookDisplayUtils";
-import { findNextSeriesBook } from "../features/library/seriesUtils";
+import { getBookDescriptionText } from "../features/library/BookDescription.Presenter";
+import { formatBookPublishedDate, formatBookSeries, getBookMetaItems } from "../features/library/display/BookDisplay.Presenter";
+import { findNextSeriesBook } from "../features/library/SeriesMetadata.Presenter";
 
 function book(input: Partial<CompactBook> & Pick<CompactBook, "id" | "title">): CompactBook {
   return {

@@ -5,7 +5,7 @@ import {
   resetReaderSettings,
   saveReaderSettings,
   type ReaderSettings,
-} from "../../../storage/readerSettings";
+} from "../../../storage/ReaderSettings.Store";
 
 export function useReaderDisplaySettings(initialSettings?: ReaderSettings) {
   const [settings, setSettings] = useState<ReaderSettings>(() => normalizeReaderSettings(initialSettings ?? getReaderSettings()));

@@ -2,16 +2,16 @@ import { createElement, Fragment, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
-import { ShelvesPreviewLoadFailure } from "../features/home/ShelvesPreviewSection";
-import { CatalogTagLoadErrorNotice } from "../features/library/catalogTags/CatalogTagRail";
-import { LibraryResultsLoadErrorNotice } from "../features/library/LibraryResultsLoadErrorNotice";
-import { LibraryBooksResults } from "../features/library/results/LibraryBooksResults";
+import { ShelvesPreviewLoadFailure } from "../features/home/ShelvesPreview.Panel";
+import { CatalogTagLoadErrorNotice } from "../features/library/catalogTags/CatalogTag.Rail";
+import { LibraryResultsLoadErrorNotice } from "../features/library/LibraryResultsLoadError.Notice";
+import { LibraryBooksResults } from "../features/library/results/LibraryBooks.Results";
 import {
   getSessionsLoadErrorMessage,
   SessionsLoadErrorNotice,
   SessionsNoDataState,
-} from "../features/sessions/SessionsPage";
-import { ShelvesLoadErrorNotice } from "../features/shelves/ShelvesPage";
+} from "../features/sessions/Sessions.Page";
+import { ShelvesLoadErrorNotice } from "../features/shelves/Shelves.Page";
 
 describe("page-local load errors", () => {
   it("shows the library authorization message without an empty successful result", () => {

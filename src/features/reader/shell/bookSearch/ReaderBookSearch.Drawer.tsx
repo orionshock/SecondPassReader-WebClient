@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { MaterialIcon } from "../../../../components/MaterialIcon";
+import { MaterialIcon } from "../../../../components/Material.Icon";
 import type { ReaderSearchResult } from "../../domain/ReaderDomain.Types";
 import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
 import { BookSearchInputBar } from "./ReaderBookSearch.InputBar";

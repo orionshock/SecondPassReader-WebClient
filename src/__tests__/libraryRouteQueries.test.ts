@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SecondPassClient } from "@secondpass/client";
-import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "../features/library/data/libraryAxisQueries";
-import { loadLibraryBooks } from "../features/library/data/libraryBookRequests";
-import { loadLibraryAuthors, loadLibrarySeries } from "../features/library/data/libraryEntityRequests";
-import { deriveLibraryRouteState, type DerivedLibraryRouteState } from "../features/library/route/libraryRouteState";
+import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "../features/library/data/LibraryAxis.Queries";
+import { loadLibraryBooks } from "../features/library/data/LibraryBooks.Queries";
+import { loadLibraryAuthors, loadLibrarySeries } from "../features/library/data/LibraryEntities.Queries";
+import { deriveLibraryRouteState, type DerivedLibraryRouteState } from "../features/library/route/LibraryRoute.State";
 
 describe("Library route state", () => {
   it("keeps axis searches on their selected axis", () => {

@@ -1,13 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { PreviewBookCoverStack } from "../features/library/display/PreviewBookCoverStack";
+import { PreviewBookCoverStack } from "../features/library/display/PreviewBookCover.Stack";
 import {
   normalizePreviewBook,
   normalizePreviewBooks,
-} from "../features/library/display/previewBooks";
-import { LibraryAuthorRows } from "../features/library/results/LibraryAuthorRows";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+} from "../features/library/display/PreviewBooks.Mapper";
+import { LibraryAuthorRows } from "../features/library/results/LibraryAuthor.Rows";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 describe("preview books", () => {
   it("normalizes wire, null, and already-normalized cover URLs", () => {

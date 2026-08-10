@@ -4,7 +4,7 @@ import {
   formatIso,
   formatProgress,
   normalizeStatus,
-} from "../features/sessions/sessionDetailDisplay";
+} from "../features/sessions/SessionDetail.Presenter";
 
 describe("sessionDetailDisplay", () => {
   it("formats zero, singular, plural, and clamped annotation counts", () => {

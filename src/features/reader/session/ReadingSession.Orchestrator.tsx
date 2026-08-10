@@ -1,4 +1,4 @@
-import type { ReaderSettings } from "../../../storage/readerSettings";
+import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/Reading.Shell";

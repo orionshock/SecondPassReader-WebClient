@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getEffectiveLibraryGroupId } from "../features/library/libraryScope/libraryScope";
+import { getEffectiveLibraryGroupId } from "../features/library/libraryScope/LibraryScope.Policy";
 
 describe("getEffectiveLibraryGroupId", () => {
   it("allows group scope when advanced groups are enabled", () => {

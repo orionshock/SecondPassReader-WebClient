@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Shelf } from "@secondpass/client";
 
-import { formatShelfOwnerParts, isCanonicalPublicShelfGroup } from "../features/shelves/shelfMeta";
+import { formatShelfOwnerParts, isCanonicalPublicShelfGroup } from "../features/shelves/ShelfMetadata.Presenter";
 
 function makeShelf(overrides: Partial<Shelf>): Shelf {
   return {

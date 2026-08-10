@@ -1,5 +1,5 @@
-import { MaterialIcon } from "../../../components/MaterialIcon";
-import { InlineMeta } from "../../../components/MetaSeparator";
+import { MaterialIcon } from "../../../components/Material.Icon";
+import { InlineMeta } from "../../../components/Metadata.Presenter";
 import { BOOKMARK_DISPLAY } from "../display/ReaderAnnotation.Presenter";
 import type { ReaderBookmarkViewModel } from "./ReaderBookmark.Mapper";
 

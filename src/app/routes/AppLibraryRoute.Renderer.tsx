@@ -1,14 +1,14 @@
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { HomePage } from "../../features/home/HomePage";
-import { LibraryBrowsePage } from "../../features/library/LibraryBrowsePage";
+import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { HomePage } from "../../features/home/Home.Page";
+import { LibraryBrowsePage } from "../../features/library/LibraryBrowse.Page";
 import { ReadingActivity } from "../../features/reader/Reading.Activity";
 import type { OpenedBook } from "../../features/reader/Reader.Types";
-import { SessionDetailPage } from "../../features/sessions/SessionDetailPage";
-import { SessionsPage } from "../../features/sessions/SessionsPage";
-import { ShelfDetailPage } from "../../features/shelves/ShelfDetailPage";
-import { ShelfEditPage } from "../../features/shelves/ShelfEditPage";
-import { ShelvesPage } from "../../features/shelves/ShelvesPage";
+import { SessionDetailPage } from "../../features/sessions/SessionDetail.Page";
+import { SessionsPage } from "../../features/sessions/Sessions.Page";
+import { ShelfDetailPage } from "../../features/shelves/ShelfDetail.Page";
+import { ShelfEditPage } from "../../features/shelves/ShelfEdit.Page";
+import { ShelvesPage } from "../../features/shelves/Shelves.Page";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, withBookModal } from "../AppNavigation.Router";
 

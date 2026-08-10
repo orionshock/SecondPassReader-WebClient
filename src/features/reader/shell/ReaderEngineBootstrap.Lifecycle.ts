@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { ReaderSettings } from "../../../storage/readerSettings";
+import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import type {
   ReaderDescribeCfiHandle,
   ReaderDisplayCfiHandle,

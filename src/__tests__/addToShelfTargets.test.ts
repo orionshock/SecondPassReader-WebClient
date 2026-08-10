@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Shelf } from "@secondpass/client";
-import { getPersonalShelfTargets } from "../features/library/bookDetail/addToShelfTargets";
+import { getPersonalShelfTargets } from "../features/library/bookDetail/AddToShelfTargets.Mapper";
 
 const shelf = (id: string, ownerType: string, canEdit: boolean): Shelf => ({
   id,

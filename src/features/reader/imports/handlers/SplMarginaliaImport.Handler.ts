@@ -1,7 +1,7 @@
 import {
   formatMarginaliaSessionLabel,
   parseAndSplitMarginaliaExport,
-} from "../../../settings/marginaliaSplitExport";
+} from "../../../settings/MarginaliaSplitExport.Actions";
 import { ReaderImportParseError, registerReaderImportHandler } from "../ReaderImportFormats.Registry";
 import type { ReaderImportJob, ReaderImportRow } from "../ReaderImport.Types";
 

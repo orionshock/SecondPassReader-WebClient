@@ -3,7 +3,7 @@ import { AnnotationWorkspace } from "../annotations/AnnotationWorkspace.Panel";
 import { ReaderImportDrawer } from "../imports/ReaderImport.Drawer";
 import type { useReaderImportJob } from "../imports/ReaderImportJob.Controller";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./ReaderActivity.Types";
-import type { ReaderWidth } from "../../../storage/readerSettings";
+import type { ReaderWidth } from "../../../storage/ReaderSettings.Store";
 
 export function ReaderActivitySidePanels({
   importDrawerInLayout,

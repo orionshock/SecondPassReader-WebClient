@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDefaultDeviceName } from "../features/connection/defaultDeviceName";
+import { buildDefaultDeviceName } from "../features/connection/DefaultDeviceName.Presenter";
 
 describe("buildDefaultDeviceName", () => {
   it("prefers userAgentData brands and platform", () => {

@@ -9,7 +9,7 @@ import {
   groupMarginaliaSplitItems,
   parseAndSplitMarginaliaExport,
   splitMarginaliaExport,
-} from "../features/settings/marginaliaSplitExport";
+} from "../features/settings/MarginaliaSplitExport.Actions";
 
 describe("marginalia split export", () => {
   it("splits multiple books and sessions into mini exports", () => {

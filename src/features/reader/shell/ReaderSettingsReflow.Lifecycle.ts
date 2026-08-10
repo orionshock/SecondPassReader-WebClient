@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ReaderSettings } from "../../../storage/readerSettings";
+import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import type { ReaderOperationFailureKind } from "./ReaderOperationError.Policy";

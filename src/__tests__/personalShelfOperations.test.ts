@@ -3,7 +3,7 @@ import type { SecondPassClient, Shelf } from "@secondpass/client";
 import {
   addBookToPersonalShelf,
   loadPersonalShelves,
-} from "../features/library/bookDetail/personalShelfOperations";
+} from "../features/library/bookDetail/PersonalShelf.Actions";
 
 describe("personal shelf operations", () => {
   it("marks a successful add as added without reconciliation", async () => {

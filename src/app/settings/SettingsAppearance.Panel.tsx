@@ -1,4 +1,4 @@
-import type { AppTheme } from "../../storage/appTheme";
+import type { AppTheme } from "../../storage/AppTheme.Store";
 
 export function SettingsAppearancePanel({
   appTheme,

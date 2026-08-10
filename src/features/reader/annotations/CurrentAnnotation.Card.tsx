@@ -1,4 +1,4 @@
-import { MaterialIcon } from "../../../components/MaterialIcon";
+import { MaterialIcon } from "../../../components/Material.Icon";
 import {
   getHighlightAnnotationDisplay,
   toAnnotationCssVars,

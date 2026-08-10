@@ -1,8 +1,8 @@
 import "./App.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ClientApiLinking } from "../features/connection/ClientApiLinking";
-import { ClientApiVerification } from "../features/connection/ClientApiVerification";
-import { ConnectServerScreen } from "../features/connection/ConnectServerScreen";
+import { ClientApiLinking } from "../features/connection/ClientApiLinking.Panel";
+import { ClientApiVerification } from "../features/connection/ClientApiVerification.Panel";
+import { ConnectServerScreen } from "../features/connection/ConnectServer.Page";
 import { getAppWorkflowStep } from "./AppWorkflow.Policy";
 import type { AppRoute } from "./AppNavigation.Router";
 import { navigateTo, parseCurrentRoute } from "./AppNavigation.Router";
@@ -10,14 +10,14 @@ import {
   clearActiveConnection,
   getActiveConnection,
   type ConnectionProfile,
-} from "../storage/connectionProfiles";
+} from "../storage/ConnectionProfiles.Store";
 import { AppHeader } from "./App.Header";
 import { SettingsPanel } from "./Settings.Panel";
 import { createSplClientFromProfile } from "./AppSplClient.Factory";
 import type { SecondPassClient } from "@secondpass/client";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecovery.Context";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecovery.Banner";
-import { debugLog } from "../lib/debug/DebugLogger";
+import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
 import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
 import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLibrarySearchPlaceholder } from "../features/library/controls/librarySearchPlaceholder";
+import { getLibrarySearchPlaceholder } from "../features/library/controls/LibrarySearchPlaceholder.Presenter";
 
 describe("Library search placeholder", () => {
   it("describes the current axis and scope", () => {

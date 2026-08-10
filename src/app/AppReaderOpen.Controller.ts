@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, type SecondPassClient } from "@secondpass/client";
-import { openBookForReader } from "../features/library/openBookForReader";
+import { openBookForReader } from "../features/library/LibraryBookOpen.Actions";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import type { OpenedBook } from "../features/reader/Reader.Types";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 import type { AppRoute } from "./AppNavigation.Router";
 import { navigateTo } from "./AppNavigation.Router";
-import { debugLog } from "../lib/debug/DebugLogger";
+import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
 
 export function useAppReaderOpenController({
   route,

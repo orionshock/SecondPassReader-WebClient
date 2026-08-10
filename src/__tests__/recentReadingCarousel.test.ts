@@ -2,8 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { MarginaliaRecentSession } from "@secondpass/client";
-import { RecentReadingCarousel } from "../features/library/RecentReadingCarousel";
-import { RecentReadingSection } from "../features/library/RecentReadingSection";
+import { RecentReadingCarousel } from "../features/library/RecentReading.Carousel";
+import { RecentReadingSection } from "../features/library/RecentReading.Panel";
 
 describe("Home recent reading carousel", () => {
   it("renders View all as a Sessions link", () => {

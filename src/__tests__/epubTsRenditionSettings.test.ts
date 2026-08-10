@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ReaderSettings } from "../storage/readerSettings";
+import type { ReaderSettings } from "../storage/ReaderSettings.Store";
 import { createEpubTsRenditionSettingsEngine } from "../features/reader/engine/EpubTsRenditionSettings.Engine";
 
 describe("epub-ts rendition settings engine", () => {

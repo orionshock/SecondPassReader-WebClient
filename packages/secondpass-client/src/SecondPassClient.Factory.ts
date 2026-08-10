@@ -1,8 +1,8 @@
-import type { SecondPassDiscovery } from "./schemas/clientApiAuth";
-import type { BookDetail, CompactBook } from "./schemas/library";
-import { consumeLoginRequest, createLoginRequest, discoverSecondPass, pollLoginRequest } from "./clientApiAuthApi";
-import { getCurrentUser } from "./accountApi";
-import { getServerInfo } from "./serverApi";
+import type { SecondPassDiscovery } from "./schemas/ClientApiAuth.Types";
+import type { BookDetail, CompactBook } from "./schemas/Library.Types";
+import { consumeLoginRequest, createLoginRequest, discoverSecondPass, pollLoginRequest } from "./ClientApiAuth.Api";
+import { getCurrentUser } from "./Account.Api";
+import { getServerInfo } from "./Server.Api";
 import {
   downloadBookFile,
   getAuthor,
@@ -20,7 +20,7 @@ import {
   listSeries,
   listTags,
   searchBooks,
-} from "./libraryApi";
+} from "./Library.Api";
 import {
   batchMarginaliaAnnotations,
   closeMarginaliaSession,
@@ -37,7 +37,7 @@ import {
   replaceMarginaliaProgress,
   startOverMarginaliaBook,
   updateMarginaliaSession,
-} from "./marginaliaApi";
+} from "./Marginalia.Api";
 import {
   addShelfItem,
   createShelf,
@@ -48,8 +48,8 @@ import {
   listShelves,
   updateShelf,
   updateShelfItem,
-} from "./shelvesApi";
-import { createClientContext, requireAuth } from "./clientContext";
+} from "./Shelves.Api";
+import { createClientContext, requireAuth } from "./ClientContext.Policy";
 import type { SecondPassClient, SecondPassClientConfig } from "./SecondPassClient.Types";
 
 export function createSecondPassClient(config: SecondPassClientConfig): SecondPassClient {

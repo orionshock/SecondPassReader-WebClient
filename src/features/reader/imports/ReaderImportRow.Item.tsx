@@ -1,4 +1,4 @@
-import { MaterialIcon } from "../../../components/MaterialIcon";
+import { MaterialIcon } from "../../../components/Material.Icon";
 import type { ReaderImportRow } from "./ReaderImport.Types";
 import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
 import { isReaderImportRowTerminal } from "./ReaderImportJob.State";

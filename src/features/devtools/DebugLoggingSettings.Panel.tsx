@@ -5,7 +5,7 @@ import {
   getEnabledDebugCategories,
   setEnabledDebugCategories,
   type DebugLogCategory,
-} from "../../lib/debug/DebugLogger";
+} from "../../lib/debug/DebugLogger.Diagnostics";
 
 const CATEGORY_LABELS: Record<DebugLogCategory, string> = {
   imports: "Import and marginalia matching",

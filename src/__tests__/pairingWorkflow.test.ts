@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ClientApiConsumeResponse, ClientApiPollResponse, SecondPassClient, SecondPassDiscovery } from "@secondpass/client";
-import { verifySecondPassServer } from "../features/connection/connectionUtils";
+import { verifySecondPassServer } from "../features/connection/ConnectionServer.Queries";
 import {
   getPairingErrorMessage,
   PAIRING_ALREADY_USED_MESSAGE,
   runPairingAttempt,
-} from "../features/connection/pairingFlow";
+} from "../features/connection/PairingFlow.Controller";
 
 const discovery: SecondPassDiscovery = {
   server_name: "Test Library",

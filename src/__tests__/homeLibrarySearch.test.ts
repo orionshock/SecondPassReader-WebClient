@@ -2,9 +2,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { routeToHash } from "../app/AppNavigation.Router";
-import { HomePage } from "../features/home/HomePage";
-import { getHomeLibrarySearchRoute } from "../features/home/homeLibrarySearch";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
+import { HomePage } from "../features/home/Home.Page";
+import { getHomeLibrarySearchRoute } from "../features/home/HomeLibrarySearch.Router";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 describe("Home library search", () => {
   it("does nothing for a blank query", () => {

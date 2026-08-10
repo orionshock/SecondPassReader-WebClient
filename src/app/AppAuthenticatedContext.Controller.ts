@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/connectionProfiles";
-import { saveConnectionProfile } from "../storage/connectionProfiles";
-import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
-import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
+import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 
 export function useAppAuthenticatedContextController({

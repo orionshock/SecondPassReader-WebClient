@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MaterialIcon } from "../../../components/MaterialIcon";
+import { MaterialIcon } from "../../../components/Material.Icon";
 
 export function CurrentSessionMetadataEditor(props: {
   name: string | null;

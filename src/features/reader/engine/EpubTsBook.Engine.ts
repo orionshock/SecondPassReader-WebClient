@@ -1,5 +1,5 @@
 import ePub, { EpubCFI, type Book, type Location, type Rendition, type Section } from "@likecoin/epub-ts";
-import type { ReaderSettings } from "../../../storage/readerSettings";
+import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/ReaderDomain.Types";
 import type { ReaderTocItem } from "../domain/ReaderDomain.Types";
 import type { ReaderLocationDescription } from "../domain/ReaderDomain.Types";

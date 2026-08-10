@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { MaterialIcon } from "../../../components/MaterialIcon";
-import type { ReaderFontFamily, ReaderLineHeight, ReaderSettings, ReaderTheme, ReaderWidth } from "../../../storage/readerSettings";
+import { MaterialIcon } from "../../../components/Material.Icon";
+import type { ReaderFontFamily, ReaderLineHeight, ReaderSettings, ReaderTheme, ReaderWidth } from "../../../storage/ReaderSettings.Store";
 import {
   READER_FONT_OPTIONS,
   READER_FONT_SIZE_OPTION_LABELS,

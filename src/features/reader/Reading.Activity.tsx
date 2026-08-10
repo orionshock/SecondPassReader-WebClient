@@ -1,4 +1,4 @@
-import type { ReaderSettings, ReaderWidth } from "../../storage/readerSettings";
+import type { ReaderSettings, ReaderWidth } from "../../storage/ReaderSettings.Store";
 import { useEffect, useState } from "react";
 import { ReadingSessionOrchestrator } from "./session/ReadingSession.Orchestrator";
 import type { OpenedBook } from "./Reader.Types";
