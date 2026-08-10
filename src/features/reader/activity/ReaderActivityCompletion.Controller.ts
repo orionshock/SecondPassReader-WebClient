@@ -5,7 +5,7 @@ import type { CloseSessionAfterOption, CloseSessionInput } from "../../sessions/
 import { findNextSeriesBook, normalizeSeriesIndex } from "../../library/seriesUtils";
 import { buildReturnLabel, saveReaderReturnTarget } from "../ReaderReturnTarget.Store";
 import type { OpenedBook } from "../Reader.Types";
-import type { ReaderActivityRenderState } from "./readerActivityTypes";
+import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
 

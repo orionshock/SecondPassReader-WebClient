@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReaderSelection } from "../domain/types";
+import type { ReaderSelection } from "../domain/ReaderDomain.Types";
 import type { StagedSelectionToolbarPosition } from "../domain/ReaderBridge.Types";
-import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
+import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import {
   debugStagedSelection,
   previewStagedSelectionCfi,

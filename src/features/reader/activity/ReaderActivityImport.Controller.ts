@@ -5,7 +5,7 @@ import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.R
 import { useReaderImportActivation } from "../imports/ReaderImportActivation.Controller";
 import type { useReaderImportJob } from "../imports/ReaderImportJob.Controller";
 import type { ReaderBookmarkMutationResult } from "../session/annotations/CurrentSessionBookmark.Actions";
-import type { ReaderActivityRenderState } from "./readerActivityTypes";
+import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 
 export function shouldAcceptImportedBookmarkMutation(result: ReaderBookmarkMutationResult): boolean {
   return result.ok && result.action === "created";

@@ -1,4 +1,4 @@
-import { ANNOTATION_LIMITS } from "../annotations/annotationLimits";
+import { ANNOTATION_LIMITS } from "../annotations/ReaderAnnotationLimits.Policy";
 
 export type QuoteContext = {
   exact: string;

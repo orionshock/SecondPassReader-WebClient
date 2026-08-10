@@ -5,7 +5,7 @@ import { ClientApiVerification } from "../features/connection/ClientApiVerificat
 import { ConnectServerScreen } from "../features/connection/ConnectServerScreen";
 import { LibraryBrowsePage } from "../features/library/LibraryBrowsePage";
 import { HomePage } from "../features/home/HomePage";
-import { ReadingActivity } from "../features/reader/ReadingActivity";
+import { ReadingActivity } from "../features/reader/Reading.Activity";
 import type { OpenedBook } from "../features/reader/Reader.Types";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { AppRoute } from "./navigation";

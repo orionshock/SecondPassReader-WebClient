@@ -6,7 +6,7 @@ import {
 import { CurrentAnnotationCardBookmarkView } from "./CurrentAnnotationCard.BookmarkView";
 import { CurrentAnnotationCardHighlightEditor } from "./CurrentAnnotationCard.HighlightEditor";
 import { CurrentAnnotationCardHighlightView } from "./CurrentAnnotationCard.HighlightView";
-import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./viewModels";
+import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./ReaderAnnotationViewModels.Types";
 
 function normalizeQuoteTextForDisplay(text: string): string {
   // Selections and describing bodies can contain hard line separators and trailing whitespace.

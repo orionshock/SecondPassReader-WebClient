@@ -1,4 +1,4 @@
-import type { ReaderSearchResult } from "../../domain/types";
+import type { ReaderSearchResult } from "../../domain/ReaderDomain.Types";
 import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./ReaderBookSearch.Constants";
 import { BookSearchResultRow } from "./ReaderBookSearch.ResultRow";
 

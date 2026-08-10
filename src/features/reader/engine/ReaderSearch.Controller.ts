@@ -1,4 +1,4 @@
-import type { ReaderSearchResult } from "../domain/types";
+import type { ReaderSearchResult } from "../domain/ReaderDomain.Types";
 
 type QueuedSearch = {
   run: () => Promise<ReaderSearchResult[]>;

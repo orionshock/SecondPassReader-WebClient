@@ -5,7 +5,7 @@ import {
   ANNOTATION_COLOR_TOKENS,
   toAnnotationCssVars,
 } from "../display/ReaderAnnotation.Presenter";
-import { ANNOTATION_LIMITS } from "./annotationLimits";
+import { ANNOTATION_LIMITS } from "./ReaderAnnotationLimits.Policy";
 
 export function CurrentAnnotationCardHighlightEditor({
   annotationId,

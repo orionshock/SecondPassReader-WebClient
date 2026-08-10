@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { MarginaliaProgress } from "@secondpass/client";
-import type { ReaderLocation } from "../../domain/types";
+import type { ReaderLocation } from "../../domain/ReaderDomain.Types";
 import {
   READING_PROGRESS_AUTOSAVE_DELAY_MS,
   ReadingProgressAutosaveController,

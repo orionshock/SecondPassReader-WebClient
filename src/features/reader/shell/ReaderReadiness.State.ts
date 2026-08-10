@@ -1,4 +1,4 @@
-import type { ReaderViewportStatus } from "./ReaderViewport";
+import type { ReaderViewportStatus } from "./Reader.Viewport";
 
 export type ReaderReadinessState =
   | "empty"

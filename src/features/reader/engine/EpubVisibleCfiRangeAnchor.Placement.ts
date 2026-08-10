@@ -1,4 +1,4 @@
-import type { ReaderSelectionAnchor } from "../domain/types";
+import type { ReaderSelectionAnchor } from "../domain/ReaderDomain.Types";
 
 type RectLike = Pick<DOMRect, "bottom" | "height" | "left" | "right" | "top" | "width">;
 

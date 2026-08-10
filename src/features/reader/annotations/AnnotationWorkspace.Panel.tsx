@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
-import type { CurrentSessionAnnotationViewModel } from "./viewModels";
-import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel";
+import type { CurrentSessionAnnotationViewModel } from "./ReaderAnnotationViewModels.Types";
+import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotations.Panel";
 import type { PreviousSessionAnnotationGroup } from "../session/previousSession/PreviousSessionViewModels.Presenter";
-import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadataEditor";
-import { CurrentAnnotationCard } from "./CurrentAnnotationCard";
-import { AnnotationWorkspaceTabs, type AnnotationWorkspaceTabKey } from "./AnnotationWorkspaceTabs";
-import { useAnnotationWorkspaceFocus, type AnnotationWorkspaceFocusRequest } from "./useAnnotationWorkspaceFocus";
+import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadata.Editor";
+import { CurrentAnnotationCard } from "./CurrentAnnotation.Card";
+import { AnnotationWorkspaceTabs, type AnnotationWorkspaceTabKey } from "./AnnotationWorkspace.Tabs";
+import { useAnnotationWorkspaceFocus, type AnnotationWorkspaceFocusRequest } from "./ReaderAnnotationWorkspaceFocus.Lifecycle";
 
 export function AnnotationWorkspace({
   annotations,

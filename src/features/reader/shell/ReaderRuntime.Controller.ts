@@ -1,4 +1,4 @@
-import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
+import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import { stabilizeReaderReflow } from "./ReaderReflow.Coordinator";
 
 export type ReaderRuntimeOperationContext = {

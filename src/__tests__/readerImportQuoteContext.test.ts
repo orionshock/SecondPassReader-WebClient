@@ -5,7 +5,7 @@ import {
   rankImportQuoteContextCandidates,
   scoreImportQuoteContextCandidate,
 } from "../features/reader/imports/ReaderImportQuoteContext.Policy";
-import type { ReaderSearchResult } from "../features/reader/domain/types";
+import type { ReaderSearchResult } from "../features/reader/domain/ReaderDomain.Types";
 
 describe("reader import quote context", () => {
   it("scores an exact quote candidate with matching prefix", () => {

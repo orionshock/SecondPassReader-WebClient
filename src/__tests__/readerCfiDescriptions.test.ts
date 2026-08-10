@@ -5,7 +5,7 @@ import {
   getCfiDescriptionCandidates,
   toReaderCfiLocationDisplay,
 } from "../features/reader/session/ReadingSessionCfiDescriptions.Queries";
-import type { ReaderTocItem } from "../features/reader/domain/types";
+import type { ReaderTocItem } from "../features/reader/domain/ReaderDomain.Types";
 
 describe("readerCfiDescriptions", () => {
   const toc: ReaderTocItem[] = [

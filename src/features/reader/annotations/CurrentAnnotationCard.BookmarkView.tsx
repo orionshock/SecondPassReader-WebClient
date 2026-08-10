@@ -1,7 +1,7 @@
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
 import { BOOKMARK_DISPLAY } from "../display/ReaderAnnotation.Presenter";
-import type { ReaderBookmarkViewModel } from "./bookmarkUtils";
+import type { ReaderBookmarkViewModel } from "./ReaderBookmark.Mapper";
 
 export function CurrentAnnotationCardBookmarkView({
   bookmark,

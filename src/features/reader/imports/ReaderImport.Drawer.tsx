@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import type { ReaderImportJobCounts } from "./ReaderImportJob.State";
 import type { ReaderImportJob } from "./ReaderImport.Types";
-import { ReaderImportRowList } from "./ReaderImportRowList";
+import { ReaderImportRowList } from "./ReaderImportRow.List";
 import { areAllReaderImportStatusFiltersEnabled, createDefaultReaderImportStatusFilters, filterReaderImportRows, READER_IMPORT_STATUS_GROUPS, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter, type ReaderImportStatusFilters, type ReaderImportStatusGroup } from "./ReaderImportStatusFilter.State";
 
 const statusFilterLabels: Record<ReaderImportStatusGroup, string> = {

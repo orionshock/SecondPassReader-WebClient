@@ -1,9 +1,9 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import type { ReaderAnnotation } from "../domain/types";
-import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
+import type { ReaderAnnotation } from "../domain/ReaderDomain.Types";
+import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./ReaderAnnotationSelectors.Queries";
 import { getAnnotationDescribingText } from "../display/ReaderAnnotation.Presenter";
 
-export { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./annotationSelectors";
+export { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "./ReaderAnnotationSelectors.Queries";
 
 export function toReaderAnnotation(annotation: MarginaliaAnnotation): ReaderAnnotation | null {
   if (isBookmarkAnnotation(annotation)) {

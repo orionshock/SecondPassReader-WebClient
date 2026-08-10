@@ -1,6 +1,6 @@
 import type { Rendition } from "@likecoin/epub-ts";
 import { resolveAnnotationColor } from "../display/ReaderAnnotation.Presenter";
-import type { ReaderHighlightMark } from "../domain/types";
+import type { ReaderHighlightMark } from "../domain/ReaderDomain.Types";
 
 export type EpubTsHighlightRenderer = {
   setHighlightMarks(marks: ReaderHighlightMark[]): void;

@@ -1,5 +1,5 @@
 import type { ReaderImportJob, ReaderImportRow } from "./ReaderImport.Types";
-import { ReaderImportRowItem } from "./ReaderImportRowItem";
+import { ReaderImportRowItem } from "./ReaderImportRow.Item";
 
 export function ReaderImportRowList({
   job,

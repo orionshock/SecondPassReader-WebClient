@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/annotationSelectors";
+import { getAnnotationFragmentCfi, isBookmarkAnnotation, isHighlightAnnotation } from "../features/reader/annotations/ReaderAnnotationSelectors.Queries";
 import {
   getAnnotationColor,
   getAnnotationDescribingText,

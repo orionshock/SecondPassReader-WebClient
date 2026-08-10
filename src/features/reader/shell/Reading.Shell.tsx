@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import { ReaderViewport } from "./ReaderViewport";
+import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
+import { ReaderViewport } from "./Reader.Viewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/ReaderDomain.Types";
 import type {
   ReadingShellCommand,
   ReadingShellEvent,
@@ -17,7 +17,7 @@ import type {
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
-import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
+import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettings.Menu";
 import { SelectionHighlightToolbar } from "./ReaderSelectionHighlightToolbar.Toolbar";
 import { TableOfContentsDrawer } from "./ReaderTableOfContents.Drawer";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem } from "./ReaderDurableAnnotationToolbar.Toolbar";

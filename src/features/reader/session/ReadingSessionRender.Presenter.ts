@@ -1,6 +1,6 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { toReaderAnnotation } from "../annotations/annotationUtils";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderTocItem } from "../domain/types";
+import { toReaderAnnotation } from "../annotations/ReaderAnnotation.Mapper";
+import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderTocItem } from "../domain/ReaderDomain.Types";
 import type { DurableAnnotationToolbarItem } from "../shell/ReaderDurableAnnotationToolbar.Toolbar";
 import type { ReadingSessionState } from "./ReadingSession.Types";
 

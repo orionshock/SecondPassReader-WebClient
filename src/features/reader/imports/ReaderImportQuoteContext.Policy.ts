@@ -1,4 +1,4 @@
-import type { ReaderSearchResult } from "../domain/types";
+import type { ReaderSearchResult } from "../domain/ReaderDomain.Types";
 import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./ReaderImportDebug.Diagnostics";
 
 export type ReaderImportQuoteContextHint = {

@@ -74,16 +74,16 @@ The workflow gate in `src/app/App.tsx` prevents unauthenticated or unverified pr
 `App.tsx`
 : Owns global workflow, route handling, selected connection profile, and opening/closing book blobs.
 
-`ReadingActivity.tsx`
+`Reading.Activity.tsx`
 : Owns reader page chrome, panels/drawers, import modal state, end-of-book dialogs, and reader layout composition.
 
-`ReadingSessionOrchestrator.tsx`
+`ReadingSession.Orchestrator.tsx`
 : Coordinates session metadata, progress autosave, annotations, previous session layers, shell commands, search handle registration, and staged-selection callbacks.
 
-`ReadingShell.tsx`
+`Reading.Shell.tsx`
 : Owns reader interaction chrome and the `EpubTsBookEngine` lifecycle.
 
-`EpubTsBookEngine.ts`
+`EpubTsBook.Engine.ts`
 : Owns all `@likecoin/epub-ts` integration and exposes app-owned commands/events.
 
 `@secondpass/client`

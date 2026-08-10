@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { ReaderImportRowItem } from "../features/reader/imports/ReaderImportRowItem";
+import { ReaderImportRowItem } from "../features/reader/imports/ReaderImportRow.Item";
 import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import row item", () => {

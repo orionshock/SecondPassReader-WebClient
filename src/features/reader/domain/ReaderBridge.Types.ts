@@ -5,7 +5,7 @@ import type {
   ReaderSearchOptions,
   ReaderSearchResult,
   ReaderSelection,
-} from "./types";
+} from "./ReaderDomain.Types";
 
 export type ReaderDescribeCfiHandle = (cfi: string) => Promise<ReaderLocationDescription>;
 export type ReaderProbeCfiHandle = (cfi: string) => Promise<ReaderCfiProbeResult>;

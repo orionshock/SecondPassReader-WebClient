@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
 import type { OpenedBook } from "../../Reader.Types";
-import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
-import type { HighlightViewModel } from "../../annotations/viewModels";
-import type { ReaderBookmark, ReaderBookmarkViewModel } from "../../annotations/bookmarkUtils";
+import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
+import type { HighlightViewModel } from "../../annotations/ReaderAnnotationViewModels.Types";
+import type { ReaderBookmark, ReaderBookmarkViewModel } from "../../annotations/ReaderBookmark.Mapper";
 import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
 import {
   buildSessionBookmarkViewModels,

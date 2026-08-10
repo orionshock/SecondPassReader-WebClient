@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReaderTocItem } from "../domain/types";
+import type { ReaderTocItem } from "../domain/ReaderDomain.Types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 
 type FilteredTocItem = ReaderTocItem & { children?: FilteredTocItem[] };

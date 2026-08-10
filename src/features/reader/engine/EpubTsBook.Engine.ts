@@ -1,11 +1,11 @@
 import ePub, { EpubCFI, type Book, type Location, type Rendition, type Section } from "@likecoin/epub-ts";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/types";
-import type { ReaderTocItem } from "../domain/types";
-import type { ReaderLocationDescription } from "../domain/types";
-import type { ReaderSelection, ReaderSelectionAnchor } from "../domain/types";
+import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/ReaderDomain.Types";
+import type { ReaderTocItem } from "../domain/ReaderDomain.Types";
+import type { ReaderLocationDescription } from "../domain/ReaderDomain.Types";
+import type { ReaderSelection, ReaderSelectionAnchor } from "../domain/ReaderDomain.Types";
 import { buildQuoteContext } from "../selection/ReaderQuoteContext.Policy";
-import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
+import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/ReaderDomain.Types";
 import { createEpubTsHighlightRenderer, type HighlightMarkClick } from "./EpubTsHighlightRenderer.Engine";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./EpubTsLocation.Mapper";
 import { extractSelectionTextAndContext } from "./EpubSelection.Extractor";

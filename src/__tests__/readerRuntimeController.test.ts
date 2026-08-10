@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ReaderCfiDisplayResult } from "../features/reader/domain/types";
-import type { EpubTsBookEngine } from "../features/reader/engine/EpubTsBookEngine";
+import type { ReaderCfiDisplayResult } from "../features/reader/domain/ReaderDomain.Types";
+import type { EpubTsBookEngine } from "../features/reader/engine/EpubTsBook.Engine";
 import {
   ReaderRuntimeController,
   ReaderRuntimeStaleGenerationError,

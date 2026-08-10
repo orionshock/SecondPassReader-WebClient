@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { ReaderHighlightMark, ReaderSelection } from "../domain/types";
+import type { ReaderHighlightMark, ReaderSelection } from "../domain/ReaderDomain.Types";
 import type {
   StagedSelectionCommitInput,
   StagedSelectionHandle,
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
-import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
+import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import type { SelectionHighlightToolbarProps } from "./ReaderSelectionHighlightToolbar.Toolbar";
 import { isReaderFullyReady, type ReaderReadinessState } from "./ReaderReadiness.State";
 import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";

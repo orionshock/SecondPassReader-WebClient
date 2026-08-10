@@ -7,7 +7,7 @@ import type {
   StagedSelectionHandle,
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
-import type { ReaderLocation, ReaderTocItem } from "../domain/types";
+import type { ReaderLocation, ReaderTocItem } from "../domain/ReaderDomain.Types";
 import type {
   ReadingShellCommand,
   ReadingShellCommandValue,

@@ -1,4 +1,4 @@
-import type { ReaderSelectionAnchor } from "../domain/types";
+import type { ReaderSelectionAnchor } from "../domain/ReaderDomain.Types";
 import type { StagedSelectionToolbarPosition } from "../domain/ReaderBridge.Types";
 
 export type StagedSelectionToolbarSize = {

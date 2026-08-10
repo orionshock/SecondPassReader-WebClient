@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
-import type { ReaderLocation } from "../../domain/types";
-import { toReaderBookmark, type ReaderBookmark } from "../../annotations/bookmarkUtils";
+import type { ReaderLocation } from "../../domain/ReaderDomain.Types";
+import { toReaderBookmark, type ReaderBookmark } from "../../annotations/ReaderBookmark.Mapper";
 import { buildBookmarkUpsert } from "../ReadingSessionMarginalia.Actions";
 import {
   CurrentSessionAnnotationController,

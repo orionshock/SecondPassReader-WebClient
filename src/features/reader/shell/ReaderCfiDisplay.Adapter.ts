@@ -1,4 +1,4 @@
-import type { ReaderCfiDisplayResult } from "../domain/types";
+import type { ReaderCfiDisplayResult } from "../domain/ReaderDomain.Types";
 import type { ReaderDisplayCfiHandle } from "../domain/ReaderBridge.Types";
 
 export async function displayReaderCfiSafely(displayCfi: ReaderDisplayCfiHandle, cfi: string): Promise<ReaderCfiDisplayResult> {

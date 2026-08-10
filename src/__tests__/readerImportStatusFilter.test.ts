@@ -2,7 +2,7 @@ import { Children, createElement, isValidElement, type ReactElement } from "reac
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features/reader/imports/ReaderImportDrawer";
+import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features/reader/imports/ReaderImport.Drawer";
 import { getReaderImportJobCounts } from "../features/reader/imports/ReaderImportJob.State";
 import { createDefaultReaderImportStatusFilters, filterReaderImportRows, getReaderImportStatusGroup, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter } from "../features/reader/imports/ReaderImportStatusFilter.State";
 import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";

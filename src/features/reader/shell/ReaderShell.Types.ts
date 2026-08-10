@@ -3,7 +3,7 @@ import type {
   ReaderLocationTarget,
   ReaderSelection,
   ReaderTocItem,
-} from "../domain/types";
+} from "../domain/ReaderDomain.Types";
 
 export type ReadingShellCommandValue =
   | { type: "display"; target: ReaderLocationTarget }

@@ -10,7 +10,7 @@ Audit baseline:
 - Package: `@likecoin/epub-ts`
 - Installed version: `0.7.1`
 - Audit date: 2026-08-09
-- Canonical package integration: `src/features/reader/engine/EpubTsBookEngine.ts`
+- Canonical package integration: `src/features/reader/engine/EpubTsBook.Engine.ts`
 - Upstream source references below use the TypeScript paths and line numbers embedded in
   `node_modules/@likecoin/epub-ts/dist/epub.js.map`. Line numbers are version-specific.
 
@@ -141,11 +141,11 @@ also reported through separate lifecycle paths.
 
 Client references:
 
-- `src/features/reader/engine/EpubTsBookEngine.ts`, `displayCfiSafely()` and
+- `src/features/reader/engine/EpubTsBook.Engine.ts`, `displayCfiSafely()` and
   `getVisibleCfiRangeAnchor()`
 - `src/features/reader/shell/ReaderStagedSelection.Controller.ts`, `reanchorStagedToolbar()`
 - `src/features/reader/shell/StagedSelection.Lifecycle.ts`
-- `src/features/reader/shell/ReadingShell.tsx`, relocation handling
+- `src/features/reader/shell/Reading.Shell.tsx`, relocation handling
 
 ### Suggested upstream fix
 
@@ -230,7 +230,7 @@ Client references:
 
 - `src/features/reader/shell/ReaderBootstrapProgressGuard.State.ts`
 - `src/features/reader/engine/ReaderReflowTarget.Engine.ts`
-- `src/features/reader/engine/EpubTsBookEngine.ts`, `resizeToMount()`
+- `src/features/reader/engine/EpubTsBook.Engine.ts`, `resizeToMount()`
 - `src/features/reader/shell/ReaderMountResize.Lifecycle.ts`
 
 ### Suggested upstream fix
@@ -261,7 +261,7 @@ There is no book-level fallback.
 
 Client references:
 
-- `src/features/reader/engine/EpubTsBookEngine.ts`, `probeCfi()`, `displayCfiSafely()`, and
+- `src/features/reader/engine/EpubTsBook.Engine.ts`, `probeCfi()`, `displayCfiSafely()`, and
   `getVisibleCfiRangeAnchor()`
 - `src/features/reader/engine/EpubVisibleCfiRangeAnchor.Placement.ts`
 
@@ -374,7 +374,7 @@ Upstream source: `src/locations.ts`, `Locations.process()`, approximately lines 
 loads a section, parses it, concatenates locations, and only then calls `section.unload()`. There is no
 `try/finally`, so a load/parse error skips unload. Similar ordering exists in word-location processing.
 
-Client reference: `src/features/reader/engine/EpubTsBookEngine.ts`, `startLocationsGeneration()`.
+Client reference: `src/features/reader/engine/EpubTsBook.Engine.ts`, `startLocationsGeneration()`.
 Generation is treated as non-fatal; the reader continues without book-level percentage metadata.
 
 ### Suggested upstream fix
@@ -450,7 +450,7 @@ The public APIs provide CFI conversion and visible `Range` lookup, but no stable
 Client references:
 
 - `src/features/reader/engine/EpubVisibleCfiRangeAnchor.Placement.ts`
-- `src/features/reader/domain/types.ts`, `ReaderSelectionAnchor`
+- `src/features/reader/domain/ReaderDomain.Types.ts`, `ReaderSelectionAnchor`
 - `docs/known-limits.md`, annotation range adjustment
 
 ### Suggested upstream improvement
@@ -494,7 +494,7 @@ measurements, making next/previous behave more like section jumps in affected la
 through a `SizeObject` path typed as numeric before the stage measures the container. This makes the
 supported meaning of values such as `"100%"` unclear across manager and stage boundaries.
 
-Client reference: `src/features/reader/engine/EpubTsBookEngine.ts`, `waitForMountSize()`. The client
+Client reference: `src/features/reader/engine/EpubTsBook.Engine.ts`, `waitForMountSize()`. The client
 waits for a non-zero mount and supplies integer pixel dimensions.
 
 ### Suggested upstream improvement

@@ -1,18 +1,18 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
-import type { HighlightViewModel } from "../../annotations/viewModels";
+import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
+import type { HighlightViewModel } from "../../annotations/ReaderAnnotationViewModels.Types";
 import {
   getAnnotationColor,
   getAnnotationNoteText,
   getAnnotationTimestamp,
 } from "../../display/ReaderAnnotation.Presenter";
-import { isHighlightAnnotation, toReaderAnnotation } from "../../annotations/annotationUtils";
+import { isHighlightAnnotation, toReaderAnnotation } from "../../annotations/ReaderAnnotation.Mapper";
 import {
   toBookmarkViewModel,
   toReaderBookmark,
   type ReaderBookmark,
   type ReaderBookmarkViewModel,
-} from "../../annotations/bookmarkUtils";
+} from "../../annotations/ReaderBookmark.Mapper";
 import { toReaderCfiLocationDisplay } from "../ReadingSessionCfiDescriptions.Queries";
 
 export type SessionAnnotationDescriptionEntry = {

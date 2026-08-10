@@ -1,5 +1,5 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
+import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import {
   getAnnotationColor,
   getAnnotationDescribingText,
@@ -11,7 +11,7 @@ import {
   isBookmarkAnnotation,
   isHighlightAnnotation,
   toReaderAnnotation,
-} from "../../annotations/annotationUtils";
+} from "../../annotations/ReaderAnnotation.Mapper";
 import { toReaderCfiLocationDisplay } from "../ReadingSessionCfiDescriptions.Queries";
 
 export type PreviousSessionLocationDescriptionCacheEntry =

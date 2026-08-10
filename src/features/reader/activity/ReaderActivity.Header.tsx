@@ -1,7 +1,7 @@
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
 import { MarginaliaMenu } from "../shell/ReaderMarginalia.Menu";
-import type { ReaderActivityRenderState } from "./readerActivityTypes";
+import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 
 export function ReaderActivityHeader({
   title,

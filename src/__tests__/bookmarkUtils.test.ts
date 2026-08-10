@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { toReaderBookmark } from "../features/reader/annotations/bookmarkUtils";
+import { toReaderBookmark } from "../features/reader/annotations/ReaderBookmark.Mapper";
 
 describe("reader bookmark utils", () => {
   it("converts marginalia bookmarks from their CFI location", () => {

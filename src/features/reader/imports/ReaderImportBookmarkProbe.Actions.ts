@@ -1,4 +1,4 @@
-import type { ReaderCfiDisplayResult, ReaderCfiProbeResult } from "../domain/types";
+import type { ReaderCfiDisplayResult, ReaderCfiProbeResult } from "../domain/ReaderDomain.Types";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderImportRowStatus } from "./ReaderImport.Types";
 import { debugReaderImport, previewImportText } from "./ReaderImportDebug.Diagnostics";

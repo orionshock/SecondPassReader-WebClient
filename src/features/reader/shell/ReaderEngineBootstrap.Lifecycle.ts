@@ -6,12 +6,12 @@ import type {
   ReaderProbeCfiHandle,
   ReaderSearchBookHandle,
 } from "../domain/ReaderBridge.Types";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/ReaderDomain.Types";
 import {
   createEpubTsBookEngine,
   type EpubTsBookEngine,
   type EpubTsBookEngineInit,
-} from "../engine/EpubTsBookEngine";
+} from "../engine/EpubTsBook.Engine";
 import type { ReadingShellEvent } from "./ReaderShell.Types";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import { ReaderCapabilityPublicationLifecycle } from "./ReaderCapabilityPublication.Lifecycle";

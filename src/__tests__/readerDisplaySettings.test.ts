@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReaderSettings } from "../storage/readerSettings";
-import { getReaderSettingsPresentation } from "../features/reader/settings/readerDisplaySettings";
+import { getReaderSettingsPresentation } from "../features/reader/settings/ReaderDisplaySettings.Presenter";
 
 describe("reader display settings presentation", () => {
   it("maps EPUB typography into the rendition payload", () => {

@@ -7,7 +7,7 @@ import {
   READER_LINE_HEIGHT_OPTIONS,
   READER_THEME_OPTIONS,
   READER_WIDTH_OPTIONS,
-} from "./readerDisplaySettings";
+} from "./ReaderDisplaySettings.Presenter";
 
 export function ReaderDisplaySettingsMenu(props: {
   open: boolean;

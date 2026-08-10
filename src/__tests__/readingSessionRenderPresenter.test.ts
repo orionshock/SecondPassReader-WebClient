@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ReaderHighlightMark } from "../features/reader/domain/types";
+import type { ReaderHighlightMark } from "../features/reader/domain/ReaderDomain.Types";
 import {
   buildReadingSessionAnnotationToolbarItems,
   composeReadingSessionDurableMarks,

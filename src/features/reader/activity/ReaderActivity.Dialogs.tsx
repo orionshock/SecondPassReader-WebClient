@@ -1,10 +1,10 @@
 import type { CompactBook } from "@secondpass/client";
 import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSessionDialog";
 import { EndOfBookDialog } from "../ReaderEndOfBook.Dialog";
-import { ReaderImportModal } from "../imports/ReaderImportModal";
+import { ReaderImportModal } from "../imports/ReaderImport.Modal";
 import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.Registry";
 import { BookSearchDrawer } from "../shell/bookSearch/ReaderBookSearch.Drawer";
-import type { ReaderActivityRenderState } from "./readerActivityTypes";
+import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 
 export function ReaderActivityDialogs({
   bookId,

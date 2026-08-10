@@ -48,9 +48,9 @@ Reader imports:
 
 ```text
 src/features/reader/imports/
-  ReaderImportDrawer.tsx
-  ReaderImportModal.tsx
-  ReaderImportRowItem.tsx
+  ReaderImport.Drawer.tsx
+  ReaderImport.Modal.tsx
+  ReaderImportRow.Item.tsx
   ReaderImportJob.Controller.ts
   ReaderImportActivation.Controller.ts
   handlers/glaspCsv/GlaspCsvImport.Handler.ts
@@ -61,8 +61,8 @@ src/features/reader/imports/
 
 Be careful extracting around:
 
-- `ReadingShell.tsx`
-- `EpubTsBookEngine.ts`
+- `Reading.Shell.tsx`
+- `EpubTsBook.Engine.ts`
 - reader engine init effects
 - shell command handling
 - staged selection callbacks

@@ -1,4 +1,4 @@
-import type { ReaderSearchResult } from "../../domain/types";
+import type { ReaderSearchResult } from "../../domain/ReaderDomain.Types";
 
 export function getSearchResultDisplayLabel(result: ReaderSearchResult, bookTitle: string | null | undefined): string {
   const fallback = getSearchResultFallbackLabel(result);

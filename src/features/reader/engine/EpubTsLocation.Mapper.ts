@@ -1,5 +1,5 @@
 import type { Location } from "@likecoin/epub-ts";
-import type { ReaderLocation, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
+import type { ReaderLocation, ReaderLocationTarget, ReaderTocItem } from "../domain/ReaderDomain.Types";
 
 export function toRenditionTarget(target: ReaderLocationTarget | undefined): string | number | undefined {
   if (!target) return undefined;

@@ -1,4 +1,4 @@
-import type { ReadingSessionOrchestratorProps } from "../session/ReadingSessionOrchestrator";
+import type { ReadingSessionOrchestratorProps } from "../session/ReadingSession.Orchestrator";
 
 export type ReaderActivityRenderState = Parameters<ReadingSessionOrchestratorProps["children"]>[0];
 

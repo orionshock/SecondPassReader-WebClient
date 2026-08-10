@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
-import type { ReaderLocation } from "../../domain/types";
-import type { ReaderBookmark } from "../../annotations/bookmarkUtils";
+import type { ReaderLocation } from "../../domain/ReaderDomain.Types";
+import type { ReaderBookmark } from "../../annotations/ReaderBookmark.Mapper";
 import { CurrentSessionAnnotationController } from "./CurrentSessionAnnotation.Controller";
 import { useCurrentSessionBookmarkActions } from "./CurrentSessionBookmark.Actions";
 import { useCurrentSessionHighlightActions } from "./CurrentSessionHighlight.Actions";

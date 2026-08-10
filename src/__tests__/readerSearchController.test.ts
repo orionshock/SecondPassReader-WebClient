@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ReaderSearchController } from "../features/reader/engine/ReaderSearch.Controller";
-import type { ReaderSearchResult } from "../features/reader/domain/types";
+import type { ReaderSearchResult } from "../features/reader/domain/ReaderDomain.Types";
 
 describe("ReaderSearchController", () => {
   it("runs EPUB search traversals serially", async () => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import type { ReaderHighlightMark, ReaderSelection } from "../domain/types";
+import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
+import type { ReaderHighlightMark, ReaderSelection } from "../domain/ReaderDomain.Types";
 import type {
   ProgrammaticStagedSelectionInput,
   StagedSelectionCommitInput,

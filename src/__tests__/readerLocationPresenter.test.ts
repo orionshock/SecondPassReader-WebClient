@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildReaderLocationLabel, buildReaderStatusLine, findTocLabelForHref, getReaderLocationTocLabel } from "../features/reader/display/ReaderLocation.Presenter";
-import type { ReaderTocItem } from "../features/reader/domain/types";
+import type { ReaderTocItem } from "../features/reader/domain/ReaderDomain.Types";
 
 describe("buildReaderStatusLine", () => {
   const toc: ReaderTocItem[] = [

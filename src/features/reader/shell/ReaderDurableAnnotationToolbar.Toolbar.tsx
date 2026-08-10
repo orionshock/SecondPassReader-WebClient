@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
-import { ANNOTATION_LIMITS } from "../annotations/annotationLimits";
+import { ANNOTATION_LIMITS } from "../annotations/ReaderAnnotationLimits.Policy";
 
 export type DurableAnnotationToolbarItem = {
   id: string;

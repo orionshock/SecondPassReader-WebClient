@@ -1,4 +1,4 @@
-import type { ReaderLocation, ReaderTocItem } from "../domain/types";
+import type { ReaderLocation, ReaderTocItem } from "../domain/ReaderDomain.Types";
 
 function formatGeneratedOrdinal(index: number, total: number | undefined): string {
   const ordinal = Math.max(1, Math.floor(index) + 1);

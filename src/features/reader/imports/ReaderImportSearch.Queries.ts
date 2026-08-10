@@ -1,5 +1,5 @@
 import type { ReaderSearchBookHandle } from "../domain/ReaderBridge.Types";
-import type { ReaderSearchResult } from "../domain/types";
+import type { ReaderSearchResult } from "../domain/ReaderDomain.Types";
 import type { ReaderImportRow } from "./ReaderImport.Types";
 import type { ReaderImportAttempt } from "./ReaderImportAttempts.State";
 import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./ReaderImportDebug.Diagnostics";

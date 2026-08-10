@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveBookmarkLabel } from "../features/reader/annotations/bookmarkLabels";
+import { deriveBookmarkLabel } from "../features/reader/annotations/ReaderBookmarkLabels.Presenter";
 
 describe("deriveBookmarkLabel", () => {
   it("uses chapter label and percent when both are present", () => {

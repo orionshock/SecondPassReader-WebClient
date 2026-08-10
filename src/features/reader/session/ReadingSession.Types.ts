@@ -1,4 +1,4 @@
-import type { ReaderAnnotation, ReaderLocation, ReaderTocItem } from "../domain/types";
+import type { ReaderAnnotation, ReaderLocation, ReaderTocItem } from "../domain/ReaderDomain.Types";
 
 export type ReadingSessionState = {
   bookId: string | number;

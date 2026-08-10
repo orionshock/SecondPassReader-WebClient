@@ -1,4 +1,4 @@
-import type { ReaderCfiRangeStageResult } from "../domain/types";
+import type { ReaderCfiRangeStageResult } from "../domain/ReaderDomain.Types";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle, StagedSelectionHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderImportRow } from "./ReaderImport.Types";
 import { normalizeImportedHighlightColor } from "./ReaderImportColors.Mapper";

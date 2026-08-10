@@ -1,17 +1,17 @@
 import type { ReaderSettings, ReaderWidth } from "../../storage/readerSettings";
 import { useEffect, useState } from "react";
-import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
+import { ReadingSessionOrchestrator } from "./session/ReadingSession.Orchestrator";
 import type { OpenedBook } from "./Reader.Types";
 import type { SecondPassClient } from "@secondpass/client";
 import { useReaderImportJob } from "./imports/ReaderImportJob.Controller";
-import { getReaderSettingsPresentation } from "./settings/readerDisplaySettings";
-import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
-import { ReaderActivityDialogs } from "./activity/ReaderActivityDialogs";
-import { ReaderActivityHeader } from "./activity/ReaderActivityHeader";
-import { ReaderActivitySidePanels } from "./activity/ReaderActivitySidePanels";
+import { getReaderSettingsPresentation } from "./settings/ReaderDisplaySettings.Presenter";
+import { useReaderDisplaySettings } from "./settings/ReaderDisplaySettings.Controller";
+import { ReaderActivityDialogs } from "./activity/ReaderActivity.Dialogs";
+import { ReaderActivityHeader } from "./activity/ReaderActivity.Header";
+import { ReaderActivitySidePanels } from "./activity/ReaderActivity.SidePanels";
 import { useReaderActivityImportController } from "./activity/ReaderActivityImport.Controller";
 import { useReaderActivityCompletionController } from "./activity/ReaderActivityCompletion.Controller";
-import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/readerActivityTypes";
+import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/ReaderActivity.Types";
 import { canMutateReaderBookmark } from "./session/annotations/CurrentSessionBookmark.Actions";
 
 export function ReadingActivity({

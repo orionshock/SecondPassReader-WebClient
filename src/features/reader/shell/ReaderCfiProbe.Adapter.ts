@@ -1,4 +1,4 @@
-import type { ReaderCfiProbeResult } from "../domain/types";
+import type { ReaderCfiProbeResult } from "../domain/ReaderDomain.Types";
 import type { ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 
 export async function probeReaderCfi(probeCfi: ReaderProbeCfiHandle, cfi: string): Promise<ReaderCfiProbeResult> {

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { MutableRefObject } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
-import type { ReaderSelection } from "../../domain/types";
+import type { ReaderSelection } from "../../domain/ReaderDomain.Types";
 import { getAnnotationColor } from "../../display/ReaderAnnotation.Presenter";
 import { buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "../ReadingSessionMarginalia.Actions";
 import type { CurrentSessionAnnotationController } from "./CurrentSessionAnnotation.Controller";

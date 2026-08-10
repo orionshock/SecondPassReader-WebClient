@@ -4,7 +4,7 @@ import type {
   ReaderProbeCfiHandle,
   ReaderSearchBookHandle,
 } from "../domain/ReaderBridge.Types";
-import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
+import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import { displayReaderCfiSafely } from "./ReaderCfiDisplay.Adapter";
 import { probeReaderCfi } from "./ReaderCfiProbe.Adapter";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";

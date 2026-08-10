@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { findImportRowSearchMatch, findImportRowSearchMatches, findImportRowSearchMatchesByAttempt } from "../features/reader/imports/ReaderImportSearch.Queries";
 import type { ReaderSearchBookHandle } from "../features/reader/domain/ReaderBridge.Types";
-import type { ReaderSearchResult } from "../features/reader/domain/types";
+import type { ReaderSearchResult } from "../features/reader/domain/ReaderDomain.Types";
 import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import search", () => {

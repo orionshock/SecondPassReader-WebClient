@@ -1,4 +1,4 @@
-import type { ReaderLocation } from "../domain/types";
+import type { ReaderLocation } from "../domain/ReaderDomain.Types";
 import type { ReadingShellEvent } from "./ReaderShell.Types";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import type { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
