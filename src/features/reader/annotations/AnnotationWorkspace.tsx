@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { CurrentSessionAnnotationViewModel } from "./viewModels";
 import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel";
-import type { PreviousSessionAnnotationGroup } from "../session/usePreviousSessionLayers";
+import type { PreviousSessionAnnotationGroup } from "../session/previousSession/PreviousSessionViewModels.Presenter";
 import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadataEditor";
 import { CurrentAnnotationCard } from "./CurrentAnnotationCard";
 import { AnnotationWorkspaceTabs, type AnnotationWorkspaceTabKey } from "./AnnotationWorkspaceTabs";

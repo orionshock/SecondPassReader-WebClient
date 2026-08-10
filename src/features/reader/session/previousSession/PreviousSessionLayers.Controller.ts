@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
-import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
-import { getAnnotationFragmentCfi } from "../annotations/annotationUtils";
-import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../storage/marginaliaLayerPreferences";
-import { describeCfiBestEffort } from "./readerCfiDescriptions";
+import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
+import { getAnnotationFragmentCfi } from "../../annotations/annotationUtils";
+import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../../storage/marginaliaLayerPreferences";
+import { describeCfiBestEffort } from "../readerCfiDescriptions";
 import {
   toPreviousSessionHighlightMarks,
   toPreviousSessionItems,
   type PreviousSessionLocationDescriptionCacheEntry,
-} from "./previousSessionAnnotationItems";
+} from "./PreviousSessionAnnotationItems.Presenter";
 import {
   getPreviousSessionHighlightCount,
   sortPreviousSessionSummariesByUpdatedAt,
@@ -19,10 +19,7 @@ import {
   type PreviousSessionAnnotationGroup,
   type PreviousSessionLayerSummary,
   type PreviousSessionSummaryViewModel,
-} from "./previousSessionViewModels";
-
-export type { PreviousSessionAnnotationGroup, PreviousSessionLayerSummary } from "./previousSessionViewModels";
-export type { PreviousSessionAnnotationItem } from "./previousSessionAnnotationItems";
+} from "./PreviousSessionViewModels.Presenter";
 
 type CachedSessionAnnotations = {
   status: "idle" | "loading" | "ready" | "error";

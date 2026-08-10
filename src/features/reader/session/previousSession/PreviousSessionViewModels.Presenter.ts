@@ -1,4 +1,4 @@
-import type { PreviousSessionAnnotationItem } from "./previousSessionAnnotationItems";
+import type { PreviousSessionAnnotationItem } from "./PreviousSessionAnnotationItems.Presenter";
 
 export type PreviousSessionLayerSummary = {
   sessionId: string;

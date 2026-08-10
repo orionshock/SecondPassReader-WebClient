@@ -6,7 +6,8 @@ import {
   getHighlightAnnotationDisplay,
   toAnnotationCssVars,
 } from "../display/ReaderAnnotation.Presenter";
-import type { PreviousSessionAnnotationGroup, PreviousSessionAnnotationItem } from "../session/usePreviousSessionLayers";
+import type { PreviousSessionAnnotationItem } from "../session/previousSession/PreviousSessionAnnotationItems.Presenter";
+import type { PreviousSessionAnnotationGroup } from "../session/previousSession/PreviousSessionViewModels.Presenter";
 
 function normalizeQuoteTextForDisplay(text: string): string {
   return text.replace(/\s+/g, " ").trim();

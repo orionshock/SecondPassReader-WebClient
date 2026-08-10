@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { toPreviousSessionHighlightMarks, toPreviousSessionItems, type PreviousSessionLocationDescriptionCacheEntry } from "../features/reader/session/previousSessionAnnotationItems";
+import { toPreviousSessionHighlightMarks, toPreviousSessionItems, type PreviousSessionLocationDescriptionCacheEntry } from "../features/reader/session/previousSession/PreviousSessionAnnotationItems.Presenter";
 
 const annotations: MarginaliaAnnotation[] = [
   { id: "highlight-a", clientId: "client-h", kind: "highlight", location: { cfi: "epubcfi(/6/2,/4/2,/4/8)", locationLabel: "Chapter 08 - 42%" }, body: { text: "Quoted text", prefix: "", suffix: "", color: "yellow", note: "Note text" }, createdAt: "2024-01-01", updatedAt: "2024-01-02" },

@@ -8,7 +8,7 @@ import {
   toPreviousSessionAnnotationGroup,
   toPreviousSessionLayerSummary,
   toPreviousSessionSummary,
-} from "../features/reader/session/previousSessionViewModels";
+} from "../features/reader/session/previousSession/PreviousSessionViewModels.Presenter";
 
 describe("previousSessionViewModels", () => {
   it("formats session time labels and strips helper updatedAt metadata", () => {
