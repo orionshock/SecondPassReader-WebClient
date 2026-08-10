@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { navigateTo } from "../../../app/navigation";
 import { completeReaderImportRowManually } from "../imports/ReaderImportManualCompletion.Actions";
 import type { ReaderImportFailureAction } from "../imports/readerImportFormats";
-import { useReaderImportActivation } from "../imports/useReaderImportActivation";
+import { useReaderImportActivation } from "../imports/ReaderImportActivation.Controller";
 import type { useReaderImportJob } from "../imports/useReaderImportJob";
 import type { ReaderBookmarkMutationResult } from "../session/annotations/CurrentSessionBookmark.Actions";
 import type { ReaderActivityRenderState } from "./readerActivityTypes";
