@@ -13,7 +13,7 @@ import { buildReadingSessionAutosaveStatus } from "./progress/ReadingSessionProg
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import type { HighlightViewModel } from "../annotations/viewModels";
-import { useSessionAnnotations } from "./useSessionAnnotations";
+import { useSessionAnnotations } from "./annotations/SessionAnnotations.Controller";
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";
 import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
 import { useCurrentSessionMeta } from "./metadata/CurrentSessionMetadata.Controller";

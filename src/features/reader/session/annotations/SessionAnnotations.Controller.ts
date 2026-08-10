@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
-import type { OpenedBook } from "../types";
-import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../domain/types";
-import type { HighlightViewModel } from "../annotations/viewModels";
+import type { OpenedBook } from "../../types";
+import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
+import type { HighlightViewModel } from "../../annotations/viewModels";
+import type { ReaderBookmark, ReaderBookmarkViewModel } from "../../annotations/bookmarkUtils";
+import { describeCfiBestEffort } from "../readerCfiDescriptions";
 import {
-  getAnnotationColor,
-  getAnnotationNoteText,
-  getAnnotationTimestamp,
-} from "../display/ReaderAnnotation.Presenter";
-import {
-  isHighlightAnnotation,
-  toReaderAnnotation,
-} from "../annotations/annotationUtils";
-import { toBookmarkViewModel, toReaderBookmark, type ReaderBookmark, type ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
-import { describeCfiBestEffort, toReaderCfiLocationDisplay } from "./readerCfiDescriptions";
+  buildSessionBookmarkViewModels,
+  buildSessionHighlightMarks,
+  buildSessionHighlightViewModels,
+  findCurrentSessionBookmark,
+  sortSessionAnnotationItems,
+  sortSessionAnnotations,
+  toSessionAnnotationBookmarks,
+  toSessionAnnotationHighlights,
+  type SessionAnnotationDescriptionEntry,
+} from "./SessionAnnotations.Presenter";
 
 export type SessionAnnotations = {
   raw: MarginaliaAnnotation[];
@@ -82,9 +84,7 @@ export function useSessionAnnotations(args: {
   const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
   const [locationsReady, setLocationsReady] = useState(false);
 
-  const [bookmarkDescriptions, setBookmarkDescriptions] = useState<
-    Record<string, { status: "idle" | "loading" | "ready" | "error"; value?: ReaderLocationDescription }>
-  >({});
+  const [bookmarkDescriptions, setBookmarkDescriptions] = useState<Record<string, SessionAnnotationDescriptionEntry>>({});
   const descriptionGenerationRef = useRef(0);
   const loadGenerationRef = useRef(0);
   const bookmarkDescriptionsRef = useRef(bookmarkDescriptions);
@@ -110,21 +110,7 @@ export function useSessionAnnotations(args: {
     setLocationsReady(true);
   }, []);
 
-  const sortedRaw = useMemo(() => {
-    const copy = [...raw];
-    const tsMs = (a: MarginaliaAnnotation): number => {
-      const s = getAnnotationTimestamp(a);
-      if (!s) return 0;
-      const ms = Date.parse(s);
-      return Number.isFinite(ms) ? ms : 0;
-    };
-    copy.sort((a, b) => {
-      const d = tsMs(b) - tsMs(a);
-      if (d !== 0) return d;
-      return String(b.id).localeCompare(String(a.id));
-    });
-    return copy;
-  }, [raw]);
+  const sortedRaw = useMemo(() => sortSessionAnnotations(raw), [raw]);
 
   // Seed from the open bootstrap response immediately when available.
   const lastSeedKeyRef = useRef<string>("");
@@ -170,32 +156,20 @@ export function useSessionAnnotations(args: {
     };
   }, [activeKey, args.spl, args.sessionId, setRaw]);
 
-  const bookmarks: ReaderBookmark[] = useMemo(() => {
-    const out: ReaderBookmark[] = [];
-    for (const a of sortedRaw) {
-      const b = toReaderBookmark(a);
-      if (b) out.push(b);
-    }
-    return out;
-  }, [sortedRaw]);
+  const bookmarks: ReaderBookmark[] = useMemo(
+    () => toSessionAnnotationBookmarks(sortedRaw),
+    [sortedRaw],
+  );
 
-  const currentBookmark = useMemo(() => {
-    const cfi = args.location?.cfi?.trim() ?? "";
-    if (!cfi) return null;
-    // v1: exact CFI string match
-    return bookmarks.find((b) => b.cfi === cfi) ?? null;
-  }, [args.location?.cfi, bookmarks]);
+  const currentBookmark = useMemo(
+    () => findCurrentSessionBookmark(bookmarks, args.location?.cfi),
+    [args.location?.cfi, bookmarks],
+  );
 
-  const highlights = useMemo(() => {
-    const out: Array<{ id: string; cfiRange: string; text: string }> = [];
-    for (const a of sortedRaw) {
-      if (!isHighlightAnnotation(a)) continue;
-      const ra = toReaderAnnotation(a);
-      if (ra?.kind !== "highlight") continue;
-      out.push({ id: ra.id, cfiRange: ra.cfiRange, text: ra.text ?? "" });
-    }
-    return out;
-  }, [sortedRaw]);
+  const highlights = useMemo(
+    () => toSessionAnnotationHighlights(sortedRaw),
+    [sortedRaw],
+  );
 
   // Best-effort: describe bookmarks/highlights at runtime (no rendition jumps).
   // Important: avoid cancelling in-flight descriptions due to state updates.
@@ -249,79 +223,37 @@ export function useSessionAnnotations(args: {
   }, [bookmarks, describeCfi, highlights, locationsReady]);
 
   const bookmarkViewModels: ReaderBookmarkViewModel[] = useMemo(() => {
-    return bookmarks.map((b) => {
-      const rawA = sortedRaw.find((a) => a.id === b.id) ?? null;
-      const timestamp = rawA ? getAnnotationTimestamp(rawA) : null;
-      const entry = bookmarkDescriptions[b.cfi];
-      return toBookmarkViewModel({
-        bookmark: b,
-        currentCfi: args.location?.cfi ?? null,
-        toc: args.toc,
-        bookTitle: args.openedBook.book.title,
-        description: entry?.value ?? null,
-        fallbackBookProgress: args.location?.bookProgress ?? null,
-        timestamp,
-        locationLabel: rawA?.location.locationLabel,
-        descriptionStatus: entry?.status ?? (describeCfi ? "idle" : "idle"),
-      });
+    return buildSessionBookmarkViewModels({
+      bookmarks,
+      sortedRaw,
+      descriptions: bookmarkDescriptions,
+      currentCfi: args.location?.cfi,
+      currentBookProgress: args.location?.bookProgress,
+      toc: args.toc,
+      bookTitle: args.openedBook.book.title,
+      describeCfiAvailable: Boolean(describeCfi),
     });
   }, [args.location?.bookProgress, args.location?.cfi, args.openedBook.book.title, args.toc, bookmarks, bookmarkDescriptions, describeCfi, sortedRaw]);
 
   const highlightViewModels = useMemo(() => {
-    return highlights.map((h) => {
-      const rawA = sortedRaw.find((a) => a.id === h.id) ?? null;
-      const note = rawA ? getAnnotationNoteText(rawA) : null;
-      const color = rawA ? getAnnotationColor(rawA) : null;
-      const timestamp = rawA ? getAnnotationTimestamp(rawA) : null;
-      const entry = bookmarkDescriptions[h.cfiRange];
-      const locationDisplay = toReaderCfiLocationDisplay({
-        description: entry?.value ?? null,
-        toc: args.toc,
-        bookTitle: args.openedBook.book.title,
-      });
-
-      return {
-        kind: "highlight" as const,
-        id: h.id,
-        cfiRange: h.cfiRange,
-        text: h.text,
-        note: note ?? undefined,
-        color: color ?? undefined,
-        timestamp: timestamp ?? undefined,
-        label: rawA?.location.locationLabel || locationDisplay.label,
-        labelParts: rawA?.location.locationLabel ? [rawA.location.locationLabel] : locationDisplay.labelParts,
-        descriptionStatus: entry?.status ?? "idle",
-      };
+    return buildSessionHighlightViewModels({
+      highlights,
+      sortedRaw,
+      descriptions: bookmarkDescriptions,
+      toc: args.toc,
+      bookTitle: args.openedBook.book.title,
     });
   }, [args.openedBook.book.title, args.toc, bookmarkDescriptions, highlights, sortedRaw]);
 
-  const highlightMarks: ReaderHighlightMark[] = useMemo(() => {
-    return highlightViewModels
-      .map((h) => ({
-        id: h.id,
-        cfiRange: h.cfiRange,
-        color: h.color,
-        text: h.text,
-        note: h.note,
-      }))
-      .filter((m) => Boolean(m.id && m.cfiRange));
-  }, [highlightViewModels]);
+  const highlightMarks: ReaderHighlightMark[] = useMemo(
+    () => buildSessionHighlightMarks(highlightViewModels),
+    [highlightViewModels],
+  );
 
-  const items: Array<ReaderBookmarkViewModel | HighlightViewModel> = useMemo(() => {
-    const combined: Array<any> = [...bookmarkViewModels, ...highlightViewModels];
-    const tsMs = (vm: { timestamp?: string; id: string }): number => {
-      const s = typeof vm.timestamp === "string" ? vm.timestamp.trim() : "";
-      if (!s) return 0;
-      const ms = Date.parse(s);
-      return Number.isFinite(ms) ? ms : 0;
-    };
-    combined.sort((a, b) => {
-      const d = tsMs(b) - tsMs(a);
-      if (d !== 0) return d;
-      return String(b.id).localeCompare(String(a.id));
-    });
-    return combined as Array<ReaderBookmarkViewModel | HighlightViewModel>;
-  }, [bookmarkViewModels, highlightViewModels]);
+  const items: Array<ReaderBookmarkViewModel | HighlightViewModel> = useMemo(
+    () => sortSessionAnnotationItems(bookmarkViewModels, highlightViewModels),
+    [bookmarkViewModels, highlightViewModels],
+  );
 
   return useMemo(
     () => ({

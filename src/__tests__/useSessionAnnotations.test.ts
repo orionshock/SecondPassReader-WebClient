@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { getSeedAnnotationsFromOpen, getSessionAnnotationsActiveKey } from "../features/reader/session/useSessionAnnotations";
+import { getSeedAnnotationsFromOpen, getSessionAnnotationsActiveKey } from "../features/reader/session/annotations/SessionAnnotations.Controller";
 
 describe("useSessionAnnotations helpers", () => {
   it("keys annotations by book, object URL, and session", () => {
