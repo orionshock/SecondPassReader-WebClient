@@ -1,5 +1,5 @@
 import ePub, { EpubCFI, type Book, type Location, type Rendition, type Section } from "@likecoin/epub-ts";
-import { normalizeReaderSettings, type ReaderSettings } from "../../../storage/readerSettings";
+import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, ReaderLocationTarget } from "../domain/types";
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
@@ -16,9 +16,7 @@ import {
   type ReaderReflowTargetOptions,
 } from "./ReaderReflowTarget.Engine";
 import { getVisibleCfiRangeAnchor } from "./visibleCfiRangeAnchor";
-import {
-  getReaderSettingsPresentation,
-} from "../settings/readerDisplaySettings";
+import { createEpubTsRenditionSettingsEngine } from "./EpubTsRenditionSettings.Engine";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
@@ -123,8 +121,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   let locationsReady = false;
   let lastRelocatedLoc: Location | null = null;
 
-  let lastAppliedDisplaySettingsKey = "";
-
   const getCurrentCfi = (): string | null => {
     try {
       const current = rendition.currentLocation();
@@ -137,50 +133,15 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     return typeof relocatedCfi === "string" && relocatedCfi.trim() ? relocatedCfi.trim() : null;
   };
 
-  const applyDisplaySettingsInternal = async (
-    settings: ReaderSettings,
-    options?: { reanchor?: boolean; preserveCfi?: string | null },
-  ) => {
-    if (destroyed) return;
-    const normalized = normalizeReaderSettings(settings);
-    const key = JSON.stringify({
-      theme: normalized.theme,
-      fontFamily: normalized.fontFamily,
-      fontSizePercent: normalized.fontSizePercent,
-      lineHeight: normalized.lineHeight,
-    });
-    if (lastAppliedDisplaySettingsKey === key) return;
-
-    const reanchorCfi = options?.reanchor
-      ? resolveReaderReflowCfi(options.preserveCfi, getCurrentCfi)
-      : null;
-    const presentation = getReaderSettingsPresentation(normalized);
-
-    // One replaceable stylesheet avoids stale rules from previously selected themes.
-    rendition.themes.registerRules("secondpass-reader-settings", presentation.epub.rules);
-    rendition.themes.select("secondpass-reader-settings");
-    rendition.themes.fontSize(presentation.epub.fontSize);
-    rendition.themes.override("line-height", presentation.epub.lineHeight, true);
-
-    if (presentation.epub.fontFamily) rendition.themes.font(presentation.epub.fontFamily);
-    else rendition.themes.removeOverride("font-family");
-
-    lastAppliedDisplaySettingsKey = key;
-
-    if (reanchorCfi && !destroyed) {
-      await rendition.display(reanchorCfi);
-    } else if (options?.reanchor && !destroyed) {
-      try {
-        await rendition.reportLocation();
-      } catch {
-        // Location may be unavailable before the first display.
-      }
-    }
-  };
+  const renditionSettings = createEpubTsRenditionSettingsEngine({
+    rendition,
+    isDestroyed: () => destroyed,
+    getCurrentCfi,
+  });
 
   if (init.displaySettings) {
     try {
-      await applyDisplaySettingsInternal(init.displaySettings, { reanchor: false });
+      await renditionSettings.applyDisplaySettings(init.displaySettings, { reanchor: false });
     } catch (err) {
       init.onError?.(err);
     }
@@ -325,7 +286,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     },
     async applyDisplaySettings(settings: ReaderSettings, options?: ReaderReflowTargetOptions) {
       if (destroyed) return;
-      await applyDisplaySettingsInternal(settings, {
+      await renditionSettings.applyDisplaySettings(settings, {
         reanchor: true,
         preserveCfi: options?.preserveCfi,
       });
