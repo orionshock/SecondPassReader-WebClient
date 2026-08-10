@@ -11,7 +11,6 @@ import {
   getActiveConnection,
   type ConnectionProfile,
 } from "../storage/connectionProfiles";
-import { getAppTheme, saveAppTheme, type AppTheme } from "../storage/appTheme";
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { createSplClientFromProfile } from "./createSplClient";
@@ -23,12 +22,12 @@ import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Contro
 import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
+import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
 
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [view, setView] = useState<"main" | "settings">("main");
   const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
-  const [appTheme, setAppTheme] = useState<AppTheme>(() => getAppTheme());
   const {
     authorizationFailure,
     clearAuthorizationFailure,
@@ -71,11 +70,7 @@ function AppShell() {
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = appTheme;
-    document.documentElement.style.colorScheme = appTheme === "dark" ? "dark" : appTheme === "light" ? "light" : "";
-    saveAppTheme(appTheme);
-  }, [appTheme]);
+  const { appTheme, setAppTheme } = useAppThemeLifecycle();
 
   useEffect(() => {
     debugLog("reader", "route changed", {
