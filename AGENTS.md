@@ -99,8 +99,9 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 
 ## Naming and grouping
 
+- These naming and grouping conventions apply project-wide, across every feature and layer. Reading/client names below are examples, not a scope restriction.
 - Prefer folders for grouping related files, not underscore-based file names.
-- Use standard React/TypeScript naming with explicit role suffixes for Reading files:
+- Use standard React/TypeScript naming with explicit role suffixes throughout the project:
   - PascalCase for component files/classes/types, e.g. `ReaderBookSearch.Drawer.tsx`, `ReaderBookSearch.ResultRow.tsx`
   - PascalCase role owners for hooks/helpers, e.g. `ReaderBookSearch.Controller.ts`, `ReaderBookSearch.Labels.ts`
 - For related UI pieces, prefer a feature folder with repeated readable prefixes:
@@ -117,9 +118,9 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
   - `BookSearch_Drawer.tsx`
   - `BookSearch_InputBar.tsx`
 
-### Reading/client role suffixes
+### Project-wide role suffixes
 
-- New or meaningfully touched Reading files should use an explicit role suffix when practical. Use folders when they clarify real ownership; do not mass-rename existing files for cosmetics.
+- New or meaningfully touched files anywhere in the project should use an explicit role suffix when practical. Use folders when they clarify real ownership; do not mass-rename existing files for cosmetics.
 - Rename a touched file only when the name materially clarifies its responsibility and the import churn is reasonable.
 - Preferred roles:
   - `.Activity.tsx`: route-level product entry that connects navigation, loading, and major feature composition.
