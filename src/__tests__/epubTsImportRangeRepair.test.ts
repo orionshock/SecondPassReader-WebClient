@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  findPunctuationTolerantRepairRange,
-  repairImportedHighlightRangeInSection,
-} from "../features/reader/engine/EpubTsImportRangeRepair.Engine";
+import { findPunctuationTolerantRepairRange } from "../features/reader/engine/EpubImportRangeRepair.Matcher";
+import { repairImportedHighlightRangeInSection } from "../features/reader/engine/EpubTsImportRangeRepair.Engine";
 import type { ReaderRangeRepairDiagnostic } from "../features/reader/domain/ReaderRangeRepair.Diagnostics";
 
 describe("EPUB import range repair matching", () => {
