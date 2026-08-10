@@ -1,5 +1,5 @@
 export { ApiError, type ApiErrorKind } from "./apiHttp";
-export { createSecondPassClient } from "./client";
+export { createSecondPassClient } from "./SecondPassClient.Factory";
 export type {
   SecondPassClient,
   SecondPassClientConfig,
@@ -11,7 +11,7 @@ export type {
   LibraryPreviewParams,
   LibraryGroupBookListParams,
   LibraryGroupEntityListParams,
-} from "./client";
+} from "./SecondPassClient.Types";
 
 export type {
   ClientApiConsumeResponse,
