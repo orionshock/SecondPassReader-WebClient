@@ -3,8 +3,8 @@ import type { MarginaliaProgress } from "@secondpass/client";
 import {
   READING_PROGRESS_AUTOSAVE_DELAY_MS,
   ReadingProgressAutosaveController,
-} from "../features/reader/session/ReadingProgressAutosave.Controller";
-import { buildReadingProgressSaveInput } from "../features/reader/session/ReadingProgressAutosave.Lifecycle";
+} from "../features/reader/session/progress/ReadingProgressAutosave.Controller";
+import { buildReadingProgressSaveInput } from "../features/reader/session/progress/ReadingProgressAutosave.Lifecycle";
 
 function savedProgress(cfi: string, locationLabel: string): MarginaliaProgress {
   return { cfi, locationLabel, updatedAt: "2026-08-08T00:00:00Z" };

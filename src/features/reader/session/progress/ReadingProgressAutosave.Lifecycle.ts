@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { MarginaliaProgress } from "@secondpass/client";
-import type { ReaderLocation } from "../domain/types";
+import type { ReaderLocation } from "../../domain/types";
 import {
   READING_PROGRESS_AUTOSAVE_DELAY_MS,
   ReadingProgressAutosaveController,
   type ReadingProgressAutosaveState,
 } from "./ReadingProgressAutosave.Controller";
-import { buildMarginaliaProgressInput } from "./marginaliaMutations";
-import { buildReaderLocationLabel } from "../display/ReaderLocation.Presenter";
+import { buildMarginaliaProgressInput } from "../marginaliaMutations";
+import { buildReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
 
 const READING_PROGRESS_EXIT_FLUSH_TIMEOUT_MS = 3000;
 

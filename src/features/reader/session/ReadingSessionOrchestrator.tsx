@@ -8,8 +8,9 @@ import type { DurableAnnotationToolbarItem } from "../shell/ReaderDurableAnnotat
 import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
-import { useReadingProgressAutosave } from "./ReadingProgressAutosave.Lifecycle";
-import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./ReadingProgressAutosave.Controller";
+import { useReadingProgressAutosave } from "./progress/ReadingProgressAutosave.Lifecycle";
+import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./progress/ReadingProgressAutosave.Controller";
+import { buildReadingSessionAutosaveStatus } from "./progress/ReadingSessionProgress.Presenter";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import type { HighlightViewModel } from "../annotations/viewModels";
@@ -218,30 +219,13 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [shouldTickAutosaveCountdown]);
 
   const autosaveStatus = useMemo((): { text: string; title?: string } | null => {
-    if (!state.sessionId) return null;
-
-    const lastSavedTitle =
-      autosave.lastSavedAt && !Number.isNaN(Date.parse(autosave.lastSavedAt))
-        ? `Last saved: ${new Date(autosave.lastSavedAt).toLocaleString()}`
-        : undefined;
-
-    switch (autosave.status) {
-      case "saving":
-        return { text: "Autosave: sending" };
-      case "saved":
-        return { text: "Autosave: complete", title: lastSavedTitle };
-      case "pending":
-      case "idle":
-        if (typeof autosave.nextSaveAt === "number") {
-          const remaining = Math.max(0, autosave.nextSaveAt - nowMs);
-          const seconds = Math.max(0, Math.ceil(remaining / 1000));
-          return { text: `Autosave: waiting (${seconds}s)` };
-        }
-        return { text: "Autosave: waiting" };
-      case "error":
-        // Keep UI terminology constrained; log details in console via hook/orchestrator.
-        return { text: "Autosave: waiting" };
-    }
+    return buildReadingSessionAutosaveStatus({
+      sessionId: state.sessionId,
+      status: autosave.status,
+      lastSavedAt: autosave.lastSavedAt,
+      nextSaveAt: autosave.nextSaveAt,
+      nowMs,
+    });
   }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, nowMs, state.sessionId]);
 
   const statusLine = useMemo(() => {
