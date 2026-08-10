@@ -1,7 +1,7 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderAnnotation } from "../domain/types";
 import type { ReaderLocationDescription, ReaderTocItem } from "../domain/types";
-import { toReaderCfiLocationDisplay } from "../session/readerCfiDescriptions";
+import { toReaderCfiLocationDisplay } from "../session/ReadingSessionCfiDescriptions.Queries";
 import { getAnnotationFragmentCfi, isBookmarkAnnotation } from "./annotationSelectors";
 
 export type ReaderBookmark = Extract<ReaderAnnotation, { kind: "bookmark" }>;

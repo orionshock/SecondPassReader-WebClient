@@ -7,7 +7,7 @@ import {
   ReadingProgressAutosaveController,
   type ReadingProgressAutosaveState,
 } from "./ReadingProgressAutosave.Controller";
-import { buildMarginaliaProgressInput } from "../marginaliaMutations";
+import { buildMarginaliaProgressInput } from "../ReadingSessionMarginalia.Actions";
 import { buildReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
 
 const READING_PROGRESS_EXIT_FLUSH_TIMEOUT_MS = 3000;

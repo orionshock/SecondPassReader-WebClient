@@ -3,7 +3,7 @@ import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client"
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
 import { getAnnotationFragmentCfi } from "../../annotations/annotationUtils";
 import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../../storage/marginaliaLayerPreferences";
-import { describeCfiBestEffort } from "../readerCfiDescriptions";
+import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
 import {
   toPreviousSessionHighlightMarks,
   toPreviousSessionItems,

@@ -7,7 +7,7 @@ import {
   normalizeHighlightText,
   normalizeOptionalHighlightContext,
   toMarginaliaLocationLabel,
-} from "../features/reader/session/marginaliaMutations";
+} from "../features/reader/session/ReadingSessionMarginalia.Actions";
 import { buildReaderLocationLabel } from "../features/reader/display/ReaderLocation.Presenter";
 
 describe("Reader marginalia mutations", () => {

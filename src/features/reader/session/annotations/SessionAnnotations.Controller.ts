@@ -4,7 +4,7 @@ import type { OpenedBook } from "../../types";
 import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
 import type { HighlightViewModel } from "../../annotations/viewModels";
 import type { ReaderBookmark, ReaderBookmarkViewModel } from "../../annotations/bookmarkUtils";
-import { describeCfiBestEffort } from "../readerCfiDescriptions";
+import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
 import {
   buildSessionBookmarkViewModels,
   buildSessionHighlightMarks,

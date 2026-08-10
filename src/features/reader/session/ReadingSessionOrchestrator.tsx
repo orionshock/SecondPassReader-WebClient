@@ -5,7 +5,7 @@ import { ReadingShell } from "../shell/ReadingShell";
 import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
 import type { ReaderDescribeCfiHandle, ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
 import type { ReaderLocationTarget, ReaderSelection } from "../domain/types";
-import type { ReadingSessionState } from "./types";
+import type { ReadingSessionState } from "./ReadingSession.Types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./progress/ReadingProgressAutosave.Lifecycle";
 import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./progress/ReadingProgressAutosave.Controller";

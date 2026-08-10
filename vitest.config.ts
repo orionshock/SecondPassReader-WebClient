@@ -26,7 +26,7 @@ export default defineConfig({
         "src/features/reader/selection/quoteContext.ts",
         "src/features/reader/session/previousSession/PreviousSessionAnnotationItems.Presenter.ts",
         "src/features/reader/session/previousSession/PreviousSessionViewModels.Presenter.ts",
-        "src/features/reader/session/readerCfiDescriptions.ts",
+        "src/features/reader/session/ReadingSessionCfiDescriptions.Queries.ts",
         "src/features/reader/session/readerSessionLabels.ts",
         "src/features/sessions/sessionDetailDisplay.ts",
         "src/features/shelves/shelfMeta.tsx",

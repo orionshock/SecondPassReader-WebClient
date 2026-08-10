@@ -3,7 +3,7 @@ import type { MutableRefObject } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
 import type { ReaderSelection } from "../../domain/types";
 import { getAnnotationColor } from "../../display/ReaderAnnotation.Presenter";
-import { buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "../marginaliaMutations";
+import { buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "../ReadingSessionMarginalia.Actions";
 import type { CurrentSessionAnnotationController } from "./CurrentSessionAnnotation.Controller";
 
 export function useCurrentSessionHighlightActions(args: {

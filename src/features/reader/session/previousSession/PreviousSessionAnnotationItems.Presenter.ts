@@ -12,7 +12,7 @@ import {
   isHighlightAnnotation,
   toReaderAnnotation,
 } from "../../annotations/annotationUtils";
-import { toReaderCfiLocationDisplay } from "../readerCfiDescriptions";
+import { toReaderCfiLocationDisplay } from "../ReadingSessionCfiDescriptions.Queries";
 
 export type PreviousSessionLocationDescriptionCacheEntry =
   | { status: "loading" }

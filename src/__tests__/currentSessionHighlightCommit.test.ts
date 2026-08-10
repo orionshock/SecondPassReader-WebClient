@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { MarginaliaAnnotation, MarginaliaHighlight } from "@secondpass/client";
-import { buildCurrentSessionHighlightCommit } from "../features/reader/session/marginaliaMutations";
+import { buildCurrentSessionHighlightCommit } from "../features/reader/session/ReadingSessionMarginalia.Actions";
 
 const exactCfi = "epubcfi(/6/10!/4/2,/1:0,/1:20)";
 

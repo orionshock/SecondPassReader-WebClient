@@ -4,7 +4,7 @@ import {
   describeCfiBestEffort,
   getCfiDescriptionCandidates,
   toReaderCfiLocationDisplay,
-} from "../features/reader/session/readerCfiDescriptions";
+} from "../features/reader/session/ReadingSessionCfiDescriptions.Queries";
 import type { ReaderTocItem } from "../features/reader/domain/types";
 
 describe("readerCfiDescriptions", () => {

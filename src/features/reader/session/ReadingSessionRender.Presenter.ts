@@ -2,7 +2,7 @@ import type { MarginaliaAnnotation } from "@secondpass/client";
 import { toReaderAnnotation } from "../annotations/annotationUtils";
 import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderTocItem } from "../domain/types";
 import type { DurableAnnotationToolbarItem } from "../shell/ReaderDurableAnnotationToolbar.Toolbar";
-import type { ReadingSessionState } from "./types";
+import type { ReadingSessionState } from "./ReadingSession.Types";
 
 export function buildReadingSessionState(input: {
   bookId: string | number;

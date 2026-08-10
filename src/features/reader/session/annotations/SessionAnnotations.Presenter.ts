@@ -13,7 +13,7 @@ import {
   type ReaderBookmark,
   type ReaderBookmarkViewModel,
 } from "../../annotations/bookmarkUtils";
-import { toReaderCfiLocationDisplay } from "../readerCfiDescriptions";
+import { toReaderCfiLocationDisplay } from "../ReadingSessionCfiDescriptions.Queries";
 
 export type SessionAnnotationDescriptionEntry = {
   status: "idle" | "loading" | "ready" | "error";
