@@ -1,12 +1,11 @@
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { InlineMeta } from "../../../components/MetaSeparator";
 import {
-  ANNOTATION_COLOR_TOKENS,
   BOOKMARK_DISPLAY,
   getHighlightAnnotationDisplay,
   toAnnotationCssVars,
 } from "../display/ReaderAnnotation.Presenter";
-import { ANNOTATION_LIMITS } from "./annotationLimits";
+import { CurrentAnnotationCardHighlightEditor } from "./CurrentAnnotationCard.HighlightEditor";
 import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./viewModels";
 
 function normalizeQuoteTextForDisplay(text: string): string {
@@ -167,10 +166,19 @@ export function CurrentAnnotationCard({
         ) : null}
 
         {isEditing ? (
-          <form
-            className="spAnnotationEditForm"
-            onSubmit={(e) => {
-              e.preventDefault();
+          <CurrentAnnotationCardHighlightEditor
+            annotationId={h.id}
+            canSave={canSave}
+            descriptionStatus={h.descriptionStatus}
+            draftColor={draftColor}
+            draftNote={draftNote}
+            editError={editError}
+            editStatus={editStatus}
+            label={h.label}
+            locationMetaParts={locationMetaParts}
+            when={when}
+            onSubmit={(event) => {
+              event.preventDefault();
               if (!canSave) return;
               setEditStatus("saving");
               setEditError(null);
@@ -185,76 +193,14 @@ export function CurrentAnnotationCard({
                 }
               })();
             }}
-          >
-            <div className="spAnnotationEditRow">
-              <textarea
-                id={`note-${h.id}`}
-                className="input spAnnotationEditTextarea"
-                rows={3}
-                value={draftNote}
-                onChange={(ev) => setDraftNote(ev.currentTarget.value)}
-                placeholder="Highlight Note"
-                maxLength={ANNOTATION_LIMITS.bodyValueMaxChars}
-                disabled={editStatus === "saving"}
-              />
-            </div>
-
-            {editStatus === "error" && editError ? (
-              <div className="spAnnotationEditError" role="alert">
-                {editError}
-              </div>
-            ) : null}
-
-            <div className="spAnnotationEditActions">
-              <div className="spAnnotationColorSwatches" role="radiogroup" aria-label="Highlight color">
-                {ANNOTATION_COLOR_TOKENS.map((token) => (
-                  <button
-                    key={token}
-                    type="button"
-                    className={`spAnnotationSwatch ${draftColor === token ? "spAnnotationSwatchActive" : ""}`}
-                    onClick={() => setDraftColor(token)}
-                    aria-label={`Color ${token}`}
-                    title={token}
-                    disabled={editStatus === "saving"}
-                    style={{ ["--swatch-color" as any]: toAnnotationCssVars(token).color }}
-                  />
-                ))}
-              </div>
-
-              <div className="spAnnotationEditPrimaryActions">
-                <button
-                  type="submit"
-                  className="button buttonCompact spIconButton spIconButtonTight"
-                  aria-label="Save highlight"
-                  title="Save"
-                  disabled={!canSave}
-                >
-                  <MaterialIcon name="check" />
-                </button>
-                <button
-                  type="button"
-                  className="button buttonCompact spIconButton spIconButtonTight"
-                  aria-label="Cancel edit"
-                  title="Cancel"
-                  onClick={() => {
-                    setEditingId(null);
-                    setEditStatus("idle");
-                    setEditError(null);
-                  }}
-                  disabled={editStatus === "saving"}
-                >
-                  <MaterialIcon name="close" />
-                </button>
-              </div>
-
-              {locationMetaParts.length > 0 || when || h.descriptionStatus === "loading" ? (
-                <div className="muted spAnnotationActionMeta" title={h.label}>
-                  <InlineMeta items={[...locationMetaParts, when]} />
-                  {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-                </div>
-              ) : null}
-            </div>
-          </form>
+            onCancel={() => {
+              setEditingId(null);
+              setEditStatus("idle");
+              setEditError(null);
+            }}
+            onColorChange={setDraftColor}
+            onNoteChange={setDraftNote}
+          />
         ) : null}
       </div>
 
