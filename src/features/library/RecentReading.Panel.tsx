@@ -85,7 +85,7 @@ export function RecentReadingSection({
     <div className="recentReadingSection">
       <div className="panelHeaderRow recentReadingHeader">
         <div className="panelTitle" style={{ margin: 0 }}>
-          Continue reading
+          Recent History
         </div>
         <div className="recentReadingHeaderActions">
           <span className="muted">
