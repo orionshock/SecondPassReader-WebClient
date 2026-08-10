@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "../features/reader/imports/readerImportCycle";
+import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "../features/reader/imports/ReaderImportCycle.State";
 
 describe("reader import cycle state", () => {
   it("uses the first available result on first activation", () => {

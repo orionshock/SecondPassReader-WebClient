@@ -1,7 +1,7 @@
 import type { ReaderCfiRangeStageResult } from "../domain/types";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle, StagedSelectionHandle } from "../domain/ReaderBridge.Types";
-import type { ReaderImportRow } from "./readerImportTypes";
-import { normalizeImportedHighlightColor } from "./readerImportColors";
+import type { ReaderImportRow } from "./ReaderImport.Types";
+import { normalizeImportedHighlightColor } from "./ReaderImportColors.Mapper";
 
 export async function stageReaderImportHighlightCfi({
   jobId,

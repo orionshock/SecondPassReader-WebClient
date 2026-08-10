@@ -1,6 +1,6 @@
-import type { ReaderImportRow } from "./readerImportTypes";
+import type { ReaderImportRow } from "./ReaderImport.Types";
 import { isReaderCfiRange } from "../engine/ReaderCfiClassifier.Engine";
-import { isReaderImportRowTerminal } from "./readerImportJobState";
+import { isReaderImportRowTerminal } from "./ReaderImportJob.State";
 
 export type ReaderImportAttempt =
   | { kind: "cfi-range"; cfiRange: string }

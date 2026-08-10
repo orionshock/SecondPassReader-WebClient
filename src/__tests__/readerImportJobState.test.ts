@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, getReaderImportJobCounts, hasOtherStagedRows, isReaderImportRowResolved, isReaderImportRowTerminal, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "../features/reader/imports/readerImportJobState";
-import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, getReaderImportJobCounts, hasOtherStagedRows, isReaderImportRowResolved, isReaderImportRowTerminal, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "../features/reader/imports/ReaderImportJob.State";
+import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import job state", () => {
   it("resets previously staged rows when a different row is activated", () => {

@@ -1,7 +1,7 @@
 import type { ReaderCfiDisplayResult, ReaderCfiProbeResult } from "../domain/types";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
-import type { ReaderImportRowStatus } from "./readerImportTypes";
-import { debugReaderImport, previewImportText } from "./readerImportDebug";
+import type { ReaderImportRowStatus } from "./ReaderImport.Types";
+import { debugReaderImport, previewImportText } from "./ReaderImportDebug.Diagnostics";
 
 export type ReaderImportBookmarkProbeOutcome = {
   status: Extract<ReaderImportRowStatus, "staged" | "not-found">;

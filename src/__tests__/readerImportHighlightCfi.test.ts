@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { stageReaderImportHighlightCfi } from "../features/reader/imports/readerImportHighlightCfi";
-import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import { stageReaderImportHighlightCfi } from "../features/reader/imports/ReaderImportHighlightCfi.Actions";
+import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import highlight CFI staging", () => {
   it("stages a safely resolved range", async () => {

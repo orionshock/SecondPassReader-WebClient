@@ -1,5 +1,5 @@
 import type { ReaderSearchResult } from "../domain/types";
-import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
+import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./ReaderImportDebug.Diagnostics";
 
 export type ReaderImportQuoteContextHint = {
   prefix?: string;

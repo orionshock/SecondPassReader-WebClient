@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon";
-import type { ReaderImportJobCounts } from "./readerImportJobState";
-import type { ReaderImportJob } from "./readerImportTypes";
+import type { ReaderImportJobCounts } from "./ReaderImportJob.State";
+import type { ReaderImportJob } from "./ReaderImport.Types";
 import { ReaderImportRowList } from "./ReaderImportRowList";
 import { areAllReaderImportStatusFiltersEnabled, createDefaultReaderImportStatusFilters, filterReaderImportRows, READER_IMPORT_STATUS_GROUPS, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter, type ReaderImportStatusFilters, type ReaderImportStatusGroup } from "./ReaderImportStatusFilter.State";
 

@@ -1,5 +1,5 @@
-import type { ReaderImportRow } from "./readerImportTypes";
-import { isReaderImportRowTerminal } from "./readerImportJobState";
+import type { ReaderImportRow } from "./ReaderImport.Types";
+import { isReaderImportRowTerminal } from "./ReaderImportJob.State";
 
 export function completeReaderImportRowManually({
   row,

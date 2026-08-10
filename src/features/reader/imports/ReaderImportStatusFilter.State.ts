@@ -1,4 +1,4 @@
-import type { ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
+import type { ReaderImportRow, ReaderImportRowStatus } from "./ReaderImport.Types";
 
 export const READER_IMPORT_STATUS_GROUPS = [
   "pending",

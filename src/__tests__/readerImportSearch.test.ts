@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { findImportRowSearchMatch, findImportRowSearchMatches, findImportRowSearchMatchesByAttempt } from "../features/reader/imports/readerImportSearch";
+import { findImportRowSearchMatch, findImportRowSearchMatches, findImportRowSearchMatchesByAttempt } from "../features/reader/imports/ReaderImportSearch.Queries";
 import type { ReaderSearchBookHandle } from "../features/reader/domain/ReaderBridge.Types";
 import type { ReaderSearchResult } from "../features/reader/domain/types";
-import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import search", () => {
   it("ranks quote-context candidates before returning a match", async () => {

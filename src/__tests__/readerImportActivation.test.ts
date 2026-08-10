@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { useReaderImportActivation } from "../features/reader/imports/ReaderImportActivation.Controller";
-import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 import type { ReaderSearchBookHandle, StagedSelectionHandle } from "../features/reader/domain/ReaderBridge.Types";
 
 describe("reader import activation orchestration", () => {

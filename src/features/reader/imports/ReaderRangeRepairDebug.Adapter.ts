@@ -1,5 +1,5 @@
 import type { ReaderRangeRepairDiagnostic } from "../domain/ReaderRangeRepair.Diagnostics";
-import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
+import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./ReaderImportDebug.Diagnostics";
 
 export function toReaderImportRangeRepairDebugData(
   diagnostic: ReaderRangeRepairDiagnostic,

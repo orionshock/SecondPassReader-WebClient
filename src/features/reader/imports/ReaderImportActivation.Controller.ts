@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ReaderSearchBookHandle, StagedSelectionHandle } from "../domain/ReaderBridge.Types";
-import type { ReaderImportJob, ReaderImportRowStatus } from "./readerImportTypes";
-import { debugReaderImport } from "./readerImportDebug";
-import { hasOtherStagedRows, isReaderImportRowTerminal } from "./readerImportJobState";
+import type { ReaderImportJob, ReaderImportRowStatus } from "./ReaderImport.Types";
+import { debugReaderImport } from "./ReaderImportDebug.Diagnostics";
+import { hasOtherStagedRows, isReaderImportRowTerminal } from "./ReaderImportJob.State";
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
 import { activateReaderImportBookmark } from "./ReaderImportActivationBookmark.Actions";
 import { activateReaderImportHighlight } from "./ReaderImportActivationHighlight.Actions";

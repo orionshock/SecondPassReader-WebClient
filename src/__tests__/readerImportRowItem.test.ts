@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReaderImportRowItem } from "../features/reader/imports/ReaderImportRowItem";
-import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import row item", () => {
   it("renders staged candidate position beside the status", () => {

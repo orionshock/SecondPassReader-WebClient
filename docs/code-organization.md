@@ -51,10 +51,10 @@ src/features/reader/imports/
   ReaderImportDrawer.tsx
   ReaderImportModal.tsx
   ReaderImportRowItem.tsx
-  useReaderImportJob.ts
-  useReaderImportActivation.ts
-  glaspCsvParser.ts
-  readerImportSearch.ts
+  ReaderImportJob.Controller.ts
+  ReaderImportActivation.Controller.ts
+  handlers/glaspCsv/GlaspCsvImport.Handler.ts
+  ReaderImportSearch.Queries.ts
 ```
 
 ## Lifecycle-Sensitive Code

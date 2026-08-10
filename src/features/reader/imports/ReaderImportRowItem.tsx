@@ -1,7 +1,7 @@
 import { MaterialIcon } from "../../../components/MaterialIcon";
-import type { ReaderImportRow } from "./readerImportTypes";
+import type { ReaderImportRow } from "./ReaderImport.Types";
 import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
-import { isReaderImportRowTerminal } from "./readerImportJobState";
+import { isReaderImportRowTerminal } from "./ReaderImportJob.State";
 
 export function ReaderImportRowItem({
   row,

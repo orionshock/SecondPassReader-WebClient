@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AnnotationWorkspace } from "../annotations/AnnotationWorkspace";
 import { ReaderImportDrawer } from "../imports/ReaderImportDrawer";
-import type { useReaderImportJob } from "../imports/useReaderImportJob";
+import type { useReaderImportJob } from "../imports/ReaderImportJob.Controller";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./readerActivityTypes";
 import type { ReaderWidth } from "../../../storage/readerSettings";
 

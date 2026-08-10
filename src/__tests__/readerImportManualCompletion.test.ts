@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { completeReaderImportRowManually } from "../features/reader/imports/ReaderImportManualCompletion.Actions";
-import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import manual completion", () => {
   it("clears staged review state and records only the local manual-completion transition", () => {

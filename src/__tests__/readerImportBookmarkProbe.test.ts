@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { probeReaderImportBookmarkCfi } from "../features/reader/imports/readerImportBookmarkProbe";
+import { probeReaderImportBookmarkCfi } from "../features/reader/imports/ReaderImportBookmarkProbe.Actions";
 
 describe("reader import bookmark CFI probe", () => {
   it("returns staged when a bookmark CFI probe succeeds", async () => {

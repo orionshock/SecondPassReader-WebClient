@@ -1,10 +1,10 @@
 import type { ReaderSearchBookHandle } from "../domain/ReaderBridge.Types";
 import type { ReaderSearchResult } from "../domain/types";
-import type { ReaderImportRow } from "./readerImportTypes";
-import type { ReaderImportAttempt } from "./readerImportAttempts";
-import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
-import { rankImportQuoteContextCandidates } from "./readerImportQuoteContext";
-import { buildImportSearchQueryPlans } from "./readerImportSearchQueries";
+import type { ReaderImportRow } from "./ReaderImport.Types";
+import type { ReaderImportAttempt } from "./ReaderImportAttempts.State";
+import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./ReaderImportDebug.Diagnostics";
+import { rankImportQuoteContextCandidates } from "./ReaderImportQuoteContext.Policy";
+import { buildImportSearchQueryPlans } from "./ReaderImportSearchPlan.Queries";
 import { debugReaderRangeRepairDiagnostic } from "./ReaderRangeRepairDebug.Adapter";
 
 type ReaderImportSearchAttempt = Extract<ReaderImportAttempt, { kind: "quote-text" | "text-search" }>;

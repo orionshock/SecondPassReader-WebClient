@@ -1,4 +1,4 @@
-import type { ReaderImportJob } from "./readerImportTypes";
+import type { ReaderImportJob } from "./ReaderImport.Types";
 
 export type ReaderImportFailureAction = {
   label: string;

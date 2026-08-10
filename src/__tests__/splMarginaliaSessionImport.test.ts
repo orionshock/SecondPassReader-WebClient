@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import "../features/reader/imports/handlers/registerBuiltInReaderImportHandlers";
-import { glaspCsvImportHandler } from "../features/reader/imports/handlers/glaspCsv/glaspCsvImportHandler";
+import "../features/reader/imports/handlers/ReaderImportHandlers.Lifecycle";
+import { glaspCsvImportHandler } from "../features/reader/imports/handlers/glaspCsv/GlaspCsvImport.Handler";
 import {
   getReaderImportFormat,
   getReaderImportHandlers,
   registerReaderImportHandler,
-} from "../features/reader/imports/readerImportFormats";
+} from "../features/reader/imports/ReaderImportFormats.Registry";
 
 describe("reader import handlers", () => {
   it("exposes self-registered built-in import formats through the shared registry", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { glaspCsvImportHandler } from "../features/reader/imports/handlers/glaspCsv/glaspCsvImportHandler";
+import { glaspCsvImportHandler } from "../features/reader/imports/handlers/glaspCsv/GlaspCsvImport.Handler";
 
 describe("Glasp CSV HTML entity decoding", () => {
   it.each([

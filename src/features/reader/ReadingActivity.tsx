@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { SecondPassClient } from "@secondpass/client";
-import { useReaderImportJob } from "./imports/useReaderImportJob";
+import { useReaderImportJob } from "./imports/ReaderImportJob.Controller";
 import { getReaderSettingsPresentation } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
 import { ReaderActivityDialogs } from "./activity/ReaderActivityDialogs";

@@ -1,7 +1,7 @@
 import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle } from "../domain/ReaderBridge.Types";
-import { debugReaderImport, previewImportText } from "./readerImportDebug";
-import { probeReaderImportBookmarkCfi } from "./readerImportBookmarkProbe";
-import type { ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
+import { debugReaderImport, previewImportText } from "./ReaderImportDebug.Diagnostics";
+import { probeReaderImportBookmarkCfi } from "./ReaderImportBookmarkProbe.Actions";
+import type { ReaderImportRow, ReaderImportRowStatus } from "./ReaderImport.Types";
 
 export async function activateReaderImportBookmark({
   jobId,

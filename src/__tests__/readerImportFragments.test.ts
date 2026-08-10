@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildImportSearchQueries,
   buildImportSearchQueryPlans,
-} from "../features/reader/imports/readerImportSearchQueries";
+} from "../features/reader/imports/ReaderImportSearchPlan.Queries";
 
 describe("reader import fragment search queries", () => {
   it("generates punctuation-light fragments at quote and comma boundaries", () => {

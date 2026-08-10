@@ -1,4 +1,4 @@
-import type { ReaderImportJob, ReaderImportRow } from "./readerImportTypes";
+import type { ReaderImportJob, ReaderImportRow } from "./ReaderImport.Types";
 import { ReaderImportRowItem } from "./ReaderImportRowItem";
 
 export function ReaderImportRowList({

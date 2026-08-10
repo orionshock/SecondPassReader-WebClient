@@ -1,4 +1,4 @@
-import type { ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
+import type { ReaderImportRow, ReaderImportRowStatus } from "./ReaderImport.Types";
 
 export type ReaderImportJobCounts = {
   pending: number;

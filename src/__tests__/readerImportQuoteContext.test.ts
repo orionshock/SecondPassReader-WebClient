@@ -4,7 +4,7 @@ import {
   normalizeImportQuoteContextText,
   rankImportQuoteContextCandidates,
   scoreImportQuoteContextCandidate,
-} from "../features/reader/imports/readerImportQuoteContext";
+} from "../features/reader/imports/ReaderImportQuoteContext.Policy";
 import type { ReaderSearchResult } from "../features/reader/domain/types";
 
 describe("reader import quote context", () => {

@@ -3,13 +3,13 @@ import {
   buildReaderImportAttemptQueue,
   getNextReaderImportAttempt,
   normalizeReaderImportAttemptCursor,
-} from "./readerImportAttempts";
-import { normalizeImportedHighlightColor } from "./readerImportColors";
-import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "./readerImportCycle";
-import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./readerImportDebug";
-import { stageReaderImportHighlightCfi } from "./readerImportHighlightCfi";
-import { findImportRowSearchMatchesByAttempt } from "./readerImportSearch";
-import type { ReaderImportRow, ReaderImportRowStatus } from "./readerImportTypes";
+} from "./ReaderImportAttempts.State";
+import { normalizeImportedHighlightColor } from "./ReaderImportColors.Mapper";
+import { getImportCycleCandidatePosition, getNextImportCycleMatch } from "./ReaderImportCycle.State";
+import { debugReaderImport, isReaderImportDebugVerbose, previewImportText } from "./ReaderImportDebug.Diagnostics";
+import { stageReaderImportHighlightCfi } from "./ReaderImportHighlightCfi.Actions";
+import { findImportRowSearchMatchesByAttempt } from "./ReaderImportSearch.Queries";
+import type { ReaderImportRow, ReaderImportRowStatus } from "./ReaderImport.Types";
 
 type ReaderImportActivationRequest = {
   signal: AbortSignal;

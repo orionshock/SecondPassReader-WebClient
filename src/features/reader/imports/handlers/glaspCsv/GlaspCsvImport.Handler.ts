@@ -1,7 +1,7 @@
 import Papa from "papaparse";
-import { registerReaderImportHandler } from "../../readerImportFormats";
-import type { ReaderImportRow } from "../../readerImportTypes";
-import { decodeHtmlEntities } from "./glaspHtmlEntities";
+import { registerReaderImportHandler } from "../../ReaderImportFormats.Registry";
+import type { ReaderImportRow } from "../../ReaderImport.Types";
+import { decodeHtmlEntities } from "./GlaspHtmlEntities.Adapter";
 
 const HIGHLIGHT_TEXT_COLUMNS = ["highlight text", "highlight", "text"];
 

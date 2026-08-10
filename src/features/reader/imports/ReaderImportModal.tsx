@@ -1,6 +1,6 @@
 import { useState } from "react";
-import "./handlers/registerBuiltInReaderImportHandlers";
-import { getReaderImportHandlers, ReaderImportParseError, type ReaderImportFailureAction } from "./readerImportFormats";
+import "./handlers/ReaderImportHandlers.Lifecycle";
+import { getReaderImportHandlers, ReaderImportParseError, type ReaderImportFailureAction } from "./ReaderImportFormats.Registry";
 
 export function ReaderImportModal({
   open,

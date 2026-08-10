@@ -77,8 +77,8 @@ window start. The loop also finds only the first occurrence in each candidate wi
 Client references:
 
 - `src/features/reader/engine/EpubTsBookSearch.ts`
-- `src/features/reader/imports/readerImportSearchQueries.ts`
-- `src/features/reader/imports/readerImportSearch.ts`
+- `src/features/reader/imports/ReaderImportSearchPlan.Queries.ts`
+- `src/features/reader/imports/ReaderImportSearch.Queries.ts`
 
 ### Local patch and suggested upstream fix
 
@@ -419,7 +419,7 @@ match quality, or a way to search across section boundaries.
 Client references:
 
 - `src/features/reader/engine/EpubTsBookSearch.ts`
-- `src/features/reader/imports/readerImportSearchQueries.ts`
+- `src/features/reader/imports/ReaderImportSearchPlan.Queries.ts`
 - `src/features/reader/engine/EpubTsImportRangeRepair.Engine.ts`
 
 The client keeps full quote search first, then uses bounded punctuation-light fragments. It does not

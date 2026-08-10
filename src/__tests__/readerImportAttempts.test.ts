@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "../features/reader/imports/readerImportAttempts";
-import type { ReaderImportRow } from "../features/reader/imports/readerImportTypes";
+import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "../features/reader/imports/ReaderImportAttempts.State";
+import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
 
 describe("reader import attempts", () => {
   it("builds a text-search queue for text-only highlights", () => {

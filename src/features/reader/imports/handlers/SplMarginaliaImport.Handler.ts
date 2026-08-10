@@ -2,8 +2,8 @@ import {
   formatMarginaliaSessionLabel,
   parseAndSplitMarginaliaExport,
 } from "../../../settings/marginaliaSplitExport";
-import { ReaderImportParseError, registerReaderImportHandler } from "../readerImportFormats";
-import type { ReaderImportJob, ReaderImportRow } from "../readerImportTypes";
+import { ReaderImportParseError, registerReaderImportHandler } from "../ReaderImportFormats.Registry";
+import type { ReaderImportJob, ReaderImportRow } from "../ReaderImport.Types";
 
 const SPL_EXPORT_SPLITTER_ROUTE = "#/settings?tab=tools";
 
