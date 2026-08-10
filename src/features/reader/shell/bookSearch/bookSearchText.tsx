@@ -1,10 +1,12 @@
+import type { ReactElement } from "react";
+
 export function renderHighlightedExcerpt(excerpt: string, query: string) {
   const q = query.trim();
   if (!q) return excerpt;
 
   const lowerExcerpt = excerpt.toLowerCase();
   const lowerQuery = q.toLowerCase();
-  const parts: Array<string | JSX.Element> = [];
+  const parts: Array<string | ReactElement> = [];
   let cursor = 0;
   let matchIndex = lowerExcerpt.indexOf(lowerQuery);
   let key = 0;
