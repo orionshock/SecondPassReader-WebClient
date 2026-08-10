@@ -13,7 +13,18 @@ This repo is **not** the Django server. The backend already exists separately an
 - In-browser EPUB reading through `@likecoin/epub-ts`
 - Reading sessions, progress restore/autosave, annotations, in-book search, and guided Glasp CSV marginalia import
 
-See [`docs/README.md`](docs/README.md) for the current documentation index.
+## Documentation
+
+- [Architecture](docs/architecture.md): runtime shape, data ownership, and application boundaries
+- [Development](docs/development.md): local setup, commands, tests, and build behavior
+- [Deployment](docs/deployment.md): static nginx/container deployment
+- [Reader](docs/reader.md): Reader ownership, lifecycle invariants, limits, and diagnostics
+- [epub-ts support issues](docs/epub-ts-support-issues.md): renderer defects, evidence, and mitigations
+- [`@secondpass/client`](packages/secondpass-client/README.md): SDK package entrypoint
+  - [API](packages/secondpass-client/docs/API.md)
+  - [Data model](packages/secondpass-client/docs/DATA_MODEL.md)
+
+Contributor and agent policy lives in [`AGENTS.md`](AGENTS.md).
 
 ## Development (Windows 10 + VS Code)
 

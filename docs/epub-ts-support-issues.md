@@ -44,20 +44,22 @@ Audit baseline:
 
 **Classification:** Confirmed defect
 
-**Local status:** Patched for the browser ESM entry point in
+**Current status:** Locally patched for the browser ESM entry point in
 `patches/@likecoin+epub-ts+0.7.1.patch`. The patch is reapplied by the root `postinstall` script and
 is guarded by `src/__tests__/epubTsSectionSearchPatch.test.ts`.
 
 **Impact:** Exact visible prose near the end of a chapter can return no result from built-in search.
 This affects normal reader search and guided import matching.
 
+**SecondPass mitigation:** The patch drains every residual search-window start without changing
+query generation, result ordering, CFI construction, or import ranking.
+
 ### Evidence
 
-We reproduced exact text that was visible and selectable at the end of a chapter but was not found
-by `Section.search()`. Manually selecting the text produced a valid range CFI, proving the content
-was present in the rendered section. A minimal package-level reproduction using three text nodes,
-a three-node window, and a query beginning in the final node returned an empty result on unpatched
-0.7.1.
+Exact text visible and selectable at the end of a chapter was not found by `Section.search()`.
+Manually selecting the text produced a valid range CFI, proving the content was present in the
+rendered section. A minimal package-level reproduction using three text nodes, a three-node window,
+and a query beginning in the final node returned an empty result on unpatched 0.7.1.
 
 Upstream source: `src/section.ts`, `Section.search()`, approximately lines 180-235 in 0.7.1.
 
@@ -119,9 +121,14 @@ Upstream regression tests should cover:
 
 **Classification:** Confirmed lifecycle limitation
 
+**Current status:** Active limitation in 0.7.1.
+
 **Impact:** A caller can successfully await `rendition.display(cfi)` and still be unable to resolve
 that visible CFI to a DOM `Range`. Toolbars and other geometry-dependent UI fall back or appear in
 the wrong place on the first display of a page.
+
+**SecondPass mitigation:** Protected relocations request a new staged-toolbar measurement. The
+newest measurement wins, and range geometry is calculated against the visible EPUB mount bounds.
 
 ### Evidence
 
@@ -143,9 +150,9 @@ Client references:
 
 - `src/features/reader/engine/EpubTsBook.Engine.ts`, `displayCfiSafely()` and
   `getVisibleCfiRangeAnchor()`
-- `src/features/reader/shell/ReaderStagedSelection.Controller.ts`, `reanchorStagedToolbar()`
+- `src/features/reader/shell/ReaderStagedSelectionReanchor.Controller.ts`
 - `src/features/reader/shell/StagedSelection.Lifecycle.ts`
-- `src/features/reader/shell/Reading.Shell.tsx`, relocation handling
+- `src/features/reader/shell/ReaderLocationPublication.Lifecycle.ts`
 
 ### Suggested upstream fix
 
@@ -166,8 +173,14 @@ settled API completes.
 
 **Classification:** Confirmed lifecycle limitation
 
+**Current status:** Active limitation in 0.7.1.
+
 **Impact:** Consumers cannot reliably distinguish user navigation from delayed relocation events
 caused by display, resize, content reflow, or internal re-anchoring.
+
+**SecondPass mitigation:** `StagedSelection.Lifecycle.ts` assigns protection to import-staging and
+layout-reflow operations. Unrelated navigation cancels staging; operation-owned and trailing
+protected relocations preserve it and request a re-anchor.
 
 ### Evidence
 
@@ -212,9 +225,14 @@ explicit navigation. The final event for an operation should be marked settled.
 
 **Classification:** Observed; upstream reproduction needed
 
+**Current status:** Client protection remains required with 0.7.1.
+
 **Impact:** A saved CFI can display correctly, then initial mount resize/content reflow can move the
 viewport to an earlier page-start CFI. If consumers persist every relocation, correct progress can
 also be overwritten with the earlier location.
+
+**SecondPass mitigation:** Bootstrap retains the authoritative restore CFI for reflow targeting and
+quarantines intermediate relocation progress until readable startup is established.
 
 ### Evidence
 
@@ -223,8 +241,8 @@ reported an older `location.start.cfi`. Initial resize code that derived its red
 `currentLocation().start.cfi` could then make the visual rollback persistent.
 
 Version 0.7.1 contains `_armReanchor()` and `onContentReflow()` in `src/rendition.ts`, which appear to
-target this class of deep-CFI clamp. We retain client protection because initial location reports can
-still be intermediate and because viewport resize has a separate path.
+target this class of deep-CFI clamp. Client protection remains necessary because initial location
+reports can still be intermediate and viewport resize has a separate path.
 
 Client references:
 
@@ -250,8 +268,13 @@ boundary.
 
 **Classification:** Confirmed API limitation
 
+**Current status:** Active limitation in 0.7.1.
+
 **Impact:** `Rendition.getRange(cfi)` cannot be used as a general CFI existence probe and may return
 `undefined` immediately after a nominally successful display.
+
+**SecondPass mitigation:** Visible geometry uses `rendition.getRange()`. Book-level validation loads
+the target section and resolves the CFI against that section document.
 
 ### Evidence
 
@@ -280,8 +303,14 @@ would also address display timing without forcing callers to inspect private vie
 
 **Classification:** Confirmed design limitation
 
+**Current status:** Active limitation in 0.7.1; no local library patch.
+
 **Impact:** Search flashes, staged previews, and durable annotations at the same CFI can overwrite or
 detach each other. Two app annotations at an identical CFI cannot have independent renderer identity.
+
+**SecondPass mitigation:** Temporary marks are cleared before ownership handoff. A same-CFI staged
+preview temporarily replaces the durable renderer mark, which is restored from canonical annotation
+state after commit or cancel. Exact same-session CFI commits update the existing app annotation.
 
 ### Evidence
 
@@ -364,9 +393,14 @@ Upstream regression tests should cover:
 
 **Classification:** Confirmed defect
 
+**Current status:** Unpatched in the support library.
+
 **Impact:** A section can remain loaded when location parsing throws, and generation rejects as one
 large queue operation. Percentage metadata then becomes unavailable and mutable section state may
 remain live longer than expected.
+
+**SecondPass mitigation:** Location generation failure is non-fatal; reading continues without
+whole-book percentage metadata.
 
 ### Evidence
 
@@ -387,8 +421,13 @@ all generation or produce partial locations plus structured per-section errors.
 
 **Classification:** Confirmed defect
 
+**Current status:** Unpatched; retained as a low-impact upstream issue.
+
 **Impact:** Chrome reports a scroll-blocking listener whenever highlights are painted. This can hurt
 touch scrolling responsiveness.
+
+**SecondPass mitigation:** None. Highlight behavior is retained because disabling marks would cause
+greater product impact than the warning.
 
 ### Evidence
 
@@ -407,8 +446,14 @@ Pointer events may simplify this code, but are not required for the small fix.
 
 **Classification:** Confirmed API limitation
 
+**Current status:** Active limitation in 0.7.1.
+
 **Impact:** Visible prose can fail to match when punctuation, whitespace, or DOM boundaries differ.
 Search cannot cross spine sections and can span only the configured number of sequential text nodes.
+
+**SecondPass mitigation:** Search traversal is serialized. Import matching tries the full quote
+first, then bounded punctuation-light fragments and same-section range repair without replacing
+epub-ts with a second full-book search engine.
 
 ### Evidence
 
@@ -435,8 +480,13 @@ Cross-section search can remain out of scope, but the boundary should be explici
 
 **Classification:** Feature gap
 
+**Current status:** Accepted limitation; endpoint editing is intentionally not implemented.
+
 **Impact:** The application cannot safely offer draggable highlight endpoints or reliably measure a
 range without reaching into the rendered iframe and CFI internals.
+
+**SecondPass mitigation:** The engine exposes visible range-anchor measurement only. The app does
+not perform unsupported CFI surgery or expose drag handles.
 
 ### Evidence
 
@@ -451,7 +501,7 @@ Client references:
 
 - `src/features/reader/engine/EpubVisibleCfiRangeAnchor.Placement.ts`
 - `src/features/reader/domain/ReaderDomain.Types.ts`, `ReaderSelectionAnchor`
-- `docs/known-limits.md`, annotation range adjustment
+- `docs/reader.md`, current product limits
 
 ### Suggested upstream improvement
 
@@ -463,8 +513,13 @@ the engine boundary.
 
 **Classification:** Observed; upstream reproduction needed
 
+**Current status:** Client workaround active; minimal upstream reproduction still needed.
+
 **Impact:** Some configured colors, especially lighter pinks, can appear faint, inconsistent, or
 temporarily absent depending on view/mark rendering.
+
+**SecondPass mitigation:** Highlight attributes include both SVG paint and DOM background
+properties with the intended opacity and blend mode.
 
 ### Evidence
 
@@ -485,8 +540,13 @@ and screenshot comparison before filing as a definite defect.
 
 **Classification:** Observed contract mismatch
 
+**Current status:** Client mitigation active with 0.7.1.
+
 **Impact:** Percentage width/height settings have produced invalid or unstable pagination
 measurements, making next/previous behave more like section jumps in affected layouts.
+
+**SecondPass mitigation:** Engine bootstrap waits for a non-zero mount measurement and supplies
+integer pixel dimensions to the rendition.
 
 ### Evidence
 
@@ -509,11 +569,11 @@ next/previous behavior.
 `Section.load()` stores mutable `document`/`contents` state and `Section.unload()` clears it. Concurrent
 full-book consumers can therefore interfere when one owner unloads a section still being used by
 another owner. Second Pass serializes EPUB search traversal in
-`src/features/reader/shell/ReaderSearch.Controller.ts`.
+`src/features/reader/engine/ReaderSearch.Controller.ts`.
 
 An upstream improvement would document section concurrency explicitly or provide reference-counted
-leases for temporary section access. We have not isolated this as an independent epub-ts defect, so
-it does not have a separate issue ID yet.
+leases for temporary section access. This constraint has not been isolated as an independent
+epub-ts defect, so it does not have a separate issue ID.
 
 ## Findings That Are Not epub-ts Defects
 

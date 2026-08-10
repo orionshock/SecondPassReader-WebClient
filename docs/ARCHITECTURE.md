@@ -4,7 +4,7 @@ Second Pass Reading Client is a standalone static browser app. It is not the Dja
 
 ## Stack
 
-- React 18
+- React 19
 - TypeScript
 - Vite
 - `@likecoin/epub-ts` for EPUB rendering
@@ -33,6 +33,31 @@ The workflow gate in `src/app/App.tsx` prevents unauthenticated or unverified pr
 - Renderer state is not canonical app data.
 - Live annotation/session data uses the SPL Marginalia Profile shape with EPUB CFI selectors.
 - `@likecoin/epub-ts` details stay behind the reader engine boundary.
+
+## Application Constraints
+
+- The app is statically deployed and hash-routed; it does not depend on server-rendered routes.
+- Connection profiles and browser preferences are local state, not server-synchronized settings.
+- Connection profiles contain bearer tokens after linking. Tokens are password-equivalent and must
+  not be logged or placed in URLs.
+- Server linking uses the PIN/code Client API flow. OAuth/OIDC is not part of the current product.
+- Reader themes use repo-owned CSS variables and activity attributes; there is no styling framework.
+
+Feature-specific Reader limits are documented in [reader.md](./reader.md). Renderer defects and
+support-library limitations are documented separately in
+[epub-ts-support-issues.md](./epub-ts-support-issues.md).
+
+## Client SDK Boundary
+
+Application features use the `@secondpass/client` facade. Endpoint URLs, authentication headers,
+wire payloads, response projection, and API error normalization remain package-owned implementation
+details. Feature code must not reconstruct those contracts.
+
+SDK documentation has a separate package audience:
+
+- [Package overview](../packages/secondpass-client/README.md)
+- [Public API](../packages/secondpass-client/docs/API.md)
+- [Data model](../packages/secondpass-client/docs/DATA_MODEL.md)
 
 ## Source Layout
 
@@ -72,25 +97,35 @@ The workflow gate in `src/app/App.tsx` prevents unauthenticated or unverified pr
 ## Layer Responsibilities
 
 `App.tsx`
-: Owns global workflow, route handling, selected connection profile, and opening/closing book blobs.
+: Composes global workflow, route handling, selected connection profile, connection recovery, and
+top-level route rendering. `AppReaderOpen.Controller.ts` owns reader restore/open state and object
+URL cleanup.
 
 `Reading.Activity.tsx`
-: Owns reader page chrome, panels/drawers, import modal state, end-of-book dialogs, and reader layout composition.
+: Composes reader page chrome and layout. Activity-level import review and completion/end-book
+behavior live in dedicated controllers under `src/features/reader/activity/`.
 
 `ReadingSession.Orchestrator.tsx`
-: Coordinates session metadata, progress autosave, annotations, previous session layers, shell commands, search handle registration, and staged-selection callbacks.
+: Composes session metadata, progress autosave, annotations, previous-session layers, renderer-neutral
+bridge state, and shell render state from dedicated session owners.
 
 `Reading.Shell.tsx`
-: Owns reader interaction chrome and the `EpubTsBookEngine` lifecycle.
+: Composes reader chrome and shell lifecycle owners. Bootstrap, capability publication, command
+routing, location publication, settings reflow, runtime serialization, and toolbar orchestration are
+separate modules under `src/features/reader/shell/`.
 
 `EpubTsBook.Engine.ts`
-: Owns all `@likecoin/epub-ts` integration and exposes app-owned commands/events.
+: Is the public `@likecoin/epub-ts` facade. Search, highlight rendering, rendition settings, range
+repair, location mapping, and geometry remain engine-owned modules behind that facade.
 
 `@secondpass/client`
-: Owns HTTP, auth headers, endpoint details, payload shaping, and API error normalization.
+: Owns HTTP, auth headers, endpoint details, payload shaping, response projection, and API error
+normalization.
 
 ## Lifecycle Boundaries
 
 The EPUB engine is expensive and stateful. Opening menus, drawers, modals, tabs, or tool panels must not recreate it. Callback identity and effect dependencies near `ReadingShell` and `EpubTsBookEngine` should be treated as lifecycle-sensitive.
 
 Temporary state must be resolved by the layer that creates it before handing off to another layer. Search flashes, staged highlight previews, and durable annotation marks should not be layered casually.
+
+See [reader.md](./reader.md) for the detailed Reader ownership map and operating invariants.
