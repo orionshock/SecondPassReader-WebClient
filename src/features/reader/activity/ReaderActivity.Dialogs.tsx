@@ -1,10 +1,15 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSession.Dialog";
 import { EndOfBookDialog } from "../ReaderEndOfBook.Dialog";
-import { ReaderImportModal } from "../imports/ReaderImport.Modal";
 import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.Registry";
 import { BookSearchDrawer } from "../shell/bookSearch/ReaderBookSearch.Drawer";
 import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
+
+const ReaderImportModal = lazy(async () => {
+  const module = await import("../imports/ReaderImport.Modal");
+  return { default: module.ReaderImportModal };
+});
 
 export function ReaderActivityDialogs({
   bookId,
@@ -63,6 +68,12 @@ export function ReaderActivityDialogs({
   onGoToLibrary?: () => void;
   returnLabel: string;
 }) {
+  const [importModalRequested, setImportModalRequested] = useState(importModalOpen);
+
+  useEffect(() => {
+    if (importModalOpen) setImportModalRequested(true);
+  }, [importModalOpen]);
+
   return (
     <>
       <BookSearchDrawer
@@ -78,12 +89,16 @@ export function ReaderActivityDialogs({
         }}
       />
 
-      <ReaderImportModal
-        open={importModalOpen}
-        onClose={onCloseImportModal}
-        onStartImport={onStartImport}
-        onParseAction={onParseImportAction}
-      />
+      {importModalOpen || importModalRequested ? (
+        <Suspense fallback={importModalOpen ? <ReaderImportModalFallback onClose={onCloseImportModal} /> : null}>
+          <ReaderImportModal
+            open={importModalOpen}
+            onClose={onCloseImportModal}
+            onStartImport={onStartImport}
+            onParseAction={onParseImportAction}
+          />
+        </Suspense>
+      ) : null}
 
       {closeDialogOpen ? (
         <CloseSessionDialog
@@ -112,5 +127,27 @@ export function ReaderActivityDialogs({
         />
       ) : null}
     </>
+  );
+}
+
+function ReaderImportModalFallback({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
+      <section
+        className="spReaderImportModal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sp-reader-import-loading-title"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <div className="spReaderImportModalHeader">
+          <h2 id="sp-reader-import-loading-title">Import marginalia</h2>
+          <button type="button" className="button buttonCompact" onClick={onClose}>Close</button>
+        </div>
+        <div className="spReaderImportModalBody">
+          <p className="muted">{`Loading import tools${"\u2026"}`}</p>
+        </div>
+      </section>
+    </div>
   );
 }

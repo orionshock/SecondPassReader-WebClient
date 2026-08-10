@@ -1,5 +1,5 @@
 import "./App.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking } from "../features/connection/ClientApiLinking.Panel";
 import { ClientApiVerification } from "../features/connection/ClientApiVerification.Panel";
 import { ConnectServerScreen } from "../features/connection/ConnectServer.Page";
@@ -12,7 +12,6 @@ import {
   type ConnectionProfile,
 } from "../storage/ConnectionProfiles.Store";
 import { AppHeader } from "./App.Header";
-import { SettingsPanel } from "./Settings.Panel";
 import { createSplClientFromProfile } from "./AppSplClient.Factory";
 import type { SecondPassClient } from "@secondpass/client";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecovery.Context";
@@ -23,6 +22,11 @@ import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
+
+const SettingsPanel = lazy(async () => {
+  const module = await import("./Settings.Panel");
+  return { default: module.SettingsPanel };
+});
 
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
@@ -250,7 +254,16 @@ function AppShell() {
 
       <main className="appMain">
         {view === "settings" ? (
-          <>
+          <Suspense
+            fallback={(
+              <div className="settingsLayout">
+                <section className="settingsSection">
+                  <h1 className="settingsTitle">Settings</h1>
+                  <p className="muted">{`Loading settings${"\u2026"}`}</p>
+                </section>
+              </div>
+            )}
+          >
             <SettingsPanel
               profile={selectedProfile}
               onProfilesChanged={handleConnectionChanged}
@@ -259,7 +272,7 @@ function AppShell() {
               onAppThemeChange={setAppTheme}
               route={route?.kind === "settings" ? route : { kind: "settings" }}
             />
-          </>
+          </Suspense>
         ) : (
           <>
             {workflowStep === "connect_server" ? (

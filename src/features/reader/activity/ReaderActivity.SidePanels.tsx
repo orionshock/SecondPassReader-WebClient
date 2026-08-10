@@ -1,9 +1,13 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { AnnotationWorkspace } from "../annotations/AnnotationWorkspace.Panel";
-import { ReaderImportDrawer } from "../imports/ReaderImport.Drawer";
 import type { useReaderImportJob } from "../imports/ReaderImportJob.Controller";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./ReaderActivity.Types";
 import type { ReaderWidth } from "../../../storage/ReaderSettings.Store";
+
+const ReaderImportDrawer = lazy(async () => {
+  const module = await import("../imports/ReaderImport.Drawer");
+  return { default: module.ReaderImportDrawer };
+});
 
 export function ReaderActivitySidePanels({
   importDrawerInLayout,
@@ -36,6 +40,13 @@ export function ReaderActivitySidePanels({
   onMarkImportRowManuallyCompleted: (rowId: string) => void;
   onSkipImportRow: (rowId: string) => void;
 }) {
+  const importDrawerOpen = Boolean(readerImport.drawerOpen && readerImport.job);
+  const [importDrawerRequested, setImportDrawerRequested] = useState(importDrawerOpen);
+
+  useEffect(() => {
+    if (importDrawerOpen) setImportDrawerRequested(true);
+  }, [importDrawerOpen]);
+
   return (
     <div className={`spReaderContentFrame${importDrawerInLayout ? " spReaderContentFrameImportOpen" : ""}`}>
       <div className="spReaderLayout">
@@ -62,18 +73,43 @@ export function ReaderActivitySidePanels({
         </div>
       </div>
 
-      <ReaderImportDrawer
-        open={readerImport.drawerOpen}
-        job={readerImport.job}
-        counts={readerImport.counts}
-        onClose={onCloseImport}
-        onClear={onClearImport}
-        onActivateRow={onSelectImportRow}
-        onMarkManuallyCompleted={onMarkImportRowManuallyCompleted}
-        onSkipRow={onSkipImportRow}
-        onUndoManualCompletion={readerImport.undoManualCompletion}
-        onUnskipRow={readerImport.unskipRow}
-      />
+      {importDrawerOpen || importDrawerRequested ? (
+        <Suspense fallback={importDrawerOpen ? <ReaderImportDrawerFallback onClose={onCloseImport} /> : null}>
+          <ReaderImportDrawer
+            open={readerImport.drawerOpen}
+            job={readerImport.job}
+            counts={readerImport.counts}
+            onClose={onCloseImport}
+            onClear={onClearImport}
+            onActivateRow={onSelectImportRow}
+            onMarkManuallyCompleted={onMarkImportRowManuallyCompleted}
+            onSkipRow={onSkipImportRow}
+            onUndoManualCompletion={readerImport.undoManualCompletion}
+            onUnskipRow={readerImport.unskipRow}
+          />
+        </Suspense>
+      ) : null}
     </div>
+  );
+}
+
+function ReaderImportDrawerFallback({ onClose }: { onClose: () => void }) {
+  return (
+    <aside
+      className="spReaderImportDrawer"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="sp-reader-import-drawer-loading-title"
+    >
+      <div className="spReaderImportDrawerHeader">
+        <div className="spReaderImportDrawerTitleRow">
+          <h2 id="sp-reader-import-drawer-loading-title" className="spReaderImportDrawerTitle">
+            Marginalia Import
+          </h2>
+          <button type="button" className="button buttonCompact" onClick={onClose}>Hide</button>
+        </div>
+        <p className="muted">{`Loading import review${"\u2026"}`}</p>
+      </div>
+    </aside>
   );
 }

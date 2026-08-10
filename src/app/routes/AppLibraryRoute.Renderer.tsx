@@ -1,8 +1,8 @@
+import { lazy, Suspense } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { HomePage } from "../../features/home/Home.Page";
 import { LibraryBrowsePage } from "../../features/library/LibraryBrowse.Page";
-import { ReadingActivity } from "../../features/reader/Reading.Activity";
 import type { OpenedBook } from "../../features/reader/Reader.Types";
 import { SessionDetailPage } from "../../features/sessions/SessionDetail.Page";
 import { SessionsPage } from "../../features/sessions/Sessions.Page";
@@ -11,6 +11,11 @@ import { ShelfEditPage } from "../../features/shelves/ShelfEdit.Page";
 import { ShelvesPage } from "../../features/shelves/Shelves.Page";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, withBookModal } from "../AppNavigation.Router";
+
+const ReadingActivity = lazy(async () => {
+  const module = await import("../../features/reader/Reading.Activity");
+  return { default: module.ReadingActivity };
+});
 
 export function AppLibraryRouteRenderer({
   route,
@@ -60,15 +65,17 @@ export function AppLibraryRouteRenderer({
   if (openedBook && route?.kind === "reader") {
     return (
       <section className="readerScreen">
-        <ReadingActivity
-          openedBook={openedBook}
-          onBackToLibrary={() => {
-            navigateTo({ kind: "home" });
-            onCloseReader();
-          }}
-          spl={spl}
-          initialSearchQuery={route.search ?? null}
-        />
+        <Suspense fallback={<p className="muted">{`Loading reader${"\u2026"}`}</p>}>
+          <ReadingActivity
+            openedBook={openedBook}
+            onBackToLibrary={() => {
+              navigateTo({ kind: "home" });
+              onCloseReader();
+            }}
+            spl={spl}
+            initialSearchQuery={route.search ?? null}
+          />
+        </Suspense>
       </section>
     );
   }

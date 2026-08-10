@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import "./handlers/ReaderImportHandlers.Lifecycle";
 import { getReaderImportFormat } from "./ReaderImportFormats.Registry";
 import { acceptSuggestedBookmarkRow, getReaderImportJobCounts, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "./ReaderImportJob.State";
 import type { ReaderImportJob, ReaderImportRow, ReaderImportRowStatus } from "./ReaderImport.Types";
@@ -10,6 +9,7 @@ export function useReaderImportJob() {
   const [bookmarkSuggestion, setBookmarkSuggestion] = useState<ReaderImportBookmarkSuggestion | null>(null);
 
   const startImport = useCallback(async (format: string, file: File) => {
+    await import("./handlers/ReaderImportHandlers.Lifecycle");
     const nextJob = await getReaderImportFormat(format).importFile(file);
     setJob(nextJob);
     setBookmarkSuggestion(null);
