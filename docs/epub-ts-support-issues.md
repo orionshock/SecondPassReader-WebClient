@@ -292,30 +292,73 @@ const hash = encodeURI(cfiRange + type);
 this._annotations[hash] = annotation;
 ```
 
-Removal also accepts CFI plus type rather than a stable annotation handle or ID. Adding another
-highlight with the same range/type replaces the stored entry, while an older visual mark may still
-exist in the current view until explicitly detached.
+Second Pass already passes its client annotation ID as data:
+
+```ts
+rendition.annotations.highlight(cfiRange, { id: clientId }, callback, className, styles);
+```
+
+epub-ts does not use that value as annotation or renderer identity. It remains annotation data and
+is emitted as event metadata when the mark is clicked. Identity is instead derived independently at
+two library layers:
+
+- The rendition annotation store uses `encodeURI(cfiRange + type)`.
+- The iframe view stores highlights as `this.highlights[cfiRange]`.
+
+Upstream source: `src/managers/views/iframe.ts`, `IframeView.highlight()` and
+`IframeView.unhighlight()`, approximately lines 748-785 and 913-925 in 0.7.1. Adding a second
+highlight at the same CFI replaces the view registry entry regardless of its caller-supplied data.
+
+Removal and detachment also address the mark by CFI and type rather than caller ID:
+
+```ts
+rendition.annotations.remove(cfiRange, "highlight");
+view.unhighlight(cfiRange);
+```
+
+The returned `Annotation` object does not provide an update escape hatch. `Annotation.update()`
+replaces `annotation.data` only; it does not update styles or repaint the visible mark. Its
+`detach()` method ultimately calls `view.unhighlight(cfiRange)`. Consequently, a caller-supplied ID
+is metadata/event data only, not an addressable renderer-mark identity.
+
+When a durable highlight and staged preview use the same exact CFI, the newer mark overwrites the
+rendition/view identity. The older SVG or DOM overlay can remain detached from the registry but
+visible in the marks pane. A later CFI-based removal can find only the currently registered mark.
+This produces visibly stacked colors even when Second Pass annotation state contains only one
+durable highlight.
 
 Client references:
 
 - `src/features/reader/engine/highlightMarks.ts`
 - `src/features/reader/session/CurrentSessionAnnotation.Actions.ts`
 
-Current client rules clear temporary marks before durable handoff and update an exact same-session
-CFI highlight rather than creating a duplicate. Previous-session overlap remains read-only display
-context and can still expose the renderer limitation.
+Current Second Pass rules do not ask epub-ts to keep two `highlight` marks alive at the same exact
+CFI. A staged preview temporarily replaces the durable renderer mark at that CFI. On commit or
+cancel, durable marks are restored from application annotation state. Exact same-session CFI
+commits update the existing application annotation rather than creating a duplicate. How current-
+and previous-session annotations should interact remains an application policy concern; CFI must
+remain the spatial anchor rather than being treated as annotation object identity.
 
 ### Suggested upstream fix
 
-Allow a caller-supplied annotation identity and return/remove by that identity:
+Introduce a first-class annotation identity contract:
 
 ```ts
-const handle = rendition.annotations.highlight(cfi, data, callback, className, styles, { id });
+const handle = rendition.annotations.highlight({ id, cfiRange, data, styles });
 rendition.annotations.removeById(id);
+rendition.annotations.updateById(id, { styles, data });
 ```
 
-The internal section index should map to annotation IDs, not only CFI/type hashes. CFI/type removal
-can remain as a convenience that removes all matching annotations.
+Store annotation records and rendered view highlights by ID. Keep CFI separately on each annotation
+for range resolution, section indexing, and CFI-based lookup. The internal section index should map
+to annotation IDs rather than CFI/type hashes. CFI/type removal can remain as a convenience that
+removes all matching annotations, but it should not be the only mutation identity.
+
+Upstream regression tests should cover:
+
+1. Two highlights with different IDs at the exact same CFI can coexist.
+2. Updating one ID changes only that highlight's styles and data.
+3. Removing one ID leaves the other exact-CFI highlight attached and addressable.
 
 ## EPUBTS-007: Location Generation Does Not Guarantee Section Cleanup
 
