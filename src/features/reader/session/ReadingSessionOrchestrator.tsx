@@ -4,8 +4,7 @@ import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
 import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
 import type { ReaderDescribeCfiHandle, ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
-import type { DurableAnnotationToolbarItem } from "../shell/ReaderDurableAnnotationToolbar.Toolbar";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
+import type { ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./progress/ReadingProgressAutosave.Lifecycle";
@@ -14,7 +13,6 @@ import { buildReadingSessionAutosaveStatus } from "./progress/ReadingSessionProg
 import type { SecondPassClient } from "@secondpass/client";
 import type { ReaderBookmarkViewModel } from "../annotations/bookmarkUtils";
 import type { HighlightViewModel } from "../annotations/viewModels";
-import { toReaderAnnotation } from "../annotations/annotationUtils";
 import { useSessionAnnotations } from "./useSessionAnnotations";
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";
 import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
@@ -25,6 +23,11 @@ import {
   type ReaderBookmarkMutationResult,
 } from "./annotations/CurrentSessionAnnotation.Actions";
 import { useReadingSessionBridgeController } from "./ReadingSessionBridge.Controller";
+import {
+  buildReadingSessionAnnotationToolbarItems,
+  buildReadingSessionState,
+  composeReadingSessionDurableMarks,
+} from "./ReadingSessionRender.Presenter";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -183,16 +186,13 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   });
 
   const state: ReadingSessionState = useMemo(() => {
-    const seedAnnotations: ReaderAnnotation[] = annotationsRaw
-      .map((a) => toReaderAnnotation(a))
-      .filter((a): a is ReaderAnnotation => Boolean(a));
-    return {
+    return buildReadingSessionState({
       bookId: props.openedBook.book.id,
       sessionId,
       location,
       toc,
-      annotations: seedAnnotations,
-    };
+      annotations: annotationsRaw,
+    });
   }, [annotationsRaw, location, props.openedBook.book.id, sessionId, toc]);
 
   const { autosave } = useReadingProgressAutosave({
@@ -233,23 +233,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     return buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });
   }, [props.openedBook.book.title, state.location, state.toc]);
 
-  const visibleHighlightMarks: ReaderHighlightMark[] = useMemo(() => {
-    const out: ReaderHighlightMark[] = [...highlightMarks, ...previousLayers.selectedHighlightMarks];
-    // Preserve existing behavior: staged selection mark composes in the shell; durable marks are filtered here only.
-    return out;
-  }, [highlightMarks, previousLayers.selectedHighlightMarks]);
+  const visibleHighlightMarks = useMemo(
+    () => composeReadingSessionDurableMarks(highlightMarks, previousLayers.selectedHighlightMarks),
+    [highlightMarks, previousLayers.selectedHighlightMarks],
+  );
 
-  const annotationToolbarItems: DurableAnnotationToolbarItem[] = useMemo(() => {
-    return visibleHighlightMarks
-      .filter((mark) => Boolean(mark.id && mark.cfiRange))
-      .map((mark) => ({
-        id: mark.id,
-        mode: mark.readOnly ? "readonly" : "editable",
-        quoteText: mark.text,
-        note: mark.note,
-        color: mark.color,
-      }));
-  }, [visibleHighlightMarks]);
+  const annotationToolbarItems = useMemo(
+    () => buildReadingSessionAnnotationToolbarItems(visibleHighlightMarks),
+    [visibleHighlightMarks],
+  );
 
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
     if (event.type === "locationsReady") {
