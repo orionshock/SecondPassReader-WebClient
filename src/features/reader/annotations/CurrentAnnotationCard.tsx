@@ -1,11 +1,11 @@
 import { MaterialIcon } from "../../../components/MaterialIcon";
-import { InlineMeta } from "../../../components/MetaSeparator";
 import {
-  BOOKMARK_DISPLAY,
   getHighlightAnnotationDisplay,
   toAnnotationCssVars,
 } from "../display/ReaderAnnotation.Presenter";
+import { CurrentAnnotationCardBookmarkView } from "./CurrentAnnotationCard.BookmarkView";
 import { CurrentAnnotationCardHighlightEditor } from "./CurrentAnnotationCard.HighlightEditor";
+import { CurrentAnnotationCardHighlightView } from "./CurrentAnnotationCard.HighlightView";
 import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./viewModels";
 
 function normalizeQuoteTextForDisplay(text: string): string {
@@ -71,57 +71,17 @@ export function CurrentAnnotationCard({
     const locationMetaParts = toLocationMetaParts(b.labelParts);
 
     return (
-      <article
-        key={b.id}
-        tabIndex={-1}
-        data-annotation-id={b.id}
-        className={`spAnnotationCard spAnnotationCardBookmark ${isCurrent ? "spAnnotationCardCurrent" : ""}`}
-      >
-        <div className="spAnnotationLeftRail" aria-hidden="true">
-          <span className="spAnnotationTypeIcon" title={BOOKMARK_DISPLAY.label}>
-            <MaterialIcon name={BOOKMARK_DISPLAY.iconName} />
-          </span>
-        </div>
-
-        <div className="spAnnotationBody">
-          <div className="spAnnotationBookmarkRow" title={b.label}>
-            <span className="spAnnotationBookmarkText">
-              Bookmark
-              {b.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-            </span>
-            {isCurrent ? <span className="spAnnotationBadge">Current</span> : null}
-          </div>
-          {locationMetaParts.length > 0 || when ? (
-            <div className="muted spAnnotationActionMeta" title={b.label}>
-              <InlineMeta items={[...locationMetaParts, when]} />
-            </div>
-          ) : null}
-        </div>
-
-        <div className="spAnnotationRightRail" aria-label="Bookmark actions">
-          <button
-            type="button"
-            className="button buttonCompact spIconButton"
-            onClick={() => onJumpToCfi(b.cfi)}
-            aria-label="Jump to bookmark"
-            title="Jump to location"
-          >
-            <MaterialIcon name="my_location" />
-          </button>
-          <button
-            type="button"
-            className="button buttonDanger buttonCompact spIconButton"
-            onClick={() => {
-              if (!window.confirm("Delete this bookmark?")) return;
-              onRemoveAnnotation(b.id);
-            }}
-            aria-label="Delete bookmark"
-            title="Delete bookmark"
-          >
-            <MaterialIcon name="delete" />
-          </button>
-        </div>
-      </article>
+      <CurrentAnnotationCardBookmarkView
+        bookmark={b}
+        isCurrent={isCurrent}
+        locationMetaParts={locationMetaParts}
+        when={when}
+        onJump={() => onJumpToCfi(b.cfi)}
+        onDelete={() => {
+          if (!window.confirm("Delete this bookmark?")) return;
+          onRemoveAnnotation(b.id);
+        }}
+      />
     );
   }
 
@@ -148,22 +108,15 @@ export function CurrentAnnotationCard({
       </div>
 
       <div className="spAnnotationBody">
-        <div className="spAnnotationQuote" title={quoteText || "Highlight"}>
-          {quoteText || "Highlight"}
-        </div>
-
-        {!isEditing && h.note ? <div className="spAnnotationNote">{h.note}</div> : null}
-
-        {!isEditing ? (
-          <div className="spAnnotationActionRow">
-            {locationMetaParts.length > 0 || when || h.descriptionStatus === "loading" ? (
-              <div className="muted spAnnotationActionMeta" title={h.label}>
-                <InlineMeta items={[...locationMetaParts, when]} />
-                {h.descriptionStatus === "loading" ? <span className="muted">{` ${"\u2026"}`}</span> : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+        <CurrentAnnotationCardHighlightView
+          descriptionStatus={h.descriptionStatus}
+          isEditing={isEditing}
+          label={h.label}
+          locationMetaParts={locationMetaParts}
+          note={h.note}
+          quoteText={quoteText}
+          when={when}
+        />
 
         {isEditing ? (
           <CurrentAnnotationCardHighlightEditor
