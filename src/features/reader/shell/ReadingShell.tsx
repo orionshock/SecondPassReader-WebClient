@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createEpubTsBookEngine, type EpubTsBookEngine } from "../engine/EpubTsBookEngine";
+import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
+import type { HighlightMarkClick } from "../engine/highlightMarks";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
+import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
 import type {
   ReadingShellCommand,
   ReadingShellCommandValue,
@@ -39,8 +40,7 @@ import {
   isExplicitProgressNavigationCommand,
   ReaderBootstrapProgressGuard,
 } from "./ReaderBootstrapProgressGuard.State";
-import { ReaderCapabilityPublicationLifecycle } from "./ReaderCapabilityPublication.Lifecycle";
-import { publishReaderLocation } from "./ReaderLocationPublication.Lifecycle";
+import { useReaderEngineBootstrapLifecycle } from "./ReaderEngineBootstrap.Lifecycle";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -202,6 +202,22 @@ export function ReadingShell(props: ReadingShellProps) {
     });
   }, []);
 
+  const onEngineSelectionChanged = useCallback((selection: ReaderSelection | null) => {
+    if (selection) closeDurableToolbar();
+    onSelectionChanged(selection);
+  }, [closeDurableToolbar, onSelectionChanged]);
+
+  const onEngineHighlightClick = useCallback((click: HighlightMarkClick) => {
+    const id = click.annotationId.trim();
+    if (!id) return;
+    const item = annotationToolbarItemsRef.current.find((candidate) => candidate.id === id);
+    if (!item) return;
+    const position = toToolbarPosition(click);
+    if (!position) return;
+    cancelStaged();
+    setDurableToolbar({ annotationId: id, position });
+  }, [cancelStaged, toToolbarPosition]);
+
   useEffect(() => {
     if (!isReaderFullyReady(readiness)) {
       props.onStagedSelectionReady?.(null);
@@ -335,149 +351,51 @@ export function ReadingShell(props: ReadingShellProps) {
     [bootstrapProgressGuard, markReadableViewport, runtimeController, stagedLifecycle],
   );
 
-  useEffect(() => {
-    if (!mountEl) return;
+  const onBootstrapReady = useCallback(async (generation: number) => {
+    const deferredCommand = deferredCommandRef.current;
+    deferredCommandRef.current = null;
+    if (!deferredCommand) return;
+    try {
+      await runRuntimeCommand(deferredCommand.value, deferredCommand.seq);
+    } catch (error) {
+      reportOperationError(
+        error,
+        "Command failed.",
+        generation,
+        getCommandFailureKind(deferredCommand.value),
+      );
+    }
+  }, [reportOperationError, runRuntimeCommand]);
 
-    let cancelled = false;
-    setReadiness("loading-engine");
-    setErrorMessage(null);
-    hasReadableViewportRef.current = false;
-    engineGenerationRef.current += 1;
-    const generation = engineGenerationRef.current;
-    const initialTarget = initialDisplayTargetRef.current;
-    bootstrapProgressGuard.reset(
-      generation,
-      initialTarget?.type === "cfi" ? initialTarget.cfi : null,
-    );
-    const capabilityPublication = new ReaderCapabilityPublicationLifecycle({
-      bootstrapProgressGuard,
-      runtimeController,
-      stagedSelectionLifecycle: stagedLifecycle,
-      onDescribeCfiReady: props.onDescribeCfiReady,
-      onProbeCfiReady: props.onProbeCfiReady,
-      onDisplayCfiReady: props.onDisplayCfiReady,
-      onSearchReady: props.onSearchReady,
-    });
-
-    void (async () => {
-      try {
-         const engine = await createEpubTsBookEngine({
-           source: props.blob,
-           mountEl,
-           // Locations generation currently can throw unhandled errors in epub-ts for some books.
-           // Keep it opt-in until upstream behavior is reliable.
-           enableLocationsGeneration: true,
-           displaySettings: settingsRef.current,
-           onLocationChanged: (location) => publishReaderLocation({
-             location,
-             generation,
-             bootstrapProgressGuard,
-             stagedSelectionLifecycle: stagedLifecycle,
-             recordReadableViewport,
-             closeDurableToolbar,
-             publishEvent: (event) => onEventRef.current?.(event),
-             reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
-           }),
-          onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
-          onLocationsReady: () => onEventRef.current?.({ type: "locationsReady" }),
-          onSelectionChanged: (selection) => {
-            if (selection) closeDurableToolbar();
-            onSelectionChanged(selection);
-          },
-          onHighlightClick: (click) => {
-            const id = click.annotationId.trim();
-            if (!id) return;
-            const item = annotationToolbarItemsRef.current.find((candidate) => candidate.id === id);
-            if (!item) return;
-            const position = toToolbarPosition(click);
-            if (!position) return;
-            cancelStaged();
-            setDurableToolbar({ annotationId: id, position });
-          },
-          onError: (err) => onEventRef.current?.({ type: "displayError", error: err }),
-        });
-
-        if (cancelled) {
-          engine.destroy();
-          return;
-        }
-
-        engineRef.current = engine;
-        runtimeController.attach(engine, generation);
-        setReadiness("engine-attached");
-
-        // Apply any highlight marks that loaded before the engine became available.
-        engine.setHighlightMarks(highlightMarksRef.current);
-
-        let initialDisplaySucceeded = false;
-        try {
-          await runtimeController.run({
-            kind: "initial-display",
-            run: ({ engine: activeEngine }) => activeEngine.display(initialDisplayTargetRef.current),
-          });
-          initialDisplaySucceeded = true;
-        } catch (err) {
-          reportOperationError(err, "Display failed.", generation, "display");
-        }
-
-        if (initialDisplaySucceeded || hasReadableViewportRef.current) markReadableViewport(generation);
-        if (!hasReadableViewportRef.current) return;
-
-        capabilityPublication.publish(
-          engine,
-          generation,
-          () => engineRef.current === engine && engineGenerationRef.current === generation,
-        );
-
-        const deferredCommand = deferredCommandRef.current;
-        deferredCommandRef.current = null;
-        if (deferredCommand) {
-          try {
-            await runRuntimeCommand(deferredCommand.value, deferredCommand.seq);
-          } catch (err) {
-            reportOperationError(
-              err,
-              "Command failed.",
-              generation,
-              getCommandFailureKind(deferredCommand.value),
-            );
-          }
-        }
-      } catch (err) {
-        if (cancelled) return;
-        reportOperationError(err, "Failed to initialize epub-ts engine.", generation, "initialization");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      engineGenerationRef.current += 1;
-      deferredCommandRef.current = null;
-      const engine = engineRef.current;
-      engineRef.current = null;
-      runtimeController.detach(generation);
-      capabilityPublication.unpublish();
-      engine?.destroy();
-    };
-  }, [
-    cancelStaged,
-    closeDurableToolbar,
+  useReaderEngineBootstrapLifecycle({
+    blob: props.blob,
     mountEl,
-    onSelectionChanged,
-    props.blob,
-    props.onDescribeCfiReady,
-    props.onProbeCfiReady,
-    props.onDisplayCfiReady,
-    props.onSearchReady,
+    engineRef,
+    engineGenerationRef,
+    hasReadableViewportRef,
+    initialDisplayTargetRef,
+    settingsRef,
+    highlightMarksRef,
+    deferredCommandRef,
+    onEventRef,
+    reanchorStagedToolbarRef,
     bootstrapProgressGuard,
-    markReadableViewport,
-    recordReadableViewport,
-    reportOperationError,
-    runRuntimeCommand,
     runtimeController,
-    stagedLifecycle,
-    toToolbarPosition,
-  ]);
+    stagedSelectionLifecycle: stagedLifecycle,
+    onEngineSelectionChanged,
+    onEngineHighlightClick,
+    closeDurableToolbar,
+    recordReadableViewport,
+    markReadableViewport,
+    setReadiness,
+    setErrorMessage,
+    reportOperationError,
+    onBootstrapReady,
+    onDescribeCfiReady: props.onDescribeCfiReady,
+    onProbeCfiReady: props.onProbeCfiReady,
+    onDisplayCfiReady: props.onDisplayCfiReady,
+    onSearchReady: props.onSearchReady,
+  });
 
   useEffect(() => {
     const cmd = props.command;
