@@ -12,7 +12,7 @@ import {
   type EpubTsBookEngine,
   type EpubTsBookEngineInit,
 } from "../engine/EpubTsBookEngine";
-import type { ReadingShellCommand, ReadingShellEvent } from "./types";
+import type { ReadingShellEvent } from "./types";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import { ReaderCapabilityPublicationLifecycle } from "./ReaderCapabilityPublication.Lifecycle";
 import { publishReaderLocation } from "./ReaderLocationPublication.Lifecycle";
@@ -32,7 +32,6 @@ export function useReaderEngineBootstrapLifecycle(input: {
   initialDisplayTargetRef: MutableRef<ReaderLocationTarget | undefined>;
   settingsRef: MutableRef<ReaderSettings | undefined>;
   highlightMarksRef: MutableRef<ReaderHighlightMark[]>;
-  deferredCommandRef: MutableRef<ReadingShellCommand | null>;
   onEventRef: MutableRef<((event: ReadingShellEvent) => void) | undefined>;
   reanchorStagedToolbarRef: MutableRef<() => Promise<void>>;
   bootstrapProgressGuard: ReaderBootstrapProgressGuard;
@@ -51,7 +50,8 @@ export function useReaderEngineBootstrapLifecycle(input: {
     generation: number,
     kind: ReaderOperationFailureKind,
   ) => void;
-  onBootstrapReady: (generation: number) => Promise<void>;
+  clearDeferredCommand: () => void;
+  flushDeferredCommand: (generation: number) => Promise<void>;
   onDescribeCfiReady?: (handle: ReaderDescribeCfiHandle | null) => void;
   onProbeCfiReady?: (handle: ReaderProbeCfiHandle | null) => void;
   onDisplayCfiReady?: (handle: ReaderDisplayCfiHandle | null) => void;
@@ -60,8 +60,8 @@ export function useReaderEngineBootstrapLifecycle(input: {
   const {
     blob,
     bootstrapProgressGuard,
+    clearDeferredCommand,
     closeDurableToolbar,
-    deferredCommandRef,
     engineGenerationRef,
     engineRef,
     hasReadableViewportRef,
@@ -69,7 +69,6 @@ export function useReaderEngineBootstrapLifecycle(input: {
     initialDisplayTargetRef,
     markReadableViewport,
     mountEl,
-    onBootstrapReady,
     onDescribeCfiReady,
     onDisplayCfiReady,
     onEngineHighlightClick,
@@ -85,6 +84,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
     setReadiness,
     settingsRef,
     stagedSelectionLifecycle,
+    flushDeferredCommand,
   } = input;
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
           generation,
           () => engineRef.current === engine && engineGenerationRef.current === generation,
         );
-        await onBootstrapReady(generation);
+        await flushDeferredCommand(generation);
       } catch (error) {
         if (cancelled) return;
         reportOperationError(error, "Failed to initialize epub-ts engine.", generation, "initialization");
@@ -180,7 +180,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
     return () => {
       cancelled = true;
       engineGenerationRef.current += 1;
-      deferredCommandRef.current = null;
+      clearDeferredCommand();
       const engine = engineRef.current;
       engineRef.current = null;
       runtimeController.detach(generation);
@@ -190,10 +190,10 @@ export function useReaderEngineBootstrapLifecycle(input: {
   }, [
     blob,
     bootstrapProgressGuard,
+    clearDeferredCommand,
     closeDurableToolbar,
     markReadableViewport,
     mountEl,
-    onBootstrapReady,
     onDescribeCfiReady,
     onDisplayCfiReady,
     onEngineHighlightClick,
@@ -204,5 +204,6 @@ export function useReaderEngineBootstrapLifecycle(input: {
     reportOperationError,
     runtimeController,
     stagedSelectionLifecycle,
+    flushDeferredCommand,
   ]);
 }

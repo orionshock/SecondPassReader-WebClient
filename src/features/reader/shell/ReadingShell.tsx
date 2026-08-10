@@ -6,7 +6,6 @@ import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection, ReaderTocItem } from "../domain/types";
 import type {
   ReadingShellCommand,
-  ReadingShellCommandValue,
   ReadingShellEvent,
 } from "./types";
 import type {
@@ -36,11 +35,9 @@ import {
   toReaderViewportStatus,
   type ReaderReadinessState,
 } from "./ReaderReadiness.State";
-import {
-  isExplicitProgressNavigationCommand,
-  ReaderBootstrapProgressGuard,
-} from "./ReaderBootstrapProgressGuard.State";
+import { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import { useReaderEngineBootstrapLifecycle } from "./ReaderEngineBootstrap.Lifecycle";
+import { useReaderCommandRoutingLifecycle } from "./ReaderCommandRouting.Lifecycle";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -88,8 +85,6 @@ export function ReadingShell(props: ReadingShellProps) {
   if (!runtimeControllerRef.current) runtimeControllerRef.current = new ReaderRuntimeController();
   const runtimeController = runtimeControllerRef.current;
   const mountWrapperRef = useRef<HTMLDivElement | null>(null);
-  const lastHandledCommandSeqRef = useRef<number | null>(null);
-  const deferredCommandRef = useRef<ReadingShellCommand | null>(null);
   const engineGenerationRef = useRef(0);
   const hasReadableViewportRef = useRef(false);
   const bootstrapProgressGuardRef = useRef<ReaderBootstrapProgressGuard | null>(null);
@@ -101,7 +96,6 @@ export function ReadingShell(props: ReadingShellProps) {
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
   const onUnrelatedNavigationRef = useRef<ReadingShellProps["onUnrelatedNavigation"]>(props.onUnrelatedNavigation);
-  const latestSearchResultCommandRef = useRef<{ seq: number; cfi: string } | null>(null);
   const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
@@ -276,96 +270,24 @@ export function ReadingShell(props: ReadingShellProps) {
     [],
   );
 
-  const runRuntimeCommand = useCallback(
-    async (command: ReadingShellCommandValue, commandSeq?: number) => {
-      const generation = engineGenerationRef.current;
-      if (isExplicitProgressNavigationCommand(command)) {
-        bootstrapProgressGuard.recordExplicitNavigation(generation);
-      }
-      switch (command.type) {
-        case "display":
-          await runtimeController.run({
-            kind: "display",
-            run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.display(command.target)),
-            after: () => reanchorStagedToolbarRef.current(),
-          });
-          markReadableViewport(generation);
-          return;
-        case "displaySearchResult": {
-          await runtimeController.run({
-            kind: "display-search-result",
-            run: ({ engine }) => stagedLifecycle.runNavigation(
-              "unrelated",
-              () => engine.display({ type: "cfi", cfi: command.cfi }),
-            ),
-            after: async (_value, context) => {
-              const latestSearch = latestSearchResultCommandRef.current;
-              if (commandSeq != null && latestSearch && latestSearch.seq !== commandSeq) {
-                await context.engine.display({ type: "cfi", cfi: latestSearch.cfi });
-                if (context.isCurrent()) await reanchorStagedToolbarRef.current();
-                return;
-              }
-              // Search result flashes are temporary visual state. Paint them only
-              // after display settles so the mark is attached to the target view.
-              if (commandSeq != null && lastHandledCommandSeqRef.current !== commandSeq) return;
-              context.engine.setTemporarySearchHighlight(command.cfi);
-              onEventRef.current?.({ type: "searchResultDisplayed", cfi: command.cfi });
-              await reanchorStagedToolbarRef.current();
-            },
-          });
-          markReadableViewport(generation);
-          return;
-        }
-        case "next":
-          await runtimeController.run({
-            kind: "next",
-            run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.next()),
-            after: () => reanchorStagedToolbarRef.current(),
-          });
-          markReadableViewport(generation);
-          return;
-        case "previous":
-          await runtimeController.run({
-            kind: "previous",
-            run: ({ engine }) => stagedLifecycle.runNavigation("unrelated", () => engine.previous()),
-            after: () => reanchorStagedToolbarRef.current(),
-          });
-          markReadableViewport(generation);
-          return;
-        case "resize":
-          await runtimeController.stabilizeReflow("resize", {
-            reflow: async (engine) => {
-              await stagedLifecycle.runNavigation("layout-reflow", async () => {
-                await waitForReaderLayout();
-                await engine.resizeToMount({
-                  preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
-                });
-              });
-            },
-            refreshMarks: (engine) => engine.refreshHighlightMarks(),
-            reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
-          });
-          return;
-      }
-    },
-    [bootstrapProgressGuard, markReadableViewport, runtimeController, stagedLifecycle],
-  );
-
-  const onBootstrapReady = useCallback(async (generation: number) => {
-    const deferredCommand = deferredCommandRef.current;
-    deferredCommandRef.current = null;
-    if (!deferredCommand) return;
-    try {
-      await runRuntimeCommand(deferredCommand.value, deferredCommand.seq);
-    } catch (error) {
-      reportOperationError(
-        error,
-        "Command failed.",
-        generation,
-        getCommandFailureKind(deferredCommand.value),
-      );
-    }
-  }, [reportOperationError, runRuntimeCommand]);
+  const {
+    clearDeferredCommand,
+    flushDeferredCommand,
+    runImmediateCommand,
+  } = useReaderCommandRoutingLifecycle({
+    command: props.command,
+    readiness,
+    engineRef,
+    engineGenerationRef,
+    onEventRef,
+    reanchorStagedToolbarRef,
+    bootstrapProgressGuard,
+    runtimeController,
+    stagedSelectionLifecycle: stagedLifecycle,
+    markReadableViewport,
+    reportOperationError,
+    waitForLayout: waitForReaderLayout,
+  });
 
   useReaderEngineBootstrapLifecycle({
     blob: props.blob,
@@ -376,7 +298,6 @@ export function ReadingShell(props: ReadingShellProps) {
     initialDisplayTargetRef,
     settingsRef,
     highlightMarksRef,
-    deferredCommandRef,
     onEventRef,
     reanchorStagedToolbarRef,
     bootstrapProgressGuard,
@@ -390,41 +311,13 @@ export function ReadingShell(props: ReadingShellProps) {
     setReadiness,
     setErrorMessage,
     reportOperationError,
-    onBootstrapReady,
+    clearDeferredCommand,
+    flushDeferredCommand,
     onDescribeCfiReady: props.onDescribeCfiReady,
     onProbeCfiReady: props.onProbeCfiReady,
     onDisplayCfiReady: props.onDisplayCfiReady,
     onSearchReady: props.onSearchReady,
   });
-
-  useEffect(() => {
-    const cmd = props.command;
-    if (!cmd) return;
-    if (lastHandledCommandSeqRef.current === cmd.seq) return;
-    lastHandledCommandSeqRef.current = cmd.seq;
-
-    void (async () => {
-      const generation = engineGenerationRef.current;
-      try {
-        const engine = engineRef.current;
-        if (cmd.value.type === "displaySearchResult") {
-          latestSearchResultCommandRef.current = { seq: cmd.seq, cfi: cmd.value.cfi };
-        }
-        if (!engine || !isReaderFullyReady(readiness)) {
-          deferredCommandRef.current = cmd;
-          return;
-        }
-        await runRuntimeCommand(cmd.value, cmd.seq);
-      } catch (err) {
-        reportOperationError(
-          err,
-          "Command failed.",
-          generation,
-          getCommandFailureKind(cmd.value),
-        );
-      }
-    })();
-  }, [props.command, readiness, reportOperationError, runRuntimeCommand]);
 
   useEffect(() => {
     if (!props.settings) return;
@@ -533,25 +426,11 @@ export function ReadingShell(props: ReadingShellProps) {
   // Staged selection toolbar state is owned by `useStagedSelectionToolbar`.
 
   const goPrev = async () => {
-    const generation = engineGenerationRef.current;
-    try {
-      const engine = engineRef.current;
-      if (!engine) return;
-      await runRuntimeCommand({ type: "previous" });
-    } catch (err) {
-      reportOperationError(err, "Previous page failed.", generation, "navigation");
-    }
+    await runImmediateCommand({ type: "previous" }, "Previous page failed.");
   };
 
   const goNext = async () => {
-    const generation = engineGenerationRef.current;
-    try {
-      const engine = engineRef.current;
-      if (!engine) return;
-      await runRuntimeCommand({ type: "next" });
-    } catch (err) {
-      reportOperationError(err, "Next page failed.", generation, "navigation");
-    }
+    await runImmediateCommand({ type: "next" }, "Next page failed.");
   };
 
   const durableToolbarItem =
@@ -675,20 +554,6 @@ function waitForReaderLayout(): Promise<void> {
       window.requestAnimationFrame(() => resolve());
     });
   });
-}
-
-function getCommandFailureKind(command: ReadingShellCommandValue): ReaderOperationFailureKind {
-  switch (command.type) {
-    case "display":
-      return "display";
-    case "displaySearchResult":
-      return "search-result";
-    case "next":
-    case "previous":
-      return "navigation";
-    case "resize":
-      return "reflow";
-  }
 }
 
 function chooseClickToolbarPlacement({
