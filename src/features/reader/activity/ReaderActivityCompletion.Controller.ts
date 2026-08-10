@@ -7,7 +7,7 @@ import { buildReturnLabel, saveReaderReturnTarget } from "../ReaderReturnTarget.
 import type { OpenedBook } from "../Reader.Types";
 import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 
-const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
+const READER_FINISH_PROGRESS_THRESHOLD = 0.99;
 
 export function useReaderActivityCompletionController({
   openedBook,
