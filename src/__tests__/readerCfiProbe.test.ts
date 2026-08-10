@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { probeReaderCfi } from "../features/reader/shell/readerCfiProbe";
+import { probeReaderCfi } from "../features/reader/shell/ReaderCfiProbe.Adapter";
 
 describe("probeReaderCfi", () => {
   it("returns ok probe results", async () => {

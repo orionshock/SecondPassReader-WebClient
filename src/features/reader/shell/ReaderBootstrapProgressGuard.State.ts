@@ -1,4 +1,4 @@
-import type { ReadingShellCommandValue } from "./types";
+import type { ReadingShellCommandValue } from "./ReaderShell.Types";
 
 export class ReaderBootstrapProgressGuard {
   private generation: number | null = null;

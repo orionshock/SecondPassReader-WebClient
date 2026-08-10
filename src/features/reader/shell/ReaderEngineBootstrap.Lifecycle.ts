@@ -12,7 +12,7 @@ import {
   type EpubTsBookEngine,
   type EpubTsBookEngineInit,
 } from "../engine/EpubTsBookEngine";
-import type { ReadingShellEvent } from "./types";
+import type { ReadingShellEvent } from "./ReaderShell.Types";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import { ReaderCapabilityPublicationLifecycle } from "./ReaderCapabilityPublication.Lifecycle";
 import { publishReaderLocation } from "./ReaderLocationPublication.Lifecycle";

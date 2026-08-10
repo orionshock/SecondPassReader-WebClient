@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayReaderCfiSafely } from "../features/reader/shell/readerCfiDisplay";
+import { displayReaderCfiSafely } from "../features/reader/shell/ReaderCfiDisplay.Adapter";
 
 describe("safe reader CFI display", () => {
   it("maps display success to ok true", async () => {

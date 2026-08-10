@@ -100,18 +100,18 @@ This repo is a **standalone browser app**. Keep it statically deployable and ind
 ## Naming and grouping
 
 - Prefer folders for grouping related files, not underscore-based file names.
-- Use standard React/TypeScript naming:
-  - PascalCase for component files/classes/types that represent components, e.g. `BookSearchDrawer.tsx`, `BookSearchResultRow.tsx`
-  - camelCase for hooks/helpers, e.g. `useBookSearchController.ts`, `bookSearchLabels.ts`
+- Use standard React/TypeScript naming with explicit role suffixes for Reading files:
+  - PascalCase for component files/classes/types, e.g. `ReaderBookSearch.Drawer.tsx`, `ReaderBookSearch.ResultRow.tsx`
+  - PascalCase role owners for hooks/helpers, e.g. `ReaderBookSearch.Controller.ts`, `ReaderBookSearch.Labels.ts`
 - For related UI pieces, prefer a feature folder with repeated readable prefixes:
 
   `bookSearch/`
-  - `BookSearchDrawer.tsx`
-  - `BookSearchInputBar.tsx`
-  - `BookSearchResultList.tsx`
-  - `BookSearchResultRow.tsx`
-  - `useBookSearchController.ts`
-  - `bookSearchLabels.ts`
+  - `ReaderBookSearch.Drawer.tsx`
+  - `ReaderBookSearch.InputBar.tsx`
+  - `ReaderBookSearch.ResultList.tsx`
+  - `ReaderBookSearch.ResultRow.tsx`
+  - `ReaderBookSearch.Controller.ts`
+  - `ReaderBookSearch.Labels.ts`
 
 - Avoid underscore grouping such as:
   - `BookSearch_Drawer.tsx`

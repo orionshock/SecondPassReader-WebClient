@@ -1,6 +1,6 @@
 import type { ReaderSearchResult } from "../../domain/types";
-import { getSearchResultDisplayLabel } from "./bookSearchLabels";
-import { renderHighlightedExcerpt } from "./bookSearchText";
+import { getSearchResultDisplayLabel } from "./ReaderBookSearch.Labels";
+import { renderHighlightedExcerpt } from "./ReaderBookSearch.Text";
 
 export function BookSearchResultRow({
   result,

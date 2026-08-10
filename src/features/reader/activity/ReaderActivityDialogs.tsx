@@ -3,7 +3,7 @@ import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInpu
 import { EndOfBookDialog } from "../EndOfBookDialog";
 import { ReaderImportModal } from "../imports/ReaderImportModal";
 import type { ReaderImportFailureAction } from "../imports/readerImportFormats";
-import { BookSearchDrawer } from "../shell/bookSearch/BookSearchDrawer";
+import { BookSearchDrawer } from "../shell/bookSearch/ReaderBookSearch.Drawer";
 import type { ReaderActivityRenderState } from "./readerActivityTypes";
 
 export function ReaderActivityDialogs({

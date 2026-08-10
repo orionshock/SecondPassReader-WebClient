@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReaderSearchResult } from "../../domain/types";
 import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
-import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./bookSearchConstants";
-import { useInitialBookSearch } from "./useInitialBookSearch";
+import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./ReaderBookSearch.Constants";
+import { useInitialBookSearch } from "./ReaderBookSearchInitial.Lifecycle";
 
 export function useBookSearchController({
   open,

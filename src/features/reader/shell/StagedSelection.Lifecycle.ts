@@ -2,7 +2,7 @@ import type { StagedSelectionNavigationIntent } from "../domain/ReaderBridge.Typ
 import {
   debugStagedSelection,
   previewStagedSelectionCfi,
-} from "./StagedSelectionDebug.Diagnostics";
+} from "./ReaderStagedSelection.Diagnostics";
 
 export type StagedSelectionRelocationResult = {
   action: "preserved" | "canceled" | "ignored";

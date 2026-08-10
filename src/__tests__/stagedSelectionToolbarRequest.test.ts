@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isStagedToolbarReanchorRequestCurrent } from "../features/reader/shell/useStagedSelectionToolbar";
+import { isStagedToolbarReanchorRequestCurrent } from "../features/reader/shell/ReaderStagedSelection.Controller";
 
 describe("staged toolbar re-anchor requests", () => {
   it("accepts only the newest measurement for the currently staged CFI", () => {

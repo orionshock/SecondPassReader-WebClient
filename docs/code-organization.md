@@ -25,8 +25,8 @@ Do not split just to reduce line count. Split when the extracted file has a clea
 
 ## Naming
 
-- Component files use PascalCase, such as `BookSearchDrawer.tsx`.
-- Hooks and helpers use camelCase, such as `useBookSearchController.ts` and `bookSearchLabels.ts`.
+- Reading component files use PascalCase role suffixes, such as `ReaderBookSearch.Drawer.tsx`.
+- Reading hooks and helpers use PascalCase role owners, such as `ReaderBookSearch.Controller.ts` and `ReaderBookSearch.Labels.ts`.
 - Prefer folders over underscore grouping.
 - Avoid generic `utils` dumping grounds.
 
@@ -36,12 +36,12 @@ Reader search:
 
 ```text
 src/features/reader/shell/bookSearch/
-  BookSearchDrawer.tsx
-  BookSearchInputBar.tsx
-  BookSearchResultList.tsx
-  BookSearchResultRow.tsx
-  useBookSearchController.ts
-  bookSearchLabels.ts
+  ReaderBookSearch.Drawer.tsx
+  ReaderBookSearch.InputBar.tsx
+  ReaderBookSearch.ResultList.tsx
+  ReaderBookSearch.ResultRow.tsx
+  ReaderBookSearch.Controller.ts
+  ReaderBookSearch.Labels.ts
 ```
 
 Reader imports:
@@ -69,4 +69,3 @@ Be careful extracting around:
 - renderer mark painting
 
 Chrome UI state should not recreate the EPUB engine.
-

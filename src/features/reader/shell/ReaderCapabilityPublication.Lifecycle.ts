@@ -5,8 +5,8 @@ import type {
   ReaderSearchBookHandle,
 } from "../domain/ReaderBridge.Types";
 import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import { displayReaderCfiSafely } from "./readerCfiDisplay";
-import { probeReaderCfi } from "./readerCfiProbe";
+import { displayReaderCfiSafely } from "./ReaderCfiDisplay.Adapter";
+import { probeReaderCfi } from "./ReaderCfiProbe.Adapter";
 import type { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import type { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import type { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";

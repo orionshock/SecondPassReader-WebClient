@@ -1,6 +1,6 @@
 import type { ReaderSearchResult } from "../../domain/types";
-import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./bookSearchConstants";
-import { BookSearchResultRow } from "./BookSearchResultRow";
+import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./ReaderBookSearch.Constants";
+import { BookSearchResultRow } from "./ReaderBookSearch.ResultRow";
 
 export function BookSearchResultList({
   ready,

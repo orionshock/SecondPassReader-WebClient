@@ -3,7 +3,7 @@ import type { HighlightMarkClick } from "../engine/highlightMarks";
 import type {
   DurableAnnotationToolbarItem,
   DurableAnnotationToolbarPosition,
-} from "./DurableAnnotationToolbar";
+} from "./ReaderDurableAnnotationToolbar.Toolbar";
 
 type DurableToolbarState = {
   annotationId: string;

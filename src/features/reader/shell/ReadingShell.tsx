@@ -6,7 +6,7 @@ import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from ".
 import type {
   ReadingShellCommand,
   ReadingShellEvent,
-} from "./types";
+} from "./ReaderShell.Types";
 import type {
   ReaderDescribeCfiHandle,
   ReaderDisplayCfiHandle,
@@ -18,9 +18,9 @@ import type {
 } from "../domain/ReaderBridge.Types";
 import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
-import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
-import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
-import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem } from "./DurableAnnotationToolbar";
+import { SelectionHighlightToolbar } from "./ReaderSelectionHighlightToolbar.Toolbar";
+import { TableOfContentsDrawer } from "./ReaderTableOfContents.Drawer";
+import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem } from "./ReaderDurableAnnotationToolbar.Toolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import { observeReaderMountResize } from "./ReaderMountResize.Lifecycle";
 import {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import type { ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "./types";
+import type { ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "./ReaderShell.Types";
 import {
   isExplicitProgressNavigationCommand,
   type ReaderBootstrapProgressGuard,

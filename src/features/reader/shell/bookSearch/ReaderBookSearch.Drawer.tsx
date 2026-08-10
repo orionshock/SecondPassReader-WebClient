@@ -2,9 +2,9 @@ import { useEffect, useRef } from "react";
 import { MaterialIcon } from "../../../../components/MaterialIcon";
 import type { ReaderSearchResult } from "../../domain/types";
 import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
-import { BookSearchInputBar } from "./BookSearchInputBar";
-import { BookSearchResultList } from "./BookSearchResultList";
-import { useBookSearchController } from "./useBookSearchController";
+import { BookSearchInputBar } from "./ReaderBookSearch.InputBar";
+import { BookSearchResultList } from "./ReaderBookSearch.ResultList";
+import { useBookSearchController } from "./ReaderBookSearch.Controller";
 
 export function BookSearchDrawer({
   open,

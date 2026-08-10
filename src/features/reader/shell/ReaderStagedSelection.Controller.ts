@@ -7,12 +7,12 @@ import type {
   StagedSelectionSource,
   StagedSelectionToolbarPosition,
 } from "../domain/ReaderBridge.Types";
-import { getStagedSelectionToolbarPosition } from "./stagedSelectionToolbarPlacement";
-import type { StagedSelectionToolbarSize } from "./stagedSelectionToolbarPlacement";
+import { getStagedSelectionToolbarPosition } from "./ReaderStagedToolbar.Placement";
+import type { StagedSelectionToolbarSize } from "./ReaderStagedToolbar.Placement";
 import {
   debugStagedSelection,
   previewStagedSelectionCfi,
-} from "./StagedSelectionDebug.Diagnostics";
+} from "./ReaderStagedSelection.Diagnostics";
 
 export type StagedSelectionToolbarPos = StagedSelectionToolbarPosition;
 

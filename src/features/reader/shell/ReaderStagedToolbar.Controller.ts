@@ -6,10 +6,10 @@ import type {
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
 import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import type { SelectionHighlightToolbarProps } from "./SelectionHighlightToolbar";
+import type { SelectionHighlightToolbarProps } from "./ReaderSelectionHighlightToolbar.Toolbar";
 import { isReaderFullyReady, type ReaderReadinessState } from "./ReaderReadiness.State";
 import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
-import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
+import { useStagedSelectionToolbar } from "./ReaderStagedSelection.Controller";
 
 type MutableRef<T> = { current: T };
 

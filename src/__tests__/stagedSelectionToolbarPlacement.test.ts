@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getStagedSelectionToolbarPosition } from "../features/reader/shell/stagedSelectionToolbarPlacement";
+import { getStagedSelectionToolbarPosition } from "../features/reader/shell/ReaderStagedToolbar.Placement";
 
 describe("staged selection toolbar placement", () => {
   const wrapper = { left: 100, top: 50, width: 600, height: 400 } as DOMRect;

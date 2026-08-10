@@ -143,7 +143,7 @@ Client references:
 
 - `src/features/reader/engine/EpubTsBookEngine.ts`, `displayCfiSafely()` and
   `getVisibleCfiRangeAnchor()`
-- `src/features/reader/shell/useStagedSelectionToolbar.ts`, `reanchorStagedToolbar()`
+- `src/features/reader/shell/ReaderStagedSelection.Controller.ts`, `reanchorStagedToolbar()`
 - `src/features/reader/shell/StagedSelection.Lifecycle.ts`
 - `src/features/reader/shell/ReadingShell.tsx`, relocation handling
 
