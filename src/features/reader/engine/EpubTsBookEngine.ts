@@ -7,15 +7,15 @@ import type { ReaderSelection, ReaderSelectionAnchor } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
 import { createEpubTsHighlightRenderer, type HighlightMarkClick } from "./EpubTsHighlightRenderer.Engine";
-import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
-import { extractSelectionTextAndContext } from "./selectionExtraction";
-import { searchEpubTsBook } from "./EpubTsBookSearch";
+import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./EpubTsLocation.Mapper";
+import { extractSelectionTextAndContext } from "./EpubSelection.Extractor";
+import { searchEpubTsBook } from "./EpubTsBookSearch.Engine";
 import { ReaderSearchController } from "./ReaderSearch.Controller";
 import {
   resolveReaderReflowCfi,
   type ReaderReflowTargetOptions,
 } from "./ReaderReflowTarget.Engine";
-import { getVisibleCfiRangeAnchor } from "./visibleCfiRangeAnchor";
+import { getVisibleCfiRangeAnchor } from "./EpubVisibleCfiRangeAnchor.Placement";
 import { createEpubTsRenditionSettingsEngine } from "./EpubTsRenditionSettings.Engine";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;

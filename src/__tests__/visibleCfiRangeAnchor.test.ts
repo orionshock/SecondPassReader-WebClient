@@ -4,7 +4,7 @@ import {
   chooseVisibleRangeRect,
   getVisibleCfiRangeAnchor,
   getVisibleRangeVerticalExtent,
-} from "../features/reader/engine/visibleCfiRangeAnchor";
+} from "../features/reader/engine/EpubVisibleCfiRangeAnchor.Placement";
 
 describe("visible CFI range anchor", () => {
   it("chooses the first visible nonzero client rect", () => {

@@ -76,7 +76,7 @@ window start. The loop also finds only the first occurrence in each candidate wi
 
 Client references:
 
-- `src/features/reader/engine/EpubTsBookSearch.ts`
+- `src/features/reader/engine/EpubTsBookSearch.Engine.ts`
 - `src/features/reader/imports/ReaderImportSearchPlan.Queries.ts`
 - `src/features/reader/imports/ReaderImportSearch.Queries.ts`
 
@@ -263,7 +263,7 @@ Client references:
 
 - `src/features/reader/engine/EpubTsBookEngine.ts`, `probeCfi()`, `displayCfiSafely()`, and
   `getVisibleCfiRangeAnchor()`
-- `src/features/reader/engine/visibleCfiRangeAnchor.ts`
+- `src/features/reader/engine/EpubVisibleCfiRangeAnchor.Placement.ts`
 
 The client deliberately separates:
 
@@ -418,7 +418,7 @@ match quality, or a way to search across section boundaries.
 
 Client references:
 
-- `src/features/reader/engine/EpubTsBookSearch.ts`
+- `src/features/reader/engine/EpubTsBookSearch.Engine.ts`
 - `src/features/reader/imports/ReaderImportSearchPlan.Queries.ts`
 - `src/features/reader/engine/EpubTsImportRangeRepair.Engine.ts`
 
@@ -449,7 +449,7 @@ The public APIs provide CFI conversion and visible `Range` lookup, but no stable
 
 Client references:
 
-- `src/features/reader/engine/visibleCfiRangeAnchor.ts`
+- `src/features/reader/engine/EpubVisibleCfiRangeAnchor.Placement.ts`
 - `src/features/reader/domain/types.ts`, `ReaderSelectionAnchor`
 - `docs/known-limits.md`, annotation range adjustment
 
