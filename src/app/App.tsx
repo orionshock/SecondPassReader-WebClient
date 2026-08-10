@@ -10,7 +10,6 @@ import { navigateTo, parseCurrentRoute } from "./navigation";
 import {
   clearActiveConnection,
   getActiveConnection,
-  saveConnectionProfile,
   type ConnectionProfile,
 } from "../storage/connectionProfiles";
 import { getAppTheme, saveAppTheme, type AppTheme } from "../storage/appTheme";
@@ -19,15 +18,14 @@ import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
 import { ApiError } from "@secondpass/client";
 import { createSplClientFromProfile } from "./createSplClient";
-import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
 import type { SecondPassClient } from "@secondpass/client";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
-import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
 import { debugLog } from "../lib/debug/DebugLogger";
 import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
 import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
+import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
@@ -49,6 +47,9 @@ function AppShell() {
     return getActiveConnection();
   }, [profilesVersion]);
   const selectedProfileId = selectedProfile?.id ?? null;
+  const refreshProfiles = useCallback(() => {
+    setProfilesVersion((version) => version + 1);
+  }, []);
 
   const splClient: SecondPassClient | null = useMemo(() => {
     if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return null;
@@ -61,7 +62,6 @@ function AppShell() {
   const navSeqRef = useRef(0);
   const routeRef = useRef<AppRoute | null>(route);
   routeRef.current = route;
-  const lastMeCheckRef = useRef<Record<string, number>>({});
   const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
 
   useEffect(() => {
@@ -95,48 +95,14 @@ function AppShell() {
     });
   }, [route]);
 
-  const checkMe = useCallback(async () => {
-    // Keep verified user display fresh on page load and periodic focus changes.
-    if (workflowStep !== "library_home") return;
-    if (!selectedProfile?.id) return;
-    if (!selectedProfile.apiBaseUrl || !selectedProfile.accessToken || !splClient) return;
-
-    const profileId = selectedProfile.id;
-    const now = Date.now();
-    const last = lastMeCheckRef.current[profileId] ?? 0;
-    if (now - last < 60_000) return; // throttle (avoid spamming)
-    lastMeCheckRef.current[profileId] = now;
-
-    try {
-      const { currentUser, serverInfo } = await loadAuthenticatedContext(splClient);
-      clearAuthorizationFailure();
-      const nextProfile = applyAuthenticatedContextToProfile(selectedProfile, currentUser, serverInfo, new Date().toISOString(), {
-        markVerified: false,
-      });
-      const changed = hasCurrentAccountProfileChanged(selectedProfile, nextProfile);
-
-      if (!changed) return;
-
-      saveConnectionProfile(nextProfile);
-      refreshProfiles();
-    } catch (error) {
-      reportAuthorizationFailure(error);
-      // ignore: keep existing verified identity if refresh fails
-    }
-  }, [clearAuthorizationFailure, reportAuthorizationFailure, selectedProfile, splClient, workflowStep]);
-
-  useEffect(() => {
-    void checkMe();
-  }, [checkMe]);
-
-  useEffect(() => {
-    if (workflowStep !== "library_home") return;
-    const onFocus = () => {
-      void checkMe();
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [checkMe, workflowStep]);
+  useAppAuthenticatedContextController({
+    workflowStep,
+    profile: selectedProfile,
+    spl: splClient,
+    clearAuthorizationFailure,
+    reportAuthorizationFailure,
+    onProfileChanged: refreshProfiles,
+  });
 
   // Bump a sequence number on any route change so async opens can be cancelled logically.
   useEffect(() => {
@@ -321,10 +287,6 @@ function AppShell() {
     reportAuthorizationFailure,
     splClient,
   ]);
-
-  function refreshProfiles() {
-    setProfilesVersion((v) => v + 1);
-  }
 
   function handleConnectionChanged() {
     clearAuthorizationFailure();
