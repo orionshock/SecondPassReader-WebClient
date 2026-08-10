@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking } from "../features/connection/ClientApiLinking";
 import { ClientApiVerification } from "../features/connection/ClientApiVerification";
 import { ConnectServerScreen } from "../features/connection/ConnectServerScreen";
-import type { OpenedBook } from "../features/reader/Reader.Types";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { AppRoute } from "./navigation";
 import { navigateTo, parseCurrentRoute } from "./navigation";
@@ -15,26 +14,20 @@ import {
 import { getAppTheme, saveAppTheme, type AppTheme } from "../storage/appTheme";
 import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
-import { openBookForReader } from "../features/library/openBookForReader";
-import { ApiError } from "@secondpass/client";
 import { createSplClientFromProfile } from "./createSplClient";
 import type { SecondPassClient } from "@secondpass/client";
-import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
 import { debugLog } from "../lib/debug/DebugLogger";
 import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
 import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
+import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
-  const [openedBook, setOpenedBook] = useState<OpenedBook | null>(null);
-  const activeOpenedBookRef = useRef<OpenedBook | null>(null);
   const [view, setView] = useState<"main" | "settings">("main");
   const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
-  const [readerRestoreError, setReaderRestoreError] = useState<string | null>(null);
-  const [readerRestoreAttempt, setReaderRestoreAttempt] = useState(0);
   const [appTheme, setAppTheme] = useState<AppTheme>(() => getAppTheme());
   const {
     authorizationFailure,
@@ -58,10 +51,6 @@ function AppShell() {
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
 
-  const openingBookRef = useRef<string | null>(null);
-  const navSeqRef = useRef(0);
-  const routeRef = useRef<AppRoute | null>(route);
-  routeRef.current = route;
   const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
 
   useEffect(() => {
@@ -104,10 +93,18 @@ function AppShell() {
     onProfileChanged: refreshProfiles,
   });
 
-  // Bump a sequence number on any route change so async opens can be cancelled logically.
-  useEffect(() => {
-    navSeqRef.current += 1;
-  }, [route]);
+  const {
+    openedBook,
+    readerRestoreError,
+    closeReader,
+    retryReaderRestore,
+  } = useAppReaderOpenController({
+    route,
+    workflowStep,
+    profile: selectedProfile,
+    spl: splClient,
+    reportAuthorizationFailure,
+  });
 
   useEffect(() => {
     if (route?.kind === "settings") setView("settings");
@@ -197,128 +194,15 @@ function AppShell() {
     }
   }, [openedBook?.book?.title, route]);
 
-  useEffect(() => {
-    // Leaving reader route closes reader state (do not keep blobs around).
-    if (!openedBook) return;
-    if (route?.kind === "reader") return;
-    handleCloseReader();
-  }, [openedBook, route?.kind]);
-
-  useEffect(() => {
-    // Reader route restore/open: on reload (or direct navigation) open the requested book.
-    if (workflowStep !== "library_home") return;
-    if (!route || route.kind !== "reader") return;
-    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken || !splClient) return;
-
-    const requestedBookId = route.bookId;
-    if (openedBook?.book?.id === requestedBookId) return;
-    if (openingBookRef.current === requestedBookId) return;
-
-    setReaderRestoreError(null);
-    openingBookRef.current = requestedBookId;
-
-    // React dev StrictMode intentionally mounts/unmounts components twice to detect unsafe effects.
-    // Guard async work so the first mount's async does not "win" or interfere with the second mount.
-    let cancelled = false;
-
-    void (async () => {
-      const seq = navSeqRef.current;
-      try {
-        const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
-          let timeoutId: ReturnType<typeof setTimeout> | undefined;
-          const timeoutPromise = new Promise<T>((_resolve, reject) => {
-            timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s.`)), ms);
-          });
-          try {
-            return await Promise.race([promise, timeoutPromise]);
-          } finally {
-            if (timeoutId) clearTimeout(timeoutId);
-          }
-        };
-
-        const book = await withTimeout(
-          splClient.library.books.get(requestedBookId),
-          30_000,
-          "Loading book details",
-        );
-        if (cancelled) return;
-        if (seq !== navSeqRef.current) return;
-        const opened = await openBookForReader({ spl: splClient, book });
-        const currentRoute = routeRef.current;
-        const currentOpened = resolveReaderOpenCompletion(
-          opened,
-          !cancelled
-            && seq === navSeqRef.current
-            && currentRoute?.kind === "reader"
-            && currentRoute.bookId === requestedBookId,
-        );
-        if (!currentOpened) return;
-        handleBookOpened(currentOpened);
-      } catch (e) {
-        if (cancelled) return;
-        reportAuthorizationFailure(e);
-        const message =
-          e instanceof ApiError && e.status === 404
-            ? "That book could not be found or you do not have access to it."
-            : e instanceof Error
-              ? e.message
-              : "Failed to open book.";
-        setReaderRestoreError(message);
-        navigateTo({ kind: "home" });
-      } finally {
-        if (openingBookRef.current === requestedBookId) openingBookRef.current = null;
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      // In React StrictMode (dev), effects are mounted/unmounted twice. If we leave the guard set
-      // during the simulated unmount, the second mount run will be incorrectly blocked.
-      if (openingBookRef.current === requestedBookId) {
-        openingBookRef.current = null;
-      }
-    };
-  }, [
-    openedBook?.book?.id,
-    route,
-    selectedProfile,
-    workflowStep,
-    readerRestoreAttempt,
-    reportAuthorizationFailure,
-    splClient,
-  ]);
-
   function handleConnectionChanged() {
     clearAuthorizationFailure();
     refreshProfiles();
   }
 
-  function handleBookOpened(opened: OpenedBook) {
-    // If the user navigated away from the reader route while this book was opening, do not re-open it.
-    if (route?.kind !== "reader") {
-      releaseOpenedBook(opened);
-      return;
-    }
-    const previous = activeOpenedBookRef.current;
-    activeOpenedBookRef.current = opened;
-    releaseOpenedBook(previous);
-    setOpenedBook(opened);
-    navigateTo({ kind: "reader", bookId: String(opened.book.id), search: route.search });
-  }
-
-  function handleCloseReader() {
-    debugLog("reader", "reader closed");
-    const active = activeOpenedBookRef.current;
-    activeOpenedBookRef.current = null;
-    releaseOpenedBook(active);
-    setOpenedBook(null);
-    openingBookRef.current = null;
-  }
-
   function returnToConnect(options?: { replace?: boolean }) {
     clearAuthorizationFailure();
     clearActiveConnection();
-    handleCloseReader();
+    closeReader();
     refreshProfiles();
     setView("main");
     navigateTo({ kind: "connect" }, options);
@@ -342,23 +226,23 @@ function AppShell() {
           canNavigate={workflowStep === "library_home"}
           onShowHome={() => {
             navigateTo({ kind: "home" });
-            handleCloseReader();
+            closeReader();
           }}
           onShowLibrary={() => {
             navigateTo({ kind: "library" });
-            handleCloseReader();
+            closeReader();
           }}
           onShowSessions={() => {
             navigateTo({ kind: "sessions" });
-            handleCloseReader();
+            closeReader();
           }}
           onShowShelves={() => {
             navigateTo({ kind: "shelves" });
-            handleCloseReader();
+            closeReader();
           }}
           onShowSettings={() => {
             navigateTo({ kind: "settings", tab: "appearance" });
-            handleCloseReader();
+            closeReader();
           }}
         />
       )}
@@ -420,13 +304,8 @@ function AppShell() {
                 spl={splClient}
                 openedBook={openedBook}
                 readerRestoreError={readerRestoreError}
-                onCloseReader={handleCloseReader}
-                onRetryReaderRestore={() => {
-                  // Force re-run of the reader restore effect by clearing the in-flight guard.
-                  openingBookRef.current = null;
-                  setReaderRestoreError(null);
-                  setReaderRestoreAttempt((v) => v + 1);
-                }}
+                onCloseReader={closeReader}
+                onRetryReaderRestore={retryReaderRestore}
               />
             ) : null}
           </>
