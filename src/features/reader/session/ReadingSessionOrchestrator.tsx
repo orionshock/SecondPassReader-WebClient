@@ -18,7 +18,7 @@ import { toReaderAnnotation } from "../annotations/annotationUtils";
 import { useSessionAnnotations } from "./useSessionAnnotations";
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";
 import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
-import { useCurrentSessionMeta } from "./useCurrentSessionMeta";
+import { useCurrentSessionMeta } from "./metadata/CurrentSessionMetadata.Controller";
 import { buildReaderLocationLabel, buildReaderStatusLine } from "../display/ReaderLocation.Presenter";
 import {
   useCurrentSessionAnnotationActions,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MarginaliaProgressInput, SecondPassClient } from "@secondpass/client";
+import { closeReadingSession } from "../close/ReadingSessionClose.Actions";
 
 export type CurrentSessionMeta = {
   name: string | null;
@@ -66,21 +67,15 @@ export function useCurrentSessionMeta(args: {
 
   const closeCurrentSession = useCallback(
     async (input: { name: string; notes: string }) => {
-      if (!args.spl) throw new Error("Not connected.");
-      if (!args.sessionId) throw new Error("Missing session id.");
-
-      const savedName = currentSessionMeta.name?.trim() ?? "";
-      const savedNotes = currentSessionMeta.notes ?? "";
-      const payload: { name?: string; notes?: string } = {};
-      if (input.name !== savedName) payload.name = input.name;
-      if (input.notes !== savedNotes) payload.notes = input.notes;
-      if (Object.keys(payload).length > 0) {
-        await args.spl.marginalia.sessions.update(args.sessionId, payload);
-      }
-      await args.spl.marginalia.sessions.close(
-        args.sessionId,
-        args.finalProgress ? { progress: args.finalProgress } : undefined,
-      );
+      await closeReadingSession({
+        spl: args.spl,
+        sessionId: args.sessionId,
+        savedName: currentSessionMeta.name,
+        savedNotes: currentSessionMeta.notes,
+        name: input.name,
+        notes: input.notes,
+        finalProgress: args.finalProgress,
+      });
       setCurrentSessionMeta((prev) => ({ ...prev, name: input.name || null, notes: input.notes || null }));
     },
     [args.finalProgress, args.spl, args.sessionId, currentSessionMeta.name, currentSessionMeta.notes],
