@@ -26,6 +26,27 @@ export type HighlightMarkBounds = {
   height: number;
 };
 
+const STAGED_SELECTION_MARK_ID = "__staged_selection__";
+
+/**
+ * epub-ts identifies highlights by CFI and renderer type, not by application id.
+ * A staged preview at an existing durable CFI must therefore replace that CFI's
+ * renderer mark temporarily. The durable marks remain in application state and
+ * are restored when the staged preview is cleared.
+ */
+export function reconcileHighlightMarksForRenderer(marks: ReaderHighlightMark[]): ReaderHighlightMark[] {
+  const stagedCfiRanges = new Set<string>();
+  for (const mark of marks) {
+    const cfiRange = typeof mark?.cfiRange === "string" ? mark.cfiRange.trim() : "";
+    if (mark?.id === STAGED_SELECTION_MARK_ID && cfiRange) stagedCfiRanges.add(cfiRange);
+  }
+
+  return marks.filter((mark) => {
+    const cfiRange = typeof mark?.cfiRange === "string" ? mark.cfiRange.trim() : "";
+    return mark?.id === STAGED_SELECTION_MARK_ID || !stagedCfiRanges.has(cfiRange);
+  });
+}
+
 export function createHighlightMarkPainter(args: {
   rendition: Rendition;
   onError?: (error: unknown) => void;
@@ -138,7 +159,7 @@ export function createHighlightMarkPainter(args: {
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       const nextIds = new Set<string>();
       const validMarks: ReaderHighlightMark[] = [];
-      for (const m of marks) {
+      for (const m of reconcileHighlightMarksForRenderer(marks)) {
         if (!m || typeof m.id !== "string") continue;
         const id = m.id;
         const cfiRange = typeof m.cfiRange === "string" ? m.cfiRange.trim() : "";
@@ -173,16 +194,9 @@ export function createHighlightMarkPainter(args: {
         const mustRepaintAfterSharedCfiRemoval = removedCfiRanges.has(cfiRange);
         if (existing && existing.cfiRange === cfiRange && existing.colorKey === nextColorKey && !mustRepaintAfterSharedCfiRemoval) continue;
 
-        // If this id moved, remove the old one first (epub-ts keys by cfiRange+type).
-        try {
-          if (existing?.cfiRange) {
-            removeRendererHighlight(existing.cfiRange);
-          } else if (mustRepaintAfterSharedCfiRemoval) {
-            removeRendererHighlight(cfiRange);
-          }
-        } catch {
-          // ignore
-        }
+        // If this id moved or changed, remove its old renderer mark first. A
+        // shared-CFI stale mark was already removed by the stale-id pass above.
+        if (existing?.cfiRange) removeRendererHighlight(existing.cfiRange);
 
         try {
           rendition.annotations.highlight(
@@ -235,7 +249,7 @@ export function createHighlightMarkPainter(args: {
 }
 
 function isReservedHighlightId(id: string): boolean {
-  return id === "__staged_selection__" || id === "sp-search-result-highlight";
+  return id === STAGED_SELECTION_MARK_ID || id === "sp-search-result-highlight";
 }
 
 function getEventClientPoint(event: Event | undefined): { clientX: number; clientY: number } | null {
