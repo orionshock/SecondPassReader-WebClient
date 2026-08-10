@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
 import type { OpenedBook } from "./types";
 import type { CompactBook, SecondPassClient } from "@secondpass/client";
-import { useReaderImportActivation } from "./imports/useReaderImportActivation";
 import { useReaderImportJob } from "./imports/useReaderImportJob";
 import { getReaderSettingsPresentation } from "./settings/readerDisplaySettings";
 import { useReaderDisplaySettings } from "./settings/useReaderDisplaySettings";
@@ -14,18 +13,11 @@ import { buildReturnLabel, saveReaderReturnTarget } from "./readerReturnTarget";
 import { ReaderActivityDialogs } from "./activity/ReaderActivityDialogs";
 import { ReaderActivityHeader } from "./activity/ReaderActivityHeader";
 import { ReaderActivitySidePanels } from "./activity/ReaderActivitySidePanels";
-import { completeReaderImportRowManually } from "./imports/ReaderImportManualCompletion.Actions";
+import { useReaderActivityImportController } from "./activity/ReaderActivityImport.Controller";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/readerActivityTypes";
-import {
-  canMutateReaderBookmark,
-  type ReaderBookmarkMutationResult,
-} from "./session/annotations/CurrentSessionBookmark.Actions";
+import { canMutateReaderBookmark } from "./session/annotations/CurrentSessionBookmark.Actions";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
-
-export function shouldAcceptImportedBookmarkMutation(result: ReaderBookmarkMutationResult): boolean {
-  return result.ok && result.action === "created";
-}
 
 export function ReadingActivity({
   openedBook,
@@ -44,7 +36,6 @@ export function ReadingActivity({
 
   const [marginaliaOpen, setMarginaliaOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);
   const [workspaceFocusRequest, setWorkspaceFocusRequest] = useState<ReaderActivityWorkspaceFocusRequest | null>(null);
@@ -88,8 +79,6 @@ export function ReadingActivity({
             setMarginaliaOpen={setMarginaliaOpen}
             searchOpen={searchOpen}
             setSearchOpen={setSearchOpen}
-            importModalOpen={importModalOpen}
-            setImportModalOpen={setImportModalOpen}
             readerImport={readerImport}
             closeDialogOpen={closeDialogOpen}
             setCloseDialogOpen={setCloseDialogOpen}
@@ -114,8 +103,6 @@ function ReaderActivityContent({
   setMarginaliaOpen,
   searchOpen,
   setSearchOpen,
-  importModalOpen,
-  setImportModalOpen,
   readerImport,
   closeDialogOpen,
   setCloseDialogOpen,
@@ -133,8 +120,6 @@ function ReaderActivityContent({
   setMarginaliaOpen: (open: boolean) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
-  importModalOpen: boolean;
-  setImportModalOpen: (open: boolean) => void;
   readerImport: ReturnType<typeof useReaderImportJob>;
   closeDialogOpen: boolean;
   setCloseDialogOpen: (open: boolean) => void;
@@ -169,8 +154,6 @@ function ReaderActivityContent({
   const showHomeAction = returnTarget.kind !== "home";
   const canLookupNextBook = seriesId != null && currentSeriesIndex != null;
   const headerEndLabel = nextSeriesBook ? "Next book..." : "End options...";
-  const importDrawerInLayout = Boolean(readerImport.drawerOpen && readerImport.job);
-  const lastImportDrawerLayoutRef = useRef(importDrawerInLayout);
   const closeAfterOptions: CloseSessionAfterOption[] = [
     ...(nextSeriesBook ? [{ action: "nextBook" as const, label: "Start next book" }] : []),
     { action: "restartBook", label: "Start this book again" },
@@ -178,69 +161,18 @@ function ReaderActivityContent({
     { action: "detail", label: "View closed session" },
     { action: "sessions", label: "Go to sessions" },
   ];
-  const activateImportRow = useReaderImportActivation({
-    job: readerImport.job,
-    searchBook: readerState.search.searchBook,
-    probeCfi: readerState.search.probeCfi,
-    displayCfi: readerState.search.displayCfi,
-    stagedSelectionHandle: readerState.stagedSelection.handle,
-    selectRow: readerImport.selectRow,
-    setRowStatus: readerImport.setRowStatus,
-    setRowActivationState: readerImport.setRowActivationState,
-    setDrawerOpen: readerImport.setDrawerOpen,
-    clearTemporaryHighlight: readerState.search.clearTemporaryHighlight,
-    onBookmarkSuggested: readerImport.suggestBookmark,
+  const activityImport = useReaderActivityImportController({
+    readerImport,
+    search: readerState.search,
+    stagedSelection: readerState.stagedSelection,
+    sendCommand: readerState.sendCommand,
+    toggleBookmarkAtCurrentLocation: annotations.toggleBookmarkAtCurrentLocation,
   });
-
-  const cleanupImportTemporaryState = () => {
-    readerState.stagedSelection.handle?.cancelStagedSelection();
-    readerState.search.clearTemporaryHighlight();
-  };
-
-  const clearImportJob = () => {
-    cleanupImportTemporaryState();
-    readerImport.clearJob();
-  };
-
-  const closeImportDrawer = () => {
-    cleanupImportTemporaryState();
-    readerImport.setDrawerOpen(false);
-  };
-
-  const skipImportRow = (rowId: string) => {
-    const row = readerImport.job?.rows.find((item) => item.id === rowId);
-    if (row?.status === "staged") readerState.stagedSelection.handle?.cancelStagedSelection();
-    readerState.search.clearTemporaryHighlight();
-    readerImport.skipRow(rowId);
-  };
-
-  const markImportRowManuallyCompleted = (rowId: string) => {
-    completeReaderImportRowManually({
-      row: readerImport.job?.rows.find((item) => item.id === rowId),
-      cancelStagedSelection: () => readerState.stagedSelection.handle?.cancelStagedSelection(),
-      clearTemporaryHighlight: readerState.search.clearTemporaryHighlight,
-      markRowManuallyCompleted: readerImport.markRowManuallyCompleted,
-    });
-  };
 
   useEffect(() => {
     if (!initialSearchQuery?.trim()) return;
     setSearchOpen(true);
   }, [initialSearchQuery, setSearchOpen]);
-
-  useEffect(() => {
-    if (lastImportDrawerLayoutRef.current === importDrawerInLayout) return;
-    lastImportDrawerLayoutRef.current = importDrawerInLayout;
-    let cancelled = false;
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        if (!cancelled) readerState.sendCommand({ type: "resize" });
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [importDrawerInLayout, readerState.sendCommand]);
 
   useEffect(() => {
     setEndBookDialogOpen(false);
@@ -334,22 +266,15 @@ function ReaderActivityContent({
         isBookmarked={isBookmarked}
         annotationBusy={Boolean(annotations.busy)}
         bookmarkSuggested={Boolean(readerImport.bookmarkSuggestion)}
-        onToggleBookmark={() => {
-          const suggestion = readerImport.bookmarkSuggestion;
-          void annotations.toggleBookmarkAtCurrentLocation().then((result) => {
-            if (suggestion && shouldAcceptImportedBookmarkMutation(result)) {
-              readerImport.acceptBookmarkSuggestion(suggestion.cfi);
-            }
-          });
-        }}
+        onToggleBookmark={activityImport.toggleBookmark}
         marginaliaOpen={marginaliaOpen}
         onOpenMarginalia={() => setMarginaliaOpen(true)}
         onCloseMarginalia={() => setMarginaliaOpen(false)}
         marginalia={marginalia}
         selectedPreviousSessionIds={selectedPreviousSessionIds}
         importJobActive={Boolean(readerImport.job)}
-        onImportMarginalia={() => setImportModalOpen(true)}
-        onOpenImport={() => readerImport.setDrawerOpen(true)}
+        onImportMarginalia={activityImport.openModal}
+        onOpenImport={activityImport.openDrawer}
         onCloseSession={currentSessionId ? () => setCloseDialogOpen(true) : undefined}
         returnLabel={returnLabel}
         onReturn={() => {
@@ -360,7 +285,7 @@ function ReaderActivityContent({
       />
 
       <ReaderActivitySidePanels
-        importDrawerInLayout={importDrawerInLayout}
+        importDrawerInLayout={activityImport.drawerInLayout}
         shell={shell}
         annotations={annotations}
         currentCfi={state.location?.cfi ?? null}
@@ -369,13 +294,13 @@ function ReaderActivityContent({
         onJumpToCfiRange={readerState.search.jumpToCfiRange}
         readerImport={readerImport}
         readerWidth={readerWidth}
-        onClearImport={clearImportJob}
-        onCloseImport={closeImportDrawer}
+        onClearImport={activityImport.clearJob}
+        onCloseImport={activityImport.closeDrawer}
         onSelectImportRow={(rowId) => {
-          void activateImportRow(rowId);
+          void activityImport.activateRow(rowId);
         }}
-        onMarkImportRowManuallyCompleted={markImportRowManuallyCompleted}
-        onSkipImportRow={skipImportRow}
+        onMarkImportRowManuallyCompleted={activityImport.markRowManuallyCompleted}
+        onSkipImportRow={activityImport.skipRow}
       />
 
       <ReaderActivityDialogs
@@ -388,14 +313,10 @@ function ReaderActivityContent({
           readerState.search.clearTemporaryHighlight();
           setSearchOpen(false);
         }}
-        importModalOpen={importModalOpen}
-        onCloseImportModal={() => setImportModalOpen(false)}
+        importModalOpen={activityImport.modalOpen}
+        onCloseImportModal={activityImport.closeModal}
         onStartImport={readerImport.startImport}
-        onParseImportAction={(action) => {
-          setImportModalOpen(false);
-          if (action.href === "#/settings?tab=tools") navigateTo({ kind: "settings", tab: "tools" });
-          else window.location.hash = action.href;
-        }}
+        onParseImportAction={activityImport.handleParseAction}
         closeDialogOpen={closeDialogOpen}
         closeInitialName={annotations.currentSessionMeta.name ?? ""}
         closeInitialNotes={annotations.currentSessionMeta.notes ?? ""}

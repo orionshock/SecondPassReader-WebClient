@@ -4,7 +4,7 @@ import {
   canMutateReaderBookmark,
   executeReaderBookmarkMutation,
 } from "../features/reader/session/annotations/CurrentSessionBookmark.Actions";
-import { shouldAcceptImportedBookmarkMutation } from "../features/reader/ReadingActivity";
+import { shouldAcceptImportedBookmarkMutation } from "../features/reader/activity/ReaderActivityImport.Controller";
 
 const existingBookmark: MarginaliaAnnotation = {
   id: "bookmark-1",
