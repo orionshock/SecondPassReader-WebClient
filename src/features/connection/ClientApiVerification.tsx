@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CurrentUser } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/connectionProfiles";
-import { createSplClientFromProfile } from "../../app/createSplClient";
+import { createSplClientFromProfile } from "../../app/AppSplClient.Factory";
 import { applyAuthenticatedContextToProfile } from "./accountProfile";
 import { loadAuthenticatedContext } from "./authenticatedContext";
-import { isAuthorizationError } from "../../app/userFacingErrors";
+import { isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
 
 type Props = {
   selectedProfileId?: string | null;

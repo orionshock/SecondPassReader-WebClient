@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
-import { getUserFacingErrorMessage } from "../app/userFacingErrors";
+import { getUserFacingErrorMessage } from "../app/AppUserFacingErrors.Mapper";
 import { RecentReadingLoadFailure } from "../features/library/RecentReadingSection";
 
 describe("recent reading errors", () => {

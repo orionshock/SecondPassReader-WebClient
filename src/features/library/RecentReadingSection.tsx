@@ -1,10 +1,10 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MarginaliaRecentSessions, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo, routeToHash } from "../../app/navigation";
+import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
 import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
-import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
-import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
+import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
 import { loadRecentReading } from "../reader/ReaderMarginalia.Queries";
 import { RecentReadingCarousel } from "./RecentReadingCarousel";
 

@@ -1,4 +1,4 @@
-import type { AppRoute } from "./navigation";
+import type { AppRoute } from "./AppNavigation.Router";
 
 export function shouldShowConnectionRecoveryBanner(input: {
   authorizationFailure: boolean;

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useConnectionRecovery } from "./ConnectionRecoveryContext";
-import { isAuthorizationError } from "./userFacingErrors";
+import { useConnectionRecovery } from "./ConnectionRecovery.Context";
+import { isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 
 export function PageLoadErrorNotice({
   error,

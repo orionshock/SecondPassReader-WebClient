@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { routeToHash } from "../app/navigation";
+import { routeToHash } from "../app/AppNavigation.Router";
 import { HomePage } from "../features/home/HomePage";
 import { getHomeLibrarySearchRoute } from "../features/home/homeLibrarySearch";
 import type { ConnectionProfile } from "../storage/connectionProfiles";

@@ -1,8 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { AppHeader } from "../app/AppHeader";
-import { routeToHash } from "../app/navigation";
+import { AppHeader } from "../app/App.Header";
+import { routeToHash } from "../app/AppNavigation.Router";
 
 describe("App header navigation", () => {
   it("renders an icon-only Home button before the existing navigation", () => {

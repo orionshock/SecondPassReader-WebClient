@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo } from "../../app/AppNavigation.Router";
 import type { CompactBook, SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookResultsView } from "../library/display/BookResultsView";

@@ -4,9 +4,9 @@ import { openBookForReader } from "../features/library/openBookForReader";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import type { OpenedBook } from "../features/reader/Reader.Types";
 import type { ConnectionProfile } from "../storage/connectionProfiles";
-import type { AppWorkflowStep } from "./appWorkflow";
-import type { AppRoute } from "./navigation";
-import { navigateTo } from "./navigation";
+import type { AppWorkflowStep } from "./AppWorkflow.Policy";
+import type { AppRoute } from "./AppNavigation.Router";
+import { navigateTo } from "./AppNavigation.Router";
 import { debugLog } from "../lib/debug/DebugLogger";
 
 export function useAppReaderOpenController({

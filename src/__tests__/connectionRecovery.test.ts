@@ -2,8 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "@secondpass/client";
 import { describe, expect, it } from "vitest";
-import { ConnectionRecoveryBannerForState } from "../app/ConnectionRecoveryBanner";
-import { reduceAuthorizationFailure } from "../app/ConnectionRecoveryContext";
+import { ConnectionRecoveryBannerForState } from "../app/ConnectionRecovery.Banner";
+import { reduceAuthorizationFailure } from "../app/ConnectionRecovery.Context";
 
 describe("top-level connection recovery", () => {
   it("shows the recovery banner after an authorization failure is reported", () => {

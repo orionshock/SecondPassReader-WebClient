@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { MarginaliaAnnotation, MarginaliaSessionDetail, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { CloseSessionDialog, type CloseSessionInput } from "./CloseSessionDialog";
 import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";

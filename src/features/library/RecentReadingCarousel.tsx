@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MarginaliaRecentSession } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
-import { routeToHash } from "../../app/navigation";
+import { routeToHash } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "./coverUtils";
 
 function formatLastActivity(isoUtc: string): string {

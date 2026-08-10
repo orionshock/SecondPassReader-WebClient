@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo } from "../../app/AppNavigation.Router";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
@@ -8,8 +8,8 @@ import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack"
 import { normalizePreviewBooks } from "../library/display/previewBooks";
 import { ShelfForm, type ShelfFormValues } from "./ShelfForm";
 import { canEditShelf, ShelfMetaLine } from "./shelfMeta";
-import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
-import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
+import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
 
 type ShelfOrdering = "name" | "-item_count";
 

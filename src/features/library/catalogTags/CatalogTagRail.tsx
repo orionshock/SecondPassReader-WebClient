@@ -1,7 +1,7 @@
 import type { SecondPassClient } from "@secondpass/client";
 import { useCatalogTags } from "./useCatalogTags";
-import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../../app/userFacingErrors";
-import { PageLoadErrorNotice } from "../../../app/PageLoadErrorNotice";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../../app/AppUserFacingErrors.Mapper";
+import { PageLoadErrorNotice } from "../../../app/AppPageLoadError.Notice";
 
 type Props = { spl: SecondPassClient; groupId?: string; selectedSlug?: string; onSelect: (slug?: string) => void };
 

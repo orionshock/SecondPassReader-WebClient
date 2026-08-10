@@ -3,8 +3,8 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { BookDetailModal } from "../../features/library/BookDetailModal";
 import { saveReaderReturnTarget } from "../../features/reader/ReaderReturnTarget.Store";
 import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
-import type { AppRoute } from "../navigation";
-import { navigateTo, routeToHash, withoutBookModal } from "../navigation";
+import type { AppRoute } from "../AppNavigation.Router";
+import { navigateTo, routeToHash, withoutBookModal } from "../AppNavigation.Router";
 
 export function AppBookDetailModalController({
   route,

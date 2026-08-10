@@ -1,5 +1,5 @@
 import type { ConnectionProfile } from "../storage/connectionProfiles";
-import type { AppRoute } from "./navigation";
+import type { AppRoute } from "./AppNavigation.Router";
 import { MaterialIcon } from "../components/MaterialIcon";
 import { MetaSeparator } from "../components/MetaSeparator";
 

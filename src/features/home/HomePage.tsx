@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo } from "../../app/AppNavigation.Router";
 import { RecentReadingSection } from "../library/RecentReadingSection";
 import { getConnectionStatus } from "../connection/connectionStatus";
 import { ShelvesPreviewSection } from "./ShelvesPreviewSection";

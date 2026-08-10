@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { navigateTo } from "../../../app/navigation";
+import { navigateTo } from "../../../app/AppNavigation.Router";
 import { completeReaderImportRowManually } from "../imports/ReaderImportManualCompletion.Actions";
 import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.Registry";
 import { useReaderImportActivation } from "../imports/ReaderImportActivation.Controller";

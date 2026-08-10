@@ -6,9 +6,9 @@ import type { AppTheme } from "../storage/appTheme";
 import { discoverSecondPass } from "../features/connection/connectionUtils";
 import { applyAuthenticatedContextToProfile } from "../features/connection/accountProfile";
 import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
-import { createSplClientFromProfile } from "./createSplClient";
-import { navigateTo, type AppRoute, type SettingsTab } from "./navigation";
-import { getTechnicalErrorDetail, isAuthorizationError } from "./userFacingErrors";
+import { createSplClientFromProfile } from "./AppSplClient.Factory";
+import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
+import { getTechnicalErrorDetail, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 import { SettingsAppearancePanel } from "./settings/SettingsAppearance.Panel";
 import {
   SettingsLibraryServerPanel,

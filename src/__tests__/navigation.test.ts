@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseCurrentRoute, routeToHash } from "../app/navigation";
+import { parseCurrentRoute, routeToHash } from "../app/AppNavigation.Router";
 
 describe("navigation route ordering params", () => {
   afterEach(() => {

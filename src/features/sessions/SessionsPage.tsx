@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { BoundedSessionBook, MarginaliaSessionListItem, MarginaliaSessionSummary, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
-import { navigateTo, routeToHash } from "../../app/navigation";
+import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
 import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
-import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/userFacingErrors";
-import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
+import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
 import { loadSessionsPage } from "../reader/ReaderMarginalia.Queries";
 
 function formatIso(iso?: string | null): string | null {

@@ -1,5 +1,5 @@
-import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
-import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
+import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 
 export function LibraryResultsLoadErrorNotice({ error }: { error: unknown }) {
   return (

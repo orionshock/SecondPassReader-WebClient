@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
-import { navigateTo } from "../../app/navigation";
+import { navigateTo } from "../../app/AppNavigation.Router";
 import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { MaterialIcon } from "../../components/MaterialIcon";
 import type { ShelfFormValues } from "./ShelfForm";

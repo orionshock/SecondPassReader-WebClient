@@ -4,7 +4,7 @@ import type { ConnectionProfile } from "../storage/connectionProfiles";
 import { saveConnectionProfile } from "../storage/connectionProfiles";
 import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
 import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
-import type { AppWorkflowStep } from "./appWorkflow";
+import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 
 export function useAppAuthenticatedContextController({
   workflowStep,

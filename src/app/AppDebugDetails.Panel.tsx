@@ -1,4 +1,4 @@
-import type { AppWorkflowStep } from "./appWorkflow";
+import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 import type { ConnectionProfile } from "../storage/connectionProfiles";
 
 export function DebugDetails({

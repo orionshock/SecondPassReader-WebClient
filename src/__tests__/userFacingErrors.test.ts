@@ -4,7 +4,7 @@ import {
   getAuthRecoveryMessage,
   getPageLoadErrorMessage,
   isAuthorizationError,
-} from "../app/userFacingErrors";
+} from "../app/AppUserFacingErrors.Mapper";
 
 describe("user-facing API errors", () => {
   it("classifies 401 and 403 API errors as authorization failures", () => {

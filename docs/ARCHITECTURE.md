@@ -13,7 +13,7 @@ Second Pass Reading Client is a standalone static browser app. It is not the Dja
 
 ## Runtime Shape
 
-The app is hash-routed. Route parsing and hash generation live in `src/app/navigation.ts`.
+The app is hash-routed. Route parsing and hash generation live in `src/app/AppNavigation.Router.ts`.
 
 Primary route families:
 

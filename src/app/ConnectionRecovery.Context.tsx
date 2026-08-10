@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { isAuthorizationError } from "./userFacingErrors";
+import { isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 
 type ConnectionRecoveryContextValue = {
   authorizationFailure: boolean;

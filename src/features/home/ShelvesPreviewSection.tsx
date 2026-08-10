@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { navigateTo, routeToHash } from "../../app/navigation";
+import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import { HomeShelfCard } from "./HomeShelfCard";
-import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/userFacingErrors";
-import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
+import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
+import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
 
 export function ShelvesPreviewLoadFailure({
   error,

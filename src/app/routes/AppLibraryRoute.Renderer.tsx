@@ -9,8 +9,8 @@ import { SessionsPage } from "../../features/sessions/SessionsPage";
 import { ShelfDetailPage } from "../../features/shelves/ShelfDetailPage";
 import { ShelfEditPage } from "../../features/shelves/ShelfEditPage";
 import { ShelvesPage } from "../../features/shelves/ShelvesPage";
-import type { AppRoute } from "../navigation";
-import { navigateTo, withBookModal } from "../navigation";
+import type { AppRoute } from "../AppNavigation.Router";
+import { navigateTo, withBookModal } from "../AppNavigation.Router";
 
 export function AppLibraryRouteRenderer({
   route,
