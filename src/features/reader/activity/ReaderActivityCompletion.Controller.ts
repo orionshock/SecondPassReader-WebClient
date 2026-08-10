@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { navigateTo } from "../../../app/navigation";
 import type { CloseSessionAfterOption, CloseSessionInput } from "../../sessions/CloseSessionDialog";
 import { findNextSeriesBook, normalizeSeriesIndex } from "../../library/seriesUtils";
-import { buildReturnLabel, saveReaderReturnTarget } from "../readerReturnTarget";
-import type { OpenedBook } from "../types";
+import { buildReturnLabel, saveReaderReturnTarget } from "../ReaderReturnTarget.Store";
+import type { OpenedBook } from "../Reader.Types";
 import type { ReaderActivityRenderState } from "./readerActivityTypes";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;

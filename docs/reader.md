@@ -8,7 +8,7 @@ The reader is a session-centered EPUB workflow. It renders a book, tracks locati
 - `src/features/reader/session/ReadingSessionOrchestrator.tsx`
 - `src/features/reader/shell/ReadingShell.tsx`
 - `src/features/reader/engine/EpubTsBookEngine.ts`
-- `src/features/reader/viewport/ReaderViewport.tsx`
+- `src/features/reader/shell/ReaderViewport.tsx`
 
 ## Opening a Book
 

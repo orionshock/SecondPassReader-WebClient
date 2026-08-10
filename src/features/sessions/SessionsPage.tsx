@@ -5,10 +5,10 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo, routeToHash } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { InlineMeta, MetaSeparator } from "../../components/MetaSeparator";
-import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
+import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/userFacingErrors";
 import { PageLoadErrorNotice } from "../../app/PageLoadErrorNotice";
-import { loadSessionsPage } from "../reader/marginaliaRequests";
+import { loadSessionsPage } from "../reader/ReaderMarginalia.Queries";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;

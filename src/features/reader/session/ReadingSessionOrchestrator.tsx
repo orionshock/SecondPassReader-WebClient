@@ -6,7 +6,7 @@ import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/Reade
 import type { ReaderDescribeCfiHandle, ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
 import type { ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReadingSessionState } from "./ReadingSession.Types";
-import type { OpenedBook } from "../types";
+import type { OpenedBook } from "../Reader.Types";
 import { useReadingProgressAutosave } from "./progress/ReadingProgressAutosave.Lifecycle";
 import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./progress/ReadingProgressAutosave.Controller";
 import { buildReadingSessionAutosaveStatus } from "./progress/ReadingSessionProgress.Presenter";
@@ -16,7 +16,7 @@ import type { HighlightViewModel } from "../annotations/viewModels";
 import { useSessionAnnotations } from "./annotations/SessionAnnotations.Controller";
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";
 import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
-import { useCurrentSessionMeta } from "./metadata/CurrentSessionMetadata.Controller";
+import { useCurrentSessionMeta } from "./CurrentSessionMetadata.Controller";
 import { buildReaderLocationLabel, buildReaderStatusLine } from "../display/ReaderLocation.Presenter";
 import { useCurrentSessionAnnotationActions } from "./annotations/CurrentSessionAnnotation.Actions";
 import type { ReaderBookmarkMutationResult } from "./annotations/CurrentSessionBookmark.Actions";

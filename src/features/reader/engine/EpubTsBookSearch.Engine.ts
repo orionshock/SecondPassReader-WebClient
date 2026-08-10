@@ -1,6 +1,6 @@
 import type { Book } from "@likecoin/epub-ts";
 import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../domain/types";
-import { buildQuoteContext } from "../selection/quoteContext";
+import { buildQuoteContext } from "../selection/ReaderQuoteContext.Policy";
 import { findTocLabelForHref } from "../display/ReaderLocation.Presenter";
 import { repairImportedHighlightRangeInSection } from "./EpubTsImportRangeRepair.Engine";
 

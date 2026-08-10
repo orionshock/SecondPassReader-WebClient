@@ -1,4 +1,4 @@
-import type { ReaderReturnTarget } from "./types";
+import type { ReaderReturnTarget } from "./Reader.Types";
 
 const STORAGE_PREFIX = "secondpass.reader.returnTarget.";
 

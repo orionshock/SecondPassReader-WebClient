@@ -5,7 +5,7 @@ import type { ConnectionProfile } from "../../storage/connectionProfiles";
 import { navigateTo } from "../../app/navigation";
 import { resolveCoverUrl } from "../library/coverUtils";
 import { CloseSessionDialog, type CloseSessionInput } from "./CloseSessionDialog";
-import { saveReaderReturnTarget } from "../reader/readerReturnTarget";
+import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
 import { SessionDetailAnnotationsList } from "./SessionDetailAnnotationsList";
 import { SessionDetailHeader } from "./SessionDetailHeader";
 import { SessionDetailMetadataEditor } from "./SessionDetailMetadataEditor";

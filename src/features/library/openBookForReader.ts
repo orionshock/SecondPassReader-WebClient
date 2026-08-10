@@ -1,6 +1,6 @@
 import type { BookDetail, CompactBook, SecondPassClient } from "@secondpass/client";
-import { getReaderReturnTarget, saveReaderReturnTarget } from "../reader/readerReturnTarget";
-import type { OpenedBook, ReaderReturnTarget } from "../reader/types";
+import { getReaderReturnTarget, saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
+import type { OpenedBook, ReaderReturnTarget } from "../reader/Reader.Types";
 
 export async function openBookForReader(input: {
   spl: SecondPassClient;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MarginaliaProgressInput, SecondPassClient } from "@secondpass/client";
-import { closeReadingSession } from "../close/ReadingSessionClose.Actions";
+import { closeReadingSession } from "./ReadingSessionClose.Actions";
 
 export type CurrentSessionMeta = {
   name: string | null;

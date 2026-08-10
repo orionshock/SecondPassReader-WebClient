@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import { ReaderViewport } from "../viewport/ReaderViewport";
+import { ReaderViewport } from "./ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
 import type {

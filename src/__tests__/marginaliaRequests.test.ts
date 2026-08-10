@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SecondPassClient } from "@secondpass/client";
-import { loadRecentReading, loadSessionsPage } from "../features/reader/marginaliaRequests";
+import { loadRecentReading, loadSessionsPage } from "../features/reader/ReaderMarginalia.Queries";
 
 function fakeClient() {
   return {

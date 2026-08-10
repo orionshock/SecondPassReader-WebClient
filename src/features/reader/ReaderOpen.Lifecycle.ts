@@ -1,4 +1,4 @@
-import type { OpenedBook } from "./types";
+import type { OpenedBook } from "./Reader.Types";
 
 export function resolveReaderOpenCompletion(opened: OpenedBook, isCurrent: boolean): OpenedBook | null {
   if (isCurrent) return opened;

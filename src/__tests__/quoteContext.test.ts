@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildQuoteContext } from "../features/reader/selection/quoteContext";
+import { buildQuoteContext } from "../features/reader/selection/ReaderQuoteContext.Policy";
 
 describe("buildQuoteContext", () => {
   it("keeps exact unchanged and targets ~500 total for short selections", () => {
@@ -35,4 +35,3 @@ describe("buildQuoteContext", () => {
     expect(out.suffix?.length).toBe(100);
   });
 });
-

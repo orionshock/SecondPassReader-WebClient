@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
-import type { OpenedBook } from "../../types";
+import type { OpenedBook } from "../../Reader.Types";
 import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../../domain/types";
 import type { HighlightViewModel } from "../../annotations/viewModels";
 import type { ReaderBookmark, ReaderBookmarkViewModel } from "../../annotations/bookmarkUtils";

@@ -4,7 +4,7 @@ import type { ReaderCfiDisplayResult, ReaderCfiProbeResult, ReaderLocation, Read
 import type { ReaderTocItem } from "../domain/types";
 import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection, ReaderSelectionAnchor } from "../domain/types";
-import { buildQuoteContext } from "../selection/quoteContext";
+import { buildQuoteContext } from "../selection/ReaderQuoteContext.Policy";
 import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
 import { createEpubTsHighlightRenderer, type HighlightMarkClick } from "./EpubTsHighlightRenderer.Engine";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./EpubTsLocation.Mapper";

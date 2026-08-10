@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
-import type { OpenedBook } from "../features/reader/types";
+import type { OpenedBook } from "../features/reader/Reader.Types";
 
 describe("reader open lifecycle", () => {
   afterEach(() => vi.unstubAllGlobals());

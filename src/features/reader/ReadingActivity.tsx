@@ -1,7 +1,7 @@
 import type { ReaderSettings, ReaderWidth } from "../../storage/readerSettings";
 import { useEffect, useState } from "react";
 import { ReadingSessionOrchestrator } from "./session/ReadingSessionOrchestrator";
-import type { OpenedBook } from "./types";
+import type { OpenedBook } from "./Reader.Types";
 import type { SecondPassClient } from "@secondpass/client";
 import { useReaderImportJob } from "./imports/ReaderImportJob.Controller";
 import { getReaderSettingsPresentation } from "./settings/readerDisplaySettings";
