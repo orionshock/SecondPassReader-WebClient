@@ -330,7 +330,7 @@ durable highlight.
 Client references:
 
 - `src/features/reader/engine/highlightMarks.ts`
-- `src/features/reader/session/CurrentSessionAnnotation.Actions.ts`
+- `src/features/reader/session/annotations/CurrentSessionAnnotation.Actions.ts`
 
 Current Second Pass rules do not ask epub-ts to keep two `highlight` marks alive at the same exact
 CFI. A staged preview temporarily replaces the durable renderer mark at that CFI. On commit or

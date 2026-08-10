@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CurrentSessionAnnotationController,
   CurrentSessionAnnotationStaleGenerationError,
-} from "../features/reader/session/CurrentSessionAnnotation.Controller";
+} from "../features/reader/session/annotations/CurrentSessionAnnotation.Controller";
 import type { MarginaliaAnnotation } from "@secondpass/client";
 
 const annotations = (id: string): MarginaliaAnnotation[] => [{

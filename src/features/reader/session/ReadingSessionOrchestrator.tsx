@@ -22,7 +22,7 @@ import { buildReaderLocationLabel, buildReaderStatusLine } from "../display/Read
 import {
   useCurrentSessionAnnotationActions,
   type ReaderBookmarkMutationResult,
-} from "./CurrentSessionAnnotation.Actions";
+} from "./annotations/CurrentSessionAnnotation.Actions";
 import { useReadingSessionBridgeController } from "./ReadingSessionBridge.Controller";
 
 export type ReadingSessionOrchestratorProps = {

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
-import type { ReaderLocation, ReaderSelection } from "../domain/types";
-import { toReaderBookmark, type ReaderBookmark } from "../annotations/bookmarkUtils";
-import { getAnnotationColor } from "../display/ReaderAnnotation.Presenter";
-import { buildBookmarkUpsert, buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "./marginaliaMutations";
+import type { ReaderLocation, ReaderSelection } from "../../domain/types";
+import { toReaderBookmark, type ReaderBookmark } from "../../annotations/bookmarkUtils";
+import { getAnnotationColor } from "../../display/ReaderAnnotation.Presenter";
+import { buildBookmarkUpsert, buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "../marginaliaMutations";
 import {
   CurrentSessionAnnotationController,
   CurrentSessionAnnotationStaleGenerationError,

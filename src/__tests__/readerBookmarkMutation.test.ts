@@ -3,7 +3,7 @@ import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client"
 import {
   canMutateReaderBookmark,
   executeReaderBookmarkMutation,
-} from "../features/reader/session/CurrentSessionAnnotation.Actions";
+} from "../features/reader/session/annotations/CurrentSessionAnnotation.Actions";
 import { shouldAcceptImportedBookmarkMutation } from "../features/reader/ReadingActivity";
 
 const existingBookmark: MarginaliaAnnotation = {

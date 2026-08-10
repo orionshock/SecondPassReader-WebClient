@@ -19,7 +19,7 @@ import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } f
 import {
   canMutateReaderBookmark,
   type ReaderBookmarkMutationResult,
-} from "./session/CurrentSessionAnnotation.Actions";
+} from "./session/annotations/CurrentSessionAnnotation.Actions";
 
 const READER_FINISH_PROGRESS_THRESHOLD = 0.95;
 
