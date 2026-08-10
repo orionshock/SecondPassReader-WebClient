@@ -21,8 +21,6 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
-import { probeReaderCfi } from "./readerCfiProbe";
-import { displayReaderCfiSafely } from "./readerCfiDisplay";
 import { useStagedSelectionToolbar } from "./useStagedSelectionToolbar";
 import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
@@ -41,6 +39,8 @@ import {
   isExplicitProgressNavigationCommand,
   ReaderBootstrapProgressGuard,
 } from "./ReaderBootstrapProgressGuard.State";
+import { ReaderCapabilityPublicationLifecycle } from "./ReaderCapabilityPublication.Lifecycle";
+import { publishReaderLocation } from "./ReaderLocationPublication.Lifecycle";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -349,6 +349,15 @@ export function ReadingShell(props: ReadingShellProps) {
       generation,
       initialTarget?.type === "cfi" ? initialTarget.cfi : null,
     );
+    const capabilityPublication = new ReaderCapabilityPublicationLifecycle({
+      bootstrapProgressGuard,
+      runtimeController,
+      stagedSelectionLifecycle: stagedLifecycle,
+      onDescribeCfiReady: props.onDescribeCfiReady,
+      onProbeCfiReady: props.onProbeCfiReady,
+      onDisplayCfiReady: props.onDisplayCfiReady,
+      onSearchReady: props.onSearchReady,
+    });
 
     void (async () => {
       try {
@@ -359,17 +368,16 @@ export function ReadingShell(props: ReadingShellProps) {
            // Keep it opt-in until upstream behavior is reliable.
            enableLocationsGeneration: true,
            displaySettings: settingsRef.current,
-           onLocationChanged: (location) => {
-             recordReadableViewport(generation);
-             closeDurableToolbar();
-             const stagedRelocation = stagedLifecycle.handleLocationChanged(location.cfi);
-             onEventRef.current?.({
-               type: "locationChanged",
-               location,
-               publishProgress: bootstrapProgressGuard.shouldPublishRelocation(generation, location.cfi),
-             });
-             if (stagedRelocation.shouldReanchor) void reanchorStagedToolbarRef.current();
-           },
+           onLocationChanged: (location) => publishReaderLocation({
+             location,
+             generation,
+             bootstrapProgressGuard,
+             stagedSelectionLifecycle: stagedLifecycle,
+             recordReadableViewport,
+             closeDurableToolbar,
+             publishEvent: (event) => onEventRef.current?.(event),
+             reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+           }),
           onTocReady: (toc) => onEventRef.current?.({ type: "tocReady", toc }),
           onLocationsReady: () => onEventRef.current?.({ type: "locationsReady" }),
           onSelectionChanged: (selection) => {
@@ -415,40 +423,11 @@ export function ReadingShell(props: ReadingShellProps) {
         if (initialDisplaySucceeded || hasReadableViewportRef.current) markReadableViewport(generation);
         if (!hasReadableViewportRef.current) return;
 
-        props.onDescribeCfiReady?.((cfi) => {
-          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
-            return Promise.reject(new Error("Reader engine is not ready."));
-          }
-          return engine.describeCfi(cfi);
-        });
-        props.onProbeCfiReady?.((cfi) => {
-          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
-            return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
-          }
-          return probeReaderCfi((candidate) => engine.probeCfi(candidate), cfi);
-        });
-        props.onDisplayCfiReady?.((cfi, options) => {
-          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
-            return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
-          }
-          bootstrapProgressGuard.recordExplicitNavigation(generation);
-          return displayReaderCfiSafely(
-            (candidate) => runtimeController.run({
-              kind: "safe-display",
-              run: ({ engine: activeEngine }) => stagedLifecycle.runNavigation(
-                options?.navigationIntent ?? "unrelated",
-                () => activeEngine.displayCfiSafely(candidate),
-              ),
-            }),
-            cfi,
-          );
-        });
-        props.onSearchReady?.((query, options) => {
-          if (engineRef.current !== engine || engineGenerationRef.current !== generation) {
-            return Promise.reject(new Error("Reader engine is not ready."));
-          }
-          return engine.searchBook(query, options);
-        });
+        capabilityPublication.publish(
+          engine,
+          generation,
+          () => engineRef.current === engine && engineGenerationRef.current === generation,
+        );
 
         const deferredCommand = deferredCommandRef.current;
         deferredCommandRef.current = null;
@@ -477,10 +456,7 @@ export function ReadingShell(props: ReadingShellProps) {
       const engine = engineRef.current;
       engineRef.current = null;
       runtimeController.detach(generation);
-      props.onDescribeCfiReady?.(null);
-      props.onProbeCfiReady?.(null);
-      props.onDisplayCfiReady?.(null);
-      props.onSearchReady?.(null);
+      capabilityPublication.unpublish();
       engine?.destroy();
     };
   }, [
