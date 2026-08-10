@@ -1,12 +1,11 @@
 import type { ReaderSettings } from "../../../storage/readerSettings";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell";
-import type { ReadingShellCommand, ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
-import type { ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
+import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
+import type { ReaderDescribeCfiHandle, ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
 import type { DurableAnnotationToolbarItem } from "../shell/ReaderDurableAnnotationToolbar.Toolbar";
-import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderLocationTarget, ReaderSelection } from "../domain/types";
-import type { ReaderTocItem } from "../domain/types";
+import type { ReaderAnnotation, ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/types";
 import type { ReadingSessionState } from "./types";
 import type { OpenedBook } from "../types";
 import { useReadingProgressAutosave } from "./ReadingProgressAutosave.Lifecycle";
@@ -23,6 +22,7 @@ import {
   useCurrentSessionAnnotationActions,
   type ReaderBookmarkMutationResult,
 } from "./CurrentSessionAnnotation.Actions";
+import { useReadingSessionBridgeController } from "./ReadingSessionBridge.Controller";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -81,25 +81,38 @@ export type ReadingSessionOrchestratorProps = {
   }) => ReactNode;
 };
 
-// Placeholder orchestrator: will eventually own session state, SPL calls, and Shell cross-talk.
+// Composition owner: wires session behavior owners to the reader shell and activity render state.
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
   const activeBookKey = `${props.openedBook.book.id}|${props.openedBook.objectUrl}`;
-  const [locationEntry, setLocationEntry] = useState<{ bookKey: string; location: ReaderLocation } | null>(null);
-  const [progressLocationEntry, setProgressLocationEntry] = useState<{ bookKey: string; location: ReaderLocation } | null>(null);
-  const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
-  const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
-  const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
-  const [probeCfi, setProbeCfi] = useState<ReaderProbeCfiHandle | null>(null);
-  const [displayCfi, setDisplayCfi] = useState<ReaderDisplayCfiHandle | null>(null);
-  const [stagedSelectionHandle, setStagedSelectionHandle] = useState<StagedSelectionHandle | null>(null);
-  const [describeCfi, setDescribeCfi] = useState<((cfi: string) => Promise<ReaderLocationDescription>) | null>(null);
-  const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
-  const commandSeqRef = useRef(0);
-  const lastActiveBookKeyRef = useRef(activeBookKey);
-  const location = locationEntry?.bookKey === activeBookKey ? locationEntry.location : null;
-  const progressLocation = progressLocationEntry?.bookKey === activeBookKey
-    ? progressLocationEntry.location
-    : null;
+  const {
+    location,
+    progressLocation,
+    toc,
+    pendingCommand,
+    searchBook,
+    probeCfi,
+    displayCfi,
+    stagedSelectionHandle,
+    describeCfi,
+    temporarySearchHighlightCfi,
+    sendCommand,
+    jumpToSearchResult,
+    jumpToCfi,
+    jumpToCfiRange,
+    clearTemporaryHighlight,
+    handleSearchReady,
+    handleProbeCfiReady,
+    handleDisplayCfiReady,
+    handleStagedSelectionReady,
+    handleDescribeCfiReady: handleBridgeDescribeCfiReady,
+    handleStagedSelectionCommitted,
+    handleStagedSelectionCanceled,
+    handleShellEvent,
+  } = useReadingSessionBridgeController({
+    activeBookKey,
+    onStagedSelectionCommitted: props.onStagedSelectionCommitted,
+    onStagedSelectionCanceled: props.onStagedSelectionCanceled,
+  });
   const generatedLocationLabel = useMemo(
     () => buildReaderLocationLabel(location),
     [location],
@@ -151,11 +164,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   } = sessionAnnotations;
 
   const handleDescribeCfiReadyForReader = useCallback(
-    (fn: ((cfi: string) => Promise<ReaderLocationDescription>) | null) => {
-      handleDescribeCfiReady(fn);
-      setDescribeCfi(() => fn);
+    (handle: ReaderDescribeCfiHandle | null) => {
+      handleDescribeCfiReady(handle);
+      handleBridgeDescribeCfiReady(handle);
     },
-    [handleDescribeCfiReady],
+    [handleBridgeDescribeCfiReady, handleDescribeCfiReady],
   );
 
   const previousLayers = usePreviousSessionLayers({
@@ -166,21 +179,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     toc,
     bookTitle: props.openedBook.book.title,
   });
-
-  useEffect(() => {
-    if (lastActiveBookKeyRef.current === activeBookKey) return;
-    lastActiveBookKeyRef.current = activeBookKey;
-    setLocationEntry(null);
-    setProgressLocationEntry(null);
-    setToc(null);
-    setPendingCommand(null);
-    setSearchBook(null);
-    setProbeCfi(null);
-    setDisplayCfi(null);
-    setStagedSelectionHandle(null);
-    setDescribeCfi(null);
-    setTemporarySearchHighlightCfi(null);
-  }, [activeBookKey]);
 
   const state: ReadingSessionState = useMemo(() => {
     const seedAnnotations: ReaderAnnotation[] = annotationsRaw
@@ -268,110 +266,13 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       }));
   }, [visibleHighlightMarks]);
 
-  const sendCommand = useCallback((command: ReadingShellCommandValue) => {
-    commandSeqRef.current += 1;
-    setPendingCommand({ seq: commandSeqRef.current, value: command });
-  }, []);
-
-  const jumpToSearchResult = useCallback(
-    (cfi: string) => {
-      const trimmed = cfi.trim();
-      if (!trimmed) return;
-      setTemporarySearchHighlightCfi(null);
-      sendCommand({ type: "displaySearchResult", cfi: trimmed });
-    },
-    [sendCommand],
-  );
-
-  const jumpToCfi = useCallback(
-    (cfi: string) => {
-      const trimmed = cfi.trim();
-      if (!trimmed) return;
-      sendCommand({ type: "display", target: { type: "cfi", cfi: trimmed } });
-    },
-    [sendCommand],
-  );
-
-  const jumpToCfiRange = useCallback(
-    (cfiRange: string) => {
-      const trimmed = cfiRange.trim();
-      if (!trimmed) return;
-      sendCommand({ type: "display", target: { type: "cfiRange", cfiRange: trimmed } });
-    },
-    [sendCommand],
-  );
-
-  const clearSearchResultHighlight = useCallback(() => {
-    setTemporarySearchHighlightCfi(null);
-  }, []);
-
-  useEffect(() => {
-    if (!temporarySearchHighlightCfi) return;
-    const id = window.setTimeout(() => setTemporarySearchHighlightCfi(null), 3500);
-    return () => window.clearTimeout(id);
-  }, [temporarySearchHighlightCfi]);
-
-  const handleSearchReady = useCallback((fn: ReaderSearchBookHandle | null) => {
-    setSearchBook(() => fn);
-  }, []);
-
-  const handleProbeCfiReady = useCallback((fn: ReaderProbeCfiHandle | null) => {
-    setProbeCfi(() => fn);
-  }, []);
-
-  const handleDisplayCfiReady = useCallback((fn: ReaderDisplayCfiHandle | null) => {
-    setDisplayCfi(() => fn);
-  }, []);
-
-  const handleStagedSelectionReady = useCallback((handle: StagedSelectionHandle | null) => {
-    setStagedSelectionHandle(handle);
-  }, []);
-
-  const handleStagedSelectionCommitted = useCallback(
-    (source: StagedSelectionSource) => {
-      if (source.kind === "import") setTemporarySearchHighlightCfi(null);
-      props.onStagedSelectionCommitted?.(source);
-    },
-    [props.onStagedSelectionCommitted],
-  );
-
-  const handleStagedSelectionCanceled = useCallback(
-    (source: StagedSelectionSource) => {
-      if (source.kind === "import") setTemporarySearchHighlightCfi(null);
-      props.onStagedSelectionCanceled?.(source);
-    },
-    [props.onStagedSelectionCanceled],
-  );
-
-  // Keep this callback referentially stable: `ReadingShell`'s engine init effect depends on `onEvent`.
-  // Unstable callbacks here can cause destroy/re-init loops (duplicated network requests, blank viewport).
   const onShellEvent = useCallback((event: ReadingShellEvent) => {
-    switch (event.type) {
-      case "locationChanged":
-        setLocationEntry({ bookKey: activeBookKey, location: event.location });
-        if (event.publishProgress) {
-          setProgressLocationEntry({ bookKey: activeBookKey, location: event.location });
-        }
-        return;
-      case "displayError":
-        // Keep errors visible in the browser console; avoid a permanent reader debug panel in the UI.
-        // eslint-disable-next-line no-console
-        console.error("Reader error", event.error);
-        return;
-      case "tocReady":
-        setToc(event.toc);
-        return;
-      case "locationsReady":
-        onLocationsReady();
-        return;
-      case "navigate":
-        sendCommand({ type: "display", target: event.target });
-        return;
-      case "searchResultDisplayed":
-        setTemporarySearchHighlightCfi(event.cfi);
-        return;
+    if (event.type === "locationsReady") {
+      onLocationsReady();
+      return;
     }
-  }, [activeBookKey, onLocationsReady, sendCommand]);
+    handleShellEvent(event);
+  }, [handleShellEvent, onLocationsReady]);
 
   const {
     annotationBusy,
@@ -435,7 +336,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       jumpToResult: jumpToSearchResult,
       jumpToCfi,
       jumpToCfiRange,
-      clearTemporaryHighlight: clearSearchResultHighlight,
+      clearTemporaryHighlight,
     },
     stagedSelection: {
       ready: Boolean(stagedSelectionHandle),
