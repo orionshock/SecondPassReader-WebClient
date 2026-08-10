@@ -6,7 +6,7 @@ import type { ReaderLocationDescription } from "../domain/types";
 import type { ReaderSelection, ReaderSelectionAnchor } from "../domain/types";
 import { buildQuoteContext } from "../selection/quoteContext";
 import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/types";
-import { createHighlightMarkPainter, type HighlightMarkClick } from "./highlightMarks";
+import { createEpubTsHighlightRenderer, type HighlightMarkClick } from "./EpubTsHighlightRenderer.Engine";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./epubLocationUtils";
 import { extractSelectionTextAndContext } from "./selectionExtraction";
 import { searchEpubTsBook } from "./EpubTsBookSearch";
@@ -249,13 +249,13 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   if (init.enableLocationsGeneration) startLocationsGeneration();
 
-  const highlightMarkPainter = createHighlightMarkPainter({ rendition, onError: init.onError, onHighlightClick: init.onHighlightClick });
+  const highlightRenderer = createEpubTsHighlightRenderer({ rendition, onError: init.onError, onHighlightClick: init.onHighlightClick });
 
   return {
     async display(target?: ReaderLocationTarget) {
       if (destroyed) return;
       await rendition.display(toRenditionTarget(target));
-      if (!destroyed) highlightMarkPainter.refresh();
+      if (!destroyed) highlightRenderer.refresh();
     },
     async next() {
       if (destroyed) return;
@@ -302,15 +302,15 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     },
     refreshHighlightMarks() {
       if (destroyed) return;
-      highlightMarkPainter.refresh();
+      highlightRenderer.refresh();
     },
     setHighlightMarks(marks: ReaderHighlightMark[]) {
       if (destroyed) return;
-      highlightMarkPainter.setHighlightMarks(marks);
+      highlightRenderer.setHighlightMarks(marks);
     },
     setTemporarySearchHighlight(cfiRange: string | null) {
       if (destroyed) return;
-      highlightMarkPainter.setTemporarySearchHighlight(cfiRange);
+      highlightRenderer.setTemporarySearchHighlight(cfiRange);
     },
     async getVisibleCfiRangeAnchor(cfiRange: string): Promise<ReaderSelectionAnchor | null> {
       const trimmed = cfiRange.trim();
@@ -445,7 +445,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       safeDisplayInProgress += 1;
       try {
         await rendition.display(trimmed);
-        if (!destroyed) highlightMarkPainter.refresh();
+        if (!destroyed) highlightRenderer.refresh();
         try {
           if (isUsableRange(rendition.getRange(trimmed))) return { ok: true, code: "displayed" };
         } catch {
@@ -484,7 +484,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       } catch {
         // ignore
       }
-      highlightMarkPainter.clear();
+      highlightRenderer.clear();
       try {
         // epubjs-style API (Book#destroy exists in upstream; keep defensive).
         (book as any).destroy?.();

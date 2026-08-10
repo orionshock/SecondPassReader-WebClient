@@ -2,7 +2,7 @@ import type { Rendition } from "@likecoin/epub-ts";
 import { resolveAnnotationColor } from "../display/ReaderAnnotation.Presenter";
 import type { ReaderHighlightMark } from "../domain/types";
 
-export type HighlightMarkPainter = {
+export type EpubTsHighlightRenderer = {
   setHighlightMarks(marks: ReaderHighlightMark[]): void;
   setTemporarySearchHighlight(cfiRange: string | null): void;
   refresh(): void;
@@ -47,11 +47,11 @@ export function reconcileHighlightMarksForRenderer(marks: ReaderHighlightMark[])
   });
 }
 
-export function createHighlightMarkPainter(args: {
+export function createEpubTsHighlightRenderer(args: {
   rendition: Rendition;
   onError?: (error: unknown) => void;
   onHighlightClick?: (click: HighlightMarkClick) => void;
-}): HighlightMarkPainter {
+}): EpubTsHighlightRenderer {
   const { rendition, onError, onHighlightClick } = args;
 
   // epub-ts renderer annotations are keyed internally by CFI range + renderer

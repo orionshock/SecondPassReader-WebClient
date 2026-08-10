@@ -329,7 +329,7 @@ durable highlight.
 
 Client references:
 
-- `src/features/reader/engine/highlightMarks.ts`
+- `src/features/reader/engine/EpubTsHighlightRenderer.Engine.ts`
 - `src/features/reader/session/annotations/CurrentSessionAnnotation.Actions.ts`
 
 Current Second Pass rules do not ask epub-ts to keep two `highlight` marks alive at the same exact
@@ -395,7 +395,7 @@ touch scrolling responsiveness.
 Upstream source: `src/marks-pane/index.ts`, approximately lines 48-50. `touchstart` is registered in
 the same loop as mouse events with the third argument `false`, producing a non-passive listener.
 
-The warning is visible from `highlightMarks.ts` call stacks when epub-ts attaches a highlight.
+The warning is visible from `EpubTsHighlightRenderer.Engine.ts` call stacks when epub-ts attaches a highlight.
 
 ### Suggested upstream fix
 
@@ -472,7 +472,7 @@ Runtime behavior indicates some highlights use SVG overlay paint (`fill`) while 
 to DOM background properties. A style object that supplies only one representation is not reliable
 across observed views.
 
-Client reference: `src/features/reader/engine/highlightMarks.ts`, `toHighlightAttributes()`. The
+Client reference: `src/features/reader/engine/EpubTsHighlightRenderer.Engine.ts`, `toHighlightAttributes()`. The
 client supplies `fill`, `fill-opacity`, `mix-blend-mode`, `background-color`, and `background`.
 
 ### Suggested upstream improvement

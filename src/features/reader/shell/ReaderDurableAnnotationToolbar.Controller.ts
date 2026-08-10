@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { HighlightMarkClick } from "../engine/highlightMarks";
+import type { HighlightMarkClick } from "../engine/EpubTsHighlightRenderer.Engine";
 import type {
   DurableAnnotationToolbarItem,
   DurableAnnotationToolbarPosition,

@@ -87,7 +87,7 @@ Rules:
 - Durable marks are restored from annotation state.
 - Cleanup paths must be explicit for cancel, commit, failed commit, skip, clear, and navigation/focus-driven teardown.
 
-Renderer mark code lives in `src/features/reader/engine/highlightMarks.ts`.
+Renderer mark code lives in `src/features/reader/engine/EpubTsHighlightRenderer.Engine.ts`.
 
 ## Marginalia And Previous Sessions
 

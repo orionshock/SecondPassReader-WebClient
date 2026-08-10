@@ -2,9 +2,9 @@ import type { Rendition } from "@likecoin/epub-ts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  createHighlightMarkPainter,
+  createEpubTsHighlightRenderer,
   reconcileHighlightMarksForRenderer,
-} from "../features/reader/engine/highlightMarks";
+} from "../features/reader/engine/EpubTsHighlightRenderer.Engine";
 
 describe("reader highlight mark painting", () => {
   it("repaints unchanged durable marks when renderer geometry changes", () => {
@@ -102,7 +102,7 @@ function createHarness() {
   const remove = vi.fn();
   const rendition = { annotations: { highlight, remove } } as unknown as Rendition;
   return {
-    painter: createHighlightMarkPainter({ rendition }),
+    painter: createEpubTsHighlightRenderer({ rendition }),
     highlight,
     remove,
   };
