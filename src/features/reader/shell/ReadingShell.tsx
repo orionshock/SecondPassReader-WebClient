@@ -38,6 +38,7 @@ import {
 import { ReaderBootstrapProgressGuard } from "./ReaderBootstrapProgressGuard.State";
 import { useReaderEngineBootstrapLifecycle } from "./ReaderEngineBootstrap.Lifecycle";
 import { useReaderCommandRoutingLifecycle } from "./ReaderCommandRouting.Lifecycle";
+import { useReaderSettingsReflowLifecycle } from "./ReaderSettingsReflow.Lifecycle";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -96,7 +97,6 @@ export function ReadingShell(props: ReadingShellProps) {
   const initialDisplayTargetRef = useRef<ReaderLocationTarget | undefined>(props.initialDisplayTarget);
   const onEventRef = useRef<ReadingShellProps["onEvent"]>(props.onEvent);
   const onUnrelatedNavigationRef = useRef<ReadingShellProps["onUnrelatedNavigation"]>(props.onUnrelatedNavigation);
-  const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(props.settings?.readerWidth ?? null);
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [readiness, setReadiness] = useState<ReaderReadinessState>("empty");
@@ -319,84 +319,18 @@ export function ReadingShell(props: ReadingShellProps) {
     onSearchReady: props.onSearchReady,
   });
 
-  useEffect(() => {
-    if (!props.settings) return;
-    if (!isReaderFullyReady(readiness)) return;
-    const engine = engineRef.current;
-    if (!engine) return;
-    const generation = engineGenerationRef.current;
-
-    void (async () => {
-      try {
-        await runtimeController.stabilizeReflow("settings", {
-          reflow: (activeEngine) => stagedLifecycle.runNavigation(
-            "layout-reflow",
-            () => activeEngine.applyDisplaySettings(props.settings!, {
-              preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
-            }),
-          ),
-          refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
-          reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
-        });
-      } catch (err) {
-        reportOperationError(err, "Display settings failed.", generation, "reflow");
-      }
-    })();
-  }, [
-    bootstrapProgressGuard,
-    props.settings,
+  useReaderSettingsReflowLifecycle({
+    settings: props.settings,
     readiness,
-    reportOperationError,
-    runtimeController,
-    stagedLifecycle,
-  ]);
-
-  useEffect(() => {
-    const readerWidth = props.settings?.readerWidth;
-    if (!readerWidth) return;
-    if (!isReaderFullyReady(readiness)) return;
-    if (lastHandledReaderWidthRef.current === readerWidth) return;
-    lastHandledReaderWidthRef.current = readerWidth;
-
-    const engine = engineRef.current;
-    if (!engine) return;
-    let cancelled = false;
-    const generation = engineGenerationRef.current;
-
-    void (async () => {
-      try {
-        await runtimeController.stabilizeReflow("resize", {
-          reflow: async (activeEngine) => {
-            await stagedLifecycle.runNavigation("layout-reflow", async () => {
-              await waitForReaderLayout();
-              if (cancelled) return;
-              await activeEngine.resizeToMount({
-                preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
-              });
-            });
-          },
-          refreshMarks: (activeEngine) => {
-            if (!cancelled) activeEngine.refreshHighlightMarks();
-          },
-          reanchorStagedToolbar: () => cancelled ? Promise.resolve() : reanchorStagedToolbarRef.current(),
-        });
-      } catch (err) {
-        if (cancelled) return;
-        reportOperationError(err, "Reader resize failed.", generation, "reflow");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
+    engineRef,
+    engineGenerationRef,
+    reanchorStagedToolbarRef,
     bootstrapProgressGuard,
-    props.settings?.readerWidth,
-    readiness,
-    reportOperationError,
     runtimeController,
-    stagedLifecycle,
-  ]);
+    stagedSelectionLifecycle: stagedLifecycle,
+    reportOperationError,
+    waitForLayout: waitForReaderLayout,
+  });
 
   useEffect(() => {
     if (!mountEl || !isReaderFullyReady(readiness)) return;
