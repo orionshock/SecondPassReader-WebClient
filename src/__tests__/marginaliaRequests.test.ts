@@ -21,6 +21,12 @@ describe("Reader marginalia requests", () => {
     expect(spl.marginalia.sessions.recent).toHaveBeenCalledWith({ limit: 10 });
   });
 
+  it("asks the recent-reading endpoint to include completed sessions when enabled", async () => {
+    const spl = fakeClient();
+    await loadRecentReading(spl, { includeCompleted: true });
+    expect(spl.marginalia.sessions.recent).toHaveBeenCalledWith({ limit: 10, includeClosed: true });
+  });
+
   it("uses global or book-scoped marginalia session lists", async () => {
     const spl = fakeClient();
     await loadSessionsPage({ spl, page: 1, pageSize: 20, status: "active", q: "notes" });

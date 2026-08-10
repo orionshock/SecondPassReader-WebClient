@@ -1,7 +1,12 @@
 import type { MarginaliaBookSessions, MarginaliaRecentSessions, MarginaliaSessionListItem, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 
-export function loadRecentReading(spl: SecondPassClient): Promise<MarginaliaRecentSessions> {
-  return spl.marginalia.sessions.recent({ limit: 10 });
+export function loadRecentReading(
+  spl: SecondPassClient,
+  options?: { includeCompleted?: boolean },
+): Promise<MarginaliaRecentSessions> {
+  return spl.marginalia.sessions.recent(
+    options?.includeCompleted ? { limit: 10, includeClosed: true } : { limit: 10 },
+  );
 }
 
 export function loadSessionsPage(input: {
