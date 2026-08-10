@@ -18,10 +18,8 @@ import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayer
 import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
 import { useCurrentSessionMeta } from "./metadata/CurrentSessionMetadata.Controller";
 import { buildReaderLocationLabel, buildReaderStatusLine } from "../display/ReaderLocation.Presenter";
-import {
-  useCurrentSessionAnnotationActions,
-  type ReaderBookmarkMutationResult,
-} from "./annotations/CurrentSessionAnnotation.Actions";
+import { useCurrentSessionAnnotationActions } from "./annotations/CurrentSessionAnnotation.Actions";
+import type { ReaderBookmarkMutationResult } from "./annotations/CurrentSessionBookmark.Actions";
 import { useReadingSessionBridgeController } from "./ReadingSessionBridge.Controller";
 import {
   buildReadingSessionAnnotationToolbarItems,
