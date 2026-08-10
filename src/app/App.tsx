@@ -3,13 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientApiLinking } from "../features/connection/ClientApiLinking";
 import { ClientApiVerification } from "../features/connection/ClientApiVerification";
 import { ConnectServerScreen } from "../features/connection/ConnectServerScreen";
-import { LibraryBrowsePage } from "../features/library/LibraryBrowsePage";
-import { HomePage } from "../features/home/HomePage";
-import { ReadingActivity } from "../features/reader/Reading.Activity";
 import type { OpenedBook } from "../features/reader/Reader.Types";
 import { getAppWorkflowStep } from "./appWorkflow";
 import type { AppRoute } from "./navigation";
-import { navigateTo, parseCurrentRoute, routeToHash, withBookModal, withoutBookModal } from "./navigation";
+import { navigateTo, parseCurrentRoute } from "./navigation";
 import {
   clearActiveConnection,
   getActiveConnection,
@@ -21,22 +18,16 @@ import { AppHeader } from "./AppHeader";
 import { SettingsPanel } from "./SettingsPanel";
 import { openBookForReader } from "../features/library/openBookForReader";
 import { ApiError } from "@secondpass/client";
-import { ShelvesPage } from "../features/shelves/ShelvesPage";
-import { ShelfDetailPage } from "../features/shelves/ShelfDetailPage";
-import { ShelfEditPage } from "../features/shelves/ShelfEditPage";
-import { BookDetailModal } from "../features/library/BookDetailModal";
-import { SessionsPage } from "../features/sessions/SessionsPage";
-import { SessionDetailPage } from "../features/sessions/SessionDetailPage";
 import { createSplClientFromProfile } from "./createSplClient";
 import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/accountProfile";
 import type { SecondPassClient } from "@secondpass/client";
-import { saveReaderReturnTarget } from "../features/reader/ReaderReturnTarget.Store";
-import type { ReaderReturnTarget } from "../features/reader/Reader.Types";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecoveryContext";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner";
 import { loadAuthenticatedContext } from "../features/connection/authenticatedContext";
 import { debugLog } from "../lib/debug/DebugLogger";
+import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
+import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
 
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
@@ -362,55 +353,6 @@ function AppShell() {
     openingBookRef.current = null;
   }
 
-  function getReaderReturnTargetForRoute(currentRoute: AppRoute | null): ReaderReturnTarget {
-    if (!currentRoute) return { kind: "home", label: "Home", route: "#/home" };
-    if (currentRoute.kind === "library") {
-      return {
-        kind: currentRoute.browse === "series" && currentRoute.seriesId ? "series" : "library",
-        label: currentRoute.browse === "series" && currentRoute.seriesId ? "Series" : "Library",
-        route: routeToHash(withoutBookModal(currentRoute)),
-        seriesId: currentRoute.browse === "series" ? currentRoute.seriesId : undefined,
-      };
-    }
-    if (currentRoute.kind === "shelves") {
-      return {
-        kind: "shelves",
-        label: "Shelves",
-        route: routeToHash(withoutBookModal(currentRoute)),
-      };
-    }
-    if (currentRoute.kind === "shelf") {
-      return {
-        kind: "shelf",
-        label: "Shelf",
-        route: routeToHash(withoutBookModal(currentRoute)),
-        shelfId: currentRoute.shelfId,
-      };
-    }
-    if (currentRoute.kind === "sessions") {
-      return {
-        kind: "sessions",
-        label: "Reading sessions",
-        route: routeToHash(currentRoute),
-      };
-    }
-    if (currentRoute.kind === "session") {
-      return {
-        kind: "sessions",
-        label: "Session detail",
-        route: routeToHash(currentRoute),
-        sessionId: currentRoute.sessionId,
-      };
-    }
-    return { kind: "home", label: "Home", route: "#/home" };
-  }
-
-  function openReaderWithReturnTarget(bookId: string | number, returnTarget: ReaderReturnTarget) {
-    const id = String(bookId);
-    saveReaderReturnTarget(id, returnTarget);
-    navigateTo({ kind: "reader", bookId: id });
-  }
-
   function returnToConnect(options?: { replace?: boolean }) {
     clearAuthorizationFailure();
     clearActiveConnection();
@@ -510,236 +452,27 @@ function AppShell() {
             ) : null}
 
             {workflowStep === "library_home" ? (
-              route?.kind === "reader" && !openedBook ? (
-                <section className="panel workflowPanel">
-                  <h2 className="panelTitle">Opening book</h2>
-                  {readerRestoreError ? <div className="errorText">{readerRestoreError}</div> : <p className="muted">{`Restoring reader${"\u2026"}`}</p>}
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      className="button buttonCompact"
-                      onClick={() => {
-                        navigateTo({ kind: "home" });
-                        handleCloseReader();
-                      }}
-                    >
-                      Home
-                    </button>
-                    <button
-                      type="button"
-                      className="button buttonCompact"
-                      onClick={() => {
-                        // Force re-run of the reader restore effect by clearing the in-flight guard.
-                        openingBookRef.current = null;
-                        setReaderRestoreError(null);
-                        setReaderRestoreAttempt((v) => v + 1);
-                      }}
-                    >
-                      Retry
-                    </button>
-                  </div>
-                </section>
-              ) : openedBook && route?.kind === "reader" ? (
-                <section className="readerScreen">
-                  <ReadingActivity
-                    openedBook={openedBook}
-                    onBackToLibrary={() => {
-                      navigateTo({ kind: "home" });
-                      handleCloseReader();
-                    }}
-                    spl={splClient}
-                    initialSearchQuery={route.search ?? null}
-                  />
-                </section>
-              ) : route?.kind === "shelves" ? (
-                <div className="libraryScreen">
-                  <ShelvesPage
-                    profile={selectedProfile}
-                    spl={splClient}
-                    ordering={route.ordering}
-                    page={route.page ?? 1}
-                    pageSize={route.pageSize ?? 20}
-                    onUpdateRoute={(patch) => {
-                      navigateTo({
-                        kind: "shelves",
-                        ordering: patch.ordering ?? route.ordering ?? "name",
-                        page: patch.page ?? route.page ?? 1,
-                        pageSize: patch.pageSize ?? route.pageSize ?? 20,
-                        bookId: route.bookId,
-                      });
-                    }}
-                  />
-                </div>
-              ) : route?.kind === "shelf" ? (
-                <div className="libraryScreen">
-                  <ShelfDetailPage
-                    profile={selectedProfile}
-                    spl={splClient}
-                    shelfId={route.shelfId}
-                    selectedBookId={route.bookId ?? null}
-                    ordering={route.ordering}
-                    page={route.page ?? 1}
-                    pageSize={route.pageSize ?? 20}
-                    onUpdateRoute={(patch) => {
-                      navigateTo({
-                        kind: "shelf",
-                        shelfId: route.shelfId,
-                        ordering: patch.ordering ?? route.ordering ?? "position",
-                        page: patch.page ?? route.page ?? 1,
-                        pageSize: patch.pageSize ?? route.pageSize ?? 20,
-                        bookId: route.bookId,
-                      });
-                    }}
-                  />
-                </div>
-              ) : route?.kind === "shelfEdit" ? (
-                <div className="libraryScreen">
-                  <ShelfEditPage profile={selectedProfile} spl={splClient} shelfId={route.shelfId} />
-                </div>
-              ) : route?.kind === "sessions" ? (
-                <div className="libraryScreen">
-                  <SessionsPage profile={selectedProfile} spl={splClient} bookId={route.bookId ?? null} searchQuery={route.q ?? ""} />
-                </div>
-              ) : route?.kind === "session" ? (
-                <div className="libraryScreen">
-                  <SessionDetailPage profile={selectedProfile} spl={splClient} sessionId={route.sessionId} />
-                </div>
-              ) : route?.kind === "library" ? (
-                <div className="libraryScreen">
-                  <LibraryBrowsePage
-                    profile={selectedProfile}
-                    spl={splClient}
-                    route={{
-                      q: route.q,
-                      searchMode: route.searchMode,
-                      browse: route.browse,
-                      seriesId: route.seriesId,
-                      authorId: route.authorId,
-                      groupId: route.groupId,
-                      tag: route.tag,
-                      view: route.view,
-                      ordering: route.ordering,
-                      page: route.page,
-                      pageSize: route.pageSize,
-                    }}
-                    selectedBookId={route.bookId ?? null}
-                    onViewBook={(bookId) => {
-                      navigateTo(withBookModal(route, bookId));
-                    }}
-                    onCommitSearch={(q) => {
-                      const next = q.trim();
-                      const browse = route.browse ?? "books";
-                      const ordering = browse === "books" ? "title" : "name";
-                      navigateTo(next
-                        ? { kind: "library", browse, q: next, searchMode: route.searchMode, groupId: route.groupId, tag: route.tag, ordering, page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId }
-                        : { kind: "library", browse, groupId: route.groupId, tag: route.tag, ordering, page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowBooks={() => {
-                      navigateTo({ kind: "library", browse: "books", groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowSeries={() => {
-                      navigateTo({ kind: "library", browse: "series", groupId: route.groupId, tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowAuthors={() => {
-                      navigateTo({ kind: "library", browse: "authors", groupId: route.groupId, tag: route.tag, ordering: "name", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowSeriesBooks={(seriesId) => {
-                      navigateTo({ kind: "library", browse: "series", seriesId, groupId: route.groupId, tag: route.tag, ordering: "series_index", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onShowAuthorBooks={(authorId) => {
-                      navigateTo({ kind: "library", browse: "authors", authorId, groupId: route.groupId, tag: route.tag, ordering: "title", page: 1, pageSize: route.pageSize ?? 20, bookId: route.bookId });
-                    }}
-                    onUpdateRoute={(patch) => {
-                      navigateTo({
-                        kind: "library",
-                        q: route.q,
-                        searchMode: patch.groupId !== undefined || patch.tag !== undefined ? undefined : route.searchMode,
-                        browse: route.browse ?? "books",
-                        seriesId: route.seriesId,
-                        authorId: route.authorId,
-                        groupId: patch.groupId === null ? undefined : patch.groupId ?? route.groupId,
-                        tag: patch.tag === null ? undefined : patch.tag ?? route.tag,
-                        view: route.view,
-                        ordering: patch.ordering ?? route.ordering,
-                        page: patch.page ?? route.page ?? 1,
-                        pageSize: patch.pageSize ?? route.pageSize ?? 20,
-                        bookId: route.bookId,
-                      });
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="libraryScreen">
-                  <HomePage profile={selectedProfile} spl={splClient} />
-                </div>
-              )
+              <AppLibraryRouteRenderer
+                route={route}
+                profile={selectedProfile}
+                spl={splClient}
+                openedBook={openedBook}
+                readerRestoreError={readerRestoreError}
+                onCloseReader={handleCloseReader}
+                onRetryReaderRestore={() => {
+                  // Force re-run of the reader restore effect by clearing the in-flight guard.
+                  openingBookRef.current = null;
+                  setReaderRestoreError(null);
+                  setReaderRestoreAttempt((v) => v + 1);
+                }}
+              />
             ) : null}
           </>
         )}
       </main>
 
       {workflowStep === "library_home" && route?.kind !== "reader" ? (
-        (() => {
-          const modalBookId =
-            route?.kind === "home" ? route.bookId ?? null : route?.kind === "library" ? route.bookId ?? null : route?.kind === "shelves" ? route.bookId ?? null : route?.kind === "shelf" ? route.bookId ?? null : null;
-          if (!modalBookId) return null;
-          return (
-            <BookDetailModal
-              profile={selectedProfile}
-              spl={splClient}
-              bookId={modalBookId}
-              initialBook={null}
-              onClose={() => {
-                if (!route) return;
-                navigateTo(withoutBookModal(route), { replace: true });
-              }}
-              onOpenReader={(book) => {
-                openReaderWithReturnTarget(book.id, getReaderReturnTargetForRoute(route));
-              }}
-              onViewSessions={(book) => {
-                navigateTo({ kind: "sessions", bookId: String(book.id) });
-              }}
-              onViewAuthor={(authorId) => {
-                navigateTo({
-                  kind: "library",
-                  browse: "authors",
-                  authorId,
-                  groupId: route?.kind === "library" ? route.groupId : undefined,
-                  tag: route?.kind === "library" ? route.tag : undefined,
-                  ordering: "title",
-                  page: 1,
-                  pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
-                });
-              }}
-              onViewSeries={(seriesId) => {
-                navigateTo({
-                  kind: "library",
-                  browse: "series",
-                  seriesId,
-                  groupId: route?.kind === "library" ? route.groupId : undefined,
-                  tag: route?.kind === "library" ? route.tag : undefined,
-                  ordering: "series_index",
-                  page: 1,
-                  pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
-                });
-              }}
-              onViewTag={(tag) => {
-                navigateTo({
-                  kind: "library",
-                  browse: "books",
-                  groupId: route?.kind === "library" ? route.groupId : undefined,
-                  tag,
-                  ordering: "title",
-                  page: 1,
-                  pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
-                });
-              }}
-              onManageShelves={() => navigateTo({ kind: "shelves" })}
-              launchMessage={null}
-              downloadState={{ phase: "idle" }}
-            />
-          );
-        })()
+        <AppBookDetailModalController route={route} profile={selectedProfile} spl={splClient} />
       ) : null}
     </div>
   );
