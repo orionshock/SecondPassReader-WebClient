@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EpubTsBookEngine } from "../engine/EpubTsBookEngine";
-import type { HighlightMarkClick } from "../engine/highlightMarks";
 import { ReaderViewport } from "../viewport/ReaderViewport";
 import type { ReaderSettings } from "../../../storage/readerSettings";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderTocItem } from "../domain/types";
@@ -21,7 +20,7 @@ import { MaterialIcon } from "../../../components/MaterialIcon";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu";
 import { SelectionHighlightToolbar } from "./SelectionHighlightToolbar";
 import { TableOfContentsDrawer } from "./TableOfContentsDrawer";
-import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem, type DurableAnnotationToolbarPosition } from "./DurableAnnotationToolbar";
+import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem } from "./DurableAnnotationToolbar";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import { observeReaderMountResize } from "./ReaderMountResize.Lifecycle";
 import {
@@ -38,6 +37,7 @@ import { useReaderEngineBootstrapLifecycle } from "./ReaderEngineBootstrap.Lifec
 import { useReaderCommandRoutingLifecycle } from "./ReaderCommandRouting.Lifecycle";
 import { useReaderSettingsReflowLifecycle } from "./ReaderSettingsReflow.Lifecycle";
 import { useReaderStagedToolbarController } from "./ReaderStagedToolbar.Controller";
+import { useReaderDurableAnnotationToolbarController } from "./ReaderDurableAnnotationToolbar.Controller";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -66,19 +66,6 @@ export type ReadingShellProps = {
   onSettingsReset?: () => void;
 };
 
-type DurableToolbarAnchor = {
-  clientX?: number;
-  clientY?: number;
-  bounds?: {
-    left: number;
-    right: number;
-    top: number;
-    bottom: number;
-    width: number;
-    height: number;
-  };
-};
-
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
   const runtimeControllerRef = useRef<ReaderRuntimeController | null>(null);
@@ -101,10 +88,8 @@ export function ReadingShell(props: ReadingShellProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [durableToolbar, setDurableToolbar] = useState<{ annotationId: string; position: DurableAnnotationToolbarPosition } | null>(null);
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(props.highlightMarks ?? []);
-  const annotationToolbarItemsRef = useRef<DurableAnnotationToolbarItem[]>(props.annotationToolbarItems ?? []);
   useEffect(() => {
     settingsRef.current = props.settings;
   }, [props.settings]);
@@ -122,10 +107,6 @@ export function ReadingShell(props: ReadingShellProps) {
   }, [props.highlightMarks]);
 
   useEffect(() => {
-    annotationToolbarItemsRef.current = props.annotationToolbarItems ?? [];
-  }, [props.annotationToolbarItems]);
-
-  useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
     engine.setTemporarySearchHighlight(props.temporarySearchHighlightCfi ?? null);
@@ -135,9 +116,23 @@ export function ReadingShell(props: ReadingShellProps) {
     setMountEl(el);
   }, []);
 
-  const closeDurableToolbar = useCallback(() => {
-    setDurableToolbar(null);
+  const cancelStagedForDurableToolbarRef = useRef<() => void>(() => undefined);
+  const cancelStagedForDurableToolbar = useCallback(() => {
+    cancelStagedForDurableToolbarRef.current();
   }, []);
+  const {
+    closeToolbar: closeDurableToolbar,
+    onEngineHighlightClick,
+    toolbarProps: durableToolbarProps,
+  } = useReaderDurableAnnotationToolbarController({
+    items: props.annotationToolbarItems,
+    busy: props.highlightCommitBusy,
+    theme: props.settings?.theme,
+    cancelStagedSelection: cancelStagedForDurableToolbar,
+    onUpdateHighlight: props.onUpdateHighlight,
+    onRemoveAnnotation: props.onRemoveAnnotation,
+    onOpenAnnotationInWorkspace: props.onOpenAnnotationInWorkspace,
+  });
 
   const {
     cancelStaged,
@@ -158,68 +153,7 @@ export function ReadingShell(props: ReadingShellProps) {
     onUnrelatedNavigation: props.onUnrelatedNavigation,
     onSelectionStarted: closeDurableToolbar,
   });
-
-  const toToolbarPosition = useCallback((anchor?: DurableToolbarAnchor): DurableAnnotationToolbarPosition | null => {
-    const margin = 12;
-    const width = window.innerWidth || document.documentElement.clientWidth || 1;
-    const height = window.innerHeight || document.documentElement.clientHeight || 1;
-    const toolbarWidth = Math.min(340, Math.max(220, width - margin * 2));
-    const toolbarHeight = 160;
-    const leftRaw = typeof anchor?.clientX === "number" ? anchor.clientX : width / 2;
-    const topRaw = typeof anchor?.clientY === "number" ? anchor.clientY : height / 2;
-    const preferredPlacement = chooseClickToolbarPlacement({
-      clickX: leftRaw,
-      clickY: topRaw,
-      height,
-      margin,
-      toolbarHeight,
-      toolbarWidth,
-      width,
-    });
-    return clampClickToolbarPosition({
-      clickX: leftRaw,
-      clickY: topRaw,
-      height,
-      margin,
-      placement: preferredPlacement,
-      toolbarHeight,
-      toolbarWidth,
-      width,
-    });
-  }, []);
-
-  const onEngineHighlightClick = useCallback((click: HighlightMarkClick) => {
-    const id = click.annotationId.trim();
-    if (!id) return;
-    const item = annotationToolbarItemsRef.current.find((candidate) => candidate.id === id);
-    if (!item) return;
-    const position = toToolbarPosition(click);
-    if (!position) return;
-    cancelStaged();
-    setDurableToolbar({ annotationId: id, position });
-  }, [cancelStaged, toToolbarPosition]);
-
-  useEffect(() => {
-    if (!durableToolbar) return;
-    if (props.annotationToolbarItems?.some((item) => item.id === durableToolbar.annotationId)) return;
-    setDurableToolbar(null);
-  }, [durableToolbar, props.annotationToolbarItems]);
-
-  useEffect(() => {
-    if (!durableToolbar) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      closeDurableToolbar();
-    };
-    const onPointerDown = () => closeDurableToolbar();
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [closeDurableToolbar, durableToolbar]);
+  cancelStagedForDurableToolbarRef.current = cancelStaged;
 
   const recordReadableViewport = useCallback((generation: number) => {
     if (engineGenerationRef.current !== generation) return;
@@ -339,11 +273,6 @@ export function ReadingShell(props: ReadingShellProps) {
     await runImmediateCommand({ type: "next" }, "Next page failed.");
   };
 
-  const durableToolbarItem =
-    durableToolbar && props.annotationToolbarItems
-      ? props.annotationToolbarItems.find((item) => item.id === durableToolbar.annotationId) ?? null
-      : null;
-
   return (
     <div className="spReadingShell">
       <ReaderViewport
@@ -407,30 +336,7 @@ export function ReadingShell(props: ReadingShellProps) {
             </button>
 
             {stagedToolbarProps ? <SelectionHighlightToolbar {...stagedToolbarProps} /> : null}
-            {durableToolbar && durableToolbarItem ? (
-              <DurableAnnotationToolbar
-                item={durableToolbarItem}
-                position={durableToolbar.position}
-                busy={props.highlightCommitBusy}
-                theme={props.settings?.theme}
-                onSave={(update) => {
-                  if (durableToolbarItem.mode !== "editable" || !props.onUpdateHighlight) return Promise.resolve();
-                  return props.onUpdateHighlight(durableToolbarItem.id, update);
-                }}
-                onDelete={() => {
-                  if (durableToolbarItem.mode !== "editable" || !props.onRemoveAnnotation) return;
-                  if (!window.confirm("Delete this annotation?")) return;
-                  const id = durableToolbarItem.id;
-                  closeDurableToolbar();
-                  void props.onRemoveAnnotation(id);
-                }}
-                onOpenWorkspace={() => {
-                  props.onOpenAnnotationInWorkspace?.(durableToolbarItem.id, durableToolbarItem.mode);
-                  closeDurableToolbar();
-                }}
-                onClose={closeDurableToolbar}
-              />
-            ) : null}
+            {durableToolbarProps ? <DurableAnnotationToolbar {...durableToolbarProps} /> : null}
           </>
         }
       />
@@ -444,73 +350,4 @@ function waitForReaderLayout(): Promise<void> {
       window.requestAnimationFrame(() => resolve());
     });
   });
-}
-
-function chooseClickToolbarPlacement({
-  clickX,
-  clickY,
-  height,
-  margin,
-  toolbarHeight,
-  toolbarWidth,
-  width,
-}: {
-  clickX: number;
-  clickY: number;
-  height: number;
-  margin: number;
-  toolbarHeight: number;
-  toolbarWidth: number;
-  width: number;
-}): DurableAnnotationToolbarPosition["placement"] {
-  const fitsRight = clickX + toolbarWidth <= width - margin;
-  const fitsLeft = clickX - toolbarWidth >= margin;
-  if (clickX < width / 2 && fitsRight) return "right";
-  if (clickX >= width / 2 && fitsLeft) return "left";
-  if (fitsRight) return "right";
-  if (fitsLeft) return "left";
-
-  const fitsBelow = clickY + toolbarHeight <= height - margin;
-  const fitsAbove = clickY - toolbarHeight >= margin;
-  if (clickY < height / 2 && fitsBelow) return "below";
-  if (fitsAbove) return "above";
-  return fitsBelow ? "below" : "above";
-}
-
-function clampClickToolbarPosition({
-  clickX,
-  clickY,
-  height,
-  margin,
-  placement,
-  toolbarHeight,
-  toolbarWidth,
-  width,
-}: {
-  clickX: number;
-  clickY: number;
-  height: number;
-  margin: number;
-  placement: DurableAnnotationToolbarPosition["placement"];
-  toolbarHeight: number;
-  toolbarWidth: number;
-  width: number;
-}): DurableAnnotationToolbarPosition {
-  if (placement === "left" || placement === "right") {
-    return {
-      left: placement === "left" ? Math.max(toolbarWidth + margin, clickX) : Math.min(width - toolbarWidth - margin, clickX),
-      top: clamp(clickY, margin + toolbarHeight / 2, height - margin - toolbarHeight / 2),
-      placement,
-    };
-  }
-
-  return {
-    left: clamp(clickX, margin + toolbarWidth / 2, width - margin - toolbarWidth / 2),
-    top: placement === "above" ? Math.max(toolbarHeight + margin, clickY) : Math.min(height - toolbarHeight - margin, clickY),
-    placement,
-  };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
