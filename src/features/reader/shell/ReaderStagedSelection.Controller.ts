@@ -7,12 +7,11 @@ import type {
   StagedSelectionSource,
   StagedSelectionToolbarPosition,
 } from "../domain/ReaderBridge.Types";
-import { getStagedSelectionToolbarPosition } from "./ReaderStagedToolbar.Placement";
-import type { StagedSelectionToolbarSize } from "./ReaderStagedToolbar.Placement";
 import {
   debugStagedSelection,
   previewStagedSelectionCfi,
 } from "./ReaderStagedSelection.Diagnostics";
+import { useReaderStagedSelectionReanchorController } from "./ReaderStagedSelectionReanchor.Controller";
 
 export type StagedSelectionToolbarPos = StagedSelectionToolbarPosition;
 
@@ -32,16 +31,10 @@ export function useStagedSelectionToolbar(args: {
   const [stagedColor, setStagedColor] = useState<string>("yellow");
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
-  const [toolbarPos, setToolbarPos] = useState<StagedSelectionToolbarPos | null>(null);
 
   const highlightMarksRef = useRef<ReaderHighlightMark[]>(args.highlightMarks ?? []);
   const noteDraftRef = useRef<string>("");
   const stagedColorRef = useRef<string>("yellow");
-  const toolbarPosRef = useRef<StagedSelectionToolbarPos | null>(null);
-  const toolbarAnchorRef = useRef<ReaderSelection["anchor"]>(undefined);
-  const toolbarFallbackRef = useRef<StagedSelectionToolbarPos | null>(null);
-  const toolbarSizeRef = useRef<StagedSelectionToolbarSize | undefined>(undefined);
-  const reanchorRequestRef = useRef(0);
   const onCommitHighlightRef = useRef<typeof args.onCommitHighlight>(args.onCommitHighlight);
   const onCommittedRef = useRef<typeof args.onStagedSelectionCommitted>(args.onStagedSelectionCommitted);
   const onCanceledRef = useRef<typeof args.onStagedSelectionCanceled>(args.onStagedSelectionCanceled);
@@ -77,9 +70,19 @@ export function useStagedSelectionToolbar(args: {
     stagedColorRef.current = stagedColor;
   }, [stagedColor]);
 
-  useEffect(() => {
-    toolbarPosRef.current = toolbarPos;
-  }, [toolbarPos]);
+  const {
+    toolbarPos,
+    toolbarPosRef,
+    resetStagedToolbar,
+    positionStagedToolbar,
+    setStagedToolbarFallback,
+    reanchorStagedToolbar,
+    onToolbarSizeChange,
+  } = useReaderStagedSelectionReanchorController({
+    engineRef: args.engineRef,
+    mountWrapperRef: args.mountWrapperRef,
+    stagedSelectionRef,
+  });
 
   const clearStaged = useCallback((options?: { notifyCancel?: boolean }) => {
     const source = stagedSourceRef.current;
@@ -93,15 +96,12 @@ export function useStagedSelectionToolbar(args: {
     stagedSelectionRef.current = null;
     stagedSourceRef.current = { kind: "user-selection" };
     noteDraftRef.current = "";
-    toolbarAnchorRef.current = undefined;
-    toolbarFallbackRef.current = null;
-    reanchorRequestRef.current += 1;
+    resetStagedToolbar();
     setStagedSelection(null);
     setStagedSource({ kind: "user-selection" });
     setStagedColor("yellow");
     setNoteOpen(false);
     setNoteDraft("");
-    setToolbarPos(null);
     const engine = args.engineRef.current;
     // Remove temporary renderer marks before returning to durable marks only.
     engine?.setTemporarySearchHighlight(null);
@@ -110,39 +110,11 @@ export function useStagedSelectionToolbar(args: {
     if (options?.notifyCancel && source.kind !== "user-selection") {
       onCanceledRef.current?.(source);
     }
-  }, [args.engineRef]);
+  }, [args.engineRef, resetStagedToolbar]);
 
   const cancelStaged = useCallback(() => {
     clearStaged({ notifyCancel: true });
   }, [clearStaged]);
-
-  const getFallbackToolbarPos = useCallback((): StagedSelectionToolbarPos | null => {
-    const wrapper = args.mountWrapperRef.current;
-    if (!wrapper) return null;
-    const r = wrapper.getBoundingClientRect();
-    return { left: r.width / 2, top: 18, placement: "below" };
-  }, [args.mountWrapperRef]);
-
-  const getToolbarPosForAnchor = useCallback(
-    (anchor?: ReaderSelection["anchor"], fallback?: StagedSelectionToolbarPos | null): StagedSelectionToolbarPos | null => {
-      const wrapper = args.mountWrapperRef.current;
-      if (!wrapper) return fallback ?? null;
-      const viewport = {
-        left: 0,
-        top: 0,
-        width: window.innerWidth || document.documentElement.clientWidth || wrapper.clientWidth,
-        height: window.innerHeight || document.documentElement.clientHeight || wrapper.clientHeight,
-      };
-      return getStagedSelectionToolbarPosition({
-        wrapper: wrapper.getBoundingClientRect(),
-        anchor,
-        fallback: fallback ?? getFallbackToolbarPos(),
-        toolbarSize: toolbarSizeRef.current,
-        viewport,
-      });
-    },
-    [args.mountWrapperRef, getFallbackToolbarPos],
-  );
 
   const stageSelection = useCallback(
     (selection: ReaderSelection, options?: { source?: StagedSelectionSource; color?: string; note?: string; toolbarPosition?: StagedSelectionToolbarPos | null; deferToolbar?: boolean }) => {
@@ -168,69 +140,19 @@ export function useStagedSelectionToolbar(args: {
       stagedSelectionRef.current = selection;
       stagedSourceRef.current = nextSource;
       noteDraftRef.current = nextNote;
-      toolbarAnchorRef.current = selection.anchor;
-      toolbarFallbackRef.current = options?.toolbarPosition ?? getFallbackToolbarPos();
-      reanchorRequestRef.current += 1;
+      positionStagedToolbar({
+        anchor: selection.anchor,
+        toolbarPosition: options?.toolbarPosition,
+        deferToolbar: options?.deferToolbar,
+      });
       setStagedSelection(selection);
       setStagedSource(nextSource);
       setStagedColor(nextColor);
       setNoteOpen(Boolean(nextNote));
       setNoteDraft(nextNote);
-      setToolbarPos(options?.deferToolbar ? null : getToolbarPosForAnchor(selection.anchor, toolbarFallbackRef.current));
     },
-    [getFallbackToolbarPos, getToolbarPosForAnchor],
+    [positionStagedToolbar],
   );
-
-  const reanchorStagedToolbar = useCallback(async () => {
-    const selection = stagedSelectionRef.current;
-    if (!selection?.cfiRange) return;
-    const cfiRange = selection.cfiRange;
-    const request = ++reanchorRequestRef.current;
-    debugStagedSelection("toolbar reanchor start", {
-      request,
-      cfiPreview: previewStagedSelectionCfi(cfiRange),
-    });
-    await waitForNextPaint();
-    if (!isStagedToolbarReanchorRequestCurrent(
-      request,
-      reanchorRequestRef.current,
-      cfiRange,
-      stagedSelectionRef.current?.cfiRange,
-    )) {
-      debugStagedSelection("toolbar reanchor abandoned before measurement", { request });
-      return;
-    }
-    const anchor = await args.engineRef.current?.getVisibleCfiRangeAnchor(cfiRange) ?? null;
-    if (!isStagedToolbarReanchorRequestCurrent(
-      request,
-      reanchorRequestRef.current,
-      cfiRange,
-      stagedSelectionRef.current?.cfiRange,
-    )) {
-      debugStagedSelection("toolbar reanchor abandoned after measurement", { request });
-      return;
-    }
-    toolbarAnchorRef.current = anchor ?? undefined;
-    const position = getToolbarPosForAnchor(
-      anchor ?? undefined,
-      toolbarFallbackRef.current ?? getFallbackToolbarPos(),
-    );
-    setToolbarPos(position);
-    const wrapperBounds = args.mountWrapperRef.current?.getBoundingClientRect();
-    debugStagedSelection("toolbar reanchor complete", {
-      request,
-      measuredAnchor: Boolean(anchor),
-      anchorX: anchor?.x,
-      anchorY: anchor?.y,
-      anchorBottom: anchor?.bottom,
-      toolbarLeft: position?.left,
-      toolbarTop: position?.top,
-      wrapperLeft: wrapperBounds?.left,
-      wrapperTop: wrapperBounds?.top,
-      wrapperWidth: wrapperBounds?.width,
-      wrapperHeight: wrapperBounds?.height,
-    });
-  }, [args.engineRef, args.mountWrapperRef, getFallbackToolbarPos, getToolbarPosForAnchor]);
 
   const stageSelectionFromCfiRange = useCallback(
     async (input: ProgrammaticStagedSelectionInput) => {
@@ -258,19 +180,11 @@ export function useStagedSelectionToolbar(args: {
         durableMarkCount: highlightMarksRef.current.length,
         color,
       });
-      toolbarFallbackRef.current = input.toolbarPosition ?? getFallbackToolbarPos();
+      setStagedToolbarFallback(input.toolbarPosition);
       await reanchorStagedToolbar();
     },
-    [args.engineRef, getFallbackToolbarPos, reanchorStagedToolbar, stageSelection],
+    [args.engineRef, reanchorStagedToolbar, setStagedToolbarFallback, stageSelection],
   );
-
-  const onToolbarSizeChange = useCallback((size: StagedSelectionToolbarSize) => {
-    if (size.width <= 0 || size.height <= 0) return;
-    if (toolbarSizeRef.current?.width === size.width && toolbarSizeRef.current.height === size.height) return;
-    toolbarSizeRef.current = size;
-    if (!stagedSelectionRef.current) return;
-    setToolbarPos(getToolbarPosForAnchor(toolbarAnchorRef.current, toolbarFallbackRef.current));
-  }, [getToolbarPosForAnchor]);
 
   const hasStagedSelection = useCallback(() => Boolean(stagedSelectionRef.current), []);
 
@@ -366,17 +280,4 @@ export function useStagedSelectionToolbar(args: {
     commitColor,
     commitBusy: Boolean(args.commitBusy),
   };
-}
-
-export function isStagedToolbarReanchorRequestCurrent(
-  request: number,
-  currentRequest: number,
-  requestedCfiRange: string,
-  currentCfiRange: string | undefined,
-): boolean {
-  return request === currentRequest && requestedCfiRange === currentCfiRange;
-}
-
-function waitForNextPaint(): Promise<void> {
-  return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
 }
