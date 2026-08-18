@@ -19,6 +19,7 @@ import {
   listGroupTags,
   listSeries,
   listTags,
+  searchGroupBooks,
   searchBooks,
 } from "./Library.Api";
 import {
@@ -189,6 +190,10 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         books: (groupId, params) => {
           const auth = requireAuth(ctx);
           return listGroupBooks(auth, groupId, params);
+        },
+        search: (groupId, params) => {
+          const auth = requireAuth(ctx);
+          return searchGroupBooks(auth, groupId, params);
         },
         authors: (groupId, params) => {
           const auth = requireAuth(ctx);

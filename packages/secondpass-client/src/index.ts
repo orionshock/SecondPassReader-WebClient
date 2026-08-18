@@ -10,6 +10,7 @@ export type {
   LibraryGroupListParams,
   LibraryPreviewParams,
   LibraryGroupBookListParams,
+  LibraryGroupSearchParams,
   LibraryGroupEntityListParams,
 } from "./SecondPassClient.Types";
 

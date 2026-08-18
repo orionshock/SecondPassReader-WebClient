@@ -272,7 +272,7 @@ export function AppLibraryRouteRenderer({
             navigateTo({
               kind: "library",
               q: route.q,
-              searchMode: patch.groupId !== undefined || patch.tag !== undefined ? undefined : route.searchMode,
+              searchMode: patch.tag !== undefined && patch.tag !== null ? undefined : route.searchMode,
               browse: route.browse ?? "books",
               seriesId: route.seriesId,
               authorId: route.authorId,

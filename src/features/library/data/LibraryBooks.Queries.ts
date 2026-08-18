@@ -17,17 +17,27 @@ export function loadLibraryBooks(
   params: LibraryBookListParams,
   searchMode: LibrarySearchMode,
 ): Promise<PaginatedResponse<CompactBook>> {
-  if (groupId) return spl.library.groups.books(groupId, params);
+  const scope = groupId
+    ? {
+        browse: (query: LibraryBookListParams) => spl.library.groups.books(groupId, query),
+        search: (query: LibrarySearchParams) => spl.library.groups.search(groupId, query),
+      }
+    : {
+        browse: (query: LibraryBookListParams) => spl.library.books.list(query),
+        search: (query: LibrarySearchParams) => spl.library.search(query),
+      };
+
   if (searchMode === "global" && params.q?.trim() && !params.tag && !params.author && !params.series) {
     const ordering = GLOBAL_SEARCH_ORDERINGS.has(params.ordering as NonNullable<LibrarySearchParams["ordering"]>)
       ? params.ordering as LibrarySearchParams["ordering"]
       : "title";
-    return spl.library.search({
+    const searchParams = {
       q: params.q,
       ordering,
       page: params.page,
       pageSize: params.pageSize,
-    });
+    };
+    return scope.search(searchParams);
   }
-  return spl.library.books.list(params);
+  return scope.browse(params);
 }

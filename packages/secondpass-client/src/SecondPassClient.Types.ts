@@ -99,7 +99,8 @@ export type LibraryGroupListParams = {
 
 export type LibraryPreviewParams = { includePreviewBooks?: boolean; previewLimit?: number };
 export type LibraryGroupBookListParams = LibraryBookListParams & { excludeShelf?: string };
-export type LibraryGroupEntityListParams = Omit<LibraryEntityListParams, "excludeId">;
+export type LibraryGroupSearchParams = Omit<LibrarySearchParams, "excludeGroup">;
+export type LibraryGroupEntityListParams = LibraryEntityListParams;
 
 export type SecondPassClient = {
   readonly config: Readonly<SecondPassClientConfig>;
@@ -153,6 +154,7 @@ export type SecondPassClient = {
       list(params?: LibraryGroupListParams): Promise<PaginatedResponse<LibraryGroup>>;
       get(groupId: string, params?: LibraryPreviewParams): Promise<LibraryGroup>;
       books(groupId: string, params?: LibraryGroupBookListParams): Promise<PaginatedResponse<CompactBook>>;
+      search(groupId: string, params?: LibraryGroupSearchParams): Promise<PaginatedResponse<CompactBook>>;
       authors(groupId: string, params?: LibraryGroupEntityListParams): Promise<PaginatedResponse<Author>>;
       series(groupId: string, params?: LibraryGroupEntityListParams): Promise<PaginatedResponse<Series>>;
       tags(groupId: string, params?: LibraryTagListParams): Promise<PaginatedResponse<CatalogTag>>;

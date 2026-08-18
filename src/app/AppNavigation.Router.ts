@@ -81,7 +81,7 @@ export function routeToHash(route: AppRoute): string {
       return `#/home${buildQuery({ book: route.bookId })}`;
     case "library": {
       const browse = route.browse ?? "books";
-      const globalSearch = route.searchMode === "global" && Boolean(route.q?.trim()) && browse === "books" && !route.groupId && !route.tag;
+      const globalSearch = route.searchMode === "global" && Boolean(route.q?.trim()) && browse === "books" && !route.tag;
       return `#/library${buildQuery({
         q: route.q,
         browse: browse !== "books" ? browse : undefined,
@@ -166,7 +166,7 @@ export function parseCurrentRoute(): AppRoute | null {
 
     const effectiveBrowse: "books" | "series" | "authors" =
       browse === "series" || browse === "authors" || browse === "books" ? browse : "books";
-    const searchMode = requestedGlobalSearch && q && effectiveBrowse === "books" && !groupId && !tag ? "global" as const : undefined;
+    const searchMode = requestedGlobalSearch && q && effectiveBrowse === "books" && !tag ? "global" as const : undefined;
 
     if (q) {
       return {

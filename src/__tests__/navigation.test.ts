@@ -99,7 +99,7 @@ describe("navigation route ordering params", () => {
     expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "books", groupId: "g1" });
   });
 
-  it("round trips valid global search and normalizes invalid combinations", () => {
+  it("round trips broad search in global or Group scope and normalizes invalid combinations", () => {
     const hash = routeToHash({ kind: "library", browse: "books", q: "space opera", searchMode: "global" });
     expect(hash).toBe("#/library?q=space+opera&search=global");
 
@@ -109,8 +109,11 @@ describe("navigation route ordering params", () => {
     vi.stubGlobal("window", { location: { hash: "#/library?browse=authors&q=space&search=global" } });
     expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "authors", q: "space", searchMode: undefined });
 
-    expect(routeToHash({ kind: "library", browse: "books", q: "space", groupId: "g1", searchMode: "global" }))
-      .toBe("#/library?q=space&group=g1");
+    const groupHash = routeToHash({ kind: "library", browse: "books", q: "space", groupId: "g1", searchMode: "global" });
+    expect(groupHash).toBe("#/library?q=space&search=global&group=g1");
+
+    vi.stubGlobal("window", { location: { hash: groupHash } });
+    expect(parseCurrentRoute()).toMatchObject({ kind: "library", browse: "books", q: "space", searchMode: "global", groupId: "g1" });
   });
 
   it("omits default shelf params and keeps non-default shelf params", () => {
