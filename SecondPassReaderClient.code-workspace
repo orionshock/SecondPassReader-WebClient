@@ -5,30 +5,40 @@
     },
   ],
   "settings": {
+    "explorer.excludeGitIgnore": false,
+    "files.exclude": {
+      "**/.agents": true,
+      "**/.cache": true,
+      "**/.DS_Store": true,
+      "**/.eslintcache": true,
+      "**/.env": true,
+      "**/.git": true,
+      "**/.idea": true,
+      "**/.npm-cache": true,
+      "**/.playwright-profile": true,
+      "**/.pnpm-store": true,
+      "**/.turbo": true,
+      "**/.vite": true,
+      "**/.vscode": true,
+      "**/.yarn": true,
+      "**/*.log": true,
+      "**/*.local": true,
+      "**/*.tgz": true,
+      "**/*.tsbuildinfo": true,
+      "**/build": true,
+      "**/coverage": true,
+      "**/dist": true,
+      "**/logs": true,
+      "**/node_modules": true,
+      "**/out": true,
+      "compose.yml": true
+    },
     "LineCount.includes": [
-      "**/*.ts",
-      "**/*.tsx",
-      "**/*.js",
-      "**/*.jsx",
-      "**/*.html",
-      "**/*.css",
-      "**/*.scss",
-      "**/*.json",
+      "index.html",
+      "src/**/*",
+      "packages/secondpass-client/src/**/*"
     ],
     "LineCount.excludes": [
-      "**/.git/**",
-      "**/.github/**",
-      "**/.vscode/**",
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/out/**",
-      "**/build/**",
-      "**/coverage/**",
-      "**/docs/**",
-      "**/TestImportFiles/**",
-      "**/.vite/**",
-      "**/.turbo/**",
-      "**/.cache/**",
       "**/__tests__/**",
       "**/*.test.ts",
       "**/*.test.tsx",
@@ -40,11 +50,22 @@
       "**/*.min.js",
       "**/*.min.css",
       "**/*.map",
-      "**/*.log",
-      "**/*.tsbuildinfo",
-      "**/package-lock.json",
-      "**/linecount.json",
-      "**/linecount.txt"
+      "**/*.log"
     ],
+    "LineCount.showStatusBarItem": true,
+    "LineCount.output": {
+      "txt": true,
+      "json": false,
+      "csv": false,
+      "md": false,
+      "outdir": ".linecount"
+    },
+    "LineCount.sort": "filename",
+    "LineCount.order": "asc"
   },
+  "extensions": {
+    "recommendations": [
+      "yycalm.linecount"
+    ]
+  }
 }
