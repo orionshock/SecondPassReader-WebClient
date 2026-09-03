@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { BookDetail, MarginaliaBookSummary, SecondPassClient } from "@secondpass/client";
 import { getBookCoverUrl } from "./BookCover.Mapper";
-import { getBookDescriptionText } from "./BookDescription.Presenter";
+import { BookDescription } from "./BookDescription.Presenter";
 import { InlineMeta } from "../../components/Metadata.Presenter";
 import { formatBookPublishedDate } from "./display/BookDisplay.Presenter";
 import { AddToShelfMenu } from "./bookDetail/AddToShelf.Menu";
@@ -68,7 +68,7 @@ export function BookDetailPanel({
     [book, coverBroken, serverBaseUrl],
   );
 
-  const descriptionText = useMemo(() => getBookDescriptionText(book), [book]);
+  const hasDescription = Boolean(book.description.trim());
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   return (
@@ -141,14 +141,13 @@ export function BookDetailPanel({
             <div className="bookDetailMetaLine muted">EPUB file unavailable</div>
           )}
 
-          {descriptionText ? (
+          {hasDescription ? (
             <div className="bookDetailSummaryBlock">
-              <div
-                className={`bookDetailSummary ${descriptionExpanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
+              <BookDescription
+                description={book.description}
+                expanded={descriptionExpanded}
                 id="book-detail-summary"
-              >
-                {descriptionText}
-              </div>
+              />
               <button
                 type="button"
                 className="bookDetailSummaryToggle"
