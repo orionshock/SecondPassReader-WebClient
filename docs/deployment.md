@@ -11,7 +11,7 @@ cp docker/compose.example.yml docker/compose.yml
 docker/restart.sh
 ```
 
-The container listens on port `8000`, which Compose exposes to other containers without publishing it on the host. Route a reverse proxy on the same Docker network to `web:8000`. Copy `docker/.env.example` to `docker/.env` only when configuring server presets.
+The container listens on port `8000`, which Compose exposes to other containers without publishing it on the host. Route a reverse proxy on the same Docker network to `secondpassreader-webclient:8000`. Copy `docker/.env.example` to `docker/.env` only when configuring server presets.
 
 ## Optional server presets
 
@@ -32,7 +32,7 @@ SECONDPASS_SERVER_2_URL=http://localhost:8000
 
 A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. Otherwise, complete indexed pairs are used and incomplete pairs are ignored. Container startup writes the resulting public, credential-free array to `/usr/share/nginx/html/secondpass-servers.json`, served by nginx at `/secondpass-servers.json`; no configuration produces `[]`.
 
-After changing presets, run `docker compose -f docker/compose.yml up -d web` to recreate/restart the container with the new environment. The image does not need to be rebuilt. Presets are only UI hints: selecting one still makes the Reader verify that server through `/.well-known/secondpass` before pairing. They do not carry tokens or bypass linking.
+After changing presets, run `docker compose -f docker/compose.yml up -d secondpassreader-webclient` to recreate/restart the container with the new environment. The image does not need to be rebuilt. Presets are only UI hints: selecting one still makes the Reader verify that server through `/.well-known/secondpass` before pairing. They do not carry tokens or bypass linking.
 
 ## Version stamp
 

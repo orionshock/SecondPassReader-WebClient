@@ -1,7 +1,7 @@
 name: secondpassreader-webclient
 
 services:
-  web:
+  secondpassreader-webclient:
     build:
       context: ..
       dockerfile: docker/Dockerfile

@@ -22,4 +22,4 @@ echo "Stopping SecondPassReader-WebClient..."
 docker compose -f "$COMPOSE_FILE" down
 
 echo "Building SecondPassReader-WebClient $VERSION ($RELEASE_DATE)..."
-docker compose -f "$COMPOSE_FILE" up -d --build web
+docker compose -f "$COMPOSE_FILE" up -d --build secondpassreader-webclient
