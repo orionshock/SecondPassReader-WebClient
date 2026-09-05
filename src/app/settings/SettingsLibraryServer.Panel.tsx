@@ -1,4 +1,5 @@
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { APP_BUILD_INFO } from "../AppBuildInfo.Constants";
 import { getConnectionStatus, getConnectionStatusLabel } from "../../features/connection/ConnectionStatus.Presenter";
 import { SettingsDetailRow } from "./SettingsDetail.Row";
 
@@ -72,6 +73,10 @@ export function SettingsLibraryServerPanel({
           Log out revokes this device session on the server and removes the local connection from this browser. Server
           books and annotations are not deleted.
         </p>
+        <div className="settingsGrid">
+          <SettingsDetailRow label="Web client version" value={APP_BUILD_INFO.version} mono />
+          <SettingsDetailRow label="Web client release date" value={APP_BUILD_INFO.releaseDate} />
+        </div>
         <div className="settingsActions">
           <button type="button" className="button buttonDanger" onClick={onLogOut} disabled={!profile || busy}>
             {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}

@@ -12,10 +12,10 @@ test-results
 
 .env
 .env.*
-!.env.example
-!deploy/.env.example
-compose.yml
-!compose.example.yml
+**/.env
+**/.env.*
+docker/compose.yml
+docker/compose.example.yml
 
 .vscode
 .idea
@@ -31,7 +31,5 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-Dockerfile*
-!Dockerfile
-docker-compose*.yml
-!docker-compose.example.yml
+docker/restart.sh
+docs/

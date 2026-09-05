@@ -1,4 +1,4 @@
-# Agent instructions (SecondPassReaderClient)
+# Agent instructions (SecondPassReader-WebClient)
 
 This repo is a **standalone browser app**. Keep it statically deployable and independent of the Django server implementation.
 

@@ -1,12 +1,14 @@
-name: secondpassreader
+name: secondpassreader-webclient
 
 services:
-  reader:
+  web:
     build:
-      context: .
-      dockerfile: Dockerfile
-    image: secondpass-reader-client:local
-    container_name: secondpass-reader-client
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        SECONDPASS_WEBCLIENT_VERSION: ${SECONDPASS_WEBCLIENT_VERSION:-development}
+        SECONDPASS_WEBCLIENT_RELEASE_DATE: ${SECONDPASS_WEBCLIENT_RELEASE_DATE:-unknown}
+    image: secondpassreader-webclient:local
     env_file:
       - path: .env
         required: false
