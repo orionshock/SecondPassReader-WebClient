@@ -6,6 +6,7 @@ import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { BookResultsView } from "../library/display/BookResults.View";
 import { BookViewModeToggle } from "../library/display/BookViewMode.Control";
 import { OrderingControl, type OrderingOption } from "../../components/Ordering.Control";
+import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import { getLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/LibraryBooksView.Store";
 import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
 
@@ -186,7 +187,7 @@ export function ShelfDetailPage({
       {busy && !shelf && items.length === 0 ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 
-      {shelf?.description ? <div className="muted">{shelf.description}</div> : null}
+      <ServerRichText value={shelf?.description} className="muted" />
       {shelf ? <div className="muted"><ShelfMetaLine shelf={shelf} /></div> : null}
 
       {items.length > 0 ? (

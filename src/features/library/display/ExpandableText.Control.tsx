@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ServerRichText } from "../../../components/ServerRichText.Renderer";
 
 export function ExpandableText({
   text,
@@ -24,12 +25,11 @@ export function ExpandableText({
 
   return (
     <div className={`expandableText${className ? ` ${className}` : ""}`}>
-      <div
+      <ServerRichText
+        value={cleaned}
         className={textClassName}
         style={{ WebkitLineClamp: !expanded && probablyLong ? collapsedLines : undefined }}
-      >
-        {cleaned}
-      </div>
+      />
       {probablyLong ? (
         <button
           type="button"

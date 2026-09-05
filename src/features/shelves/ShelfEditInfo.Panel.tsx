@@ -1,4 +1,5 @@
 import type { Shelf } from "@secondpass/client";
+import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import { ShelfMetaLine } from "./ShelfMetadata.Presenter";
 
 export function ShelfEditInfoPanel({
@@ -15,7 +16,7 @@ export function ShelfEditInfoPanel({
       <div className="muted">
         <ShelfMetaLine shelf={shelf} />
       </div>
-      {shelf.description ? <div className="muted">{shelf.description}</div> : null}
+      <ServerRichText value={shelf.description} className="muted" />
       {canEdit ? (
         <button type="button" className="button buttonCompact" onClick={onChangeInfo}>
           Change shelf info

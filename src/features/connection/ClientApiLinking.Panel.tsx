@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createSecondPassClient } from "@secondpass/client";
 import type { ClientApiLoginRequestResponse, SecondPassDiscovery } from "@secondpass/client";
 import { MaterialIcon } from "../../components/Material.Icon";
+import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { isProfileLinked } from "./ConnectionStatus.Presenter";
 import { buildDefaultDeviceName } from "./DefaultDeviceName.Presenter";
@@ -154,7 +155,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       <div className="pairHeader">
         <h1 className="pairTitle">Connect to SecondPass Library</h1>
         <div className="pairLibraryName">{profile.serverName ?? profile.label}</div>
-        {profile.serverDescription ? <p className="pairLibraryDescription">{profile.serverDescription}</p> : null}
+        <ServerRichText value={profile.serverDescription} className="pairLibraryDescription" />
         <div className="pairLibraryAddress">
           <span className="muted">at</span> <span className="mono">{profile.serverBaseUrl}</span>
         </div>

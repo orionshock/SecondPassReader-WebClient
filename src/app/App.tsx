@@ -16,6 +16,7 @@ import { createSplClientFromProfile } from "./AppSplClient.Factory";
 import type { SecondPassClient } from "@secondpass/client";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecovery.Context";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecovery.Banner";
+import { ServerRichText } from "../components/ServerRichText.Renderer";
 import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
 import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
 import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
@@ -344,7 +345,8 @@ function ServerSummary({ profile }: { profile: ConnectionProfile | null }) {
       ) : null}
       {profile.serverDescription ? (
         <div className="detailRow">
-          <span className="muted">Description:</span> {profile.serverDescription}
+          <span className="muted">Description:</span>
+          <ServerRichText value={profile.serverDescription} />
         </div>
       ) : null}
       {profile.apiBaseUrl ? (

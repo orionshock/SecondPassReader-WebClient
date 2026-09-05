@@ -120,3 +120,30 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.serverRichText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.serverRichText > :first-child {
+  margin-top: 0;
+}
+
+.serverRichText > :last-child {
+  margin-bottom: 0;
+}
+
+.serverRichText p {
+  margin: 0 0 0.75em;
+}
+
+.serverRichText ul,
+.serverRichText ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.serverRichText li + li {
+  margin-top: 0.25em;
+}

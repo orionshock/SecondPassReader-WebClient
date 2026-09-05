@@ -21,7 +21,6 @@ export function HomeShelfCard({
     <a
       className="homeShelfCard"
       aria-label={`Open shelf ${shelf.name}${accessibleOwner}, ${count} ${count === 1 ? "book" : "books"}`}
-      title={shelf.description ?? undefined}
       href={href}
     >
       <PreviewBookCoverStack

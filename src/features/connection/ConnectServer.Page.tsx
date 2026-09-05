@@ -71,7 +71,7 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
       const now = new Date().toISOString();
       const existing = getActiveConnection();
 
-      const label = summary.serverName || summary.serverDescription || serverBaseUrl;
+      const label = summary.serverName || serverBaseUrl;
 
       const updated: ConnectionProfile = {
         id: existing?.id ?? selectedProfileId ?? newProfileId(),

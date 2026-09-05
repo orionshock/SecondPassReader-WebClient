@@ -1,5 +1,6 @@
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { APP_BUILD_INFO } from "../AppBuildInfo.Constants";
+import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import { getConnectionStatus, getConnectionStatusLabel } from "../../features/connection/ConnectionStatus.Presenter";
 import { SettingsDetailRow } from "./SettingsDetail.Row";
 
@@ -50,7 +51,12 @@ export function SettingsLibraryServerPanel({
           <>
             <div className="settingsGrid">
               <SettingsDetailRow label="Library" value={profile.serverName ?? profile.label} />
-              {profile.serverDescription ? <SettingsDetailRow label="Description" value={profile.serverDescription} /> : null}
+              {profile.serverDescription ? (
+                <div className="detailRow">
+                  <span className="muted">Description:</span>
+                  <ServerRichText value={profile.serverDescription} />
+                </div>
+              ) : null}
               <SettingsDetailRow label="Server URL" value={profile.serverBaseUrl} mono />
               <SettingsDetailRow label="Signed-in user" value={formatUser(profile)} />
               <SettingsDetailRow label="This device" value={profile.clientSessionName ?? "Unknown"} />

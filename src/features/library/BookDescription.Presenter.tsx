@@ -1,3 +1,5 @@
+import { ServerRichText } from "../../components/ServerRichText.Renderer";
+
 export function BookDescription({
   description,
   expanded,
@@ -7,16 +9,11 @@ export function BookDescription({
   expanded: boolean;
   id: string;
 }) {
-  const html = description.trim();
-  if (!html) return null;
-
-  // Book descriptions are a server-sanitized, attribute-free limited HTML contract.
-  // Keep the trusted HTML boundary confined to this component.
   return (
-    <div
+    <ServerRichText
+      value={description}
       className={`bookDetailSummary ${expanded ? "bookDetailSummaryExpanded" : "bookDetailSummaryCollapsed"}`}
       id={id}
-      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
