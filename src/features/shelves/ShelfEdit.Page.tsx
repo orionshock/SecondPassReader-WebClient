@@ -4,7 +4,7 @@ import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { MaterialIcon } from "../../components/Material.Icon";
-import type { ShelfFormValues } from "./Shelf.Form";
+import { updatePersonalShelfInput, type ShelfFormValues } from "./Shelf.Form";
 import { ShelfEditInfoModal } from "./ShelfEditInfo.Modal";
 import { ShelfEditInfoPanel } from "./ShelfEditInfo.Panel";
 import { ShelfEditItemsList } from "./ShelfEditItems.List";
@@ -124,19 +124,16 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
     setInfoBusy(true);
     setMutationError(null);
     try {
-      await spl.shelves.update(shelfId, {
-        name,
-        description: infoDraft.description.trim(),
-        visibility: infoDraft.visibility,
-      });
+      const updatedShelf = await spl.shelves.update(shelfId, updatePersonalShelfInput(infoDraft));
+      setShelf(updatedShelf);
+      setInfoDraft(shelfToFormValues(updatedShelf));
       setInfoOpen(false);
-      await loadFirst();
     } catch (e) {
       setMutationError(e instanceof Error ? e.message : "Failed to update shelf.");
     } finally {
       setInfoBusy(false);
     }
-  }, [infoDraft, loadFirst, shelf, shelfId, spl]);
+  }, [infoDraft, shelf, shelfId, spl]);
 
   const handleMoveToPosition = useCallback(async (item: ShelfItem, position: number) => {
     if (!spl) return;
@@ -207,7 +204,7 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
-      {mutationError ? <div className="errorText">{mutationError}</div> : null}
+      {mutationError && !infoOpen ? <div className="errorText">{mutationError}</div> : null}
 
       {shelf ? (
         <>
@@ -254,6 +251,7 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
         <ShelfEditInfoModal
           values={infoDraft}
           busy={infoBusy}
+          descriptionError={mutationError}
           onChange={setInfoDraft}
           onSave={() => void handleSaveInfo()}
           onCancel={() => {

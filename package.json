@@ -21,6 +21,9 @@
   "dependencies": {
     "@likecoin/epub-ts": "^0.7.1",
     "@secondpass/client": "workspace:*",
+    "@tiptap/extension-list": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
     "@types/papaparse": "^5.5.2",
     "dompurify": "^3.4.14",
     "fflate": "^0.8.3",

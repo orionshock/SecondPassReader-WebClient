@@ -4,12 +4,14 @@ import { ShelfForm, type ShelfFormValues } from "./Shelf.Form";
 export function ShelfEditInfoModal({
   values,
   busy,
+  descriptionError,
   onChange,
   onSave,
   onCancel,
 }: {
   values: ShelfFormValues;
   busy: boolean;
+  descriptionError?: string | null;
   onChange: (values: ShelfFormValues) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -46,6 +48,7 @@ export function ShelfEditInfoModal({
             onCancel={onCancel}
             submitLabel="Save shelf"
             busy={busy}
+            descriptionError={descriptionError}
           />
         </div>
       </section>

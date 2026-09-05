@@ -487,8 +487,8 @@ describe("@secondpass/client high-level workflows", () => {
       .mockResolvedValueOnce(emptyResponse());
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
-    await spl.shelves.create({ name: "Later", description: "To read", visibility: "private", owner_type: "user" });
-    await spl.shelves.update("shelf-1", { name: "Renamed", description: "Updated" });
+    await spl.shelves.create({ name: "Later", description: "<p>To <strong>read</strong></p>", visibility: "private", owner_type: "user" });
+    await spl.shelves.update("shelf-1", { name: "Renamed", description: "<p>Updated<br>again</p>" });
     await spl.shelves.addItem("shelf-1", { book: "10" });
     await spl.shelves.updateItem("shelf-1", "item-1", { position: 2 });
     await spl.shelves.removeItem("shelf-1", "item-1");
@@ -499,7 +499,7 @@ describe("@secondpass/client high-level workflows", () => {
     expect(fetchMock.mock.calls[0]![1]?.method).toBe("POST");
     expect(createPayload).toEqual({
       name: "Later",
-      description: "To read",
+      description: "<p>To <strong>read</strong></p>",
       visibility: "private",
       owner_type: "user",
     });
@@ -508,7 +508,7 @@ describe("@secondpass/client high-level workflows", () => {
 
     expect(String(fetchMock.mock.calls[1]![0])).toBe("https://api.example/shelves/shelf-1/");
     expect(fetchMock.mock.calls[1]![1]?.method).toBe("PATCH");
-    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toEqual({ name: "Renamed", description: "Updated" });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1]?.body))).toEqual({ name: "Renamed", description: "<p>Updated<br>again</p>" });
 
     expect(String(fetchMock.mock.calls[2]![0])).toBe("https://api.example/shelves/shelf-1/items/");
     expect(fetchMock.mock.calls[2]![1]?.method).toBe("POST");

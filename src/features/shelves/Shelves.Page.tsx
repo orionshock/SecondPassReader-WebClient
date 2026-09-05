@@ -6,7 +6,7 @@ import { MaterialIcon } from "../../components/Material.Icon";
 import { OrderingControl, type OrderingOption } from "../../components/Ordering.Control";
 import { PreviewBookCoverStack } from "../library/display/PreviewBookCover.Stack";
 import { normalizePreviewBooks } from "../library/display/PreviewBooks.Mapper";
-import { ShelfForm, type ShelfFormValues } from "./Shelf.Form";
+import { createPersonalShelfInput, ShelfForm, type ShelfFormValues } from "./Shelf.Form";
 import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
@@ -121,12 +121,7 @@ export function ShelvesPage({
     setMutationBusy(true);
     setMutationError(null);
     try {
-      await spl.shelves.create({
-        name,
-        description: createDraft.description.trim(),
-        owner_type: "user",
-        visibility: createDraft.visibility,
-      });
+      await spl.shelves.create(createPersonalShelfInput(createDraft));
       setCreateOpen(false);
       setCreateDraft(shelfToFormValues());
       setMenuShelfId(null);
@@ -282,7 +277,7 @@ export function ShelvesPage({
           disabled={!canLoad || busy}
         />
       ) : null}
-      {mutationError ? <div className="errorText">{mutationError}</div> : null}
+      {mutationError && !formOpen ? <div className="errorText">{mutationError}</div> : null}
 
       {formOpen ? (
         <div
@@ -326,6 +321,7 @@ export function ShelvesPage({
                 }}
                 submitLabel="Create personal shelf"
                 busy={mutationBusy}
+                descriptionError={mutationError}
               />
             </div>
           </section>

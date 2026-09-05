@@ -11,7 +11,7 @@ export function formatShelfVisibility(visibility: Shelf["visibility"]): string {
 }
 
 export function canEditShelf(shelf: Shelf | null | undefined): boolean {
-  return shelf?.can_edit === true;
+  return shelf?.owner_type === "user" && shelf.can_edit === true;
 }
 
 export function formatUserDisplayName(user: Shelf["owner_user"]): string {

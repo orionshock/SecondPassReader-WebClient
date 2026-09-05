@@ -1,8 +1,33 @@
+import { lazy, Suspense } from "react";
+import type { CreateShelfInput, UpdateShelfInput } from "@secondpass/client";
+
+const LimitedRichTextEditor = lazy(async () => {
+  const module = await import("../../components/LimitedRichText.Editor");
+  return { default: module.LimitedRichTextEditor };
+});
+
 export type ShelfFormValues = {
   name: string;
   description: string;
   visibility: "private" | "listed";
 };
+
+export function createPersonalShelfInput(values: ShelfFormValues): CreateShelfInput {
+  return {
+    name: values.name.trim(),
+    description: values.description,
+    owner_type: "user",
+    visibility: values.visibility,
+  };
+}
+
+export function updatePersonalShelfInput(values: ShelfFormValues): UpdateShelfInput {
+  return {
+    name: values.name.trim(),
+    description: values.description,
+    visibility: values.visibility,
+  };
+}
 
 export function ShelfForm({
   values,
@@ -11,6 +36,7 @@ export function ShelfForm({
   onCancel,
   submitLabel,
   busy,
+  descriptionError,
 }: {
   values: ShelfFormValues;
   onChange: (values: ShelfFormValues) => void;
@@ -18,6 +44,7 @@ export function ShelfForm({
   onCancel: () => void;
   submitLabel: string;
   busy: boolean;
+  descriptionError?: string | null;
 }) {
   return (
     <form
@@ -38,15 +65,16 @@ export function ShelfForm({
         />
       </label>
 
-      <label className="field">
-        <span className="fieldLabel">Description</span>
-        <textarea
-          className="input shelfEditDescription"
+      <Suspense fallback={<div className="muted limitedRichTextLoading" role="status">Loading description editor...</div>}>
+        <LimitedRichTextEditor
+          id="shelf-description"
+          label="Description"
           value={values.description}
-          onChange={(e) => onChange({ ...values, description: e.target.value })}
-          rows={3}
+          onChange={(description) => onChange({ ...values, description })}
+          disabled={busy}
+          error={descriptionError}
         />
-      </label>
+      </Suspense>
 
       <label className="field">
         <span className="fieldLabel">Visibility</span>

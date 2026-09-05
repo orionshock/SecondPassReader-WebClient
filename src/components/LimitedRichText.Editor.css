@@ -1,0 +1,91 @@
+.limitedRichTextField {
+  display: grid;
+  gap: 6px;
+}
+
+.limitedRichTextEditor {
+  overflow: hidden;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  background: var(--sp-panel);
+}
+
+.limitedRichTextFieldError .limitedRichTextEditor {
+  border-color: var(--sp-danger-border);
+}
+
+.limitedRichTextToolbar {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--sp-border);
+}
+
+.limitedRichTextToolbarButton {
+  display: inline-grid;
+  width: 32px;
+  min-width: 32px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+}
+
+.limitedRichTextToolbarButton[aria-pressed="true"] {
+  border-color: var(--sp-primary-border);
+  color: var(--sp-primary-text);
+  background: var(--sp-primary-bg);
+}
+
+.limitedRichTextToolbarButton .material-symbols-outlined {
+  font-size: 19px;
+}
+
+.limitedRichTextToolbarSpacer {
+  flex: 1;
+}
+
+.limitedRichTextContent {
+  min-height: 112px;
+  padding: 10px 12px;
+  color: var(--sp-text);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.limitedRichTextContent:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--sp-primary-border);
+}
+
+.limitedRichTextContent > :first-child {
+  margin-top: 0;
+}
+
+.limitedRichTextContent > :last-child {
+  margin-bottom: 0;
+}
+
+.limitedRichTextContent p {
+  margin: 0 0 0.75em;
+}
+
+.limitedRichTextContent ul,
+.limitedRichTextContent ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.limitedRichTextMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 12px;
+}
+
+.limitedRichTextCountOver {
+  color: var(--sp-danger-text);
+}
+
+.limitedRichTextError {
+  margin-top: 0;
+}
