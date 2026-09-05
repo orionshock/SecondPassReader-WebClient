@@ -10,7 +10,7 @@ import { AddToShelfMenu } from "../features/library/bookDetail/AddToShelf.Menu";
 
 vi.mock("../features/library/catalogTags/CatalogTags.Controller", () => ({
   useCatalogTags: () => ({
-    data: { results: [{ id: 1, slug: "fiction", name: "Fiction", book_count: 3 }], previous: null, next: null },
+    data: { results: [{ id: "1", slug: "fiction", name: "Fiction", bookCount: 3 }], previous: null, next: null },
     busy: false,
     error: null,
     previousPage: vi.fn(),
@@ -47,6 +47,26 @@ describe("Library accessibility semantics", () => {
     expect(html).toContain('aria-label="Catalog tags"');
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('aria-label="3 books"');
+  });
+
+  it("prefers contextual catalog tags, including a present empty aggregate", () => {
+    const contextual = [{ id: "2", slug: "science-fiction", name: "Science Fiction", bookCount: 84 }];
+    const html = renderToStaticMarkup(
+      <CatalogTagRail
+        spl={{} as SecondPassClient}
+        catalogResult={{ catalogTags: contextual }}
+        selectedSlug="science-fiction"
+        onSelect={noop}
+      />,
+    );
+    expect(html).toContain("Science Fiction");
+    expect(html).toContain('aria-label="84 books"');
+    expect(html).not.toContain(">Fiction</span>");
+
+    const emptyHtml = renderToStaticMarkup(
+      <CatalogTagRail spl={{} as SecondPassClient} catalogResult={{ catalogTags: [] }} onSelect={noop} />,
+    );
+    expect(emptyHtml).not.toContain(">Fiction</span>");
   });
 
   it("exposes pressed state on book view buttons", () => {

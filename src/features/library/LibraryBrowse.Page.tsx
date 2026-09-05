@@ -119,6 +119,7 @@ export function LibraryBrowsePage({
   useEffect(() => {
     setQDraft(qFromRoute);
   }, [qFromRoute]);
+  const catalogResult = showBookList ? booksData : browseMode === "series" ? seriesData : authorsData;
 
   useEffect(() => {
     if (!advancedGroupsEnabled && route.groupId) onUpdateRoute?.({ groupId: null });
@@ -226,6 +227,7 @@ export function LibraryBrowsePage({
               <CatalogTagRail
                 spl={spl}
                 groupId={effectiveGroupId}
+                catalogResult={catalogResult}
                 selectedSlug={tagSlug}
                 onSelect={(slug) => onUpdateRoute?.({ tag: slug ?? null, page: 1, pageSize })}
               />

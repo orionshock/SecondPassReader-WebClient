@@ -5,6 +5,10 @@ export type PaginatedResponse<T> = {
   results: T[];
 };
 
+export type CatalogResultPage<T> = PaginatedResponse<T> & {
+  catalogTags?: CatalogTag[];
+};
+
 export type PreviewBook = {
   id: string;
   title: string;

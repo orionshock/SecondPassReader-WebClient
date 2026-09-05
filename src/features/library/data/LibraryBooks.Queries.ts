@@ -1,8 +1,8 @@
 import type {
   CompactBook,
+  CatalogResultPage,
   LibraryBookListParams,
   LibrarySearchParams,
-  PaginatedResponse,
   SecondPassClient,
 } from "@secondpass/client";
 import type { LibrarySearchMode } from "../route/LibraryRoute.State";
@@ -16,7 +16,7 @@ export function loadLibraryBooks(
   groupId: string | undefined,
   params: LibraryBookListParams,
   searchMode: LibrarySearchMode,
-): Promise<PaginatedResponse<CompactBook>> {
+): Promise<CatalogResultPage<CompactBook>> {
   const scope = groupId
     ? {
         browse: (query: LibraryBookListParams) => spl.library.groups.books(groupId, query),
@@ -27,12 +27,13 @@ export function loadLibraryBooks(
         search: (query: LibrarySearchParams) => spl.library.search(query),
       };
 
-  if (searchMode === "global" && params.q?.trim() && !params.tag && !params.author && !params.series) {
+  if (searchMode === "global" && params.q?.trim() && !params.author && !params.series) {
     const ordering = GLOBAL_SEARCH_ORDERINGS.has(params.ordering as NonNullable<LibrarySearchParams["ordering"]>)
       ? params.ordering as LibrarySearchParams["ordering"]
       : "title";
     const searchParams = {
       q: params.q,
+      ...(params.tag !== undefined ? { tag: params.tag } : {}),
       ordering,
       page: params.page,
       pageSize: params.pageSize,

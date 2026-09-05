@@ -20,7 +20,8 @@ describe("Library route state", () => {
       .toMatchObject({ axis: "books", resultKind: "books", effectiveGroupId: "g1", searchMode: "global" });
     expect(deriveLibraryRouteState({ browse: "authors", q: "space", searchMode: "global" }, true).searchMode).toBe("axis");
     expect(deriveLibraryRouteState({ browse: "books", searchMode: "global" }, true).searchMode).toBe("axis");
-    expect(deriveLibraryRouteState({ browse: "books", q: "space", tag: "classic", searchMode: "global" }, true).searchMode).toBe("axis");
+    expect(deriveLibraryRouteState({ browse: "books", q: "space", tag: "classic", searchMode: "global" }, true))
+      .toMatchObject({ searchMode: "global", tag: "classic" });
   });
 
   it("turns selected author and series routes into Books results", () => {
@@ -113,22 +114,31 @@ describe("Library axis queries", () => {
     expect(search).toHaveBeenCalledWith({ q: "space", ordering: "title", page: 1, pageSize: 20 });
   });
 
-  it("keeps tag-filtered global browsing on the books list endpoint", async () => {
+  it("keeps tagged axis browsing on the list endpoint and passes the tag through broad search", async () => {
     const emptyPage = { count: 0, next: null, previous: null, results: [] };
     const search = vi.fn().mockResolvedValue(emptyPage);
+    const groupSearch = vi.fn().mockResolvedValue(emptyPage);
     const list = vi.fn().mockResolvedValue(emptyPage);
-    const spl = { library: { search, books: { list }, groups: { books: vi.fn(), search: vi.fn() } } } as unknown as SecondPassClient;
+    const spl = { library: { search, books: { list }, groups: { books: vi.fn(), search: groupSearch } } } as unknown as SecondPassClient;
 
     const params = { q: "space", tag: "classic", ordering: "title" as const, page: 1, pageSize: 20 };
     await loadLibraryBooks(spl, undefined, params, "axis");
     expect(list).toHaveBeenCalledWith(params);
     expect(search).not.toHaveBeenCalled();
+
+    await loadLibraryBooks(spl, undefined, params, "global");
+    expect(search).toHaveBeenCalledWith({ q: "space", tag: "classic", ordering: "title", page: 1, pageSize: 20 });
+    expect(list).toHaveBeenCalledTimes(1);
+    await loadLibraryBooks(spl, "group-1", params, "global");
+    expect(groupSearch).toHaveBeenCalledWith("group-1", { q: "space", tag: "classic", ordering: "title", page: 1, pageSize: 20 });
+
   });
 
   it("uses axis-specific author and series endpoints", async () => {
     const emptyPage = { count: 0, next: null, previous: null, results: [] };
     const authorList = vi.fn().mockResolvedValue(emptyPage);
     const seriesList = vi.fn().mockResolvedValue(emptyPage);
+
     const groupAuthors = vi.fn().mockResolvedValue(emptyPage);
     const groupSeries = vi.fn().mockResolvedValue(emptyPage);
     const spl = { library: {

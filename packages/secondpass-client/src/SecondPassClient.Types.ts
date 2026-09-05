@@ -9,6 +9,7 @@ import type { ServerInfo } from "./schemas/Server.Types";
 import type {
   Author,
   BookDetail,
+  CatalogResultPage,
   CatalogTag,
   CompactBook,
   LibraryGroup,
@@ -62,6 +63,7 @@ export type LibraryBookListParams = {
 
 export type LibrarySearchParams = {
   q?: string;
+  tag?: string;
   ordering?: "title" | "-title" | "author" | "-author" | "series" | "-series";
   excludeShelf?: string;
   excludeGroup?: string;
@@ -121,9 +123,9 @@ export type SecondPassClient = {
   };
 
   library: {
-    search(params?: LibrarySearchParams): Promise<PaginatedResponse<CompactBook>>;
+    search(params?: LibrarySearchParams): Promise<CatalogResultPage<CompactBook>>;
     books: {
-      list(params?: LibraryBookListParams): Promise<PaginatedResponse<CompactBook>>;
+      list(params?: LibraryBookListParams): Promise<CatalogResultPage<CompactBook>>;
       get(bookId: string): Promise<BookDetail>;
       /**
        * Returns a server-provided download URL for deliberate URL workflows.
@@ -139,11 +141,11 @@ export type SecondPassClient = {
       download(book: CompactBook | BookDetail | string | number): Promise<Blob>;
     };
     series: {
-      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<Series>>;
+      list(params?: LibraryEntityListParams): Promise<CatalogResultPage<Series>>;
       get(seriesId: string, params?: LibraryPreviewParams): Promise<Series>;
     };
     authors: {
-      list(params?: LibraryEntityListParams): Promise<PaginatedResponse<Author>>;
+      list(params?: LibraryEntityListParams): Promise<CatalogResultPage<Author>>;
       get(authorId: string, params?: LibraryPreviewParams): Promise<Author>;
     };
     tags: {
@@ -153,10 +155,10 @@ export type SecondPassClient = {
     groups: {
       list(params?: LibraryGroupListParams): Promise<PaginatedResponse<LibraryGroup>>;
       get(groupId: string, params?: LibraryPreviewParams): Promise<LibraryGroup>;
-      books(groupId: string, params?: LibraryGroupBookListParams): Promise<PaginatedResponse<CompactBook>>;
-      search(groupId: string, params?: LibraryGroupSearchParams): Promise<PaginatedResponse<CompactBook>>;
-      authors(groupId: string, params?: LibraryGroupEntityListParams): Promise<PaginatedResponse<Author>>;
-      series(groupId: string, params?: LibraryGroupEntityListParams): Promise<PaginatedResponse<Series>>;
+      books(groupId: string, params?: LibraryGroupBookListParams): Promise<CatalogResultPage<CompactBook>>;
+      search(groupId: string, params?: LibraryGroupSearchParams): Promise<CatalogResultPage<CompactBook>>;
+      authors(groupId: string, params?: LibraryGroupEntityListParams): Promise<CatalogResultPage<Author>>;
+      series(groupId: string, params?: LibraryGroupEntityListParams): Promise<CatalogResultPage<Series>>;
       tags(groupId: string, params?: LibraryTagListParams): Promise<PaginatedResponse<CatalogTag>>;
     };
   };

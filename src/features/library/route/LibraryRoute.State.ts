@@ -45,7 +45,7 @@ export function deriveLibraryRouteState(
   const q = route.q?.trim() || undefined;
   const axis: LibraryAxis = route.browse === "authors" || route.browse === "series" ? route.browse : "books";
   const effectiveGroupId = getEffectiveLibraryGroupId(route.groupId, advancedLibraryGroupsEnabled);
-  const searchMode: LibrarySearchMode = route.searchMode === "global" && q && axis === "books" && !route.tag?.trim()
+  const searchMode: LibrarySearchMode = route.searchMode === "global" && q && axis === "books"
     ? "global"
     : "axis";
   const selectedAuthorId = !q && axis === "authors" ? route.authorId?.trim() || undefined : undefined;

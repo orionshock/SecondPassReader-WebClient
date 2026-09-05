@@ -1,5 +1,5 @@
 import type {
-  BookDetail, BookFileDownloadResult, CatalogTag, CompactBook, Author,
+  BookDetail, BookFileDownloadResult, CatalogResultPage, CatalogTag, CompactBook, Author,
   LibraryGroup, Series, PaginatedResponse, PreviewBook,
 } from "./schemas/Library.Types";
 import type { AuthenticatedClientContext } from "./ClientContext.Policy";
@@ -30,13 +30,14 @@ type WireSeries = { id: string; name: string; sort_name: string; summary: string
 type WireTag = WireTagSummary & { book_count: number };
 type WireGroup = { id: string; name: string; description: string; is_public_group: boolean; preview_books?: WirePreviewBook[] };
 type WirePage<T> = { count: number; next: string | null; previous: string | null; results: T[] };
+type WireCatalogPage<T> = WirePage<T> & { catalog_tags?: WireTag[] };
 
 export type BookListParams = {
   page?: number; pageSize?: number; q?: string; author?: string; series?: string; tag?: string;
   publisher?: string; ordering?: string; excludeGroup?: string;
 };
 export type SearchParams = {
-  q?: string; ordering?: string; excludeShelf?: string; excludeGroup?: string; page?: number; pageSize?: number;
+  q?: string; tag?: string; ordering?: string; excludeShelf?: string; excludeGroup?: string; page?: number; pageSize?: number;
 };
 export type EntityListParams = {
   q?: string; tag?: string; ordering?: string; page?: number; pageSize?: number;
@@ -76,6 +77,12 @@ const series = (wire: WireSeries): Series => ({ id: String(wire.id), name: wire.
 const tag = (wire: WireTag): CatalogTag => ({ id: String(wire.id), name: wire.name, slug: wire.slug, bookCount: wire.book_count });
 const group = (wire: WireGroup): LibraryGroup => ({ id: String(wire.id), name: wire.name, description: wire.description, isPublicGroup: wire.is_public_group === true, previewBooks: (wire.preview_books ?? []).map(preview) });
 const page = <W, T>(wire: WirePage<W>, project: (value: W) => T): PaginatedResponse<T> => ({ ...wire, results: (wire.results ?? []).map(project) });
+const catalogPage = <W, T>(wire: WireCatalogPage<W>, project: (value: W) => T): CatalogResultPage<T> => {
+  const { catalog_tags: catalogTags, ...pagination } = wire;
+  const result: CatalogResultPage<T> = page(pagination, project);
+  if (catalogTags !== undefined) result.catalogTags = catalogTags.map(tag);
+  return result;
+};
 
 function addPageParams(url: URL, params: { page?: number; pageSize?: number }): void {
   if (params.page !== undefined) url.searchParams.set("page", String(params.page));
@@ -94,6 +101,7 @@ function addBookParams(url: URL, params: BookListParams): void {
 function addSearchParams(url: URL, params: SearchParams): void {
   if (params.q !== undefined) url.searchParams.set("q", params.q);
   if (params.ordering !== undefined) url.searchParams.set("ordering", params.ordering);
+  if (params.tag !== undefined) url.searchParams.set("tag", params.tag);
   if (params.excludeShelf !== undefined) url.searchParams.set("exclude_shelf", params.excludeShelf);
   if (params.excludeGroup !== undefined) url.searchParams.set("exclude_group", params.excludeGroup);
   addPageParams(url, params);
@@ -129,6 +137,12 @@ async function list<W, T>(ctx: AuthenticatedClientContext, path: string, configu
   const wire = await requestJson<WirePage<W>>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }) } });
   return page(wire, project);
 }
+async function catalogList<W, T>(ctx: AuthenticatedClientContext, path: string, configure: (url: URL) => void, project: (wire: W) => T): Promise<CatalogResultPage<T>> {
+  const url = new URL(resolveUrl(ctx.apiBaseUrl, path));
+  configure(url);
+  const wire = await requestJson<WireCatalogPage<W>>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }) } });
+  return catalogPage(wire, project);
+}
 async function get<W, T>(ctx: AuthenticatedClientContext, path: string, notFound: string, project: (wire: W) => T, configure?: (url: URL) => void): Promise<T> {
   const url = new URL(resolveUrl(ctx.apiBaseUrl, path));
   configure?.(url);
@@ -136,21 +150,21 @@ async function get<W, T>(ctx: AuthenticatedClientContext, path: string, notFound
   return project(wire);
 }
 
-export const listBooks = (ctx: AuthenticatedClientContext, params: BookListParams = {}) => list(ctx, "/library/books/", (url) => addBookParams(url, params), compactBook);
-export const searchBooks = (ctx: AuthenticatedClientContext, params: SearchParams = {}) => list(ctx, "/library/search", (url) => addSearchParams(url, params), compactBook);
+export const listBooks = (ctx: AuthenticatedClientContext, params: BookListParams = {}) => catalogList(ctx, "/library/books/", (url) => addBookParams(url, params), compactBook);
+export const searchBooks = (ctx: AuthenticatedClientContext, params: SearchParams = {}) => catalogList(ctx, "/library/search", (url) => addSearchParams(url, params), compactBook);
 export const getBook = (ctx: AuthenticatedClientContext, bookId: string) => get(ctx, `/library/books/${encodeURIComponent(bookId)}/`, "Book not found or not accessible (404).", bookDetail);
-export const listSeries = (ctx: AuthenticatedClientContext, params: EntityListParams = {}) => list(ctx, "/library/series/", (url) => addEntityParams(url, params, true), series);
+export const listSeries = (ctx: AuthenticatedClientContext, params: EntityListParams = {}) => catalogList(ctx, "/library/series/", (url) => addEntityParams(url, params, true), series);
 export const getSeries = (ctx: AuthenticatedClientContext, seriesId: string, params: EntityPreviewParams = {}) => get(ctx, `/library/series/${encodeURIComponent(seriesId)}/`, "Series not found or not accessible (404).", series, (url) => addPreviewParams(url, params));
-export const listAuthors = (ctx: AuthenticatedClientContext, params: EntityListParams = {}) => list(ctx, "/library/authors/", (url) => addEntityParams(url, params, true), author);
+export const listAuthors = (ctx: AuthenticatedClientContext, params: EntityListParams = {}) => catalogList(ctx, "/library/authors/", (url) => addEntityParams(url, params, true), author);
 export const getAuthor = (ctx: AuthenticatedClientContext, authorId: string, params: EntityPreviewParams = {}) => get(ctx, `/library/authors/${encodeURIComponent(authorId)}/`, "Author not found or not accessible (404).", author, (url) => addPreviewParams(url, params));
 export const listTags = (ctx: AuthenticatedClientContext, params: TagListParams = {}) => list(ctx, "/library/tags/", (url) => addTagParams(url, params), tag);
 export const getTag = (ctx: AuthenticatedClientContext, tagId: string) => get(ctx, `/library/tags/${encodeURIComponent(tagId)}/`, "Catalog tag not found or not accessible (404).", tag);
 export const listGroups = (ctx: AuthenticatedClientContext, params: GroupListParams = {}) => list(ctx, "/library/groups/", (url) => addGroupParams(url, params), group);
 export const getGroup = (ctx: AuthenticatedClientContext, groupId: string, params: EntityPreviewParams = {}) => get(ctx, `/library/groups/${encodeURIComponent(groupId)}/`, "Library group not found or not accessible (404).", group, (url) => addPreviewParams(url, params));
-export const listGroupBooks = (ctx: AuthenticatedClientContext, groupId: string, params: BookListParams & { excludeShelf?: string } = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/books/`, (url) => { addBookParams(url, params); if (params.excludeShelf !== undefined) url.searchParams.set("exclude_shelf", params.excludeShelf); }, compactBook);
-export const searchGroupBooks = (ctx: AuthenticatedClientContext, groupId: string, params: Omit<SearchParams, "excludeGroup"> = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/search`, (url) => addSearchParams(url, params), compactBook);
-export const listGroupAuthors = (ctx: AuthenticatedClientContext, groupId: string, params: EntityListParams = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/authors/`, (url) => addEntityParams(url, params, true), author);
-export const listGroupSeries = (ctx: AuthenticatedClientContext, groupId: string, params: EntityListParams = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/series/`, (url) => addEntityParams(url, params, true), series);
+export const listGroupBooks = (ctx: AuthenticatedClientContext, groupId: string, params: BookListParams & { excludeShelf?: string } = {}) => catalogList(ctx, `/library/groups/${encodeURIComponent(groupId)}/books/`, (url) => { addBookParams(url, params); if (params.excludeShelf !== undefined) url.searchParams.set("exclude_shelf", params.excludeShelf); }, compactBook);
+export const searchGroupBooks = (ctx: AuthenticatedClientContext, groupId: string, params: Omit<SearchParams, "excludeGroup"> = {}) => catalogList(ctx, `/library/groups/${encodeURIComponent(groupId)}/search`, (url) => addSearchParams(url, params), compactBook);
+export const listGroupAuthors = (ctx: AuthenticatedClientContext, groupId: string, params: EntityListParams = {}) => catalogList(ctx, `/library/groups/${encodeURIComponent(groupId)}/authors/`, (url) => addEntityParams(url, params, true), author);
+export const listGroupSeries = (ctx: AuthenticatedClientContext, groupId: string, params: EntityListParams = {}) => catalogList(ctx, `/library/groups/${encodeURIComponent(groupId)}/series/`, (url) => addEntityParams(url, params, true), series);
 export const listGroupTags = (ctx: AuthenticatedClientContext, groupId: string, params: TagListParams = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/tags/`, (url) => addTagParams(url, params), tag);
 
 export async function downloadBookFile(ctx: AuthenticatedClientContext, bookId: string): Promise<BookFileDownloadResult> {

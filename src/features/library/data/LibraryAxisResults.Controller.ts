@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Author, CompactBook, LibraryBookListParams, LibraryEntityListParams, Series, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import type { Author, CatalogResultPage, CompactBook, LibraryBookListParams, LibraryEntityListParams, Series, SecondPassClient } from "@secondpass/client";
 import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./LibraryAxis.Queries";
 import { loadLibraryBooks } from "./LibraryBooks.Queries";
 import { loadLibraryAuthors, loadLibrarySeries } from "./LibraryEntities.Queries";
@@ -12,15 +12,15 @@ type Input = {
 };
 
 export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
-  const [booksData, setBooksData] = useState<PaginatedResponse<CompactBook> | null>(null);
+  const [booksData, setBooksData] = useState<CatalogResultPage<CompactBook> | null>(null);
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksError, setBooksError] = useState<unknown>(null);
   const [booksPage, setBooksPage] = useState(1);
-  const [authorsData, setAuthorsData] = useState<PaginatedResponse<Author> | null>(null);
+  const [authorsData, setAuthorsData] = useState<CatalogResultPage<Author> | null>(null);
   const [authorsBusy, setAuthorsBusy] = useState(false);
   const [authorsError, setAuthorsError] = useState<unknown>(null);
   const [authorsPage, setAuthorsPage] = useState(1);
-  const [seriesData, setSeriesData] = useState<PaginatedResponse<Series> | null>(null);
+  const [seriesData, setSeriesData] = useState<CatalogResultPage<Series> | null>(null);
   const [seriesBusy, setSeriesBusy] = useState(false);
   const [seriesError, setSeriesError] = useState<unknown>(null);
   const [seriesPage, setSeriesPage] = useState(1);

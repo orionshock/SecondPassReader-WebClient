@@ -3,7 +3,7 @@ import type { CatalogTag, PaginatedResponse, SecondPassClient } from "@secondpas
 
 const TAG_PAGE_SIZE = 50;
 
-export function useCatalogTags(spl: SecondPassClient, groupId?: string) {
+export function useCatalogTags(spl: SecondPassClient, groupId?: string, enabled = true) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PaginatedResponse<CatalogTag> | null>(null);
   const [busy, setBusy] = useState(false);
@@ -11,12 +11,16 @@ export function useCatalogTags(spl: SecondPassClient, groupId?: string) {
   const requestSeq = useRef(0);
 
   useEffect(() => {
+    requestSeq.current += 1;
     setPage(1);
     setData(null);
-  }, [groupId]);
+    setBusy(false);
+    setError(null);
+  }, [enabled, groupId]);
 
   useEffect(() => {
     const request = ++requestSeq.current;
+    if (!enabled) return;
     setBusy(true);
     setError(null);
     const pending = groupId
@@ -31,7 +35,7 @@ export function useCatalogTags(spl: SecondPassClient, groupId?: string) {
     }).finally(() => {
       if (request === requestSeq.current) setBusy(false);
     });
-  }, [groupId, page, spl]);
+  }, [enabled, groupId, page, spl]);
 
   return {
     data,

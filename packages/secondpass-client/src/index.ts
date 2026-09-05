@@ -23,7 +23,7 @@ export type {
 export type { CurrentUser, CurrentUserGroup, MePayload } from "./schemas/Account.Types";
 export type { ServerInfo, ServerPublicGroup } from "./schemas/Server.Types";
 
-export type { BookDetail, BookIdentifierScheme, CatalogTag, CatalogTagSummary, CompactBook, Author, AuthorSummary, BookFile, BookGroup, BookIdentifier, LibraryGroup, Series, SeriesSummary, PaginatedResponse, PreviewBook } from "./schemas/Library.Types";
+export type { BookDetail, BookIdentifierScheme, CatalogResultPage, CatalogTag, CatalogTagSummary, CompactBook, Author, AuthorSummary, BookFile, BookGroup, BookIdentifier, LibraryGroup, Series, SeriesSummary, PaginatedResponse, PreviewBook } from "./schemas/Library.Types";
 
 export type {
   BoundedSessionBook,
