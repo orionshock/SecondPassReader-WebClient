@@ -1,0 +1,19 @@
+# Project source scope for scc reports.
+*
+!*/
+!/index.html
+!/src/**/*
+!/packages/secondpass-client/src/**/*
+
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/vite-env.d.ts
+**/*.generated.*
+**/*.gen.*
+**/*.min.js
+**/*.min.css
+**/*.map
+**/*.log

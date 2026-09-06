@@ -33,12 +33,7 @@
       "**/out": true,
       "compose.yml": true
     },
-    "LineCount.includes": [
-      "index.html",
-      "src/**/*",
-      "packages/secondpass-client/src/**/*"
-    ],
-    "LineCount.excludes": [
+    "repoStats.excludePatterns": [
       "**/__tests__/**",
       "**/*.test.ts",
       "**/*.test.tsx",
@@ -51,21 +46,15 @@
       "**/*.min.css",
       "**/*.map",
       "**/*.log"
-    ],
-    "LineCount.showStatusBarItem": true,
-    "LineCount.output": {
-      "txt": true,
-      "json": false,
-      "csv": false,
-      "md": false,
-      "outdir": ".linecount"
-    },
-    "LineCount.sort": "filename",
-    "LineCount.order": "asc"
+    ]
   },
   "extensions": {
     "recommendations": [
-      "yycalm.linecount"
+      "vitest.explorer",
+      "ms-vscode.powershell",
+      "mhutchie.git-graph",
+      "openai.chatgpt",
+      "guwidoe.vscode-repo-stats"
     ]
   }
 }
