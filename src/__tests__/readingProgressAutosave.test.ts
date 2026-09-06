@@ -21,16 +21,20 @@ function deferred<T>() {
 describe("reading progress autosave input", () => {
   it("sends the stable generated location label instead of rendered-page metadata", () => {
     expect(buildReadingProgressSaveInput({
-      cfi: "epubcfi(/6/2)",
-      sectionIndex: 7,
-      sectionCount: 12,
-      bookProgress: 0.42,
-      displayedPage: 1,
-      displayedTotal: 10,
-      href: "The Blackstaff.xhtml",
+      toc: [{ id: "dedication", label: "Dedication", href: "The Blackstaff.xhtml" }],
+      bookTitle: "The Blackstaff",
+      location: {
+        cfi: "epubcfi(/6/2)",
+        sectionIndex: 7,
+        sectionCount: 12,
+        bookProgress: 0.01,
+        displayedPage: 1,
+        displayedTotal: 2,
+        href: "The Blackstaff.xhtml",
+      },
     })).toEqual({
       cfi: "epubcfi(/6/2)",
-      locationLabel: "Chapter 08 - 42%",
+      locationLabel: "001% - Dedication",
     });
   });
 });

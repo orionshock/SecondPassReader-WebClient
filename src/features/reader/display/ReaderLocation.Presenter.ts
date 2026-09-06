@@ -1,6 +1,6 @@
 import type { ReaderLocation, ReaderTocItem } from "../domain/ReaderDomain.Types";
 
-function formatGeneratedOrdinal(index: number, total: number | undefined): string {
+function formatStableSectionOrdinal(index: number, total: number | undefined): string {
   const ordinal = Math.max(1, Math.floor(index) + 1);
   const totalWidth = typeof total === "number" && Number.isFinite(total) && total > 0
     ? String(Math.floor(total)).length
@@ -8,21 +8,40 @@ function formatGeneratedOrdinal(index: number, total: number | undefined): strin
   return String(ordinal).padStart(Math.max(2, totalWidth), "0");
 }
 
-export function buildReaderLocationLabel(location: ReaderLocation | null | undefined): string {
-  const progress = typeof location?.bookProgress === "number" && Number.isFinite(location.bookProgress)
-    ? `${String(Math.round(location.bookProgress * 100)).padStart(2, "0")}%`
+export function buildSavedReaderLocationLabel(input: {
+  location: ReaderLocation | null | undefined;
+  toc: ReaderTocItem[] | null | undefined;
+  bookTitle?: string | null;
+}): string {
+  const rawProgress = input.location?.bookProgress;
+  const hasProgress = typeof rawProgress === "number" && Number.isFinite(rawProgress);
+  const percent = hasProgress
+    ? Math.max(0, Math.min(100, Math.round(rawProgress * 100)))
+    : 0;
+  const tocLabel = getReaderLocationTocLabel({
+    toc: input.toc,
+    href: input.location?.href,
+    bookTitle: input.bookTitle,
+  });
+  const stableTocLabel = tocLabel && !isRenditionPageFragment(tocLabel) ? tocLabel : null;
+  const sectionLabel = typeof input.location?.sectionIndex === "number"
+    && Number.isFinite(input.location.sectionIndex)
+    && input.location.sectionIndex >= 0
+    ? `Chapter ${formatStableSectionOrdinal(input.location.sectionIndex, input.location.sectionCount)}`
     : null;
+  const suffix = stableTocLabel
+    ?? (hasProgress && percent <= 1 ? "Start" : null)
+    ?? (hasProgress && percent >= 99 ? "End" : null)
+    ?? sectionLabel
+    ?? "Location";
+  const prefix = `${String(percent).padStart(3, "0")}% - `;
 
-  let ordinal: string | null = null;
-  if (typeof location?.sectionIndex === "number" && Number.isFinite(location.sectionIndex) && location.sectionIndex >= 0) {
-    ordinal = `Chapter ${formatGeneratedOrdinal(location.sectionIndex, location.sectionCount)}`;
-  } else if (typeof location?.locationIndex === "number" && Number.isFinite(location.locationIndex) && location.locationIndex >= 0) {
-    ordinal = `Location ${formatGeneratedOrdinal(location.locationIndex, location.locationCount)}`;
-  }
-
-  return [ordinal, progress].filter((part): part is string => Boolean(part)).join(" - ").slice(0, 255);
+  return `${prefix}${suffix.slice(0, 255 - prefix.length)}`;
 }
 
+function isRenditionPageFragment(label: string): boolean {
+  return /^p\s*\d+\s*\/\s*\d+$/i.test(label.trim());
+}
 export function buildReaderStatusLine(input: {
   location: ReaderLocation | null;
   toc: ReaderTocItem[] | null;

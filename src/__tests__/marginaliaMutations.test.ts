@@ -8,7 +8,7 @@ import {
   normalizeOptionalHighlightContext,
   toMarginaliaLocationLabel,
 } from "../features/reader/session/ReadingSessionMarginalia.Actions";
-import { buildReaderLocationLabel } from "../features/reader/display/ReaderLocation.Presenter";
+import { buildSavedReaderLocationLabel } from "../features/reader/display/ReaderLocation.Presenter";
 
 describe("Reader marginalia mutations", () => {
   it("maps progress location labels without changing their text", () => {
@@ -17,14 +17,17 @@ describe("Reader marginalia mutations", () => {
   });
 
   it("keeps bookmark upserts body-free", () => {
-    const locationLabel = buildReaderLocationLabel({ locationIndex: 7, bookProgress: 0.42 });
+    const locationLabel = buildSavedReaderLocationLabel({ toc: null, location: { locationIndex: 7, bookProgress: 0.42 } });
     const operation = buildBookmarkUpsert({ clientId: "client-b", cfi: "point", locationLabel });
     expect(operation).not.toHaveProperty("annotation.body");
-    expect(operation).toHaveProperty("annotation.location.locationLabel", "Location 08 - 42%");
+    expect(operation).toHaveProperty("annotation.location.locationLabel", "042% - Location");
   });
 
   it("normalizes highlight prose and context while preserving notes and labels", () => {
-    const locationLabel = buildReaderLocationLabel({ sectionIndex: 7, bookProgress: 0.42 });
+    const locationLabel = buildSavedReaderLocationLabel({
+      toc: [{ id: "ch8", label: "Chapter 08", href: "chapter-8.xhtml" }],
+      location: { sectionIndex: 7, href: "chapter-8.xhtml", bookProgress: 0.42 },
+    });
     const operation = buildHighlightUpsert({
       clientId: "client-h",
       cfi: "  epubcfi(/6/2)  ",
@@ -44,7 +47,7 @@ describe("Reader marginalia mutations", () => {
     });
     expect(operation).toHaveProperty("annotation.location", {
       cfi: "  epubcfi(/6/2)  ",
-      locationLabel: "Chapter 08 - 42%",
+      locationLabel: "042% - Chapter 08",
     });
   });
 

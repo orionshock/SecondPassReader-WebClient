@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReaderLocationLabel, buildReaderStatusLine, findTocLabelForHref, getReaderLocationTocLabel } from "../features/reader/display/ReaderLocation.Presenter";
+import { buildReaderStatusLine, buildSavedReaderLocationLabel, findTocLabelForHref, getReaderLocationTocLabel } from "../features/reader/display/ReaderLocation.Presenter";
 import type { ReaderTocItem } from "../features/reader/domain/ReaderDomain.Types";
 
 describe("buildReaderStatusLine", () => {
@@ -131,40 +131,72 @@ describe("buildReaderStatusLine", () => {
   });
 });
 
-describe("buildReaderLocationLabel", () => {
-  it("uses a padded section ordinal and integer book progress", () => {
-    expect(buildReaderLocationLabel({
-      sectionIndex: 7,
-      sectionCount: 12,
-      bookProgress: 0.421,
-      displayedPage: 1,
-      displayedTotal: 10,
-      href: "chapter-eight.xhtml",
-    })).toBe("Chapter 08 - 42%");
+describe("buildSavedReaderLocationLabel", () => {
+  it("prefers a stable TOC label after padded progress", () => {
+    expect(buildSavedReaderLocationLabel({
+      toc: [{ id: "ch8", label: "Chapter 08", href: "text/chapter-eight.xhtml" }],
+      bookTitle: "Sample Book",
+      location: {
+        cfi: "epubcfi(/6/16)",
+        href: "text/chapter-eight.xhtml",
+        sectionIndex: 7,
+        bookProgress: 0.141,
+        displayedPage: 1,
+        displayedTotal: 2,
+      },
+    })).toBe("014% - Chapter 08");
   });
 
-  it("does not persist rendered pages, page counts, hrefs, or chapter titles", () => {
-    const label = buildReaderLocationLabel({
-      sectionIndex: 0,
-      sectionCount: 10,
-      bookProgress: 0.01,
-      displayedPage: 1,
-      displayedTotal: 10,
-      href: "Chapter One.xhtml",
+  it("uses the stable spine ordinal when no TOC label or boundary fallback applies", () => {
+    expect(buildSavedReaderLocationLabel({
+      toc: null,
+      location: { sectionIndex: 7, sectionCount: 12, bookProgress: 0.14 },
+    })).toBe("014% - Chapter 08");
+  });
+
+  it("sorts saved labels lexically by their padded progress prefix", () => {
+    const labels = [
+      buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 0.01 } }),
+      buildSavedReaderLocationLabel({ toc: null, location: { sectionIndex: 7, sectionCount: 12, bookProgress: 0.14 } }),
+      buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 0.99 } }),
+    ];
+
+    expect(labels).toEqual(["001% - Start", "014% - Chapter 08", "099% - End"]);
+    expect([...labels].sort()).toEqual(labels);
+  });
+  it("uses semantic fallbacks near the start, near the end, and elsewhere", () => {
+    expect(buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 0 } })).toBe("000% - Start");
+    expect(buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 0.01 } })).toBe("001% - Start");
+    expect(buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 0.99 } })).toBe("099% - End");
+    expect(buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 1 } })).toBe("100% - End");
+    expect(buildSavedReaderLocationLabel({ toc: null, location: { bookProgress: 0.42 } })).toBe("042% - Location");
+    expect(buildSavedReaderLocationLabel({ toc: null, location: {} })).toBe("000% - Location");
+  });
+
+  it("does not persist rendition page fragments or machine-oriented location data", () => {
+    const label = buildSavedReaderLocationLabel({
+      toc: [{ id: "page", label: "p1/2", href: "OPS/Text/chapter.xhtml" }],
+      location: {
+        cfi: "epubcfi(/6/2)",
+        href: "OPS/Text/chapter.xhtml",
+        sectionIndex: 7,
+        locationIndex: 12,
+        bookProgress: 0.01,
+        displayedPage: 1,
+        displayedTotal: 2,
+      },
     });
-    expect(label).toBe("Chapter 01 - 01%");
-    expect(label).not.toContain("p1/10");
-    expect(label).not.toContain("Chapter One");
+
+    expect(label).toBe("001% - Start");
+    expect(label).not.toContain("p1/2");
+    expect(label).not.toContain("chapter.xhtml");
+    expect(label).not.toContain("epubcfi");
   });
 
-  it("uses location ordinal and percent-only fallbacks", () => {
-    expect(buildReaderLocationLabel({ locationIndex: 0, locationCount: 120, bookProgress: 0.01 })).toBe("Location 001 - 01%");
-    expect(buildReaderLocationLabel({ bookProgress: 0.42 })).toBe("42%");
-  });
-
-  it("pads to the known total width and caps generated labels", () => {
-    expect(buildReaderLocationLabel({ sectionIndex: 102, sectionCount: 103, bookProgress: 1 })).toBe("Chapter 103 - 100%");
-    expect(buildReaderLocationLabel({ sectionIndex: 0, bookProgress: 0 })).toBe("Chapter 01 - 00%");
-    expect(buildReaderLocationLabel({ sectionIndex: Number.MAX_SAFE_INTEGER, bookProgress: 0.5 }).length).toBeLessThanOrEqual(255);
+  it("caps stored display metadata at the API field limit", () => {
+    expect(buildSavedReaderLocationLabel({
+      toc: [{ id: "long", label: "A".repeat(300), href: "long.xhtml" }],
+      location: { href: "long.xhtml", bookProgress: 0.5 },
+    }).length).toBe(255);
   });
 });

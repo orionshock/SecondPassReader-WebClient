@@ -17,7 +17,7 @@ import { useSessionAnnotations } from "./annotations/SessionAnnotations.Controll
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";
 import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
 import { useCurrentSessionMeta } from "./CurrentSessionMetadata.Controller";
-import { buildReaderLocationLabel, buildReaderStatusLine } from "../display/ReaderLocation.Presenter";
+import { buildReaderStatusLine, buildSavedReaderLocationLabel } from "../display/ReaderLocation.Presenter";
 import { useCurrentSessionAnnotationActions } from "./annotations/CurrentSessionAnnotation.Actions";
 import type { ReaderBookmarkMutationResult } from "./annotations/CurrentSessionBookmark.Actions";
 import { useReadingSessionBridgeController } from "./ReadingSessionBridge.Controller";
@@ -117,12 +117,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     onStagedSelectionCanceled: props.onStagedSelectionCanceled,
   });
   const generatedLocationLabel = useMemo(
-    () => buildReaderLocationLabel(location),
-    [location],
+    () => buildSavedReaderLocationLabel({ location, toc, bookTitle: props.openedBook.book.title }),
+    [location, props.openedBook.book.title, toc],
   );
   const progressLocationLabel = useMemo(
-    () => buildReaderLocationLabel(progressLocation),
-    [progressLocation],
+    () => buildSavedReaderLocationLabel({ location: progressLocation, toc, bookTitle: props.openedBook.book.title }),
+    [progressLocation, props.openedBook.book.title, toc],
   );
   const finalProgress = useMemo(
     () => progressLocation?.cfi
@@ -199,6 +199,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     spl: props.spl,
     sessionId: state.sessionId,
     location: progressLocation,
+    toc,
+    bookTitle: props.openedBook.book.title,
     savedProgress: bootstrapSession?.progress ?? null,
   });
 

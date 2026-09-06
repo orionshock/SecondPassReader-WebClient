@@ -1,25 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { MarginaliaProgress } from "@secondpass/client";
-import type { ReaderLocation } from "../../domain/ReaderDomain.Types";
+import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import {
   READING_PROGRESS_AUTOSAVE_DELAY_MS,
   ReadingProgressAutosaveController,
   type ReadingProgressAutosaveState,
 } from "./ReadingProgressAutosave.Controller";
 import { buildMarginaliaProgressInput } from "../ReadingSessionMarginalia.Actions";
-import { buildReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
+import { buildSavedReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
 
 const READING_PROGRESS_EXIT_FLUSH_TIMEOUT_MS = 3000;
 
-export function buildReadingProgressSaveInput(location: ReaderLocation | null): {
+export function buildReadingProgressSaveInput(input: {
+  location: ReaderLocation | null;
+  toc: ReaderTocItem[] | null;
+  bookTitle?: string | null;
+}): {
   cfi: string;
   locationLabel: string;
 } | null {
-  if (!location) return null;
-  const cfi = typeof location.cfi === "string" ? location.cfi.trim() : "";
+  if (!input.location) return null;
+  const cfi = typeof input.location.cfi === "string" ? input.location.cfi.trim() : "";
   if (!cfi) return null;
-  return { cfi, locationLabel: buildReaderLocationLabel(location) };
+  return { cfi, locationLabel: buildSavedReaderLocationLabel(input) };
 }
 
 export function useReadingProgressAutosave(input: {
@@ -28,6 +32,8 @@ export function useReadingProgressAutosave(input: {
   spl?: SecondPassClient | null;
   sessionId: string | null;
   location: ReaderLocation | null;
+  toc: ReaderTocItem[] | null;
+  bookTitle?: string | null;
   savedProgress?: MarginaliaProgress | null;
 }) {
   const [autosave, setAutosave] = useState<ReadingProgressAutosaveState>({ status: "idle" });
@@ -36,7 +42,11 @@ export function useReadingProgressAutosave(input: {
   if (!controllerRef.current) controllerRef.current = new ReadingProgressAutosaveController(setAutosave);
   const controller = controllerRef.current;
 
-  const progress = useMemo(() => buildReadingProgressSaveInput(input.location), [input.location]);
+  const progress = useMemo(() => buildReadingProgressSaveInput({
+    location: input.location,
+    toc: input.toc,
+    bookTitle: input.bookTitle,
+  }), [input.bookTitle, input.location, input.toc]);
   const saveProgress = useCallback(
     async (sessionId: string, payload: { cfi: string; locationLabel: string }) => {
       if (!input.spl) throw new Error("Reading progress client is unavailable.");
