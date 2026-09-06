@@ -7,7 +7,13 @@ import { buildReturnLabel, saveReaderReturnTarget } from "../ReaderReturnTarget.
 import type { OpenedBook } from "../Reader.Types";
 import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
 
-const READER_FINISH_PROGRESS_THRESHOLD = 0.99;
+const END_OF_BOOK_PROMPT_THRESHOLD = 0.99;
+
+export function hasReachedEndOfBookPromptThreshold(progress: unknown): boolean {
+  return typeof progress === "number"
+    && Number.isFinite(progress)
+    && progress >= END_OF_BOOK_PROMPT_THRESHOLD;
+}
 
 export function useReaderActivityCompletionController({
   openedBook,
@@ -27,7 +33,7 @@ export function useReaderActivityCompletionController({
   const shownEndBookSessionIdsRef = useRef<Set<string>>(new Set());
   const currentSessionId = state.sessionId;
   const progress = state.location?.bookProgress;
-  const nearEnd = typeof progress === "number" && Number.isFinite(progress) && progress >= READER_FINISH_PROGRESS_THRESHOLD;
+  const nearEnd = hasReachedEndOfBookPromptThreshold(progress);
   const showFinishControls = Boolean(currentSessionId && nearEnd);
   const activeReaderKey = `${openedBook.book.id}|${currentSessionId ?? ""}`;
   const seriesId = openedBook.book.series?.id;
