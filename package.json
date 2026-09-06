@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
   "workspaces": [
     "packages/*"
   ],
@@ -16,7 +21,8 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:client": "vitest run packages/secondpass-client/src/__tests__ --coverage --coverage.include=packages/secondpass-client/src/**/*.ts --coverage.exclude=packages/secondpass-client/src/__tests__/** --coverage.exclude=packages/secondpass-client/src/index.ts --coverage.exclude=packages/secondpass-client/src/schemas/**",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify": "npm run hygiene && npm test -- --run && npm run build"
   },
   "dependencies": {
     "@likecoin/epub-ts": "^0.7.1",

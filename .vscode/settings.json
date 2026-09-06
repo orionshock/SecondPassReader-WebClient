@@ -1,0 +1,17 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "files.exclude": {
+    "**/.npm-cache": true
+  },
+  "search.exclude": {
+    "**/.npm-cache": true,
+    "**/dist": true,
+    "**/node_modules": true
+  },
+  "files.watcherExclude": {
+    "**/.npm-cache/**": true,
+    "**/dist/**": true,
+    "**/node_modules/**": true
+  }
+}

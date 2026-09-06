@@ -3,7 +3,8 @@
 ## Prerequisites
 
 - Windows 10 + VS Code is the assumed primary development environment.
-- Install Node.js LTS, including `npm`.
+- Install the Node.js version in `.node-version` and the npm major declared in
+  `package.json`.
 - Keep the repo in a normal local folder rather than a synced/network folder when possible.
 
 ## Install
@@ -54,6 +55,17 @@ For the client package only:
 npm run test -w @secondpass/client
 ```
 
+## Verify
+
+Run the complete local verification gate with:
+
+```bash
+npm run verify
+```
+
+This runs repository hygiene, the noninteractive Vitest suite, and the
+production build. The VS Code `Verify: all` task invokes the same script.
+
 ## Static Deployment
 
 The app builds to `dist/` and is intended to be served by a static HTTP server. Runtime server selection happens in the browser through the connection flow.
@@ -70,4 +82,3 @@ The app stores non-server local state in browser storage, including:
 - marginalia layer preferences
 
 Bearer tokens are password-equivalent. Do not log them or add them to URLs.
-
