@@ -31,6 +31,14 @@
   background: var(--sp-reader-hover);
 }
 
+.spReaderActivity .spTocItemButtonCurrent,
+.spReaderActivity .spTocItemButtonCurrent:hover {
+  background: var(--sp-reader-hover);
+  color: var(--sp-reader-text);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--sp-accent);
+}
+
 .spReaderActivity .spAnnotationTabs {
   background: var(--sp-reader-hover);
   border-color: var(--sp-reader-border);
@@ -50,4 +58,3 @@
 .spReaderActivity[data-reader-theme="dark"] .spAnnotationQuote {
   background: rgba(59, 130, 246, 0.16);
 }
-

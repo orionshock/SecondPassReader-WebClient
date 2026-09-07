@@ -282,6 +282,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onEvent={onShellEvent}
         command={pendingCommand ?? undefined}
         toc={toc}
+        currentHref={location?.href}
         temporarySearchHighlightCfi={temporarySearchHighlightCfi}
         onDescribeCfiReady={handleDescribeCfiReadyForReader}
         onProbeCfiReady={handleProbeCfiReady}

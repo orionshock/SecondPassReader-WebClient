@@ -1,35 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReaderTocItem } from "../domain/ReaderDomain.Types";
 import { MaterialIcon } from "../../../components/Material.Icon";
-
-type FilteredTocItem = ReaderTocItem & { children?: FilteredTocItem[] };
-
-function filterToc(items: ReaderTocItem[], query: string): FilteredTocItem[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return items as FilteredTocItem[];
-
-  const visit = (list: ReaderTocItem[]): FilteredTocItem[] => {
-    const out: FilteredTocItem[] = [];
-    for (const item of list) {
-      const label = typeof item.label === "string" ? item.label : "";
-      const selfMatch = label.toLowerCase().includes(q);
-      const children = Array.isArray(item.children) ? visit(item.children) : [];
-      if (!selfMatch && children.length === 0) continue;
-      out.push({ ...item, children: children.length > 0 ? children : undefined });
-    }
-    return out;
-  };
-
-  return visit(items);
-}
+import {
+  filterTocItems,
+  findCurrentTocItemKey,
+  getTocItemKey,
+  type FilteredTocItem,
+} from "./ReaderTableOfContents.Presenter";
 
 function TocTree({
   items,
   depth,
+  currentItemKey,
   onPick,
 }: {
   items: FilteredTocItem[];
   depth: number;
+  currentItemKey: string | null;
   onPick: (item: ReaderTocItem) => void;
 }) {
   return (
@@ -39,20 +26,29 @@ function TocTree({
       aria-label={depth === 0 ? "Table of contents" : undefined}
     >
       {items.map((item) => {
-        const key = `${item.id ?? ""}|${item.href ?? ""}|${item.label ?? ""}`;
+        const key = getTocItemKey(item);
         const hasChildren = Boolean(item.children && item.children.length > 0);
+        const isCurrent = key === currentItemKey;
         return (
           <li key={key} className="spTocItem" role="treeitem" aria-expanded={hasChildren ? true : undefined}>
             <button
               type="button"
-              className="spTocItemButton"
+              className={`spTocItemButton${isCurrent ? " spTocItemButtonCurrent" : ""}`}
               style={{ paddingLeft: 12 + depth * 14 }}
               onClick={() => onPick(item)}
               title={item.label}
+              aria-current={isCurrent ? "location" : undefined}
             >
               {item.label}
             </button>
-            {hasChildren ? <TocTree items={item.children ?? []} depth={depth + 1} onPick={onPick} /> : null}
+            {hasChildren ? (
+              <TocTree
+                items={item.children ?? []}
+                depth={depth + 1}
+                currentItemKey={currentItemKey}
+                onPick={onPick}
+              />
+            ) : null}
           </li>
         );
       })}
@@ -63,16 +59,19 @@ function TocTree({
 export function TableOfContentsDrawer({
   open,
   toc,
+  currentHref,
   onClose,
   onPickItem,
 }: {
   open: boolean;
   toc: ReaderTocItem[] | null | undefined;
+  currentHref?: string | null;
   onClose: () => void;
   onPickItem: (item: ReaderTocItem) => void;
 }) {
   const [query, setQuery] = useState("");
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -86,10 +85,20 @@ export function TableOfContentsDrawer({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    searchInputRef.current?.focus();
+  }, [open]);
+
   const filtered = useMemo(() => {
     if (!toc || toc.length === 0) return [];
-    return filterToc(toc, query);
+    return filterTocItems(toc, query);
   }, [query, toc]);
+
+  const currentItemKey = useMemo(
+    () => findCurrentTocItemKey(toc ?? [], currentHref),
+    [currentHref, toc],
+  );
 
   if (!open) return null;
 
@@ -134,6 +143,7 @@ export function TableOfContentsDrawer({
 
         <div className="spTocDrawerSearch">
           <input
+            ref={searchInputRef}
             className="input spTocDrawerSearchInput"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -143,12 +153,13 @@ export function TableOfContentsDrawer({
         </div>
 
         <div className="spTocDrawerBody">
-          {!hasToc ? <div className="muted spTocEmpty">No contents available.</div> : null}
-          {hasToc && !hasMatches ? <div className="muted spTocEmpty">No matching sections.</div> : null}
+          {!hasToc ? <div className="muted spTocEmpty">No table of contents available.</div> : null}
+          {hasToc && !hasMatches ? <div className="muted spTocEmpty">No matching contents entries.</div> : null}
           {hasToc && hasMatches ? (
             <TocTree
               items={filtered}
               depth={0}
+              currentItemKey={currentItemKey}
               onPick={(item) => {
                 onPickItem(item);
               }}

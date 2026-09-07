@@ -145,3 +145,7 @@
   background: var(--sp-reader-hover);
 }
 
+.spTocItemButton:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: -2px;
+}

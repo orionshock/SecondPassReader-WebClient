@@ -44,6 +44,7 @@ export type ReadingShellProps = {
   initialDisplayTarget?: ReaderLocationTarget;
   onEvent?: (event: ReadingShellEvent) => void;
   toc?: ReaderTocItem[] | null;
+  currentHref?: string | null;
   command?: ReadingShellCommand;
   highlightMarks?: ReaderHighlightMark[];
   temporarySearchHighlightCfi?: string | null;
@@ -296,6 +297,7 @@ export function ReadingShell(props: ReadingShellProps) {
             <TableOfContentsDrawer
               open={tocOpen}
               toc={props.toc}
+              currentHref={props.currentHref}
               onClose={() => setTocOpen(false)}
               onPickItem={(item) => {
                 const href = typeof item.href === "string" ? item.href.trim() : "";
