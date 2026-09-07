@@ -1,24 +1,24 @@
 # Reader Architecture
 
-The Reader is a session-centered EPUB workflow. The server owns books, reading sessions, progress,
-and annotations. The browser owns the active UI lifecycle and delegates EPUB behavior to an
-engine adapter. EPUB CFI is the canonical spatial and restore anchor; renderer state is never the
-canonical annotation model.
+The Reader centers each EPUB workflow on a reading session. The server stores books, sessions,
+progress, and annotations. The browser manages the UI lifecycle and sends EPUB operations through
+an engine adapter. EPUB CFI is the canonical spatial and restore anchor. Renderer state is
+transient, not an annotation model.
 
 ## Top-Level Flow
 
-1. `src/app/AppReaderOpen.Controller.ts` restores a reader route, fetches book metadata, opens the
-   marginalia session, downloads the EPUB, and owns object URL replacement and cleanup.
-2. `src/features/reader/Reading.Activity.tsx` composes reader chrome, panels, dialogs, settings,
-   import review, and completion behavior.
-3. `src/features/reader/session/ReadingSession.Orchestrator.tsx` composes server-backed session
-   state and renderer-neutral bridge capabilities.
-4. `src/features/reader/shell/Reading.Shell.tsx` composes the viewport and shell lifecycle owners.
+1. `src/app/AppReaderOpen.Controller.ts` restores the route, fetches book metadata, opens the
+   marginalia session, downloads the EPUB, and manages object URL replacement and cleanup.
+2. `src/features/reader/Reading.Activity.tsx` renders Reader chrome, panels, dialogs, settings,
+   import review, and completion controls.
+3. `src/features/reader/session/ReadingSession.Orchestrator.tsx` wires server-backed session state
+   to renderer-neutral bridge capabilities.
+4. `src/features/reader/shell/Reading.Shell.tsx` renders the viewport and wires shell lifecycles.
 5. `src/features/reader/engine/EpubTsBook.Engine.ts` is the public adapter around
    `@likecoin/epub-ts`.
 
 Direct navigation to `#/reader/:bookId` uses the same open/restore path. A `search` query parameter
-is handed to the in-book search lifecycle after the search capability becomes readable and ready.
+starts an in-book search after the search capability is readable and ready.
 
 ## Activity Owners
 
@@ -36,8 +36,8 @@ directly.
 
 ## Session Owners
 
-`ReadingSession.Orchestrator.tsx` is a composition owner. Its children provide server-backed data,
-actions, and renderer-neutral handles to the activity.
+`ReadingSession.Orchestrator.tsx` wires server-backed data and actions to renderer-neutral handles
+used by the activity.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -61,7 +61,7 @@ with respect to Reader annotation mutation modules.
 - Normal `POST /books/:id/open/` responses contain one active session: `201` creates it and `200`
   reuses it. The server's unique constraint owns the one-active-session-per-user/book invariant;
   clients must not select between competing active sessions.
-- The shared bootstrap type remains defensive because `GET /books/:id/active-session/` may return no
+- The shared bootstrap type allows for `GET /books/:id/active-session/` to return no
   session and a concurrent close can rarely make an `open` response contain a closed snapshot. A
   closed snapshot is rendered read-only and does not start progress autosave.
 - Closing from Reader first drains and stops pending progress writes. Close then sends the latest
@@ -71,8 +71,7 @@ with respect to Reader annotation mutation modules.
 
 ## Shell Owners
 
-`Reading.Shell.tsx` holds composition refs and renders chrome. Behavior belongs to the following
-owners:
+`Reading.Shell.tsx` holds composition refs and renders chrome. The modules below own its behavior.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -90,13 +89,13 @@ owners:
 | `ReaderDurableAnnotationToolbar.Controller.ts` | Opens, closes, and positions the durable annotation toolbar while coordinating staged cancellation. |
 | `ReaderBootstrapProgressGuard.State.ts` | Quarantines bootstrap relocations and protects the restored CFI until readable startup is established. |
 
-Engine attachment is not readiness. The viewport becomes ready only after a successful readable
-display or a relocation proving readable content. Search, CFI, and staging capabilities must not be
-published before that point.
+Attaching the engine does not make it ready. Readiness requires either a successful readable display
+or a relocation that proves content is readable. Search, CFI, and staging capabilities are not
+published before then.
 
 ## Engine Owners
 
-`EpubTsBook.Engine.ts` remains the public facade. Runtime imports of `@likecoin/epub-ts` stay under
+`EpubTsBook.Engine.ts` is the public facade. Runtime imports of `@likecoin/epub-ts` stay under
 `src/features/reader/engine/`.
 
 | Owner | Responsibility |
@@ -136,7 +135,7 @@ Known support-library defects and limitations are tracked in
   at the exact same CFI updates the existing application annotation instead of creating a duplicate.
 - Previous-session layers remain read-only. Their marks may be displayed, but their data must not
   enter current-session mutation actions.
-- Cleanup remains generation-safe: stale async work cannot publish capabilities, mutate the active
+- Cleanup is generation-safe: stale async work cannot publish capabilities, mutate the active
   runtime, or retain an obsolete engine.
 
 ## Current Product Limits
@@ -145,8 +144,8 @@ Known support-library defects and limitations are tracked in
   server.
 - In-book search runs only for an explicit submit action or an initial reader search route. It does
   not search on every keystroke.
-- Search uses epub-ts section traversal. There is no general fuzzy-search engine, and import range
-  repair does not cross spine sections.
+- Search uses epub-ts section traversal. The Reader has no general fuzzy-search engine, and import
+  range repair does not cross spine sections.
 - Glasp CSV is the only supported import format. Import jobs are in memory, are reviewed row by row,
   and do not survive reload.
 - Import does not persist provenance or perform import-level duplicate detection. Confirmed rows use
@@ -185,7 +184,7 @@ Useful diagnostic owners:
 
 ## Validation
 
-Run the full behavior-preserving validation set after Reader changes:
+Run the full validation set after Reader changes:
 
 ```powershell
 npm.cmd run hygiene

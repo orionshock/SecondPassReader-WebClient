@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Windows 10 + VS Code is the assumed primary development environment.
+- The primary development environment is Windows 10 with VS Code.
 - Install the Node.js version in `.node-version` and the npm major declared in
   `package.json`.
 - Keep the repo in a normal local folder rather than a synced/network folder when possible.
@@ -19,9 +19,10 @@ npm install
 npm run dev
 ```
 
-Vite prints a local URL, usually `http://localhost:5173/`.
+Vite prints the local URL, usually `http://localhost:5173/`.
 
-The Django server is separate from this repo. For local development, configure the server to allow the Vite origin with CORS. Do not try to bypass CORS in the client.
+The Django server is separate from this repo. For local development, configure the server to allow
+the Vite origin with CORS. Do not bypass CORS in the client.
 
 ## Build
 
@@ -29,7 +30,7 @@ The Django server is separate from this repo. For local development, configure t
 npm run build
 ```
 
-Build does three things:
+The build command:
 
 1. Builds `@secondpass/client`.
 2. Runs TypeScript project build with `tsc -b`.
@@ -63,16 +64,17 @@ Run the complete local verification gate with:
 npm run verify
 ```
 
-This runs repository hygiene, the noninteractive Vitest suite, and the
-production build. The VS Code `Verify: all` task invokes the same script.
+This runs repository hygiene, Vitest in noninteractive mode, and the production build. The VS Code
+`Verify: all` task runs the same command.
 
 ## Static Deployment
 
-The app builds to `dist/` and is intended to be served by a static HTTP server. Runtime server selection happens in the browser through the connection flow.
+The build output is in `dist/`. Serve it from a static HTTP server. Users select a Second Pass server
+in the browser connection flow.
 
 ## Common Local State
 
-The app stores non-server local state in browser storage, including:
+Browser storage contains:
 
 - connection profiles and bearer token
 - app theme

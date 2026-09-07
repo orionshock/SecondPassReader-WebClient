@@ -1,9 +1,8 @@
 # epub-ts Support Library Issue Ledger
 
-This document records defects, lifecycle gaps, and API limitations found while integrating
-[`@likecoin/epub-ts`](https://github.com/likecoin/epub.ts) with Second Pass Reader. It is intended
-to support upstream bug reports and future dependency upgrades. It is not a request to replace
-epub-ts or build a second EPUB engine.
+This ledger records defects, lifecycle gaps, and API limits found while integrating
+[`@likecoin/epub-ts`](https://github.com/likecoin/epub.ts) with Second Pass Reader. Use it when
+preparing upstream reports or evaluating a dependency upgrade. Replacing epub-ts is out of scope.
 
 Audit baseline:
 
@@ -16,12 +15,12 @@ Audit baseline:
 
 ## Classification
 
-- **Confirmed defect**: reproduced behavior and a concrete problematic implementation were found.
-- **Confirmed limitation**: behavior follows the current API/implementation, but the API is not
-  sufficient for a reliable reader workflow.
-- **Observed; upstream reproduction needed**: runtime evidence exists, but a minimal upstream
-  fixture has not yet isolated the library from application behavior.
-- **Feature gap**: functionality is not provided by epub-ts; this is not necessarily a defect.
+- **Confirmed defect**: a reproduction and the faulty implementation are known.
+- **Confirmed limitation**: the implementation follows its current contract, but that contract does
+  not support the Reader's requirements.
+- **Observed; upstream reproduction needed**: runtime evidence exists, but no minimal fixture has
+  isolated the library from application code.
+- **Feature gap**: epub-ts does not provide the function; this may not be a defect.
 
 ## Summary
 
@@ -36,7 +35,7 @@ Audit baseline:
 | EPUBTS-007 | Location generation failures can leave section cleanup incomplete | Confirmed defect | Medium | Treat location generation as non-fatal |
 | EPUBTS-008 | Marks pane installs a non-passive `touchstart` listener | Confirmed defect | Low | None |
 | EPUBTS-009 | Search is literal, window-limited, and section-local | Confirmed API limitation | Medium | Query fragments and serialized traversal |
-| EPUBTS-010 | No first-class range endpoint editing or visible range-bounds API | Feature gap | Medium | Range editing is intentionally not implemented |
+| EPUBTS-010 | No first-class range endpoint editing or visible range-bounds API | Feature gap | Medium | Range editing is not implemented |
 | EPUBTS-011 | Highlight style behavior varies between SVG and DOM render paths | Observed; upstream reproduction needed | Medium | Supply both SVG and CSS color properties |
 | EPUBTS-012 | Percentage rendition dimensions cross a number-typed manager boundary | Observed contract mismatch | Medium | Measure the mount and pass pixel dimensions |
 
@@ -48,8 +47,8 @@ Audit baseline:
 `patches/@likecoin+epub-ts+0.7.1.patch`. The patch is reapplied by the root `postinstall` script and
 is guarded by `src/__tests__/epubTsSectionSearchPatch.test.ts`.
 
-**Impact:** Exact visible prose near the end of a chapter can return no result from built-in search.
-This affects normal reader search and guided import matching.
+**Impact:** Built-in search can miss exact visible prose near the end of a chapter. This affects
+normal Reader search and guided import matching.
 
 **SecondPass mitigation:** The patch drains every residual search-window start without changing
 query generation, result ordering, CFI construction, or import ranking.
@@ -93,11 +92,10 @@ while (nodeList.length > 0) {
 }
 ```
 
-This is low risk for the current algorithm because the inner search accepts only matches beginning
-in the first node of its window. Draining the residual list gives each previously unsearched tail
-node exactly one turn as the first node; it does not repeat the starts already searched by full
-windows. The local patch intentionally does not change literal matching, the one-occurrence-per-
-start behavior, window size, CFI construction, result order, or any Second Pass search logic.
+The inner search accepts only matches that begin in the first node of its window. Draining the
+residual list gives each unsearched tail node one turn as the first node without repeating starts
+already searched by full windows. The patch does not change literal matching, one-occurrence-per-
+start behavior, window size, CFI construction, result order, or Second Pass search logic.
 
 The published package ships generated bundles rather than TypeScript source. Second Pass imports
 the package's browser ESM export (`dist/epub.js`), so the local patch changes that entry point only.
@@ -106,9 +104,9 @@ execute them; patching their minified generated output would add disproportionat
 An upstream fix should instead change `src/section.ts`, rebuild every distribution target, and add
 the regression coverage below.
 
-A more maintainable implementation would collect searchable text nodes once, then build one window
-per possible start node. Search all occurrences that begin in the first node and map offsets back to
-DOM ranges. Results should be deduplicated by range CFI.
+An upstream implementation should collect searchable text nodes once, build one window per start
+node, search every occurrence that begins in the first node, and map offsets back to DOM ranges.
+It should deduplicate results by range CFI.
 
 Upstream regression tests should cover:
 
@@ -156,8 +154,8 @@ Client references:
 
 ### Suggested upstream fix
 
-Do not silently change `display()` semantics without considering compatibility. Add an explicit
-settled operation, promise, or event that guarantees:
+Keep the current `display()` contract for compatibility. Add a settled operation, promise, or event
+that guarantees:
 
 - the target view is current and visible;
 - render/content hooks have completed;
@@ -194,7 +192,7 @@ Upstream source paths involved:
 - `src/managers/default/index.ts`, display and resize reporting
 
 Version 0.7.1 includes internal CFI re-anchoring with a 2.5 second window and a 50 ms reflow debounce.
-That improves deep-CFI restoration but can legitimately produce additional location reports. The
+This improves deep-CFI restoration but can produce additional location reports. The
 events do not identify the display/reflow operation that caused them.
 
 Client references:
@@ -217,15 +215,15 @@ type RelocationContext = {
 };
 ```
 
-The same operation ID should follow display, rendered, resized, and relocated events. This would let
-applications preserve temporary state for operation-owned relocations while still canceling it for
-explicit navigation. The final event for an operation should be marked settled.
+Carry the same operation ID through display, rendered, resized, and relocated events. Applications
+could then preserve temporary state during operation-owned relocations and cancel it during user
+navigation. Mark the final event for an operation as settled.
 
 ## EPUBTS-004: Initial Reflow Can Roll Back a Restored CFI
 
 **Classification:** Observed; upstream reproduction needed
 
-**Current status:** Client protection remains required with 0.7.1.
+**Current status:** Version 0.7.1 still requires client protection.
 
 **Impact:** A saved CFI can display correctly, then initial mount resize/content reflow can move the
 viewport to an earlier page-start CFI. If consumers persist every relocation, correct progress can
@@ -241,7 +239,7 @@ reported an older `location.start.cfi`. Initial resize code that derived its red
 `currentLocation().start.cfi` could then make the visual rollback persistent.
 
 Version 0.7.1 contains `_armReanchor()` and `onContentReflow()` in `src/rendition.ts`, which appear to
-target this class of deep-CFI clamp. Client protection remains necessary because initial location
+target this class of deep-CFI clamp. Client protection is still necessary because initial location
 reports can still be intermediate and viewport resize has a separate path.
 
 Client references:
@@ -288,14 +286,14 @@ Client references:
   `getVisibleCfiRangeAnchor()`
 - `src/features/reader/engine/EpubVisibleCfiRangeAnchor.Placement.ts`
 
-The client deliberately separates:
+The client uses two separate operations:
 
 - visible range measurement through `rendition.getRange()`; and
 - book-level validation by loading the target `Section` and calling `EpubCFI.toRange(document)`.
 
 ### Suggested upstream fix
 
-Keep `getRange()` as the fast visible-view operation, but document that contract clearly and add a
+Keep `getRange()` as the fast visible-view operation, document that contract, and add a
 separate async resolver such as `book.resolveRange(cfi, { signal })`. A `whenRangeVisible(cfi)` helper
 would also address display timing without forcing callers to inspect private view state.
 
@@ -327,7 +325,7 @@ Second Pass already passes its client annotation ID as data:
 rendition.annotations.highlight(cfiRange, { id: clientId }, callback, className, styles);
 ```
 
-epub-ts does not use that value as annotation or renderer identity. It remains annotation data and
+epub-ts does not use that value as annotation or renderer identity. It is annotation data and
 is emitted as event metadata when the mark is clicked. Identity is instead derived independently at
 two library layers:
 
@@ -364,9 +362,9 @@ Client references:
 Current Second Pass rules do not ask epub-ts to keep two `highlight` marks alive at the same exact
 CFI. A staged preview temporarily replaces the durable renderer mark at that CFI. On commit or
 cancel, durable marks are restored from application annotation state. Exact same-session CFI
-commits update the existing application annotation rather than creating a duplicate. How current-
-and previous-session annotations should interact remains an application policy concern; CFI must
-remain the spatial anchor rather than being treated as annotation object identity.
+commits update the existing application annotation rather than creating a duplicate. Interaction
+between current- and previous-session annotations is an application policy. CFI stays the spatial
+anchor and must not be treated as annotation object identity.
 
 ### Suggested upstream fix
 
@@ -480,7 +478,7 @@ Cross-section search can remain out of scope, but the boundary should be explici
 
 **Classification:** Feature gap
 
-**Current status:** Accepted limitation; endpoint editing is intentionally not implemented.
+**Current status:** Accepted limitation; endpoint editing is not implemented.
 
 **Impact:** The application cannot safely offer draggable highlight endpoints or reliably measure a
 range without reaching into the rendered iframe and CFI internals.
@@ -506,8 +504,8 @@ Client references:
 ### Suggested upstream improvement
 
 Add renderer-owned range measurement and endpoint operations that return stable, documented data.
-Until that exists, Second Pass intentionally does not implement drag handles or CFI surgery above
-the engine boundary.
+Until that API exists, Second Pass does not implement drag handles or CFI surgery above the engine
+boundary.
 
 ## EPUBTS-011: Highlight Styling Varies by Render Path
 
@@ -571,8 +569,8 @@ full-book consumers can therefore interfere when one owner unloads a section sti
 another owner. Second Pass serializes EPUB search traversal in
 `src/features/reader/engine/ReaderSearch.Controller.ts`.
 
-An upstream improvement would document section concurrency explicitly or provide reference-counted
-leases for temporary section access. This constraint has not been isolated as an independent
+Upstream should document section concurrency or provide reference-counted leases for temporary
+section access. This constraint has not been isolated as an independent
 epub-ts defect, so it does not have a separate issue ID.
 
 ## Findings That Are Not epub-ts Defects

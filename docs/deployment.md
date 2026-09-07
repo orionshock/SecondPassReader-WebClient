@@ -1,6 +1,8 @@
 # Static Docker Deployment
 
-The `docker/` deployment kit packages the Vite Reader client as static files served by nginx. It does not include backend proxying, TLS, public hostnames, or SecondPass Library credentials. Put a reverse proxy in front of the container for those concerns.
+The `docker/` kit serves the Vite build as static files through nginx. It does not configure a
+backend proxy, TLS, public hostnames, or Second Pass Library credentials. Configure those at the
+reverse proxy in front of the container.
 
 ## Quick start
 
@@ -30,23 +32,33 @@ SECONDPASS_SERVER_2_NAME=Local Library
 SECONDPASS_SERVER_2_URL=http://localhost:8000
 ```
 
-A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. Otherwise, complete indexed pairs are used and incomplete pairs are ignored. Container startup writes the resulting public, credential-free array to `/usr/share/nginx/html/secondpass-servers.json`, served by nginx at `/secondpass-servers.json`; no configuration produces `[]`.
+A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. If it is empty,
+startup reads complete indexed pairs and ignores incomplete pairs. It writes the resulting public,
+credential-free array to `/usr/share/nginx/html/secondpass-servers.json`, which nginx serves at
+`/secondpass-servers.json`. With no configuration, the file contains `[]`.
 
-After changing presets, run `docker compose -f docker/compose.yml up -d secondpassreader-webclient` to recreate/restart the container with the new environment. The image does not need to be rebuilt. Presets are only UI hints: selecting one still makes the Reader verify that server through `/.well-known/secondpass` before pairing. They do not carry tokens or bypass linking.
+After changing presets, run `docker compose -f docker/compose.yml up -d secondpassreader-webclient`
+to recreate the container with the new environment. You do not need to rebuild the image. Presets
+only populate the server picker. The Reader still verifies the selected server through
+`/.well-known/secondpass` before pairing. Presets contain no tokens and do not bypass linking.
 
 ## Version stamp
 
-Vite stamps each build with `git describe --tags --always --dirty` and the latest commit date. Local builds read those values directly from Git. `docker/restart.sh` passes them into the Docker build because the image build context intentionally excludes `.git`.
+Vite stamps each build with `git describe --tags --always --dirty` and the latest commit date. Local
+builds read both values from Git. `docker/restart.sh` passes them to Docker because `.git` is excluded
+from the image build context.
 
 The compiled values are shown under Settings > Library Server > This Device. Builds without Git metadata or explicit Docker build arguments report `development` and `unknown` rather than inventing a release identity.
 
-The version stamp is static build metadata. Runtime server-preset changes do not alter it and do not require an image rebuild.
+The version stamp is build metadata. Changing server presets does not alter it or require an image
+rebuild.
 
 ## Reverse proxy
 
 For production, route your public reverse proxy to the reader container on internal port `8000`. The nginx config inside this image only serves the static Vite build and falls back to `/index.html` for SPA routes.
 
-The Reader remains a standalone static app. Users still pair it to a SecondPass Library through the app UI using the PIN/code Client API linking flow. Do not put bearer tokens, credentials, or server API secrets in preset configuration.
+Users pair the static Reader app to a Second Pass Library through the PIN/code Client API flow. Do
+not put bearer tokens, credentials, or server API secrets in preset configuration.
 
 ## Build without compose
 
