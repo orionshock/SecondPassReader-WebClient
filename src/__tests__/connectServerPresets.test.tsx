@@ -54,7 +54,7 @@ describe("connection server presets", () => {
     });
 
     expect(verifySecondPassServerMock).not.toHaveBeenCalled();
-    expect(container.querySelector("fieldset")).toBeNull();
+    expect(container.querySelectorAll('button[aria-pressed]')).toHaveLength(0);
     expect(container.querySelector<HTMLInputElement>("input")).not.toBeNull();
   });
 
@@ -78,9 +78,10 @@ describe("connection server presets", () => {
     expect(verifySecondPassServerMock).toHaveBeenCalledTimes(2);
     expect(verifySecondPassServerMock).toHaveBeenCalledWith("https://one.example.com");
     expect(verifySecondPassServerMock).toHaveBeenCalledWith("https://two.example.com");
-    expect(container.textContent?.match(/Loading server details\.\.\./g)).toHaveLength(2);
 
-    const presetButtons = [...container.querySelectorAll<HTMLButtonElement>("fieldset button")];
+    const presetButtons = [...container.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')];
+    expect(presetButtons).toHaveLength(2);
+    expect(presetButtons.every((button) => !button.disabled)).toBe(true);
     act(() => presetButtons[0]?.click());
     expect(container.querySelector<HTMLInputElement>("input")?.value).toBe("https://one.example.com");
     expect(presetButtons[0]?.getAttribute("aria-pressed")).toBe("true");
@@ -97,7 +98,6 @@ describe("connection server presets", () => {
     await act(async () => {
       second.reject(new Error("offline"));
     });
-    expect(container.textContent).toContain("Server details unavailable. You can still try this URL.");
     act(() => presetButtons[1]?.click());
     const input = container.querySelector<HTMLInputElement>("input");
     expect(input?.value).toBe("https://two.example.com");

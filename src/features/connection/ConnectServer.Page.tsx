@@ -140,42 +140,47 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
         }}
       >
         {presets.length > 0 ? (
-          <fieldset className="serverPresets">
-            <legend className="fieldLabel">Known servers</legend>
+          <div className="serverPresets">
             {presets.map((preset, index) => {
               const identity = presetIdentities[preset.url] ?? { status: "loading" };
               return (
-                <div className="serverPresetCard" key={`${preset.url}:${index}`}>
+                <div
+                  className={`serverPresetCard${selectedPresetUrl === preset.url ? " serverPresetCardSelected" : ""}`}
+                  key={`${preset.url}:${index}`}
+                >
                   <button
-                    className="button serverPresetButton"
+                    className="serverPresetCardAction"
                     type="button"
+                    aria-label={`Use server ${identity.status === "loaded" ? identity.serverName : preset.url}`}
                     aria-pressed={selectedPresetUrl === preset.url}
                     onClick={() => {
                       setSelectedPresetUrl(preset.url);
                       setServerUrlInput(preset.url);
                     }}
-                  >
-                    <strong>{identity.status === "loaded" ? identity.serverName : preset.url}</strong>
+                  />
+                  <div className="serverPresetContent">
+                    <strong className="serverPresetName">
+                      {identity.status === "loaded" ? identity.serverName : preset.url}
+                    </strong>
                     {identity.status === "loaded" ? <span className="muted mono">{preset.url}</span> : null}
-                  </button>
-                  <div className="serverPresetDetails" aria-live="polite">
+                  </div>
+                  <div className="serverPresetDescription" aria-live="polite">
                     {identity.status === "loading" ? <span className="muted">Loading server details...</span> : null}
                     {identity.status === "loaded" ? (
                       <ServerRichText
                         value={identity.serverDescription}
-                        className="serverPresetDescription muted"
+                        className="muted"
                         emptyFallback={<span>No server description provided.</span>}
                       />
                     ) : null}
                     {identity.status === "unavailable" ? (
-                      <span className="muted">Server details unavailable. You can still try this URL.</span>
+                      <span className="muted">Server Unreachable</span>
                     ) : null}
                   </div>
                 </div>
               );
             })}
-            <div className="fieldHelp muted">Presets are suggestions. The selected server is verified before pairing.</div>
-          </fieldset>
+          </div>
         ) : null}
         <label className="field">
           <span className="fieldLabel">Server URL</span>
@@ -191,7 +196,7 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
             spellCheck={false}
             autoFocus
           />
-          <div className="fieldHelp muted">Examples: localhost:8000, http://localhost:8000/app/</div>
+          <div className="fieldHelp muted">Examples: localhost:8000, http://localhost:8000/ibrary</div>
         </label>
 
         <div className="formActions">
