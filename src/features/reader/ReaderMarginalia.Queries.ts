@@ -2,10 +2,10 @@ import type { MarginaliaBookSessions, MarginaliaRecentSessions, MarginaliaSessio
 
 export function loadRecentReading(
   spl: SecondPassClient,
-  options?: { includeCompleted?: boolean },
+  options?: { includeClosed?: boolean },
 ): Promise<MarginaliaRecentSessions> {
   return spl.marginalia.sessions.recent(
-    options?.includeCompleted ? { limit: 10, includeClosed: true } : { limit: 10 },
+    options?.includeClosed ? { limit: 10, includeClosed: true } : { limit: 10 },
   );
 }
 

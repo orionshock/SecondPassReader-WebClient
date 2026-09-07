@@ -11,6 +11,8 @@ describe("Home recent reading carousel", () => {
 
     expect(html).toContain("View all");
     expect(html).toContain('href="#/sessions"');
+    expect(html).toContain("Show closed");
+    expect(html).not.toContain("Show completed");
   });
 
   it("keeps Reader targets and useful accessible card names", () => {

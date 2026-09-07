@@ -3,7 +3,6 @@ import {
   formatAnnotationCount,
   formatIso,
   formatProgress,
-  normalizeStatus,
 } from "../features/sessions/SessionDetail.Presenter";
 import { getSessionDisplayName } from "../features/sessions/SessionDisplayName.Presenter";
 
@@ -38,15 +37,6 @@ describe("sessionDetailDisplay", () => {
     expect(formatProgress()).toBeNull();
     expect(formatProgress(null)).toBeNull();
     expect(formatProgress(Number.NaN)).toBeNull();
-  });
-
-  it("normalizes known, custom, and inferred session statuses", () => {
-    expect(normalizeStatus("completed", true)).toBe("active");
-    expect(normalizeStatus(" Completed ")).toBe("completed");
-    expect(normalizeStatus("ARCHIVED")).toBe("archived");
-    expect(normalizeStatus("paused")).toBe("paused");
-    expect(normalizeStatus(null, false)).toBe("completed");
-    expect(normalizeStatus()).toBe("active");
   });
 
   it("preserves saved display names and adds only a short id suffix to unnamed sessions", () => {

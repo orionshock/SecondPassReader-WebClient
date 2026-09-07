@@ -44,7 +44,7 @@ export function RecentReadingSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [data, setData] = useState<MarginaliaRecentSessions | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showClosed, setShowClosed] = useState(false);
   const canLoad = Boolean(spl);
 
   const loadRecent = useCallback(async () => {
@@ -52,7 +52,7 @@ export function RecentReadingSection({
     setBusy(true);
     setError(null);
     try {
-      const r = await loadRecentReading(spl, { includeCompleted: showCompleted });
+      const r = await loadRecentReading(spl, { includeClosed: showClosed });
       setData(r);
     } catch (e) {
       setData(null);
@@ -60,7 +60,7 @@ export function RecentReadingSection({
     } finally {
       setBusy(false);
     }
-  }, [showCompleted, spl]);
+  }, [showClosed, spl]);
 
   useEffect(() => {
     setData(null);
@@ -93,12 +93,12 @@ export function RecentReadingSection({
           </span>
           <button
             type="button"
-            className={`button buttonCompact${showCompleted ? " buttonPrimary" : ""}`}
-            aria-pressed={showCompleted}
+            className={`button buttonCompact${showClosed ? " buttonPrimary" : ""}`}
+            aria-pressed={showClosed}
             disabled={busy}
-            onClick={() => setShowCompleted((current) => !current)}
+            onClick={() => setShowClosed((current) => !current)}
           >
-            Show completed
+            Show closed
           </button>
           <a className="button buttonCompact recentReadingViewAll" href={routeToHash({ kind: "sessions" })}>
             View all

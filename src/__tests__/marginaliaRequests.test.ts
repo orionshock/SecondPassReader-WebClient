@@ -21,9 +21,9 @@ describe("Reader marginalia requests", () => {
     expect(spl.marginalia.sessions.recent).toHaveBeenCalledWith({ limit: 10 });
   });
 
-  it("asks the recent-reading endpoint to include completed sessions when enabled", async () => {
+  it("asks the recent-reading endpoint to include closed sessions when enabled", async () => {
     const spl = fakeClient();
-    await loadRecentReading(spl, { includeCompleted: true });
+    await loadRecentReading(spl, { includeClosed: true });
     expect(spl.marginalia.sessions.recent).toHaveBeenCalledWith({ limit: 10, includeClosed: true });
   });
 

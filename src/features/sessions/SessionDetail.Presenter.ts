@@ -14,15 +14,6 @@ export function formatProgress(p?: number | null): string | null {
   return `${Math.round(clamped * 100)}%`;
 }
 
-export function normalizeStatus(status?: string | null, isActive?: boolean | null): "active" | "completed" | "archived" | string {
-  if (isActive === true) return "active";
-  const raw = typeof status === "string" ? status.trim().toLowerCase() : "";
-  if (raw === "active" || raw === "completed" || raw === "archived") return raw;
-  if (raw) return raw;
-  if (isActive === false) return "completed";
-  return "active";
-}
-
 export function formatAnnotationCount(n?: number | null): string | null {
   if (typeof n !== "number" || !Number.isFinite(n)) return null;
   const count = Math.max(0, Math.floor(n));

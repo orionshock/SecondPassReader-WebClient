@@ -31,10 +31,10 @@ export type PreviousSessionSummaryWithUpdatedAt = PreviousSessionSummaryViewMode
   updatedAt: string | null;
 };
 
-export function toSessionTimeLabel(input: { startedAt?: string | null; updatedAt?: string | null; createdAt?: string | null; completedAt?: string | null; fallbackId: string }): string {
+export function toSessionTimeLabel(input: { startedAt?: string | null; updatedAt?: string | null; createdAt?: string | null; closedAt?: string | null; fallbackId: string }): string {
   const ts =
     (typeof input.updatedAt === "string" ? input.updatedAt : null) ??
-    (typeof input.completedAt === "string" ? input.completedAt : null) ??
+    (typeof input.closedAt === "string" ? input.closedAt : null) ??
     (typeof input.startedAt === "string" ? input.startedAt : null) ??
     (typeof input.createdAt === "string" ? input.createdAt : null);
   if (!ts) return input.fallbackId;
@@ -73,11 +73,11 @@ export function toPreviousSessionSummary(input: {
 }): PreviousSessionSummaryWithUpdatedAt {
   const sessionId = typeof input.id === "string" ? input.id : "";
   const updatedAt = typeof input.updatedAt === "string" ? input.updatedAt : null;
-  const completedAt = typeof input.closedAt === "string" ? input.closedAt : null;
+  const closedAt = typeof input.closedAt === "string" ? input.closedAt : null;
   const startedAt = typeof input.startedAt === "string" ? input.startedAt : null;
   const timeLabel = toSessionTimeLabel({
     updatedAt,
-    completedAt,
+    closedAt,
     startedAt,
     fallbackId: sessionId || "(unknown session)",
   });
