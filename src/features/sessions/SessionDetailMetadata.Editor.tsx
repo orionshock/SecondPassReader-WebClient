@@ -3,34 +3,24 @@ import type { MarginaliaSession } from "@secondpass/client";
 export function SessionDetailMetadataEditor({
   session,
   isActive,
-  draftName,
-  setDraftName,
   draftNotes,
   setDraftNotes,
-  editingName,
-  setEditingName,
   editingNotes,
   setEditingNotes,
   saveBusy,
   saveError,
   clearSaveError,
-  onSaveName,
   onSaveNotes,
 }: {
   session: MarginaliaSession;
   isActive: boolean;
-  draftName: string;
-  setDraftName: (value: string) => void;
   draftNotes: string;
   setDraftNotes: (value: string) => void;
-  editingName: boolean;
-  setEditingName: (value: boolean) => void;
   editingNotes: boolean;
   setEditingNotes: (value: boolean) => void;
   saveBusy: boolean;
   saveError: string | null;
   clearSaveError: () => void;
-  onSaveName: () => void;
   onSaveNotes: () => void;
 }) {
   if (!isActive) {
@@ -39,11 +29,6 @@ export function SessionDetailMetadataEditor({
         <div className="sessionClosedNotice muted">
           This session is closed. Name, notes, and annotations are read-only.
         </div>
-        {session.name ? (
-          <div className="detailRow">
-            <span className="muted">Name:</span> {session.name}
-          </div>
-        ) : null}
         {session.notes ? (
           <div className="detailRow">
             <span className="muted">Notes:</span> {session.notes}
@@ -55,56 +40,6 @@ export function SessionDetailMetadataEditor({
 
   return (
     <div className="sessionEdit">
-      <div className="sessionInlineEditRow">
-        <div className="sessionInlineEditLabel">Name</div>
-        {!editingName ? (
-          <div className="sessionInlineEditFieldRow">
-            {session.name && session.name.trim() ? (
-              <div className="sessionInlineEditValue">{session.name}</div>
-            ) : (
-              <div className="sessionInlineEditValue muted">Unnamed session</div>
-            )}
-            <button
-              type="button"
-              className="button buttonCompact sessionInlineEditButton"
-              onClick={() => {
-                setDraftName(typeof session.name === "string" ? session.name : "");
-                setEditingName(true);
-              }}
-              aria-label="Edit session name"
-              title="Edit"
-            >
-              {"\u270E"}
-            </button>
-          </div>
-        ) : (
-          <div className="sessionInlineEditFieldRow">
-            <input
-              className="input inputCompact sessionInlineEditInput"
-              value={draftName}
-              onChange={(e) => setDraftName(e.target.value)}
-              placeholder="Session name"
-              maxLength={255}
-            />
-            <button type="button" className="button buttonPrimary buttonCompact" onClick={onSaveName} disabled={saveBusy}>
-              Save
-            </button>
-            <button
-              type="button"
-              className="button buttonCompact"
-              onClick={() => {
-                setEditingName(false);
-                setDraftName(typeof session.name === "string" ? session.name : "");
-                clearSaveError();
-              }}
-              disabled={saveBusy}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
-
       <div className="sessionInlineEditRow">
         <div className="sessionInlineEditLabel">Notes</div>
         {!editingNotes ? (
@@ -162,7 +97,7 @@ export function SessionDetailMetadataEditor({
         )}
       </div>
 
-      {saveError ? <div className="errorText">{saveError}</div> : null}
+      {editingNotes && saveError ? <div className="errorText">{saveError}</div> : null}
     </div>
   );
 }

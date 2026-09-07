@@ -3,6 +3,7 @@ import {
   formatAnnotationCount,
   formatIso,
   formatProgress,
+  getSessionDisplayName,
   normalizeStatus,
 } from "../features/sessions/SessionDetail.Presenter";
 
@@ -46,5 +47,11 @@ describe("sessionDetailDisplay", () => {
     expect(normalizeStatus("paused")).toBe("paused");
     expect(normalizeStatus(null, false)).toBe("completed");
     expect(normalizeStatus()).toBe("active");
+  });
+
+  it("uses the saved display name verbatim after trimming and falls back without exposing an id", () => {
+    expect(getSessionDisplayName("  Initial Kindle Import 49d47f  ")).toBe("Initial Kindle Import 49d47f");
+    expect(getSessionDisplayName("Unnamed session 49d47f")).toBe("Unnamed session 49d47f");
+    expect(getSessionDisplayName("  ")).toBe("Unnamed session");
   });
 });

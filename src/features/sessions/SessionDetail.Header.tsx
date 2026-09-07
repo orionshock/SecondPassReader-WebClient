@@ -1,8 +1,7 @@
-import type { BoundedSessionBook, MarginaliaSession } from "@secondpass/client";
+import type { BoundedSessionBook } from "@secondpass/client";
 import { InlineMeta } from "../../components/Metadata.Presenter";
 
 export function SessionDetailHeader({
-  session,
   book,
   coverSrc,
   bookLine,
@@ -15,7 +14,6 @@ export function SessionDetailHeader({
   onCloseSession,
   onOpenBookSessions,
 }: {
-  session: MarginaliaSession;
   book: BoundedSessionBook;
   coverSrc: string | null;
   bookLine: string[];
@@ -47,9 +45,6 @@ export function SessionDetailHeader({
             <div className="bookTitle">{book.title}</div>
           )}
           {bookLine.length ? <div className="muted"><InlineMeta items={bookLine} /></div> : null}
-          <div className="muted">
-            <span className="sessionsId">{session.id}</span>
-          </div>
           <div className="muted">
             <InlineMeta items={[statusText || null, progressText || null, annotationText || null]} />
           </div>

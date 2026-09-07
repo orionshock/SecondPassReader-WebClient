@@ -28,3 +28,8 @@ export function formatAnnotationCount(n?: number | null): string | null {
   const count = Math.max(0, Math.floor(n));
   return count === 1 ? "1 annotation" : `${count} annotations`;
 }
+
+export function getSessionDisplayName(name?: string | null): string {
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  return trimmed || "Unnamed session";
+}

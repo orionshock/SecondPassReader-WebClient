@@ -146,6 +146,37 @@
   align-items: start;
 }
 
+.sessionTitleBlock {
+  min-width: 0;
+}
+
+.sessionTitleRow {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.sessionTitle {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sessionTitleEditButton {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.sessionTitleEditRow {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .sessionCover {
   width: 96px;
   aspect-ratio: 2 / 3;

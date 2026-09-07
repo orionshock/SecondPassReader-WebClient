@@ -9,7 +9,8 @@ import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
 import { SessionDetailAnnotationsList } from "./SessionDetailAnnotations.List";
 import { SessionDetailHeader } from "./SessionDetail.Header";
 import { SessionDetailMetadataEditor } from "./SessionDetailMetadata.Editor";
-import { formatAnnotationCount, formatIso } from "./SessionDetail.Presenter";
+import { SessionDetailTitleEditor } from "./SessionDetailTitle.Editor";
+import { formatAnnotationCount, formatIso, getSessionDisplayName } from "./SessionDetail.Presenter";
 
 export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
   const canLoad = Boolean(spl);
@@ -100,9 +101,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
   const statusText = session?.status ?? "";
   const annoText = formatAnnotationCount(session?.annotationCount ?? null);
 
-  const headerTitle = book?.title
-    ? `Marginalia for ${"\u201C"}${book.title}${"\u201D"}`
-    : "Marginalia";
+  const displayName = getSessionDisplayName(session?.name);
 
   const handleSaveName = useCallback(async () => {
     if (!spl) return;
@@ -170,11 +169,21 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
 
   return (
     <section className="panel sessionDetailPage">
-      <div className="panelHeaderRow">
-        <h2 className="panelTitle" style={{ margin: 0 }}>
-          {headerTitle}
-        </h2>
-      </div>
+      {session ? (
+        <SessionDetailTitleEditor
+          displayName={displayName}
+          savedName={typeof session.name === "string" ? session.name : ""}
+          isActive={isActive}
+          draftName={draftName}
+          setDraftName={setDraftName}
+          editingName={editingName}
+          setEditingName={setEditingName}
+          saveBusy={saveBusy}
+          saveError={saveError}
+          clearSaveError={() => setSaveError(null)}
+          onSaveName={() => void handleSaveName()}
+        />
+      ) : null}
 
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
@@ -183,7 +192,6 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
       {session ? (
         <>
           <SessionDetailHeader
-            session={session}
             book={book!}
             coverSrc={coverSrc}
             bookLine={bookLine}
@@ -216,18 +224,13 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
           <SessionDetailMetadataEditor
             session={session}
             isActive={isActive}
-            draftName={draftName}
-            setDraftName={setDraftName}
             draftNotes={draftNotes}
             setDraftNotes={setDraftNotes}
-            editingName={editingName}
-            setEditingName={setEditingName}
             editingNotes={editingNotes}
             setEditingNotes={setEditingNotes}
             saveBusy={saveBusy}
             saveError={saveError}
             clearSaveError={() => setSaveError(null)}
-            onSaveName={() => void handleSaveName()}
             onSaveNotes={() => void handleSaveNotes()}
           />
 
