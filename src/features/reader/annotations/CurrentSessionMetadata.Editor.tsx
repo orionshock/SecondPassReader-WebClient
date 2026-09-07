@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { MaterialIcon } from "../../../components/Material.Icon";
+import { getSessionDisplayName } from "../../sessions/SessionDisplayName.Presenter";
 
 export function CurrentSessionMetadataEditor(props: {
+  sessionId?: string | null;
   name: string | null;
   notes: string | null;
   busy?: boolean;
@@ -16,9 +18,8 @@ export function CurrentSessionMetadataEditor(props: {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const displayName = useMemo(() => {
-    const n = typeof props.name === "string" ? props.name.trim() : "";
-    return n ? n : "Unnamed Session";
-  }, [props.name]);
+    return getSessionDisplayName(props.name, props.sessionId);
+  }, [props.name, props.sessionId]);
 
   const notesPreview = useMemo(() => {
     const n = typeof props.notes === "string" ? props.notes.trim() : "";

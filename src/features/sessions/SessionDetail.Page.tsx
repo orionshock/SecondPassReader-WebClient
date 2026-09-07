@@ -10,7 +10,8 @@ import { SessionDetailAnnotationsList } from "./SessionDetailAnnotations.List";
 import { SessionDetailHeader } from "./SessionDetail.Header";
 import { SessionDetailMetadataEditor } from "./SessionDetailMetadata.Editor";
 import { SessionDetailTitleEditor } from "./SessionDetailTitle.Editor";
-import { formatAnnotationCount, formatIso, getSessionDisplayName } from "./SessionDetail.Presenter";
+import { formatAnnotationCount, formatIso } from "./SessionDetail.Presenter";
+import { getSessionDisplayName } from "./SessionDisplayName.Presenter";
 
 export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
   const canLoad = Boolean(spl);
@@ -222,7 +223,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
               const bookId = String(book?.id ?? "");
               saveReaderReturnTarget(bookId, {
                 kind: "sessions",
-                label: session.name?.trim() ? session.name.trim() : "Session detail",
+                label: displayName,
                 route: `#/sessions/${encodeURIComponent(sessionId)}`,
                 sessionId,
               });

@@ -1,0 +1,62 @@
+// @vitest-environment jsdom
+
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SecondPassClient } from "@secondpass/client";
+
+const { loadSessionsPageMock } = vi.hoisted(() => ({
+  loadSessionsPageMock: vi.fn(),
+}));
+
+vi.mock("../features/reader/ReaderMarginalia.Queries", () => ({
+  loadSessionsPage: loadSessionsPageMock,
+}));
+
+import { SessionsPage } from "../features/sessions/Sessions.Page";
+
+const rawSessionId = "51388269-2a4b-4a13-8428-7b57805a7445";
+let container: HTMLDivElement;
+let root: Root;
+
+beforeEach(() => {
+  (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+  loadSessionsPageMock.mockResolvedValue({
+    count: 1,
+    next: null,
+    previous: null,
+    results: [{
+      id: rawSessionId,
+      name: "",
+      notes: "",
+      status: "active",
+      startedAt: "2026-09-06T00:00:00Z",
+      closedAt: null,
+      updatedAt: "2026-09-06T00:00:00Z",
+      lastActivityAt: "2026-09-06T00:00:00Z",
+      annotationCount: 0,
+      progress: null,
+      book: { id: "book-1", title: "Book One", coverUrl: null, canOpen: true },
+    }],
+  });
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+});
+
+describe("Sessions page display", () => {
+  it("shows the derived unnamed-session label without exposing the raw session id", async () => {
+    await act(async () => {
+      root.render(<SessionsPage profile={null} spl={{} as SecondPassClient} />);
+    });
+
+    expect(container.textContent).toContain("Unnamed Session 5a7445");
+    expect(container.innerHTML).not.toContain(rawSessionId);
+    expect(container.querySelector('[aria-label="Manage Unnamed Session 5a7445"]')).not.toBeNull();
+  });
+});

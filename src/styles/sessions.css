@@ -132,12 +132,6 @@
   align-items: center;
 }
 
-.sessionsId {
-  color: var(--sp-muted);
-  font-style: italic;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
 .sessionHero {
   margin-top: 12px;
   display: grid;

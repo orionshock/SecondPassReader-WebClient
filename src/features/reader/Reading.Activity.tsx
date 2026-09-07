@@ -177,6 +177,7 @@ function ReaderActivityContent({
         importDrawerInLayout={activityImport.drawerInLayout}
         shell={shell}
         annotations={annotations}
+        currentSessionId={currentSessionId}
         currentCfi={state.location?.cfi ?? null}
         workspaceFocusRequest={workspaceFocusRequest}
         onJumpToCfi={readerState.search.jumpToCfi}

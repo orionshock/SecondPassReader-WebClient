@@ -12,6 +12,7 @@ export function AnnotationWorkspace({
   status,
   error,
   busy,
+  currentSessionId,
   currentCfi,
   previousSessionGroups,
   onEnablePreviousSession,
@@ -27,6 +28,7 @@ export function AnnotationWorkspace({
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   busy: boolean;
+  currentSessionId?: string | null;
   currentCfi?: string | null;
   previousSessionGroups?: PreviousSessionAnnotationGroup[];
   onEnablePreviousSession?: (sessionId: string) => void;
@@ -58,6 +60,7 @@ export function AnnotationWorkspace({
         {currentSessionMeta && onUpdateCurrentSessionMeta ? (
           <div className="spAnnotationWorkspaceHeaderMeta">
             <CurrentSessionMetadataEditor
+              sessionId={currentSessionId}
               name={currentSessionMeta.name}
               notes={currentSessionMeta.notes}
               loadStatus={currentSessionMeta.status}

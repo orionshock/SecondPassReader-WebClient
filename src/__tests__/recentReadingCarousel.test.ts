@@ -35,6 +35,16 @@ describe("Home recent reading carousel", () => {
     expect(html).toContain(">chevron_left</span>");
     expect(html).toContain(">chevron_right</span>");
   });
+
+  it("uses the short display-name suffix for an unnamed session without exposing its full id", () => {
+    const session = recentSession("51388269-2a4b-4a13-8428-7b57805a7445", "book-1", "Book One");
+    session.name = "";
+
+    const html = renderCarousel([session]);
+
+    expect(html).toContain("Unnamed Session 5a7445");
+    expect(html).not.toContain(session.id);
+  });
 });
 
 function renderCarousel(items: MarginaliaRecentSession[]): string {

@@ -9,6 +9,7 @@ import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadError.Notice";
 import { loadSessionsPage } from "../reader/ReaderMarginalia.Queries";
+import { getSessionDisplayName } from "./SessionDisplayName.Presenter";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -241,7 +242,7 @@ export function SessionsPage({
                 const coverSrc = resolveCoverUrl(sessionBook?.coverUrl ?? null, profile);
                 const updated = formatIso(s.updatedAt);
                 const statusLine = s.status;
-                const sessionName = s.name.trim();
+                const sessionName = getSessionDisplayName(s.name, s.id);
                 const annoText = formatAnnotationCount(s.annotationCount);
 
                 return (
@@ -250,8 +251,8 @@ export function SessionsPage({
                     type="button"
                     className="sessionsRow"
                     onClick={() => navigateTo({ kind: "session", sessionId: s.id })}
-                    aria-label={`Manage session ${s.id}`}
-                    title={`Session ${s.id}`}
+                    aria-label={`Manage ${sessionName}`}
+                    title={sessionName}
                   >
                     <div className="sessionsCover">
                       {coverSrc ? (
@@ -266,9 +267,7 @@ export function SessionsPage({
                         <span className="bookTitle">{sessionBook?.title ?? "Book"}</span>
                       </div>
                       <div className="sessionsMeta muted">
-                        {sessionName ? <span className="mono">{sessionName}</span> : null}
-                        {sessionName ? <MetaSeparator /> : null}
-                        <span className="sessionsId">{s.id}</span>
+                        <span className="mono">{sessionName}</span>
                       </div>
                       <div className="sessionsMeta muted">
                         {statusLine ? <span>{statusLine}</span> : null}

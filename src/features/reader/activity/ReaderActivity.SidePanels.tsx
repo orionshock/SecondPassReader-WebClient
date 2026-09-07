@@ -13,6 +13,7 @@ export function ReaderActivitySidePanels({
   importDrawerInLayout,
   shell,
   annotations,
+  currentSessionId,
   currentCfi,
   workspaceFocusRequest,
   onJumpToCfi,
@@ -28,6 +29,7 @@ export function ReaderActivitySidePanels({
   importDrawerInLayout: boolean;
   shell: ReactNode;
   annotations: ReaderActivityRenderState["annotations"];
+  currentSessionId?: string | null;
   currentCfi?: string | null;
   workspaceFocusRequest: ReaderActivityWorkspaceFocusRequest | null;
   onJumpToCfi: (cfi: string) => void;
@@ -57,6 +59,7 @@ export function ReaderActivitySidePanels({
             status={annotations.status}
             error={annotations.error}
             busy={annotations.busy}
+            currentSessionId={currentSessionId}
             currentCfi={currentCfi ?? null}
             previousSessionGroups={annotations.previousSessionGroups}
             onEnablePreviousSession={annotations.enablePreviousSession}

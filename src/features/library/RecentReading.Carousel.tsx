@@ -4,6 +4,7 @@ import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { MaterialIcon } from "../../components/Material.Icon";
 import { routeToHash } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "./BookCover.Mapper";
+import { getSessionDisplayName } from "../sessions/SessionDisplayName.Presenter";
 
 function formatLastActivity(isoUtc: string): string {
   try {
@@ -75,7 +76,7 @@ export function RecentReadingCarousel({
           const id = String(item.book.id);
           const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.coverUrl, profile);
           const lastActivity = formatLastActivity(item.lastActivityAt);
-          const sessionName = item.name.trim();
+          const sessionName = getSessionDisplayName(item.name, item.id);
           const statusLabel = item.status === "closed" ? "Closed" : "Active";
           const locationLabel = item.progress?.locationLabel;
           return (
@@ -106,7 +107,7 @@ export function RecentReadingCarousel({
                 <span className="recentCardMetadata">
                   <span className={`recentStatusBadge recentStatusBadge${statusLabel}`}>{statusLabel}</span>
                   <span className="recentBookTitle">{item.book.title}</span>
-                  {sessionName ? <span className="recentSessionName">{sessionName}</span> : null}
+                  <span className="recentSessionName">{sessionName}</span>
                   <span className="recentBookMeta">{lastActivity}</span>
                   {locationLabel && /\S/.test(locationLabel) ? (
                     <span className="recentProgressLabel">{locationLabel}</span>
