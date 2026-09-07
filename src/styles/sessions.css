@@ -138,11 +138,11 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-.sessionHeader {
-  margin-top: 10px;
+.sessionHero {
+  margin-top: 12px;
   display: grid;
-  grid-template-columns: 96px 1fr auto;
-  gap: 12px;
+  grid-template-columns: 140px minmax(300px, 0.85fr) minmax(380px, 1.15fr);
+  gap: 22px;
   align-items: start;
 }
 
@@ -157,6 +157,12 @@
 
 .sessionTitle {
   margin: 0;
+  color: var(--color-text);
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: normal;
+  line-height: 1.15;
+  text-transform: none;
   overflow-wrap: anywhere;
 }
 
@@ -178,7 +184,7 @@
 }
 
 .sessionCover {
-  width: 96px;
+  width: 140px;
   aspect-ratio: 2 / 3;
   border: 1px solid var(--sp-border);
   border-radius: 12px;
@@ -188,14 +194,40 @@
   place-items: center;
 }
 
+.sessionHeroCoverColumn {
+  display: grid;
+  gap: 10px;
+}
+
+.sessionHeroActions {
+  display: grid;
+  gap: 8px;
+}
+
+.sessionHeroActions > .button {
+  width: 100%;
+}
+
 .sessionCoverImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.sessionHeaderMain {
+.sessionHeroMain {
   min-width: 0;
+}
+
+.sessionHeroBookTitle {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+  line-height: 1.2;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.sessionHeroBookLine {
+  margin-top: 4px;
 }
 
 .sessionBookTitleButton {
@@ -218,20 +250,50 @@
   border-radius: 4px;
 }
 
-.sessionHeaderActions {
+.sessionHeroFacts {
+  margin-top: 18px;
   display: grid;
-  gap: 8px;
-  justify-items: end;
+  gap: 10px;
 }
 
-.sessionMetaGrid {
-  margin-top: 10px;
+.sessionHeroFact {
   display: grid;
-  gap: 4px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.sessionHeroFactLabel {
+  color: var(--sp-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sessionHeroDates {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--sp-border);
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.sessionHeroDates > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.sessionHeroNote {
+  min-width: 0;
+  align-self: stretch;
+  padding-left: 22px;
+  border-left: 1px solid var(--sp-border);
 }
 
 .sessionEdit {
-  margin-top: 12px;
   display: grid;
   gap: 10px;
 }
@@ -277,21 +339,61 @@
 }
 
 .sessionInlineEditTextarea {
-  width: 40ch;
-  max-width: 100%;
+  width: 100%;
+  min-height: 220px;
   resize: vertical;
 }
 
 .sessionInlineEditNotesWrap {
-  margin-top: 6px;
+  margin-top: 8px;
+  min-width: 0;
 }
 
 .sessionInlineEditNotesFooter {
-  margin-top: 4px;
+  font-size: 13px;
+}
+
+.sessionNoteEditBody {
+  min-width: 0;
+}
+
+.sessionNoteEditFooter {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sessionNoteEditActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sessionNoteDisplay {
+  min-width: 0;
+}
+
+.sessionNoteHeadingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sessionNoteHeading {
+  font-weight: 600;
+}
+
+.sessionNoteText {
+  margin-top: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .sessionReadOnly {
-  margin-top: 12px;
+  display: grid;
+  gap: 8px;
 }
 
 .sessionClosedNotice {
@@ -300,7 +402,50 @@
 }
 
 .sessionAnnotations {
-  margin-top: 14px;
+  margin-top: 26px;
+  min-height: 240px;
+}
+
+.sessionAnnotations > .panelHeaderRow {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--sp-border);
+}
+
+@media (max-width: 960px) {
+  .sessionHero {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+
+  .sessionHeroNote {
+    grid-column: 1 / -1;
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 1px solid var(--sp-border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .sessionHero {
+    grid-template-columns: 1fr;
+  }
+
+  .sessionHeroCoverColumn {
+    width: min(150px, 48vw);
+    justify-self: center;
+  }
+
+  .sessionCover {
+    width: 100%;
+  }
+
+  .sessionHeroNote {
+    grid-column: auto;
+  }
+
+  .sessionInlineEditTextarea {
+    min-height: 180px;
+  }
 }
 
 .modalOverlay.closeSessionOverlay {

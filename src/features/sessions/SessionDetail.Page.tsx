@@ -98,10 +98,10 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
   const isActive = session?.status === "active";
   const progressText = session?.progress?.locationLabel || null;
   const coverSrc = resolveCoverUrl(book?.coverUrl ?? null, profile) ?? null;
-  const statusText = session?.status ?? "";
+  const statusText = session?.status === "active" ? "Active" : "Closed";
   const annoText = formatAnnotationCount(session?.annotationCount ?? null);
 
-  const displayName = getSessionDisplayName(session?.name);
+  const displayName = getSessionDisplayName(session?.name, session?.id);
 
   const handleSaveName = useCallback(async () => {
     if (!spl) return;
@@ -198,6 +198,23 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
             statusText={statusText}
             progressText={progressText}
             annotationText={annoText}
+            startedText={formatIso(session.startedAt)}
+            updatedText={formatIso(session.updatedAt)}
+            closedText={formatIso(session.closedAt)}
+            noteContent={(
+              <SessionDetailMetadataEditor
+                session={session}
+                isActive={isActive}
+                draftNotes={draftNotes}
+                setDraftNotes={setDraftNotes}
+                editingNotes={editingNotes}
+                setEditingNotes={setEditingNotes}
+                saveBusy={saveBusy}
+                saveError={saveError}
+                clearSaveError={() => setSaveError(null)}
+                onSaveNotes={() => void handleSaveNotes()}
+              />
+            )}
             isActive={isActive}
             canOpenReader={canOpenReader}
             onOpenReader={() => {
@@ -213,25 +230,6 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
             }}
             onCloseSession={() => setCloseDialogOpen(true)}
             onOpenBookSessions={() => navigateTo({ kind: "sessions", bookId: String(book?.id) })}
-          />
-
-          <div className="sessionMetaGrid">
-            {session.startedAt ? <div className="detailRow"><span className="muted">Started:</span> {formatIso(session.startedAt)}</div> : null}
-            {session.updatedAt ? <div className="detailRow"><span className="muted">Updated:</span> {formatIso(session.updatedAt)}</div> : null}
-            {session.closedAt ? <div className="detailRow"><span className="muted">Closed:</span> {formatIso(session.closedAt)}</div> : null}
-          </div>
-
-          <SessionDetailMetadataEditor
-            session={session}
-            isActive={isActive}
-            draftNotes={draftNotes}
-            setDraftNotes={setDraftNotes}
-            editingNotes={editingNotes}
-            setEditingNotes={setEditingNotes}
-            saveBusy={saveBusy}
-            saveError={saveError}
-            clearSaveError={() => setSaveError(null)}
-            onSaveNotes={() => void handleSaveNotes()}
           />
 
           <SessionDetailAnnotationsList

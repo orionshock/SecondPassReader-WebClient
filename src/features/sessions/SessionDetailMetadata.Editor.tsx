@@ -1,4 +1,5 @@
 import type { MarginaliaSession } from "@secondpass/client";
+import { MaterialIcon } from "../../components/Material.Icon";
 
 export function SessionDetailMetadataEditor({
   session,
@@ -23,32 +24,32 @@ export function SessionDetailMetadataEditor({
   clearSaveError: () => void;
   onSaveNotes: () => void;
 }) {
+  const noteText = session.notes.trim();
+
   if (!isActive) {
     return (
       <div className="sessionReadOnly">
         <div className="sessionClosedNotice muted">
           This session is closed. Name, notes, and annotations are read-only.
         </div>
-        {session.notes ? (
-          <div className="detailRow">
-            <span className="muted">Notes:</span> {session.notes}
+        <div className="sessionNoteDisplay">
+          <div className={`sessionNoteHeading${noteText ? "" : " muted"}`}>
+            {noteText ? "Session Note:" : "No Session Note"}
           </div>
-        ) : null}
+          {noteText ? <div className="sessionNoteText">{session.notes}</div> : null}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="sessionEdit">
-      <div className="sessionInlineEditRow">
-        <div className="sessionInlineEditLabel">Notes</div>
-        {!editingNotes ? (
-          <div className="sessionInlineEditFieldRow">
-            {session.notes && session.notes.trim() ? (
-              <div className="sessionInlineEditValue">{session.notes}</div>
-            ) : (
-              <div className="sessionInlineEditValue muted">No notes</div>
-            )}
+      {!editingNotes ? (
+        <div className="sessionNoteDisplay">
+          <div className="sessionNoteHeadingRow">
+            <div className={`sessionNoteHeading${noteText ? "" : " muted"}`}>
+              {noteText ? "Session Note:" : "No Session Note"}
+            </div>
             <button
               type="button"
               className="button buttonCompact sessionInlineEditButton"
@@ -59,27 +60,28 @@ export function SessionDetailMetadataEditor({
               aria-label="Edit session notes"
               title="Edit"
             >
-              {"\u270E"}
+              <MaterialIcon name="edit" />
             </button>
           </div>
-        ) : (
-          <>
-            <div className="sessionInlineEditNotesWrap">
-              <textarea
-                className="input sessionInlineEditTextarea"
-                cols={40}
-                rows={4}
-                value={draftNotes}
-                onChange={(e) => setDraftNotes(e.target.value.slice(0, 500))}
-                placeholder={`Notes${"\u2026"}`}
-                maxLength={500}
-              />
-              <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/500</div>
-            </div>
-            <div className="sessionInlineEditFieldRow">
-              <button type="button" className="button buttonPrimary buttonCompact" onClick={onSaveNotes} disabled={saveBusy}>
-                Save
-              </button>
+          {noteText ? <div className="sessionNoteText">{session.notes}</div> : null}
+        </div>
+      ) : (
+        <div className="sessionNoteEditBody">
+          <div className="sessionNoteHeading">Session Note</div>
+          <div className="sessionInlineEditNotesWrap">
+            <textarea
+              className="input sessionInlineEditTextarea"
+              cols={40}
+              rows={8}
+              value={draftNotes}
+              onChange={(e) => setDraftNotes(e.target.value.slice(0, 500))}
+              aria-label="Session note"
+              maxLength={500}
+            />
+          </div>
+          <div className="sessionNoteEditFooter">
+            <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/500</div>
+            <div className="sessionNoteEditActions">
               <button
                 type="button"
                 className="button buttonCompact"
@@ -92,10 +94,13 @@ export function SessionDetailMetadataEditor({
               >
                 Cancel
               </button>
+              <button type="button" className="button buttonPrimary buttonCompact" onClick={onSaveNotes} disabled={saveBusy}>
+                Save
+              </button>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {editingNotes && saveError ? <div className="errorText">{saveError}</div> : null}
     </div>
