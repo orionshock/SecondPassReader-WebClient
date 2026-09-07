@@ -4,15 +4,16 @@ import {
   buildImportSearchQueries,
   buildImportSearchQueryPlans,
 } from "../features/reader/imports/ReaderImportSearchPlan.Queries";
+import { importProse } from "./ReaderImportTest.Fixtures";
 
 describe("reader import fragment search queries", () => {
   it("generates punctuation-light fragments at quote and comma boundaries", () => {
-    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
+    const quote = importProse.dorogaQuote;
     const queries = buildImportSearchQueries(quote);
 
     expect(queries[0]).toBe(quote);
     expect(queries).toContain("It is too late to save them");
-    expect(queries).toContain("Doroga rumbled");
+    expect(queries).toContain(importProse.dorogaFragment);
     expect(queries).toContain("This is how it begins");
     expect(queries).not.toEqual([
       quote,
@@ -25,8 +26,8 @@ describe("reader import fragment search queries", () => {
   });
 
   it("retains surrounding quote context for punctuation-light fragments", () => {
-    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
-    const plan = buildImportSearchQueryPlans(quote).find((candidate) => candidate.query === "Doroga rumbled");
+    const quote = importProse.dorogaQuote;
+    const plan = buildImportSearchQueryPlans(quote).find((candidate) => candidate.query === importProse.dorogaFragment);
 
     expect(plan).toMatchObject({
       repairText: "\u201cIt is too late to save them,\u201d Doroga rumbled.",

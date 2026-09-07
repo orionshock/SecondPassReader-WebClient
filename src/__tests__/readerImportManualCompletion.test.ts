@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { completeReaderImportRowManually } from "../features/reader/imports/ReaderImportManualCompletion.Actions";
-import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
+import {
+  readerImportRow as row,
+  reviewableImportStatuses,
+  terminalImportStatuses,
+} from "./ReaderImportTest.Fixtures";
 
 describe("reader import manual completion", () => {
   it("clears staged review state and records only the local manual-completion transition", () => {
@@ -22,7 +26,7 @@ describe("reader import manual completion", () => {
     expect(markRowManuallyCompleted).toHaveBeenCalledWith("row-1");
   });
 
-  it.each(["pending", "not-found"] as const)("manually completes a %s row without clearing unrelated reader state", (status) => {
+  it.each(reviewableImportStatuses)("manually completes a %s row without clearing unrelated reader state", (status) => {
     const cancelStagedSelection = vi.fn();
     const clearTemporaryHighlight = vi.fn();
     const markRowManuallyCompleted = vi.fn();
@@ -40,7 +44,7 @@ describe("reader import manual completion", () => {
     expect(markRowManuallyCompleted).toHaveBeenCalledWith("row-1");
   });
 
-  it.each(["searching", "accepted", "skipped", "manually-completed"] as const)(
+  it.each(terminalImportStatuses)(
     "does not manually complete a %s row",
     (status) => {
       const markRowManuallyCompleted = vi.fn();
@@ -56,14 +60,3 @@ describe("reader import manual completion", () => {
     },
   );
 });
-
-function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {
-  return {
-    id: "row-1",
-    kind: "highlight",
-    index: 1,
-    quoteText: "Imported quote",
-    status: "pending",
-    ...overrides,
-  };
-}

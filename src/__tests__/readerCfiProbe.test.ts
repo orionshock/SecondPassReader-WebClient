@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { probeReaderCfi } from "../features/reader/shell/ReaderCfiProbe.Adapter";
+import { readerCfi } from "./ReaderCfiTest.Fixtures";
 
 describe("probeReaderCfi", () => {
   it("returns ok probe results", async () => {
@@ -7,15 +8,15 @@ describe("probeReaderCfi", () => {
       ok: true,
       code: "exists-in-book",
       description: cfi,
-    }), " epubcfi(/6/2) ");
+    }), ` ${readerCfi.point} `);
 
-    expect(result).toEqual({ ok: true, code: "exists-in-book", description: "epubcfi(/6/2)" });
+    expect(result).toEqual({ ok: true, code: "exists-in-book", description: readerCfi.point });
   });
 
   it("maps probe failures to ok false instead of throwing", async () => {
     const result = await probeReaderCfi(async () => {
       throw new Error("Invalid CFI");
-    }, "bad-cfi");
+    }, readerCfi.malformed);
 
     expect(result).toEqual({ ok: false, code: "resolution-failed", error: "Invalid CFI" });
   });

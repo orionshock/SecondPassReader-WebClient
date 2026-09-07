@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { acceptSuggestedBookmarkRow, createBookmarkSuggestion, getReaderImportJobCounts, hasOtherStagedRows, isReaderImportRowResolved, isReaderImportRowTerminal, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "../features/reader/imports/ReaderImportJob.State";
-import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
+import { readerImportRow as row } from "./ReaderImportTest.Fixtures";
 
 describe("reader import job state", () => {
   it("resets previously staged rows when a different row is activated", () => {
@@ -111,14 +111,3 @@ describe("reader import job state", () => {
     });
   });
 });
-
-function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {
-  return {
-    id: "row",
-    kind: "highlight",
-    index: 1,
-    quoteText: "Text",
-    status: "pending",
-    ...overrides,
-  };
-}

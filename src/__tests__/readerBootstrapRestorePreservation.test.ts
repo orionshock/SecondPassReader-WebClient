@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveReaderReflowCfi } from "../features/reader/engine/ReaderReflowTarget.Engine";
 import { ReaderBootstrapProgressGuard } from "../features/reader/shell/ReaderBootstrapProgressGuard.State";
+import { bootstrapRestoreTransition } from "./ReaderCfiTest.Fixtures";
 
 describe("reader bootstrap restore preservation", () => {
   it("uses an explicit restore CFI without consulting the current rendition location", () => {
@@ -18,17 +19,18 @@ describe("reader bootstrap restore preservation", () => {
   });
 
   it("keeps the restore CFI protected through layout activity until explicit navigation", () => {
+    const transition = bootstrapRestoreTransition;
     const guard = new ReaderBootstrapProgressGuard();
-    guard.reset(7, "epubcfi(/6/76)");
+    guard.reset(transition.generation, transition.restoreCfi);
 
-    expect(guard.getProtectedRestoreCfi(7)).toBe("epubcfi(/6/76)");
-    expect(guard.shouldPublishRelocation(7, "epubcfi(/6/38)")).toBe(false);
-    expect(guard.getProtectedRestoreCfi(7)).toBe("epubcfi(/6/76)");
+    expect(guard.getProtectedRestoreCfi(transition.generation)).toBe(transition.restoreCfi);
+    expect(guard.shouldPublishRelocation(transition.generation, transition.layoutCfi)).toBe(false);
+    expect(guard.getProtectedRestoreCfi(transition.generation)).toBe(transition.restoreCfi);
 
-    guard.recordExplicitNavigation(7);
+    guard.recordExplicitNavigation(transition.generation);
 
-    expect(guard.getProtectedRestoreCfi(7)).toBeNull();
-    expect(guard.shouldPublishRelocation(7, "epubcfi(/6/100)")).toBe(true);
+    expect(guard.getProtectedRestoreCfi(transition.generation)).toBeNull();
+    expect(guard.shouldPublishRelocation(transition.generation, transition.navigatedCfi)).toBe(true);
   });
 
   it("does not invent restore preservation without an initial saved CFI or for a stale generation", () => {

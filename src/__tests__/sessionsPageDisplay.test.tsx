@@ -14,8 +14,8 @@ vi.mock("../features/reader/ReaderMarginalia.Queries", () => ({
 }));
 
 import { SessionsPage } from "../features/sessions/Sessions.Page";
+import { rawSessionId, sessionListItemFixture } from "./SessionTest.Fixtures";
 
-const rawSessionId = "51388269-2a4b-4a13-8428-7b57805a7445";
 let container: HTMLDivElement;
 let root: Root;
 
@@ -28,19 +28,7 @@ beforeEach(() => {
     count: 1,
     next: null,
     previous: null,
-    results: [{
-      id: rawSessionId,
-      name: "",
-      notes: "",
-      status: "active",
-      startedAt: "2026-09-06T00:00:00Z",
-      closedAt: null,
-      updatedAt: "2026-09-06T00:00:00Z",
-      lastActivityAt: "2026-09-06T00:00:00Z",
-      annotationCount: 0,
-      progress: null,
-      book: { id: "book-1", title: "Book One", coverUrl: null, canOpen: true },
-    }],
+    results: [sessionListItemFixture({ name: "", notes: "" })],
   });
 });
 

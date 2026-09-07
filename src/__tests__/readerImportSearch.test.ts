@@ -4,6 +4,7 @@ import { findImportRowSearchMatch, findImportRowSearchMatches, findImportRowSear
 import type { ReaderSearchBookHandle } from "../features/reader/domain/ReaderBridge.Types";
 import type { ReaderSearchResult } from "../features/reader/domain/ReaderDomain.Types";
 import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
+import { importProse } from "./ReaderImportTest.Fixtures";
 
 describe("reader import search", () => {
   it("ranks quote-context candidates before returning a match", async () => {
@@ -111,8 +112,8 @@ describe("reader import search", () => {
   });
 
   it("ranks repeated punctuation-light fragment matches by imported quote context", async () => {
-    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
-    const searchBook: ReaderSearchBookHandle = async (query) => query === "Doroga rumbled"
+    const quote = importProse.dorogaQuote;
+    const searchBook: ReaderSearchBookHandle = async (query) => query === importProse.dorogaFragment
       ? [
           result({ id: "wrong", cfi: "wrong-cfi", quotePrefix: "unrelated words", quoteSuffix: "another sentence" }),
           result({
@@ -136,7 +137,7 @@ describe("reader import search", () => {
 
   it("ranks successfully repaired fragment matches before generic occurrences", async () => {
     const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled.";
-    const searchBook: ReaderSearchBookHandle = async (query) => query === "Doroga rumbled"
+    const searchBook: ReaderSearchBookHandle = async (query) => query === importProse.dorogaFragment
       ? [
           result({ id: "generic", cfi: "generic-cfi" }),
           result({ id: "repaired", cfi: "repaired-cfi", repairedText: '"It is too late to save them," Doroga rumbled' }),
@@ -154,8 +155,8 @@ describe("reader import search", () => {
   });
 
   it("rejects generic fragment occurrences without repair or surrounding context", async () => {
-    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
-    const searchBook: ReaderSearchBookHandle = async (query) => query === "Doroga rumbled"
+    const quote = importProse.dorogaQuote;
+    const searchBook: ReaderSearchBookHandle = async (query) => query === importProse.dorogaFragment
       ? [
           result({ id: "prologue", cfi: "prologue-cfi", quotePrefix: "unrelated", quoteSuffix: "unrelated" }),
           result({ id: "chapter", cfi: "chapter-cfi", quotePrefix: "different prose", quoteSuffix: "different prose" }),
@@ -173,10 +174,10 @@ describe("reader import search", () => {
   });
 
   it("searches beyond the first five generic fragment occurrences", async () => {
-    const quote = "\u201cIt is too late to save them,\u201d Doroga rumbled. \u201cThis is how it begins.\u201d";
+    const quote = importProse.dorogaQuote;
     const observedLimits: number[] = [];
     const searchBook: ReaderSearchBookHandle = async (query, options) => {
-      if (query !== "Doroga rumbled") return [];
+      if (query !== importProse.dorogaFragment) return [];
       observedLimits.push(options?.maxResults ?? 0);
       return [
         ...Array.from({ length: 5 }, (_, index) => result({

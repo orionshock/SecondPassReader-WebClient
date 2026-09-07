@@ -27,14 +27,14 @@ export function composeReadingSessionDurableMarks(
   currentSessionMarks: ReaderHighlightMark[],
   previousSessionMarks: ReaderHighlightMark[],
 ): ReaderHighlightMark[] {
-  return [...currentSessionMarks, ...previousSessionMarks];
+  return [...currentSessionMarks, ...previousSessionMarks].filter(isRenderableHighlightMark);
 }
 
 export function buildReadingSessionAnnotationToolbarItems(
   marks: ReaderHighlightMark[],
 ): DurableAnnotationToolbarItem[] {
   return marks
-    .filter((mark) => Boolean(mark.id && mark.cfiRange))
+    .filter(isRenderableHighlightMark)
     .map((mark) => ({
       id: mark.id,
       mode: mark.readOnly ? "readonly" : "editable",
@@ -42,4 +42,8 @@ export function buildReadingSessionAnnotationToolbarItems(
       note: mark.note,
       color: mark.color,
     }));
+}
+
+function isRenderableHighlightMark(mark: ReaderHighlightMark): boolean {
+  return mark.id.trim().length > 0 && mark.cfiRange.trim().length > 0;
 }

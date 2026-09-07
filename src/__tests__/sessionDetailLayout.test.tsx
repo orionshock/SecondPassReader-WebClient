@@ -6,12 +6,10 @@ import { SessionDetailAnnotationsList } from "../features/sessions/SessionDetail
 import { SessionDetailHeader } from "../features/sessions/SessionDetail.Header";
 import { SessionDetailMetadataEditor } from "../features/sessions/SessionDetailMetadata.Editor";
 import { SessionDetailTitleEditor } from "../features/sessions/SessionDetailTitle.Editor";
-
-const rawSessionId = "49d47f00-a77c-4d1c-96af-e4941bc93327";
+import { rawSessionId, sessionFixture } from "./SessionTest.Fixtures";
 
 function session(status: MarginaliaSession["status"], notes = "Keep this note in the metadata area."): MarginaliaSession {
-  return {
-    id: rawSessionId,
+  return sessionFixture({
     name: "Initial Kindle Import 49d47f",
     notes,
     status,
@@ -21,7 +19,7 @@ function session(status: MarginaliaSession["status"], notes = "Keep this note in
     lastActivityAt: "2026-08-02T00:00:00Z",
     annotationCount: 3,
     progress: null,
-  };
+  });
 }
 
 function renderDetailChrome(status: MarginaliaSession["status"], notes?: string): string {

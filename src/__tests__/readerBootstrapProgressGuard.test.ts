@@ -3,18 +3,20 @@ import {
   isExplicitProgressNavigationCommand,
   ReaderBootstrapProgressGuard,
 } from "../features/reader/shell/ReaderBootstrapProgressGuard.State";
+import { bootstrapRestoreTransition } from "./ReaderCfiTest.Fixtures";
 
 describe("reader bootstrap progress guard", () => {
   it("publishes only the authoritative restore CFI until explicit navigation", () => {
+    const transition = bootstrapRestoreTransition;
     const guard = new ReaderBootstrapProgressGuard();
-    guard.reset(1, "epubcfi(/6/60!/4/76/1:0)");
+    guard.reset(transition.generation, transition.restoreCfi);
 
-    expect(guard.shouldPublishRelocation(1, "epubcfi(/6/60!/4/76/1:0)")).toBe(true);
-    expect(guard.shouldPublishRelocation(1, "epubcfi(/6/60!/4/38/1:0)")).toBe(false);
+    expect(guard.shouldPublishRelocation(transition.generation, transition.restoreCfi)).toBe(true);
+    expect(guard.shouldPublishRelocation(transition.generation, transition.layoutCfi)).toBe(false);
 
-    guard.recordExplicitNavigation(1);
+    guard.recordExplicitNavigation(transition.generation);
 
-    expect(guard.shouldPublishRelocation(1, "epubcfi(/6/60!/4/38/1:0)")).toBe(true);
+    expect(guard.shouldPublishRelocation(transition.generation, transition.navigatedCfi)).toBe(true);
   });
 
   it("keeps suppressing layout-derived relocations until navigation is explicit", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildReaderImportAttemptQueue, getNextReaderImportAttempt } from "../features/reader/imports/ReaderImportAttempts.State";
-import type { ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
+import { readerImportRow as row } from "./ReaderImportTest.Fixtures";
 
 describe("reader import attempts", () => {
   it("builds a text-search queue for text-only highlights", () => {
@@ -142,14 +142,3 @@ describe("reader import attempts", () => {
     });
   });
 });
-
-function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {
-  return {
-    id: "row-1",
-    kind: "highlight",
-    index: 1,
-    quoteText: "Text",
-    status: "pending",
-    ...overrides,
-  };
-}

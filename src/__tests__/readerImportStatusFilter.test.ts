@@ -9,6 +9,7 @@ import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features
 import { getReaderImportJobCounts } from "../features/reader/imports/ReaderImportJob.State";
 import { createDefaultReaderImportStatusFilters, filterReaderImportRows, getReaderImportStatusGroup, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter } from "../features/reader/imports/ReaderImportStatusFilter.State";
 import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
+import { readerImportRowsWithStatuses } from "./ReaderImportTest.Fixtures";
 
 describe("reader import status filters", () => {
   it("shows unresolved and reviewable rows by default", () => {
@@ -111,13 +112,7 @@ describe("reader import status filters", () => {
 });
 
 function statuses(...values: ReaderImportRow["status"][]): ReaderImportRow[] {
-  return values.map((status, index) => ({
-    id: `row-${index}`,
-    index: index + 1,
-    kind: "highlight",
-    quoteText: `quote-${status}`,
-    status,
-  }));
+  return readerImportRowsWithStatuses(...values);
 }
 
 function renderDrawer(rows: ReaderImportRow[]): string {

@@ -1,10 +1,10 @@
-import { ApiError } from "@secondpass/client";
 import { describe, expect, it } from "vitest";
 import {
   getAuthRecoveryMessage,
   getPageLoadErrorMessage,
   isAuthorizationError,
 } from "../app/AppUserFacingErrors.Mapper";
+import { apiError } from "./ApiErrorTest.Fixtures";
 
 describe("user-facing API errors", () => {
   it("classifies 401 and 403 API errors as authorization failures", () => {
@@ -37,7 +37,3 @@ describe("user-facing API errors", () => {
     )).toBe("Could not load library results.");
   });
 });
-
-function apiError(status: number, message: string): ApiError {
-  return new ApiError({ kind: "http_error", status, message });
-}

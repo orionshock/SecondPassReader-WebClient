@@ -1,6 +1,5 @@
 import { createElement, Fragment, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ApiError } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
 import { ShelvesPreviewLoadFailure } from "../features/home/ShelvesPreview.Panel";
 import { CatalogTagLoadErrorNotice } from "../features/library/catalogTags/CatalogTag.Rail";
@@ -12,10 +11,11 @@ import {
   SessionsNoDataState,
 } from "../features/sessions/Sessions.Page";
 import { ShelvesLoadErrorNotice } from "../features/shelves/Shelves.Page";
+import { apiError, authorizationError } from "./ApiErrorTest.Fixtures";
 
 describe("page-local load errors", () => {
   it("shows the library authorization message without an empty successful result", () => {
-    const error = authError();
+    const error = authorizationError();
     const html = render(createElement(Fragment, null,
       createElement(LibraryResultsLoadErrorNotice, { error }),
       createElement(LibraryBooksResults, {
@@ -37,13 +37,13 @@ describe("page-local load errors", () => {
   });
 
   it("shows the catalog-tag-specific authorization message", () => {
-    const html = render(createElement(CatalogTagLoadErrorNotice, { error: authError() }));
+    const html = render(createElement(CatalogTagLoadErrorNotice, { error: authorizationError() }));
     expect(html).toContain("This device is not authorized to load catalog tags.");
   });
 
   it("shows the shelves authorization message with Retry", () => {
     const html = render(createElement(ShelvesLoadErrorNotice, {
-      error: authError(),
+      error: authorizationError(),
       disabled: false,
       onRetry: vi.fn(),
     }));
@@ -54,7 +54,7 @@ describe("page-local load errors", () => {
 
   it("shows the sessions authorization message without missing-book or empty copy", () => {
     const html = render(createElement(SessionsLoadErrorNotice, {
-      error: authError(),
+      error: authorizationError(),
       hasBookFilter: true,
     }), createElement(SessionsNoDataState, { busy: false, hasError: true }));
     expect(html).toContain("This device is not authorized to access reading sessions.");
@@ -63,14 +63,14 @@ describe("page-local load errors", () => {
   });
 
   it("uses missing-book copy only for a book-filtered 404", () => {
-    const error = new ApiError({ kind: "http_error", status: 404, message: "Not found." });
+    const error = apiError(404, "Not found.");
     expect(getSessionsLoadErrorMessage(error, true)).toBe("That book could not be found or is not accessible.");
     expect(getSessionsLoadErrorMessage(error, false)).toBe("Could not load reading sessions.");
   });
 
   it("shows the Home shelves authorization message with Retry", () => {
     const html = render(createElement(ShelvesPreviewLoadFailure, {
-      error: authError(),
+      error: authorizationError(),
       disabled: false,
       onRetry: vi.fn(),
     }));
@@ -78,10 +78,6 @@ describe("page-local load errors", () => {
     expect(html).toContain("Retry");
   });
 });
-
-function authError(): ApiError {
-  return new ApiError({ kind: "http_error", status: 403, message: "Token is not allowed." });
-}
 
 function render(...elements: ReactElement[]): string {
   return renderToStaticMarkup(createElement(Fragment, null, ...elements));

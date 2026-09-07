@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { MarginaliaRecentSession } from "@secondpass/client";
 import { RecentReadingCarousel } from "../features/library/RecentReading.Carousel";
 import { RecentReadingSection } from "../features/library/RecentReading.Panel";
+import { rawSessionId, recentSessionFixture } from "./SessionTest.Fixtures";
 
 describe("Home recent reading carousel", () => {
   it("renders View all as a Sessions link", () => {
@@ -15,7 +16,9 @@ describe("Home recent reading carousel", () => {
   });
 
   it("keeps Reader targets and useful accessible card names", () => {
-    const html = renderCarousel([recentSession("session-1", "book-1", "The Left Hand of Darkness")]);
+    const html = renderCarousel([recentSessionFixture({
+      book: { id: "book-1", title: "The Left Hand of Darkness", coverUrl: null, canOpen: true },
+    })]);
 
     expect(html).toContain('href="#/reader/book-1"');
     expect(html).toMatch(/aria-label="Resume The Left Hand of Darkness, last read [^"]+"/);
@@ -24,8 +27,8 @@ describe("Home recent reading carousel", () => {
 
   it("renders labeled carousel controls for multiple recent items", () => {
     const html = renderCarousel([
-      recentSession("session-1", "book-1", "Book One"),
-      recentSession("session-2", "book-2", "Book Two"),
+      recentSessionFixture(),
+      recentSessionFixture({ id: "session-2", book: { id: "book-2", title: "Book Two", coverUrl: null, canOpen: true } }),
     ]);
 
     expect(html).toContain('aria-label="Scroll recent reading left"');
@@ -33,8 +36,7 @@ describe("Home recent reading carousel", () => {
   });
 
   it("uses the short display-name suffix for an unnamed session without exposing its full id", () => {
-    const session = recentSession("51388269-2a4b-4a13-8428-7b57805a7445", "book-1", "Book One");
-    session.name = "";
+    const session = recentSessionFixture({ id: rawSessionId, name: "" });
 
     const html = renderCarousel([session]);
 
@@ -50,19 +52,4 @@ function renderCarousel(items: MarginaliaRecentSession[]): string {
     disabled: false,
     onResume: vi.fn(),
   }));
-}
-
-function recentSession(id: string, bookId: string, title: string): MarginaliaRecentSession {
-  return {
-    id,
-    name: "Evening reading",
-    status: "active",
-    lastActivityAt: "2026-08-02T12:00:00Z",
-    book: { id: bookId, title, coverUrl: null, canOpen: true },
-    progress: {
-      cfi: "epubcfi(/6/8!/4/2)",
-      locationLabel: "Chapter 08 - 42%",
-      updatedAt: "2026-08-02T12:00:00Z",
-    },
-  };
 }

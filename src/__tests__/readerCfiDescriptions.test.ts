@@ -6,6 +6,7 @@ import {
   toReaderCfiLocationDisplay,
 } from "../features/reader/session/ReadingSessionCfiDescriptions.Queries";
 import type { ReaderTocItem } from "../features/reader/domain/ReaderDomain.Types";
+import { readerCfi } from "./ReaderCfiTest.Fixtures";
 
 describe("readerCfiDescriptions", () => {
   const toc: ReaderTocItem[] = [
@@ -22,7 +23,7 @@ describe("readerCfiDescriptions", () => {
   });
 
   it("handles malformed CFI candidates without throwing", () => {
-    expect(getCfiDescriptionCandidates("not-a-cfi")).toEqual(["not-a-cfi"]);
+    expect(getCfiDescriptionCandidates(readerCfi.malformed)).toEqual([readerCfi.malformed]);
     expect(getCfiDescriptionCandidates("   ")).toEqual([]);
   });
 

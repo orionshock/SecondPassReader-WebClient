@@ -2,10 +2,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { CurrentSessionMetadataEditor } from "../features/reader/annotations/CurrentSessionMetadata.Editor";
+import { rawSessionId, sessionFixture } from "./SessionTest.Fixtures";
 
 describe("Reader current-session metadata", () => {
   it("uses the shared short-suffix display name for an unnamed session", () => {
-    const rawSessionId = "51388269-2a4b-4a13-8428-7b57805a7445";
     const html = renderToStaticMarkup(createElement(CurrentSessionMetadataEditor, {
       sessionId: rawSessionId,
       name: "",
@@ -18,10 +18,11 @@ describe("Reader current-session metadata", () => {
   });
 
   it("does not render metadata editing for a read-only session snapshot", () => {
+    const session = sessionFixture({ status: "closed", name: "Closed reading", notes: "Done" });
     const html = renderToStaticMarkup(createElement(CurrentSessionMetadataEditor, {
-      sessionId: "session-1",
-      name: "Closed reading",
-      notes: "Done",
+      sessionId: session.id,
+      name: session.name,
+      notes: session.notes,
       readOnly: true,
       onSave: vi.fn(),
     }));

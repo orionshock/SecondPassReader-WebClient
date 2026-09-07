@@ -1,18 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ApiError } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
 import { getUserFacingErrorMessage } from "../app/AppUserFacingErrors.Mapper";
 import { RecentReadingLoadFailure } from "../features/library/RecentReading.Panel";
+import { apiError, authorizationError, htmlApiError } from "./ApiErrorTest.Fixtures";
 
 describe("recent reading errors", () => {
   it("does not render an HTML API error body and keeps Retry available", () => {
-    const error = new ApiError({
-      kind: "http_error",
-      status: 404,
-      statusText: "Not Found",
-      message: "Request failed: 404 Not Found - <!DOCTYPE html><html><body>Django debug page</body></html>",
-    });
+    const error = htmlApiError();
 
     const html = renderToStaticMarkup(createElement(RecentReadingLoadFailure, {
       error,
@@ -38,7 +33,7 @@ describe("recent reading errors", () => {
     );
     expect(
       getUserFacingErrorMessage(
-        new ApiError({ kind: "http_error", status: 500, message: "Request failed: 500" }),
+        apiError(500, "Request failed: 500"),
         "Safe fallback.",
       ),
     ).toBe("Safe fallback.");
@@ -46,7 +41,7 @@ describe("recent reading errors", () => {
 
   it("shows the Home authorization fallback for recent reading", () => {
     const html = renderToStaticMarkup(createElement(RecentReadingLoadFailure, {
-      error: new ApiError({ kind: "unauthorized", status: 401, message: "Unauthorized" }),
+      error: authorizationError(401),
       disabled: false,
       onRetry: vi.fn(),
     }));
