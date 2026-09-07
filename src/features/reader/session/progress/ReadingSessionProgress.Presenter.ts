@@ -34,5 +34,7 @@ export function buildReadingSessionAutosaveStatus(input: {
       return { text: "Autosave: waiting" };
     case "error":
       return { text: "Autosave: waiting" };
+    case "closed":
+      return { text: "Autosave: session closed" };
   }
 }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MarginaliaProgress } from "@secondpass/client";
+import { ApiError } from "@secondpass/client";
 import {
   READING_PROGRESS_AUTOSAVE_DELAY_MS,
   ReadingProgressAutosaveController,
@@ -370,5 +371,29 @@ describe("ReadingProgressAutosaveController", () => {
 
     expect(onStateChange).not.toHaveBeenCalled();
     expect(controller.getState()).toMatchObject({ status: "error", error: "offline" });
+  });
+
+  it("treats a closed-session conflict as recoverable drift and blocks later writes for that session", async () => {
+    const save = vi.fn().mockRejectedValue(new ApiError({
+      kind: "http_error",
+      status: 409,
+      message: "SESSION_CLOSED",
+    }));
+    const controller = new ReadingProgressAutosaveController(() => undefined);
+    const input = {
+      enabled: true,
+      autosaveDelayMs: 10,
+      sessionId: "session-1",
+      progress: { cfi: "epubcfi(/6/4)", locationLabel: "020% - Chapter 2" },
+      saveProgress: save,
+    };
+
+    controller.update(input);
+    await vi.advanceTimersByTimeAsync(10);
+    controller.update({ ...input, progress: { cfi: "epubcfi(/6/6)", locationLabel: "030% - Chapter 3" } });
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(save).toHaveBeenCalledOnce();
+    expect(controller.getState()).toMatchObject({ status: "closed", dirty: false });
   });
 });

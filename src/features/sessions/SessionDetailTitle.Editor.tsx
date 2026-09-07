@@ -1,4 +1,5 @@
 import { MaterialIcon } from "../../components/Material.Icon";
+import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
 
 export function SessionDetailTitleEditor({
   displayName,
@@ -54,7 +55,7 @@ export function SessionDetailTitleEditor({
             onChange={(event) => setDraftName(event.target.value)}
             placeholder="Session name"
             aria-label="Session name"
-            maxLength={255}
+            maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
           />
           <button type="button" className="button buttonPrimary buttonCompact" onClick={onSaveName} disabled={saveBusy}>
             Save

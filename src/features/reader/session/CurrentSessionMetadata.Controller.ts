@@ -13,6 +13,8 @@ export function useCurrentSessionMeta(args: {
   spl?: SecondPassClient | null;
   sessionId: string | null;
   finalProgress?: MarginaliaProgressInput;
+  prepareProgressForClose?: () => Promise<void>;
+  resumeProgressAfterCloseFailure?: () => void;
 }) {
   const [currentSessionMeta, setCurrentSessionMeta] = useState<CurrentSessionMeta>({
     name: null,
@@ -75,10 +77,12 @@ export function useCurrentSessionMeta(args: {
         name: input.name,
         notes: input.notes,
         finalProgress: args.finalProgress,
+        prepareProgressForClose: args.prepareProgressForClose,
+        resumeProgressAfterCloseFailure: args.resumeProgressAfterCloseFailure,
       });
       setCurrentSessionMeta((prev) => ({ ...prev, name: input.name || null, notes: input.notes || null }));
     },
-    [args.finalProgress, args.spl, args.sessionId, currentSessionMeta.name, currentSessionMeta.notes],
+    [args.finalProgress, args.prepareProgressForClose, args.resumeProgressAfterCloseFailure, args.spl, args.sessionId, currentSessionMeta.name, currentSessionMeta.notes],
   );
 
   return {

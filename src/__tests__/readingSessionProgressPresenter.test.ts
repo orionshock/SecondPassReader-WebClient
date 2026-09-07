@@ -29,5 +29,10 @@ describe("reading session progress presentation", () => {
       status: "error",
       nowMs: 1000,
     })).toEqual({ text: "Autosave: waiting" });
+    expect(buildReadingSessionAutosaveStatus({
+      sessionId: "session-1",
+      status: "closed",
+      nowMs: 1000,
+    })).toEqual({ text: "Autosave: session closed" });
   });
 });

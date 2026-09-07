@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MaterialIcon } from "../../../components/Material.Icon";
 import { getSessionDisplayName } from "../../sessions/SessionDisplayName.Presenter";
+import { SESSION_METADATA_LIMITS } from "../../sessions/SessionMetadata.Policy";
 
 export function CurrentSessionMetadataEditor(props: {
   sessionId?: string | null;
@@ -9,6 +10,7 @@ export function CurrentSessionMetadataEditor(props: {
   busy?: boolean;
   loadStatus?: "idle" | "loading" | "ready" | "error";
   loadError?: string | null;
+  readOnly?: boolean;
   onSave: (update: { name: string; notes: string }) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -42,9 +44,10 @@ export function CurrentSessionMetadataEditor(props: {
             <input
               className="input spCurrentSessionMetaName"
               value={draftName}
-              onChange={(e) => setDraftName(e.target.value)}
+              onChange={(e) => setDraftName(e.target.value.slice(0, SESSION_METADATA_LIMITS.nameMaxChars))}
               placeholder="Unnamed Session"
               aria-label="Session name"
+              maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
               disabled={!canSave}
             />
           </div>
@@ -54,9 +57,10 @@ export function CurrentSessionMetadataEditor(props: {
             <textarea
               className="input spCurrentSessionMetaNotes"
               value={draftNotes}
-              onChange={(e) => setDraftNotes(e.target.value)}
+              onChange={(e) => setDraftNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
               placeholder="Notes..."
               aria-label="Session notes"
+              maxLength={SESSION_METADATA_LIMITS.notesMaxChars}
               disabled={!canSave}
             />
           </div>
@@ -111,16 +115,18 @@ export function CurrentSessionMetadataEditor(props: {
   return (
     <div className="spCurrentSessionMeta">
       <div className="spCurrentSessionMetaSummaryRow">
-        <button
-          type="button"
-          className="button buttonCompact spIconButton spIconButtonTight"
-          aria-label="Edit session details"
-          title="Edit"
-          disabled={props.busy || props.loadStatus === "loading"}
-          onClick={() => setEditing(true)}
-        >
-          <MaterialIcon name="edit" />
-        </button>
+        {!props.readOnly ? (
+          <button
+            type="button"
+            className="button buttonCompact spIconButton spIconButtonTight"
+            aria-label="Edit session details"
+            title="Edit"
+            disabled={props.busy || props.loadStatus === "loading"}
+            onClick={() => setEditing(true)}
+          >
+            <MaterialIcon name="edit" />
+          </button>
+        ) : null}
         <div className="spCurrentSessionMetaSummaryLabel">Current Session:</div>
         <div className="spCurrentSessionMetaSummaryValue" title={displayName}>
           <span className="spCurrentSessionMetaSummaryName">{displayName}</span>

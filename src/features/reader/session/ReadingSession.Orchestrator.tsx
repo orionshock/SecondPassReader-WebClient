@@ -133,12 +133,6 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const bootstrapSession = props.openedBook.marginaliaBootstrap?.session ?? null;
   const sessionId = bootstrapSession?.id ?? null;
   const canMutateSession = bootstrapSession?.status === "active";
-  const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
-    spl: props.spl,
-    sessionId,
-    finalProgress,
-  });
-
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = props.openedBook.marginaliaBootstrap?.session?.progress;
     const cfi = progress?.cfi ?? null;
@@ -193,7 +187,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     });
   }, [annotationsRaw, location, props.openedBook.book.id, sessionId, toc]);
 
-  const { autosave } = useReadingProgressAutosave({
+  const { autosave, prepareProgressForClose, resumeProgressAfterCloseFailure } = useReadingProgressAutosave({
     enabled: canMutateSession,
     autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
     spl: props.spl,
@@ -202,6 +196,13 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     toc,
     bookTitle: props.openedBook.book.title,
     savedProgress: bootstrapSession?.progress ?? null,
+  });
+  const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
+    spl: props.spl,
+    sessionId,
+    finalProgress,
+    prepareProgressForClose,
+    resumeProgressAfterCloseFailure,
   });
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());

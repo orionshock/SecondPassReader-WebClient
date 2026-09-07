@@ -30,6 +30,7 @@ function toLocationMetaParts(parts: string[] | undefined): string[] {
 export function CurrentAnnotationCard({
   annotation,
   busy,
+  readOnly = false,
   currentCfi,
   draftColor,
   draftNote,
@@ -48,6 +49,7 @@ export function CurrentAnnotationCard({
 }: {
   annotation: CurrentSessionAnnotationViewModel;
   busy: boolean;
+  readOnly?: boolean;
   currentCfi?: string | null;
   draftColor: string;
   draftNote: string;
@@ -76,6 +78,7 @@ export function CurrentAnnotationCard({
         isCurrent={isCurrent}
         locationMetaParts={locationMetaParts}
         when={when}
+        readOnly={readOnly}
         onJump={() => onJumpToCfi(b.cfi)}
         onDelete={() => {
           if (!window.confirm("Delete this bookmark?")) return;
@@ -158,7 +161,7 @@ export function CurrentAnnotationCard({
       </div>
 
       <div className="spAnnotationRightRail" aria-label="Highlight actions">
-        {!isEditing ? (
+        {!readOnly && !isEditing ? (
           <button
             type="button"
             className="button buttonCompact spIconButton"
@@ -186,19 +189,21 @@ export function CurrentAnnotationCard({
         >
           <MaterialIcon name="my_location" />
         </button>
-        <button
-          type="button"
-          className="button buttonDanger buttonCompact spIconButton"
-          onClick={() => {
-            if (!window.confirm("Delete this highlight?")) return;
-            onRemoveAnnotation(h.id);
-          }}
-          aria-label="Delete highlight"
-          title="Delete highlight"
-          disabled={editStatus === "saving"}
-        >
-          <MaterialIcon name="delete" />
-        </button>
+        {!readOnly ? (
+          <button
+            type="button"
+            className="button buttonDanger buttonCompact spIconButton"
+            onClick={() => {
+              if (!window.confirm("Delete this highlight?")) return;
+              onRemoveAnnotation(h.id);
+            }}
+            aria-label="Delete highlight"
+            title="Delete highlight"
+            disabled={editStatus === "saving"}
+          >
+            <MaterialIcon name="delete" />
+          </button>
+        ) : null}
       </div>
     </article>
   );

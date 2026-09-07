@@ -149,7 +149,8 @@ describe("session detail layout", () => {
     expect(html).toContain('class="sessionNoteEditActions"');
     expect(html).toContain('class="sessionNoteEditFooter"');
     expect(html).toContain("Session Note");
-    expect(html).toContain(`${value.notes.length}/500`);
+    expect(html).toContain(`${value.notes.length}/65536`);
+    expect(html).toContain('maxLength="65536"');
     expect(html).not.toContain("placeholder=");
     expect(html.indexOf("Cancel</button>")).toBeLessThan(html.indexOf("Save</button>"));
   });

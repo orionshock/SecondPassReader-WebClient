@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../library/BookCover.Mapper";
 import { formatSeriesIndex } from "../library/SeriesMetadata.Presenter";
+import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
 
 export type CloseSessionAfterAction = "nextBook" | "restartBook" | "home" | "detail" | "sessions";
 
@@ -109,7 +110,7 @@ export function CloseSessionDialog({
               className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              maxLength={255}
+              maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
               disabled={busy}
             />
           </label>
@@ -119,13 +120,13 @@ export function CloseSessionDialog({
             <textarea
               className="input closeSessionNotes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+              onChange={(e) => setNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
               rows={5}
-              maxLength={500}
+              maxLength={SESSION_METADATA_LIMITS.notesMaxChars}
               disabled={busy}
             />
           </label>
-          <div className="muted closeSessionCounter">{notes.length}/500</div>
+          <div className="muted closeSessionCounter">{notes.length}/{SESSION_METADATA_LIMITS.notesMaxChars}</div>
 
           <fieldset className="closeSessionAfter">
             <legend className="fieldLabel">After closing</legend>

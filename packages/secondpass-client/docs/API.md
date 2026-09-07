@@ -93,6 +93,16 @@ Author- and series-filtered books use `spl.library.books.list({ author })` and
 
 `startOver` requires a 1-128 character `idempotencyKey`. The client sends it as `Idempotency-Key`.
 
+`open` is the normal Reader open/resume operation. A successful `201` creates an active session and
+`200` reuses the existing active session. The server prevents multiple active sessions for the same
+user and book; clients do not perform tie-breaking. `getActiveSession` is the supported lookup when
+the caller only needs the current active session. `startOver` atomically closes the active session
+and creates a new blank active session for an explicit reread flow.
+
+The bootstrap shape is shared by these operations. `open` normally returns a non-null active
+session, while `getActiveSession` may return `session: null`. A concurrent close can rarely make an
+`open` response contain a closed snapshot, so consumers should still gate mutations on status.
+
 ### Progress and annotations
 
 - `spl.marginalia.sessions.getProgress(sessionId)`
@@ -101,6 +111,11 @@ Author- and series-filtered books use `spl.library.books.list({ author })` and
 - `spl.marginalia.sessions.batchAnnotations(sessionId, operations)`
 
 Progress replacement uses `PUT`; `locationLabel` maps to `location_label`. Annotation batches use `clientId`/`client_id` for retry-safe upserts and deletes. Bookmark upserts have no body. Highlight upserts require body text.
+
+Close may include final progress and atomically persists that progress with the closed status.
+Clients should drain and stop pending progress writes before close. A later progress replacement
+against a closed session fails with `409 SESSION_CLOSED`; it must not be retried as an ordinary
+autosave failure.
 
 Bearer clients do not expose archive import/export methods.
 

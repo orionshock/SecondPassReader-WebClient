@@ -47,7 +47,7 @@ actions, and renderer-neutral handles to the activity.
 | `annotations/CurrentSessionAnnotation.Controller.ts` | Serializes current-session mutations and rejects stale generations. |
 | `annotations/CurrentSessionAnnotation.Actions.ts` | Composes bookmark and highlight actions without changing their payload builders. |
 | `progress/ReadingProgressAutosave.Controller.ts` | Debounces and serializes progress replacement. |
-| `progress/ReadingProgressAutosave.Lifecycle.ts` | Seeds saved progress from the open response and performs a bounded best-effort exit flush. |
+| `progress/ReadingProgressAutosave.Lifecycle.ts` | Seeds saved progress, performs a bounded best-effort exit flush, and drains/stops writes before session close. |
 | `previousSession/PreviousSessionLayers.Controller.ts` | Loads and selects previous-session annotation layers as read-only context. |
 | `CurrentSessionMetadata.Controller.ts` | Loads and updates editable metadata for the active session. |
 | `ReadingSessionClose.Actions.ts` | Applies changed metadata, closes the session with final progress when available, and leaves activity-level navigation outside this owner. |
@@ -55,6 +55,19 @@ actions, and renderer-neutral handles to the activity.
 
 Current-session owners may mutate. `previousSession/` and the general Sessions feature are read-only
 with respect to Reader annotation mutation modules.
+
+### Live session contract
+
+- Normal `POST /books/:id/open/` responses contain one active session: `201` creates it and `200`
+  reuses it. The server's unique constraint owns the one-active-session-per-user/book invariant;
+  clients must not select between competing active sessions.
+- The shared bootstrap type remains defensive because `GET /books/:id/active-session/` may return no
+  session and a concurrent close can rarely make an `open` response contain a closed snapshot. A
+  closed snapshot is rendered read-only and does not start progress autosave.
+- Closing from Reader first drains and stops pending progress writes. Close then sends the latest
+  stable CFI and location label so metadata, final progress, and closed status commit atomically.
+- A progress `409` means the server has already closed the session. Autosave treats that as closed
+  state drift, stops further writes for that session, and leaves the Reader usable.
 
 ## Shell Owners
 

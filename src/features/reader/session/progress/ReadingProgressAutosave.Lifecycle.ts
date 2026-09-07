@@ -37,6 +37,7 @@ export function useReadingProgressAutosave(input: {
   savedProgress?: MarginaliaProgress | null;
 }) {
   const [autosave, setAutosave] = useState<ReadingProgressAutosaveState>({ status: "idle" });
+  const [writesStoppedForClose, setWritesStoppedForClose] = useState(false);
   const controllerRef = useRef<ReadingProgressAutosaveController | null>(null);
   const lifecycleGenerationRef = useRef(0);
   if (!controllerRef.current) controllerRef.current = new ReadingProgressAutosaveController(setAutosave);
@@ -60,8 +61,22 @@ export function useReadingProgressAutosave(input: {
   );
 
   useEffect(() => {
+    setWritesStoppedForClose(false);
+  }, [input.sessionId]);
+
+  const prepareProgressForClose = useCallback(async () => {
+    await controller.flushAndPause();
+    setWritesStoppedForClose(true);
+  }, [controller]);
+
+  const resumeProgressAfterCloseFailure = useCallback(() => {
+    controller.resume();
+    setWritesStoppedForClose(false);
+  }, [controller]);
+
+  useEffect(() => {
     controller.update({
-      enabled: input.enabled !== false,
+      enabled: input.enabled !== false && !writesStoppedForClose,
       autosaveDelayMs: input.autosaveDelayMs ?? READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: input.sessionId,
       progress,
@@ -70,7 +85,7 @@ export function useReadingProgressAutosave(input: {
     if (input.sessionId && input.savedProgress) {
       controller.seedSavedProgress(input.sessionId, input.savedProgress);
     }
-  }, [controller, input.autosaveDelayMs, input.enabled, input.savedProgress, input.sessionId, input.spl, progress, saveProgress]);
+  }, [controller, input.autosaveDelayMs, input.enabled, input.savedProgress, input.sessionId, input.spl, progress, saveProgress, writesStoppedForClose]);
 
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
@@ -85,7 +100,7 @@ export function useReadingProgressAutosave(input: {
     };
   }, [controller]);
 
-  return { autosave };
+  return { autosave, prepareProgressForClose, resumeProgressAfterCloseFailure };
 }
 
 async function settleExitFlush(controller: ReadingProgressAutosaveController): Promise<void> {

@@ -8,6 +8,7 @@ export function CurrentAnnotationCardBookmarkView({
   isCurrent,
   locationMetaParts,
   when,
+  readOnly,
   onDelete,
   onJump,
 }: {
@@ -15,6 +16,7 @@ export function CurrentAnnotationCardBookmarkView({
   isCurrent: boolean;
   locationMetaParts: string[];
   when: string | null;
+  readOnly: boolean;
   onDelete: () => void;
   onJump: () => void;
 }) {
@@ -56,15 +58,17 @@ export function CurrentAnnotationCardBookmarkView({
         >
           <MaterialIcon name="my_location" />
         </button>
-        <button
-          type="button"
-          className="button buttonDanger buttonCompact spIconButton"
-          onClick={onDelete}
-          aria-label="Delete bookmark"
-          title="Delete bookmark"
-        >
-          <MaterialIcon name="delete" />
-        </button>
+        {!readOnly ? (
+          <button
+            type="button"
+            className="button buttonDanger buttonCompact spIconButton"
+            onClick={onDelete}
+            aria-label="Delete bookmark"
+            title="Delete bookmark"
+          >
+            <MaterialIcon name="delete" />
+          </button>
+        ) : null}
       </div>
     </article>
   );

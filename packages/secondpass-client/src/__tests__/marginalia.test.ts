@@ -76,6 +76,8 @@ describe("marginalia client", () => {
     const opened = await spl.marginalia.books.open("book-1", { name: "Morning" });
     const active = await spl.marginalia.books.getActiveSession("book-1");
     await spl.marginalia.books.startOver("book-1", { name: "Done", progress: { cfi: "epubcfi(/6/10)", locationLabel: "Chapter 10 - 75%" } }, { idempotencyKey: "start-over-action-1" });
+    expect(opened.created).toBe(true);
+    expect(opened.session).toMatchObject({ status: "active" });
     expect(opened.annotations[1]).not.toHaveProperty("body");
     expect(active.session).toBeNull();
     const startInit = fetchMock().mock.calls[2]![1]!;

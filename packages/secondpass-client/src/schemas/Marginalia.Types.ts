@@ -100,6 +100,8 @@ export type MarginaliaBookmark = {
 export type MarginaliaAnnotation = MarginaliaHighlight | MarginaliaBookmark;
 export type MarginaliaAnnotationCollection = { annotations: MarginaliaAnnotation[] };
 
+// Shared by open, active-session lookup, and start-over. Open normally supplies an active session;
+// active-session lookup may supply null, and callers still gate on status for concurrent close drift.
 export type MarginaliaBootstrap = {
   created: boolean;
   context: { book: BoundedSessionBook };

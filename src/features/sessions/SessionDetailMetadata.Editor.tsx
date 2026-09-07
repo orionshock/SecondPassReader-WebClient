@@ -1,5 +1,6 @@
 import type { MarginaliaSession } from "@secondpass/client";
 import { MaterialIcon } from "../../components/Material.Icon";
+import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
 
 export function SessionDetailMetadataEditor({
   session,
@@ -74,13 +75,13 @@ export function SessionDetailMetadataEditor({
               cols={40}
               rows={8}
               value={draftNotes}
-              onChange={(e) => setDraftNotes(e.target.value.slice(0, 500))}
+              onChange={(e) => setDraftNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
               aria-label="Session note"
-              maxLength={500}
+              maxLength={SESSION_METADATA_LIMITS.notesMaxChars}
             />
           </div>
           <div className="sessionNoteEditFooter">
-            <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/500</div>
+            <div className="sessionInlineEditNotesFooter muted">{draftNotes.length}/{SESSION_METADATA_LIMITS.notesMaxChars}</div>
             <div className="sessionNoteEditActions">
               <button
                 type="button"

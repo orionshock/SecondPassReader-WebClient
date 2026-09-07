@@ -166,7 +166,7 @@ function ReaderActivityContent({
         importJobActive={Boolean(readerImport.job)}
         onImportMarginalia={activityImport.openModal}
         onOpenImport={activityImport.openDrawer}
-        onCloseSession={currentSessionId ? completion.openCloseDialog : undefined}
+        onCloseSession={readerState.canMutateSession && currentSessionId ? completion.openCloseDialog : undefined}
         returnLabel={completion.returnLabel}
         onReturn={completion.returnToTarget}
         showHomeAction={completion.showHomeAction}
@@ -177,6 +177,7 @@ function ReaderActivityContent({
         importDrawerInLayout={activityImport.drawerInLayout}
         shell={shell}
         annotations={annotations}
+        canMutateSession={readerState.canMutateSession}
         currentSessionId={currentSessionId}
         currentCfi={state.location?.cfi ?? null}
         workspaceFocusRequest={workspaceFocusRequest}

@@ -17,9 +17,15 @@ describe("Reader end-of-book completion", () => {
     expect(hasReachedEndOfBookPromptThreshold(Number.POSITIVE_INFINITY)).toBe(false);
   });
 
-  it("keeps explicit close behavior and its final progress payload unchanged", async () => {
+  it("flushes and stops progress before closing with the final progress payload", async () => {
+    const calls: string[] = [];
     const update = vi.fn();
-    const close = vi.fn().mockResolvedValue(undefined);
+    const close = vi.fn().mockImplementation(async () => {
+      calls.push("close");
+    });
+    const prepareProgressForClose = vi.fn().mockImplementation(async () => {
+      calls.push("progress");
+    });
     const spl = {
       marginalia: { sessions: { update, close } },
     } as unknown as SecondPassClient;
@@ -33,10 +39,32 @@ describe("Reader end-of-book completion", () => {
       name: "Reading",
       notes: "",
       finalProgress,
+      prepareProgressForClose,
     });
 
+    expect(calls).toEqual(["progress", "close"]);
     expect(update).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledOnce();
     expect(close).toHaveBeenCalledWith("session-1", { progress: finalProgress });
+  });
+
+  it("resumes autosave when closing fails", async () => {
+    const resumeProgressAfterCloseFailure = vi.fn();
+    const spl = {
+      marginalia: { sessions: { update: vi.fn(), close: vi.fn().mockRejectedValue(new Error("offline")) } },
+    } as unknown as SecondPassClient;
+
+    await expect(closeReadingSession({
+      spl,
+      sessionId: "session-1",
+      savedName: "Reading",
+      savedNotes: "",
+      name: "Reading",
+      notes: "",
+      prepareProgressForClose: vi.fn(),
+      resumeProgressAfterCloseFailure,
+    })).rejects.toThrow("offline");
+
+    expect(resumeProgressAfterCloseFailure).toHaveBeenCalledOnce();
   });
 });

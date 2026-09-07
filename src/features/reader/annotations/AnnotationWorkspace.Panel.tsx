@@ -12,6 +12,7 @@ export function AnnotationWorkspace({
   status,
   error,
   busy,
+  canMutateSession = true,
   currentSessionId,
   currentCfi,
   previousSessionGroups,
@@ -28,6 +29,7 @@ export function AnnotationWorkspace({
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
   busy: boolean;
+  canMutateSession?: boolean;
   currentSessionId?: string | null;
   currentCfi?: string | null;
   previousSessionGroups?: PreviousSessionAnnotationGroup[];
@@ -65,6 +67,7 @@ export function AnnotationWorkspace({
               notes={currentSessionMeta.notes}
               loadStatus={currentSessionMeta.status}
               loadError={currentSessionMeta.error}
+              readOnly={!canMutateSession}
               busy={busy}
               onSave={onUpdateCurrentSessionMeta}
             />
@@ -87,6 +90,7 @@ export function AnnotationWorkspace({
                     key={a.id}
                     annotation={a}
                     busy={busy}
+                    readOnly={!canMutateSession}
                     currentCfi={currentCfi}
                     draftColor={draftColor}
                     draftNote={draftNote}

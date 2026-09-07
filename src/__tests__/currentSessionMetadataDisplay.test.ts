@@ -16,4 +16,17 @@ describe("Reader current-session metadata", () => {
     expect(html).toContain("Unnamed Session 5a7445");
     expect(html).not.toContain(rawSessionId);
   });
+
+  it("does not render metadata editing for a read-only session snapshot", () => {
+    const html = renderToStaticMarkup(createElement(CurrentSessionMetadataEditor, {
+      sessionId: "session-1",
+      name: "Closed reading",
+      notes: "Done",
+      readOnly: true,
+      onSave: vi.fn(),
+    }));
+
+    expect(html).toContain("Closed reading");
+    expect(html).not.toContain("Edit session details");
+  });
 });

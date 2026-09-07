@@ -8,7 +8,7 @@ export type ReadingProgressSavePayload = {
   locationLabel: string;
 };
 
-export type ReadingProgressAutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+export type ReadingProgressAutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error" | "closed";
 
 export type ReadingProgressAutosaveState = {
   status: ReadingProgressAutosaveStatus;
@@ -50,6 +50,10 @@ function progressErrorMessage(error: unknown): string {
   return "Failed to save progress.";
 }
 
+function isSessionClosedError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 409;
+}
+
 export class ReadingProgressAutosaveController {
   private state: ReadingProgressAutosaveState = { status: "idle" };
   private input: AutosaveInput = {
@@ -67,6 +71,7 @@ export class ReadingProgressAutosaveController {
   private seededGeneration: number | null = null;
   private activeDrain: ActiveDrain | null = null;
   private notifyStateChanges = true;
+  private closedSessionId: string | null = null;
 
   constructor(private readonly onStateChange: (state: ReadingProgressAutosaveState) => void) {}
 
@@ -78,9 +83,10 @@ export class ReadingProgressAutosaveController {
 
     if (sessionChanged) this.resetForSession(next.sessionId);
 
-    this.input = next;
+    const closedSession = next.sessionId !== null && next.sessionId === this.closedSessionId;
+    this.input = closedSession ? { ...next, enabled: false } : next;
     const nextPayloadKey = payloadKey(next.progress);
-    const canSave = next.enabled && Boolean(next.sessionId && next.progress && next.saveProgress);
+    const canSave = this.input.enabled && Boolean(next.sessionId && next.progress && next.saveProgress);
 
     if (!canSave) {
       this.clearTimer();
@@ -114,6 +120,18 @@ export class ReadingProgressAutosaveController {
     this.inFlightGeneration = null;
     this.seededGeneration = null;
     this.activeDrain = null;
+  }
+
+  async flushAndPause(): Promise<void> {
+    try {
+      await this.flushNow();
+    } finally {
+      this.pause();
+    }
+  }
+
+  resume(): void {
+    this.update({ ...this.input, enabled: true });
   }
 
   seedSavedProgress(sessionId: string, progress: MarginaliaProgress): void {
@@ -164,6 +182,7 @@ export class ReadingProgressAutosaveController {
     this.seededGeneration = null;
     this.activeDrain = null;
     this.lastSavedPayloadKey = null;
+    this.closedSessionId = null;
     this.input = { ...this.input, sessionId: nextSessionId, progress: null };
     this.publish({ status: "idle" });
   }
@@ -228,6 +247,19 @@ export class ReadingProgressAutosaveController {
         });
       } catch (error) {
         if (generation !== this.generation) return;
+        if (isSessionClosedError(error)) {
+          this.closedSessionId = sessionId;
+          this.input = { ...this.input, enabled: false };
+          this.clearTimer();
+          this.publish({
+            ...this.state,
+            status: "closed",
+            error: "Autosave stopped because the reading session is closed.",
+            dirty: false,
+            nextSaveAt: undefined,
+          });
+          return;
+        }
         const hasNewerProgress = payloadKey(this.input.progress) !== attemptedKey;
         this.publish({
           ...this.state,
