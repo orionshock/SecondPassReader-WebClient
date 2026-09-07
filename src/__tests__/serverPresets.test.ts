@@ -4,19 +4,23 @@ import { loadServerPresets, parseServerPresets } from "../features/connection/Se
 describe("server presets", () => {
   it("normalizes valid entries and rejects invalid entries", () => {
     expect(parseServerPresets([
-      { name: " Production Library ", url: " https://library.example.com " },
-      { name: "", url: "https://invalid.example.com" },
-      { name: "Missing URL" },
-    ])).toEqual([{ name: "Production Library", url: "https://library.example.com" }]);
+      " https://library.example.com ",
+      "http://localhost:8000",
+      "",
+      { url: "https://object.example.com" },
+    ])).toEqual([
+      { url: "https://library.example.com" },
+      { url: "http://localhost:8000" },
+    ]);
   });
 
   it("loads a valid preset file", async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => [{ name: "Production Library", url: "https://library.example.com" }],
+      json: async () => ["https://library.example.com"],
     });
     await expect(loadServerPresets(fetcher)).resolves.toEqual([
-      { name: "Production Library", url: "https://library.example.com" },
+      { url: "https://library.example.com" },
     ]);
   });
 

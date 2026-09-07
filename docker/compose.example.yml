@@ -12,15 +12,13 @@ services:
     env_file:
       - path: .env
         required: false
-    # If you do not use .env, uncomment environment and either the JSON value
-    # or the indexed values below.
+    # If you do not use .env, uncomment environment and use either JSON or
+    # indexed URLs.
     # environment:
-    #   SECONDPASS_SERVER_PRESETS_JSON: '[{"name":"Production Library","url":"https://library.example.com"}]'
-    # Or use indexed pairs:
+    #   SECONDPASS_SERVER_PRESETS_JSON: '["https://library.example.com"]'
+    # Or use indexed URLs:
     # environment:
-    #   SECONDPASS_SERVER_1_NAME: Production Library
     #   SECONDPASS_SERVER_1_URL: https://library.example.com
-    #   SECONDPASS_SERVER_2_NAME: Local Library
     #   SECONDPASS_SERVER_2_URL: http://localhost:8000
     expose:
       - "8000"

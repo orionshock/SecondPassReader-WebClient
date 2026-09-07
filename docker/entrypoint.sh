@@ -7,16 +7,16 @@ temporary_file="${output_file}.tmp"
 json_presets="${SECONDPASS_SERVER_PRESETS_JSON:-}"
 if [ -n "$json_presets" ] && printf '%s' "$json_presets" | jq -e '
   type == "array" and
-  all(.[]; type == "object" and (.name | type == "string" and length > 0) and (.url | type == "string" and length > 0))
+  all(.[]; type == "string" and (gsub("^\\s+|\\s+$"; "") | length > 0))
 ' >/dev/null 2>&1; then
-  printf '%s' "$json_presets" | jq -c '[.[] | {name: .name, url: .url}]' > "$temporary_file"
+  printf '%s' "$json_presets" | jq -c '[.[] | gsub("^\\s+|\\s+$"; "")]' > "$temporary_file"
 else
   printf '[]' > "$temporary_file"
-  env | sed -n 's/^SECONDPASS_SERVER_\([0-9][0-9]*\)_NAME=.*/\1/p' | sort -n -u | while IFS= read -r index; do
-    name="$(printenv "SECONDPASS_SERVER_${index}_NAME" || true)"
+  env | sed -n 's/^SECONDPASS_SERVER_\([0-9][0-9]*\)_URL=.*/\1/p' | sort -n -u | while IFS= read -r index; do
     url="$(printenv "SECONDPASS_SERVER_${index}_URL" || true)"
-    if [ -n "$name" ] && [ -n "$url" ]; then
-      jq -c --arg name "$name" --arg url "$url" '. + [{name: $name, url: $url}]' "$temporary_file" > "${temporary_file}.next"
+    url="$(printf '%s' "$url" | jq -Rr 'gsub("^\\s+|\\s+$"; "")')"
+    if [ -n "$url" ]; then
+      jq -c --arg url "$url" '. + [$url]' "$temporary_file" > "${temporary_file}.next"
       mv "${temporary_file}.next" "$temporary_file"
     fi
   done

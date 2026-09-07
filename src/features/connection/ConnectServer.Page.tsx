@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SecondPassDiscovery } from "@secondpass/client";
+import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import {
   getActiveConnection,
   saveConnectionProfile,
@@ -14,6 +15,11 @@ type Props = {
   onSelectedProfileIdChange: (profileId: string | null) => void;
   onProfilesChanged: () => void;
 };
+
+type PresetIdentity =
+  | { status: "loading" }
+  | { status: "loaded"; serverName: string; serverDescription?: string }
+  | { status: "unavailable" };
 
 function newProfileId() {
   try {
@@ -50,11 +56,34 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [presets, setPresets] = useState<ServerPreset[]>([]);
+  const [selectedPresetUrl, setSelectedPresetUrl] = useState<string | null>(null);
+  const [presetIdentities, setPresetIdentities] = useState<Record<string, PresetIdentity>>({});
 
   useEffect(() => {
     let active = true;
     void loadServerPresets().then((loaded) => {
-      if (active) setPresets(loaded);
+      if (!active) return;
+      setPresets(loaded);
+      setPresetIdentities(Object.fromEntries(loaded.map((preset) => [preset.url, { status: "loading" }])));
+      for (const preset of loaded) {
+        void verifySecondPassServer(preset.url).then(
+          ({ discovery }) => {
+            if (!active) return;
+            setPresetIdentities((current) => ({
+              ...current,
+              [preset.url]: {
+                status: "loaded",
+                serverName: discovery.server_name,
+                serverDescription: discovery.server_description,
+              },
+            }));
+          },
+          () => {
+            if (!active) return;
+            setPresetIdentities((current) => ({ ...current, [preset.url]: { status: "unavailable" } }));
+          },
+        );
+      }
     });
     return () => {
       active = false;
@@ -113,17 +142,38 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
         {presets.length > 0 ? (
           <fieldset className="serverPresets">
             <legend className="fieldLabel">Known servers</legend>
-            {presets.map((preset) => (
-              <button
-                className="button serverPresetButton"
-                type="button"
-                key={`${preset.name}:${preset.url}`}
-                onClick={() => setServerUrlInput(preset.url)}
-              >
-                <span>{preset.name}</span>
-                <span className="muted mono">{preset.url}</span>
-              </button>
-            ))}
+            {presets.map((preset, index) => {
+              const identity = presetIdentities[preset.url] ?? { status: "loading" };
+              return (
+                <div className="serverPresetCard" key={`${preset.url}:${index}`}>
+                  <button
+                    className="button serverPresetButton"
+                    type="button"
+                    aria-pressed={selectedPresetUrl === preset.url}
+                    onClick={() => {
+                      setSelectedPresetUrl(preset.url);
+                      setServerUrlInput(preset.url);
+                    }}
+                  >
+                    <strong>{identity.status === "loaded" ? identity.serverName : preset.url}</strong>
+                    {identity.status === "loaded" ? <span className="muted mono">{preset.url}</span> : null}
+                  </button>
+                  <div className="serverPresetDetails" aria-live="polite">
+                    {identity.status === "loading" ? <span className="muted">Loading server details...</span> : null}
+                    {identity.status === "loaded" ? (
+                      <ServerRichText
+                        value={identity.serverDescription}
+                        className="serverPresetDescription muted"
+                        emptyFallback={<span>No server description provided.</span>}
+                      />
+                    ) : null}
+                    {identity.status === "unavailable" ? (
+                      <span className="muted">Server details unavailable. You can still try this URL.</span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
             <div className="fieldHelp muted">Presets are suggestions. The selected server is verified before pairing.</div>
           </fieldset>
         ) : null}
@@ -132,7 +182,10 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
           <input
             className="input"
             value={serverUrlInput}
-            onChange={(e) => setServerUrlInput(e.target.value)}
+            onChange={(e) => {
+              setSelectedPresetUrl(null);
+              setServerUrlInput(e.target.value);
+            }}
             placeholder="http://localhost:8000"
             autoComplete="off"
             spellCheck={false}

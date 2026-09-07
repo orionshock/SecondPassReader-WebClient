@@ -72,6 +72,24 @@ This runs repository hygiene, Vitest in noninteractive mode, and the production 
 The build output is in `dist/`. Serve it from a static HTTP server. Users select a Second Pass server
 in the browser connection flow.
 
+## Local Server Presets
+
+To test pinned servers with `npm run dev`, create the ignored file
+`public/secondpass-servers.json`. Vite serves it at `/secondpass-servers.json`.
+
+The file contains a JSON array of server URLs:
+
+```json
+[
+  "https://library.example.com/",
+  "http://localhost:8000/"
+]
+```
+
+The connection page loads each server's public name and description through unauthenticated
+discovery. The servers must allow requests from the Vite development origin through CORS. Do not
+put bearer tokens or other credentials in this file.
+
 ## Common Local State
 
 Browser storage contains:

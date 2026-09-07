@@ -17,30 +17,31 @@ The container listens on port `8000`, which Compose exposes to other containers 
 
 ## Optional server presets
 
-Copy `docker/.env.example` to `docker/.env`, then configure known Library servers using one of the forms below. For the JSON form, set one JSON array:
+Copy `docker/.env.example` to `docker/.env`, then configure known Library server URLs. The canonical
+JSON form is an array of strings:
 
 ```dotenv
-SECONDPASS_SERVER_PRESETS_JSON=[{"name":"Production Library","url":"https://library.example.com"}]
+SECONDPASS_SERVER_PRESETS_JSON=["https://library.example.com","http://localhost:8000"]
 ```
 
-Alternatively, leave `SECONDPASS_SERVER_PRESETS_JSON` empty and use indexed name/URL pairs:
+Alternatively, leave `SECONDPASS_SERVER_PRESETS_JSON` empty and use indexed URLs:
 
 ```dotenv
-SECONDPASS_SERVER_1_NAME=Production Library
 SECONDPASS_SERVER_1_URL=https://library.example.com
-SECONDPASS_SERVER_2_NAME=Local Library
 SECONDPASS_SERVER_2_URL=http://localhost:8000
 ```
 
-A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. If it is empty,
-startup reads complete indexed pairs and ignores incomplete pairs. It writes the resulting public,
-credential-free array to `/usr/share/nginx/html/secondpass-servers.json`, which nginx serves at
-`/secondpass-servers.json`. With no configuration, the file contains `[]`.
+A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. If it is empty or
+invalid, startup reads non-empty indexed URL values. It trims URLs, then writes the public,
+credential-free string array to `/usr/share/nginx/html/secondpass-servers.json`, which nginx
+serves at `/secondpass-servers.json`. With no configuration, the file contains `[]`.
 
 After changing presets, run `docker compose -f docker/compose.yml up -d secondpassreader-webclient`
 to recreate the container with the new environment. You do not need to rebuild the image. Presets
-only populate the server picker. The Reader still verifies the selected server through
-`/.well-known/secondpass` before pairing. Presets contain no tokens and do not bypass linking.
+only populate the server picker. On page load, the Reader requests each server's name and
+description through unauthenticated discovery. Selecting a preset fills the URL field at any point
+during that request. The normal Connect action verifies the server again before the existing
+PIN/code pairing flow. Presets contain no display names or tokens and do not bypass linking.
 
 ## Version stamp
 

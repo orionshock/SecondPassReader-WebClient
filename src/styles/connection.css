@@ -16,6 +16,25 @@
   display: grid;
   justify-items: start;
   text-align: left;
+  width: 100%;
+}
+
+.serverPresetCard {
+  border: 1px solid var(--sp-border);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+  background: var(--color-surface-muted);
+}
+
+.serverPresetDetails {
+  min-height: 1.4em;
+  padding: 0 8px 4px;
+}
+
+.serverPresetDescription {
+  margin: 0;
 }
 
 .pairScreen {
