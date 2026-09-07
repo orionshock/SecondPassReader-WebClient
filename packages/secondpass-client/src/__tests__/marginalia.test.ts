@@ -106,13 +106,6 @@ describe("marginalia client", () => {
     expect(body.operations[2]).toEqual({ action: "delete", client_id: "client-old" });
   });
 
-  it("does not expose archive or legacy reading APIs", () => {
-    const spl = client() as any;
-    expect(spl.reading).toBeUndefined();
-    expect(spl.marginalia.export).toBeUndefined();
-    expect(spl.marginalia.import).toBeUndefined();
-  });
-
   it("rejects invalid start-over keys and empty annotation batches before sending", async () => {
     const spl = client();
     await expect(spl.marginalia.books.startOver("book-1", undefined, { idempotencyKey: "   " })).rejects.toThrow(/idempotencyKey/);

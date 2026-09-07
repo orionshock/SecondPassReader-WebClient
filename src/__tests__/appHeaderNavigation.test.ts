@@ -1,28 +1,33 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "../app/App.Header";
-import { routeToHash } from "../app/AppNavigation.Router";
 
 describe("App header navigation", () => {
-  it("renders an icon-only Home button before the existing navigation", () => {
-    const html = renderToStaticMarkup(createElement(AppHeader, {
+  it("exposes an accessible Home control that activates Home navigation", () => {
+    const onShowHome = vi.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    act(() => root.render(createElement(AppHeader, {
       profile: null,
       view: "main",
       route: { kind: "library" },
       canNavigate: true,
-      onShowHome: vi.fn(),
+      onShowHome,
       onShowLibrary: vi.fn(),
       onShowSessions: vi.fn(),
       onShowShelves: vi.fn(),
       onShowSettings: vi.fn(),
-    }));
+    })));
 
-    expect(html).toContain('aria-label="Home"');
-    expect(html).toContain('<span class="material-symbols-outlined" aria-hidden="true">home</span>');
-    expect(html.indexOf('aria-label="Home"')).toBeLessThan(
-      html.indexOf('<button type="button" class="button buttonCompact">Library</button>'),
-    );
-    expect(routeToHash({ kind: "home" })).toBe("#/home");
+    const home = container.querySelector<HTMLButtonElement>('button[aria-label="Home"]');
+    expect(home).not.toBeNull();
+    act(() => home?.click());
+    expect(onShowHome).toHaveBeenCalledOnce();
+
+    act(() => root.unmount());
   });
 });

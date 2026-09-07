@@ -27,7 +27,6 @@ describe("reader import row item", () => {
     expect(markup).not.toContain("Mark manually completed");
     expect(markup).not.toContain(">Skip<");
     expect(markup).toContain('aria-label="Undo manual completion"');
-    expect(markup).toContain("undo");
   });
 
   it("offers a clearly labelled manual completion action for reviewable rows", () => {
@@ -35,15 +34,13 @@ describe("reader import row item", () => {
     const pendingMarkup = renderRow({ status: "pending" });
     const notFoundMarkup = renderRow({ status: "not-found" });
     expect(stagedMarkup).toContain('aria-label="Mark manually completed"');
-    expect(stagedMarkup).toContain("task_alt");
     expect(pendingMarkup).toContain('aria-label="Mark manually completed"');
     expect(notFoundMarkup).toContain('aria-label="Mark manually completed"');
   });
 
   it("shows manual completion disabled while matching is in flight", () => {
     const markup = renderRow({ status: "searching" });
-    expect(markup).toContain('aria-label="Mark manually completed"');
-    expect(markup).toContain("disabled");
+    expect(markup).toMatch(/<button[^>]*aria-label="Mark manually completed"[^>]*disabled/);
   });
 });
 

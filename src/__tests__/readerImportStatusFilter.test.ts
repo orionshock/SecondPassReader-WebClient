@@ -1,15 +1,14 @@
-import { Children, createElement, isValidElement, type ReactElement } from "react";
+// @vitest-environment jsdom
+
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features/reader/imports/ReaderImport.Drawer";
 import { getReaderImportJobCounts } from "../features/reader/imports/ReaderImportJob.State";
 import { createDefaultReaderImportStatusFilters, filterReaderImportRows, getReaderImportStatusGroup, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter } from "../features/reader/imports/ReaderImportStatusFilter.State";
 import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
 
 describe("reader import status filters", () => {
   it("shows unresolved and reviewable rows by default", () => {
@@ -53,66 +52,61 @@ describe("reader import status filters", () => {
     expect(filterReaderImportRows(rows, showAllReaderImportStatusFilters())).toEqual(rows);
   });
 
-  it("renders accessible default chips, disables empty groups, and keeps visible row actions", () => {
+  it("exposes filter state, disables empty groups, and keeps visible row actions", () => {
     const rows = statuses("pending", "accepted");
-    const markup = renderDrawer(rows);
+    const container = markupContainer(renderDrawer(rows));
+    const buttons = [...container.querySelectorAll("button")];
+    const pending = buttons.find((button) => button.textContent?.includes("Pending"));
+    const accepted = buttons.find((button) => button.textContent?.includes("Accepted"));
+    const skipped = buttons.find((button) => button.textContent?.includes("Skipped"));
 
-    expect(markup).toContain('aria-pressed="true"><span>Pending</span><span aria-hidden="true">1</span>');
-    expect(markup).toContain('aria-pressed="false"><span>Accepted</span><span aria-hidden="true">1</span>');
-    expect(markup).toContain('aria-pressed="false" disabled=""><span>Skipped</span>');
-    expect(markup).toContain("quote-pending");
-    expect(markup).not.toContain("quote-accepted");
-    expect(markup).toContain("Mark manually completed");
-    expect(markup).toContain("Show all");
+    expect(container.querySelector('[aria-label="Filter import rows by status"]')).not.toBeNull();
+    expect(pending?.getAttribute("aria-pressed")).toBe("true");
+    expect(accepted?.getAttribute("aria-pressed")).toBe("false");
+    expect(skipped?.disabled).toBe(true);
+    expect(container.textContent).toContain("quote-pending");
+    expect(container.textContent).not.toContain("quote-accepted");
+    expect(container.querySelector('[aria-label="Mark manually completed"]')).not.toBeNull();
   });
 
   it("shows a filter-specific empty state when default filters hide every row", () => {
     expect(renderDrawer(statuses("accepted"))).toContain("No rows match the selected filters.");
   });
 
-  it("renders distinct accessible hide and clear header actions without the old footer control", () => {
-    const markup = renderDrawer(statuses("pending"));
+  it("renders distinct accessible hide and clear actions", () => {
+    const container = markupContainer(renderDrawer(statuses("pending")));
 
-    expect(markup).toContain('aria-label="Hide import drawer"');
-    expect(markup).toContain('title="Hide import drawer"');
-    expect(markup).toContain('aria-label="Clear import"');
-    expect(markup).toContain('title="Clear import"');
-    expect(markup).toContain("delete_sweep");
-    expect(markup).not.toContain(">Clear import</button>");
-    expect(markup).toContain("Filter import rows by status");
+    expect(container.querySelector('button[aria-label="Hide import drawer"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Clear import"]')).not.toBeNull();
   });
 
   it("keeps hide and clear callbacks semantically separate", () => {
     const onHide = vi.fn();
     const onClear = vi.fn();
-    const confirm = vi.fn(() => true);
-    vi.stubGlobal("window", { confirm });
-    const actions = ReaderImportDrawerHeaderActions({ onHide, onClear });
-    const buttons = Children.toArray(actions.props.children)
-      .filter(isValidElement) as ReactElement<{ onClick: () => void }>[];
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const view = renderHeaderActions(onHide, onClear);
 
-    buttons[0]?.props.onClick();
+    act(() => view.hide.click());
     expect(onHide).toHaveBeenCalledOnce();
     expect(onClear).not.toHaveBeenCalled();
 
-    buttons[1]?.props.onClick();
+    act(() => view.clear.click());
     expect(onHide).toHaveBeenCalledOnce();
     expect(confirm).toHaveBeenCalledOnce();
     expect(onClear).toHaveBeenCalledOnce();
+    view.cleanup();
   });
 
   it("leaves the import job untouched when clear confirmation is canceled", () => {
     const onClear = vi.fn();
-    const confirm = vi.fn(() => false);
-    vi.stubGlobal("window", { confirm });
-    const actions = ReaderImportDrawerHeaderActions({ onHide: vi.fn(), onClear });
-    const buttons = Children.toArray(actions.props.children)
-      .filter(isValidElement) as ReactElement<{ onClick: () => void }>[];
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const view = renderHeaderActions(vi.fn(), onClear);
 
-    buttons[1]?.props.onClick();
+    act(() => view.clear.click());
 
     expect(confirm).toHaveBeenCalledOnce();
     expect(onClear).not.toHaveBeenCalled();
+    view.cleanup();
   });
 });
 
@@ -146,4 +140,24 @@ function renderDrawer(rows: ReaderImportRow[]): string {
     onUndoManualCompletion: vi.fn(),
     onUnskipRow: vi.fn(),
   }));
+}
+
+function markupContainer(markup: string): HTMLDivElement {
+  const container = document.createElement("div");
+  container.innerHTML = markup;
+  return container;
+}
+
+function renderHeaderActions(onHide: () => void, onClear: () => void) {
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  act(() => root.render(createElement(ReaderImportDrawerHeaderActions, { onHide, onClear })));
+  const hide = container.querySelector<HTMLButtonElement>('button[aria-label="Hide import drawer"]');
+  const clear = container.querySelector<HTMLButtonElement>('button[aria-label="Clear import"]');
+  if (!hide || !clear) throw new Error("Expected import header actions.");
+  return {
+    hide,
+    clear,
+    cleanup: () => act(() => root.unmount()),
+  };
 }

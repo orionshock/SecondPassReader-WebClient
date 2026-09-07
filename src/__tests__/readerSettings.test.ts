@@ -5,11 +5,12 @@ import {
   saveReaderSettings,
 } from "../storage/ReaderSettings.Store";
 
-function installLocalStorage(initialValue: string | null = null) {
+function installLocalStorage(initialValue: string | null = null, writeError?: Error) {
   let value = initialValue;
   const storage = {
     getItem: vi.fn(() => value),
     setItem: vi.fn((_key: string, next: string) => {
+      if (writeError) throw writeError;
       value = next;
     }),
   };
@@ -20,7 +21,7 @@ function installLocalStorage(initialValue: string | null = null) {
 describe("reader settings storage", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("does not include an unused page margin in defaults", () => {
+  it("returns the complete supported default settings schema", () => {
     expect(normalizeReaderSettings(undefined)).toEqual({
       fontSizePercent: 100,
       theme: "light",
@@ -30,14 +31,13 @@ describe("reader settings storage", () => {
     });
   });
 
-  it("ignores page margin from old persisted settings", () => {
+  it("loads persisted supported settings", () => {
     installLocalStorage(JSON.stringify({
       fontSizePercent: 120,
       theme: "dark",
       readerWidth: "wide",
       lineHeight: "spacious",
       fontFamily: "serif",
-      pageMargin: "wide",
     }));
 
     expect(getReaderSettings()).toEqual({
@@ -49,7 +49,17 @@ describe("reader settings storage", () => {
     });
   });
 
-  it("does not write page margin when saving settings", () => {
+  it("falls back safely when persisted settings are malformed", () => {
+    installLocalStorage("{not-json");
+
+    expect(getReaderSettings()).toMatchObject({
+      fontSizePercent: 100,
+      theme: "light",
+      readerWidth: "normal",
+    });
+  });
+
+  it("round-trips supported values through storage", () => {
     const local = installLocalStorage();
     saveReaderSettings({
       fontSizePercent: 110,
@@ -67,5 +77,17 @@ describe("reader settings storage", () => {
       fontFamily: "sans",
     });
     expect(local.storage.setItem).toHaveBeenCalledOnce();
+  });
+
+  it("does not crash when browser storage rejects a write", () => {
+    installLocalStorage(null, new Error("quota exceeded"));
+
+    expect(() => saveReaderSettings({
+      fontSizePercent: 110,
+      theme: "sepia",
+      readerWidth: "narrow",
+      lineHeight: "compact",
+      fontFamily: "sans",
+    })).not.toThrow();
   });
 });

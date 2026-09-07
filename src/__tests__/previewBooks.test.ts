@@ -32,7 +32,7 @@ describe("preview books", () => {
       baseUrl: "https://library.example/app/",
     }));
 
-    expect(html).toContain("previewBookCoverStack");
+    expect(html).toContain('aria-label="Cover previews"');
     expect(html).toContain('src="https://library.example/covers/book-1.jpg"');
     expect(html).toContain('alt="Preview Book"');
   });
@@ -44,8 +44,8 @@ describe("preview books", () => {
     }));
 
     expect(empty).toContain("No books");
-    expect(empty).toContain("previewBookCoverTileEmpty");
     expect(missing).toContain("No cover");
+    expect(missing).toContain('aria-label="Preview Book has no cover"');
     expect(missing).not.toContain("<img");
   });
 
@@ -73,7 +73,6 @@ describe("preview books", () => {
       onPageChange: vi.fn(),
     }));
 
-    expect(html).toContain("previewBookCoverStackCompact");
     expect(html).toContain('src="https://library.example/covers/book.jpg"');
   });
 });

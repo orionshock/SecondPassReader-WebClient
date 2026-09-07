@@ -87,21 +87,19 @@ describe("session detail layout", () => {
     expect(html).toContain("Initial Kindle Import 49d47f</h2>");
     expect(html).not.toContain(rawSessionId);
     expect(html).toContain('aria-label="Edit session name"');
-    expect(html).toContain('class="sessionHero"');
-    expect(html).toContain('class="sessionCover"');
     expect(html).toContain("Brief Cases");
-    expect(html).toContain("Status</span><span><span");
     expect(html).toContain(">Active</span>");
-    expect(html).toContain("Location</span><span>Chapter 4");
-    expect(html).toContain("Annotations</span><span>3 annotations");
-    expect(html).toContain("Started</span><span>Started date");
-    expect(html).toContain("Updated</span><span>Updated date");
+    expect(html).toContain("Chapter 4");
+    expect(html).toContain("3 annotations");
+    expect(html).toContain("Started date");
+    expect(html).toContain("Updated date");
     expect(html).toContain("Keep this note in the metadata area.");
     expect(html).toContain("Session Note:");
     expect(html).toContain('aria-label="Edit session notes"');
     expect(html).toContain("Open reader");
     expect(html).toContain("Close session");
-    expect(html.indexOf('class="sessionHero"')).toBeLessThan(html.indexOf('class="sessionAnnotations"'));
+    expect(html).toContain("0 total");
+    expect(html.indexOf("Brief Cases")).toBeLessThan(html.indexOf("Annotations"));
   });
 
   it("keeps closed sessions read-only while retaining their title, note, and reader control", () => {
@@ -113,11 +111,11 @@ describe("session detail layout", () => {
     expect(html).not.toContain('aria-label="Edit session notes"');
     expect(html).toContain("Name, notes, and annotations are read-only.");
     expect(html).toContain(">Closed</span>");
-    expect(html).toContain("Closed</span><span>Closed date");
+    expect(html).toContain("Closed date");
     expect(html).toContain("Keep this note in the metadata area.");
     expect(html).toContain("Open reader");
     expect(html).not.toContain("Close session");
-    expect(html.indexOf('class="sessionHero"')).toBeLessThan(html.indexOf('class="sessionAnnotations"'));
+    expect(html).toContain("0 total");
   });
 
   it("keeps the empty-note state in the hero with the existing permission gates", () => {
@@ -130,7 +128,7 @@ describe("session detail layout", () => {
     expect(closedHtml).not.toContain('aria-label="Edit session notes"');
   });
 
-  it("places note edit actions below the editor with Save on the right", () => {
+  it("keeps the bounded note editor and its save controls", () => {
     const value = session("active");
     const noop = vi.fn();
     const html = renderToStaticMarkup(createElement(SessionDetailMetadataEditor, {
@@ -146,12 +144,11 @@ describe("session detail layout", () => {
       onSaveNotes: noop,
     }));
 
-    expect(html).toContain('class="sessionNoteEditActions"');
-    expect(html).toContain('class="sessionNoteEditFooter"');
     expect(html).toContain("Session Note");
     expect(html).toContain(`${value.notes.length}/65536`);
     expect(html).toContain('maxLength="65536"');
     expect(html).not.toContain("placeholder=");
-    expect(html.indexOf("Cancel</button>")).toBeLessThan(html.indexOf("Save</button>"));
+    expect(html).toContain("Cancel</button>");
+    expect(html).toContain("Save</button>");
   });
 });

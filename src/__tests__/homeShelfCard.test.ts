@@ -16,7 +16,6 @@ describe("Home shelf cards", () => {
 
     expect(html).toContain("Group Name - Group Name - Favorites");
     expect(html).toContain("12 books");
-    expect(html).toContain(">groups</span>");
     expect(html).toContain('href="#/shelves/shelf%20one"');
     expect(html).toContain('aria-label="Open shelf Group Name - Group Name - Favorites, group Group Name, 12 books"');
   });
@@ -28,7 +27,6 @@ describe("Home shelf cards", () => {
       owner_user: { profile_id: "user-1", username: "eismusd" },
     }));
 
-    expect(html).toContain(">person</span>");
     expect(html).toContain("eismusd");
     expect(html).toContain("6 books");
     expect(html).toContain('aria-label="Open shelf Favorites, user eismusd, 6 books"');
@@ -38,8 +36,6 @@ describe("Home shelf cards", () => {
     const html = render(shelf({ item_count: 6, owner_user: null }));
 
     expect(html).toContain("6 books");
-    expect(html).not.toContain(">person</span>");
-    expect(html).not.toContain(">groups</span>");
     expect(html).toContain('aria-label="Open shelf Shelf, 6 books"');
   });
 
@@ -50,14 +46,13 @@ describe("Home shelf cards", () => {
 
     expect(html).toContain('src="https://library.example/covers/book-1.jpg"');
     expect(html).toContain('title="Preview Book"');
-    expect(html).toContain("previewBookCoverStackHomeShelf");
+    expect(html).toContain('aria-hidden="true"');
     expect(html).not.toContain("No books");
   });
 
   it("renders a compact placeholder when no previews are available", () => {
     const html = render(shelf({ preview_books: [] }));
 
-    expect(html).toContain("previewBookCoverTileEmpty");
     expect(html).toContain("No books");
   });
 });

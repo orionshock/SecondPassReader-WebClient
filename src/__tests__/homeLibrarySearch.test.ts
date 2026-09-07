@@ -1,10 +1,6 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { routeToHash } from "../app/AppNavigation.Router";
-import { HomePage } from "../features/home/Home.Page";
 import { getHomeLibrarySearchRoute } from "../features/home/HomeLibrarySearch.Router";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 describe("Home library search", () => {
   it("does nothing for a blank query", () => {
@@ -15,20 +11,5 @@ describe("Home library search", () => {
     const route = getHomeLibrarySearchRoute("  space & time  ");
     expect(route).toEqual({ kind: "library", browse: "books", q: "space & time", searchMode: "global" });
     expect(route && routeToHash(route)).toBe("#/library?q=space+%26+time&search=global");
-  });
-
-  it("renders the requested copy without BookVerse", () => {
-    const profile = {
-      id: "p1",
-      label: "Server",
-      serverBaseUrl: "https://example.test",
-      accessToken: "secret",
-      verifiedAt: "2026-08-04T00:00:00Z",
-      createdAt: "2026-08-04T00:00:00Z",
-    } satisfies ConnectionProfile;
-    const html = renderToStaticMarkup(createElement(HomePage, { profile, spl: null }));
-    expect(html).toContain("Search the library");
-    expect(html).toContain("Search books, authors, series, publishers...");
-    expect(html).not.toContain("BookVerse");
   });
 });

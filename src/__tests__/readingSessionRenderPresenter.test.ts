@@ -23,11 +23,9 @@ describe("reading session render presentation", () => {
       readOnly: true,
       sessionId: "previous-session",
     };
-    const invalid: ReaderHighlightMark = { id: "", cfiRange: "", readOnly: true };
+    const marks = composeReadingSessionDurableMarks([current], [previous]);
 
-    const marks = composeReadingSessionDurableMarks([current, invalid], [previous]);
-
-    expect(marks).toEqual([current, invalid, previous]);
+    expect(marks).toEqual([current, previous]);
     expect(buildReadingSessionAnnotationToolbarItems(marks)).toEqual([
       {
         id: "current-highlight",

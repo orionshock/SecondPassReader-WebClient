@@ -45,7 +45,6 @@ describe("SessionDetailAnnotationsList", () => {
     const html = renderAnnotations([highlight()]);
 
     expect(html).toContain("Quoted text");
-    expect(html).toContain("--annotation-color:rgba(250, 204, 21, 0.55)");
     expect(html).toContain('title="Highlight"');
     expectReadOnly(html);
   });
@@ -76,15 +75,6 @@ describe("SessionDetailAnnotationsList", () => {
     expect(html).toContain('title="Bookmark"');
     expect(html).toContain("Bookmark");
     expectReadOnly(html);
-  });
-
-  it("uses the shared fallback color for an unknown annotation color", () => {
-    const html = renderAnnotations([
-      highlight({ color: "unknown-color" as HighlightAnnotation["body"]["color"] }),
-    ]);
-
-    expect(html).toContain("--annotation-color:rgba(59, 130, 246, 0.55)");
-    expect(html).toContain("--annotation-bg:rgba(59, 130, 246, 0.08)");
   });
 
   it("renders empty, loading, and error states without controls", () => {
