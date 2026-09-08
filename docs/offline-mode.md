@@ -123,6 +123,13 @@ far as the runtime permits. There is no arbitrary file-size limit. Missing or ma
 checksums skip hashing and remain unverifiable; completed bytes are not published as an offline
 asset until the checksum matches.
 
+Explicit offline acquisition checks browser capability and quota before optionally requesting
+persistent storage, downloading through the authenticated SDK, and verifying the Blob. Limited
+capability may proceed best-effort when quota can still be established; persistence denial or
+failure is advisory. Only a verified complete Blob is published. A previous verified asset remains
+in place until its replacement commits successfully. Partial and resumable downloads remain out of
+scope.
+
 ## EPUB Storage Admission
 
 Before retaining an EPUB, the client uses the browser's advisory origin usage and quota estimate.
