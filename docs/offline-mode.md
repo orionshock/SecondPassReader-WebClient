@@ -136,6 +136,19 @@ server Session identity so a future reconciler can assign a new `clientId` when 
 of annotations confirmed in the closed Session do not transfer. Session establishment resolves
 through normal `open`; `start-over` is never automatic recovery.
 
+## Durable Repository Boundaries
+
+Browser persistence is split by ownership: successful authoritative projections, complete EPUB
+assets, local Reader continuity state, and Reader outbox intents use separate async repositories.
+All account-owned records and operations are namespace-scoped, namespace purge is isolated, and
+repository reads and writes do not expose mutable stored object identity.
+
+The outbox repository owns atomic read-coalesce-write and exact-revision removal. Listing order is
+not a replay contract. A future browser-backed implementation must satisfy the shared repository
+conformance cases before feature wiring uses it. Storage technology, transactions beyond atomic
+outbox coalescing, schema migration, and cross-tab single-writer or replay coordination remain
+later decisions.
+
 ## Architecture Seams
 
 Keep these seams explicit before broad feature wiring, with server calls behind the existing client
