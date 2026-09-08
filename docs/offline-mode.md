@@ -73,12 +73,13 @@ semantics where applicable:
 | Annotations | Store durable desired-state operations later with stable client IDs and exact acknowledgement. |
 | Shelves | Online-only initially. |
 
-## Future Architecture Seams
+## Architecture Seams
 
-Introduce these seams before broad feature wiring, keeping server calls behind the existing client
+Keep these seams explicit before broad feature wiring, with server calls behind the existing client
 boundary and renderer details behind the Reader bridge:
 
-- connectivity source
+- browser connectivity source limited to `online`, `offline`, or `unknown`; it reports browser
+  connectivity signals only and does not infer server, authentication, cache, or book availability
 - account/profile-scoped cache namespace
 - cache repositories for replaceable snapshots and durable Reader state
 - EPUB asset store
