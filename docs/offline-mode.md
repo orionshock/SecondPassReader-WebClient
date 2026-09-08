@@ -143,6 +143,12 @@ does not exist. They query `persisted()` but never call `persist()`. A later exp
 offline** action owns any persistence request. Persistent permission reduces automatic eviction,
 but browser or user site-data clearing can still remove local data.
 
+Persistent storage is never requested during startup, capability inspection, or background work.
+A future explicit offline-availability action first checks `persisted()` and calls `persist()` at
+most once when needed. A denied request does not make IndexedDB unusable; it leaves any later
+offline-retention attempt subject to best-effort eviction. A grant reduces automatic eviction risk
+but does not prevent the user or browser controls from clearing site data.
+
 ## Reader Outbox Intents
 
 The Reader outbox stores domain desired state, never serialized HTTP requests. Initial queued scope
