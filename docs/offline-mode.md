@@ -103,6 +103,19 @@ book-asset availability remain separate concerns. Initial loading and failure wi
 value remain page or query states; they must not be presented as stale cached data. Cache records
 must also retain enough query context to establish which projection was fetched.
 
+## EPUB Asset Availability
+
+Cached Book metadata and cover images do not admit a book to the offline Reader. **Available
+offline** requires a complete local EPUB asset whose recorded SHA-256 checksum matches the checksum
+from current Book file metadata. The asset identity is cache namespace, Book ID, and checksum;
+title, author, description, cover, download URL, and file size are not identity.
+
+Missing, partial, unsupported, or checksum-mismatched assets are not offline-readable. Complete
+assets without a valid server and recorded checksum are `unverifiable` and do not receive the
+offline-stable promise. File size is diagnostic metadata only: a mismatch must be reported, but a
+matching checksum remains decisive. A known checksum change requires replacement; different Book
+IDs remain different assets and no CFI portability is inferred between editions.
+
 ## Architecture Seams
 
 Keep these seams explicit before broad feature wiring, with server calls behind the existing client
