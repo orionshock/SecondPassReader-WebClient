@@ -24,10 +24,11 @@ export interface OfflineProjectionRepository {
   deleteNamespace(namespaceKey: string): Promise<void>;
 }
 
-export type OfflineEpubAssetCompleteRecord<TPayload> = {
+export type OfflinePublicationAssetCompleteRecord<TPayload> = {
   status: "complete";
   namespaceKey: string;
   bookId: string;
+  format: string;
   checksum: string;
   byteLength: number;
   schemaVersion: number;
@@ -35,10 +36,10 @@ export type OfflineEpubAssetCompleteRecord<TPayload> = {
 };
 
 // TPayload remains storage-neutral but must be suitable for detached repository reads and writes.
-export interface OfflineEpubAssetRepository<TPayload> {
-  get(namespaceKey: string, bookId: string): Promise<OfflineEpubAssetCompleteRecord<TPayload> | null>;
-  putComplete(record: OfflineEpubAssetCompleteRecord<TPayload>): Promise<void>;
-  delete(namespaceKey: string, bookId: string): Promise<void>;
+export interface OfflinePublicationAssetRepository<TPayload> {
+  get(namespaceKey: string, bookId: string, format: string): Promise<OfflinePublicationAssetCompleteRecord<TPayload> | null>;
+  putComplete(record: OfflinePublicationAssetCompleteRecord<TPayload>): Promise<void>;
+  delete(namespaceKey: string, bookId: string, format: string): Promise<void>;
   deleteNamespace(namespaceKey: string): Promise<void>;
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 import type {
-  OfflineEpubAssetCompleteRecord,
+  OfflinePublicationAssetCompleteRecord,
   OfflineProjectionRecord,
   OfflineReaderBookState,
 } from "../app/offline/OfflineRepositories.Types";
@@ -28,9 +28,9 @@ defineOfflineRepositoryContractTests("IndexedDB offline repositories", {
   createProjectionRepository: async () => (
     await createIndexedDbRepositories()
   ).projections,
-  createEpubAssetRepository: async () => (
+  createPublicationAssetRepository: async () => (
     await createIndexedDbRepositories()
-  ).epubAssets,
+  ).publicationAssets,
   createReaderStateRepository: async () => (
     await createIndexedDbRepositories()
   ).readerState,
@@ -104,50 +104,63 @@ function defineOfflineRepositoryContractTests(
     });
   });
 
-  describe(`${implementationName}: EPUB asset repository`, () => {
+  describe(`${implementationName}: publication asset repository`, () => {
     it("round-trips a complete asset without exposing stored bytes", async () => {
-      const repository = await factories.createEpubAssetRepository();
-      const record = assetRecord("account-a", "book-1", "a", new Uint8Array([1, 2, 3]));
+      const repository = await factories.createPublicationAssetRepository();
+      const record = assetRecord("account-a", "book-1", "epub", "a", new Uint8Array([1, 2, 3]));
 
       await repository.putComplete(record);
       record.payload[0] = 9;
-      const first = await repository.get("account-a", "book-1");
+      const first = await repository.get("account-a", "book-1", "epub");
       first!.payload[1] = 9;
 
-      expect(await repository.get("account-a", "book-1")).toEqual(
-        assetRecord("account-a", "book-1", "a", new Uint8Array([1, 2, 3])),
+      expect(await repository.get("account-a", "book-1", "epub")).toEqual(
+        assetRecord("account-a", "book-1", "epub", "a", new Uint8Array([1, 2, 3])),
       );
     });
 
     it("isolates Book IDs by namespace and replaces a changed checksum", async () => {
-      const repository = await factories.createEpubAssetRepository();
-      const first = assetRecord("account-a", "book-1", "a", new Uint8Array([1]));
-      const replacement = assetRecord("account-a", "book-1", "b", new Uint8Array([2]));
-      const otherAccount = assetRecord("account-b", "book-1", "c", new Uint8Array([3]));
+      const repository = await factories.createPublicationAssetRepository();
+      const first = assetRecord("account-a", "book-1", "epub", "a", new Uint8Array([1]));
+      const replacement = assetRecord("account-a", "book-1", "epub", "b", new Uint8Array([2]));
+      const otherAccount = assetRecord("account-b", "book-1", "epub", "c", new Uint8Array([3]));
       await repository.putComplete(first);
       await repository.putComplete(otherAccount);
 
       await repository.putComplete(replacement);
 
-      expect(await repository.get("account-a", "book-1")).toEqual(replacement);
-      expect(await repository.get("account-b", "book-1")).toEqual(otherAccount);
+      expect(await repository.get("account-a", "book-1", "epub")).toEqual(replacement);
+      expect(await repository.get("account-b", "book-1", "epub")).toEqual(otherAccount);
+    });
+
+    it("isolates formats for the same account and Book", async () => {
+      const repository = await factories.createPublicationAssetRepository();
+      const epub = assetRecord("account-a", "book-1", "epub", "a", new Uint8Array([1]));
+      const alternateFormat = assetRecord("account-a", "book-1", "cbz", "b", new Uint8Array([2]));
+      await repository.putComplete(epub);
+      await repository.putComplete(alternateFormat);
+
+      await repository.delete("account-a", "book-1", "epub");
+
+      expect(await repository.get("account-a", "book-1", "epub")).toBeNull();
+      expect(await repository.get("account-a", "book-1", "cbz")).toEqual(alternateFormat);
     });
 
     it("isolates targeted asset deletion and namespace purge", async () => {
-      const repository = await factories.createEpubAssetRepository();
-      const retainedBook = assetRecord("account-a", "book-2", "b", new Uint8Array([2]));
-      const retainedAccount = assetRecord("account-b", "book-1", "c", new Uint8Array([3]));
-      await repository.putComplete(assetRecord("account-a", "book-1", "a", new Uint8Array([1])));
+      const repository = await factories.createPublicationAssetRepository();
+      const retainedBook = assetRecord("account-a", "book-2", "epub", "b", new Uint8Array([2]));
+      const retainedAccount = assetRecord("account-b", "book-1", "epub", "c", new Uint8Array([3]));
+      await repository.putComplete(assetRecord("account-a", "book-1", "epub", "a", new Uint8Array([1])));
       await repository.putComplete(retainedBook);
       await repository.putComplete(retainedAccount);
 
-      await repository.delete("account-a", "book-1");
-      expect(await repository.get("account-a", "book-1")).toBeNull();
-      expect(await repository.get("account-a", "book-2")).toEqual(retainedBook);
+      await repository.delete("account-a", "book-1", "epub");
+      expect(await repository.get("account-a", "book-1", "epub")).toBeNull();
+      expect(await repository.get("account-a", "book-2", "epub")).toEqual(retainedBook);
 
       await repository.deleteNamespace("account-a");
-      expect(await repository.get("account-a", "book-2")).toBeNull();
-      expect(await repository.get("account-b", "book-1")).toEqual(retainedAccount);
+      expect(await repository.get("account-a", "book-2", "epub")).toBeNull();
+      expect(await repository.get("account-b", "book-1", "epub")).toEqual(retainedAccount);
     });
   });
 
@@ -297,13 +310,15 @@ function projectionRecord<T>(namespaceKey: string, projectionKey: string, value:
 function assetRecord(
   namespaceKey: string,
   bookId: string,
+  format: string,
   checksumCharacter: string,
   payload: Uint8Array,
-): OfflineEpubAssetCompleteRecord<Uint8Array> {
+): OfflinePublicationAssetCompleteRecord<Uint8Array> {
   return {
     status: "complete",
     namespaceKey,
     bookId,
+    format,
     checksum: checksumCharacter.repeat(64),
     byteLength: payload.byteLength,
     schemaVersion: 1,

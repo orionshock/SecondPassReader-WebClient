@@ -1,0 +1,43 @@
+import type {
+  OfflinePublicationAssetCompleteRecord,
+  OfflinePublicationAssetRepository,
+} from "./OfflineRepositories.Types";
+import {
+  deleteNamespaceRecords,
+  OFFLINE_STORE_NAMES,
+  requestResult,
+  runTransaction,
+} from "./OfflineDatabase.IndexedDb";
+
+export class IndexedDbOfflinePublicationAssetRepository<TPayload = Blob>
+implements OfflinePublicationAssetRepository<TPayload> {
+  constructor(private readonly database: IDBDatabase) {}
+
+  async get(namespaceKey: string, bookId: string, format: string): Promise<OfflinePublicationAssetCompleteRecord<TPayload> | null> {
+    const transaction = this.database.transaction(OFFLINE_STORE_NAMES.publicationAssets, "readonly");
+    const record = await runTransaction(transaction, () => (
+      requestResult<OfflinePublicationAssetCompleteRecord<TPayload> | undefined>(
+        transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets).get([namespaceKey, bookId, format]),
+      )
+    ));
+    return record ?? null;
+  }
+
+  async putComplete(record: OfflinePublicationAssetCompleteRecord<TPayload>): Promise<void> {
+    const transaction = this.database.transaction(OFFLINE_STORE_NAMES.publicationAssets, "readwrite");
+    await runTransaction(transaction, () => (
+      requestResult(transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets).put(record))
+    ));
+  }
+
+  async delete(namespaceKey: string, bookId: string, format: string): Promise<void> {
+    const transaction = this.database.transaction(OFFLINE_STORE_NAMES.publicationAssets, "readwrite");
+    await runTransaction(transaction, () => (
+      requestResult(transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets).delete([namespaceKey, bookId, format]))
+    ));
+  }
+
+  deleteNamespace(namespaceKey: string): Promise<void> {
+    return deleteNamespaceRecords(this.database, OFFLINE_STORE_NAMES.publicationAssets, namespaceKey);
+  }
+}

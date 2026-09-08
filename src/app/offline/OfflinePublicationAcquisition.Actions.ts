@@ -12,15 +12,18 @@ import {
   type BrowserStorageEstimate,
 } from "./BrowserStorageEstimate.State";
 import type { OfflineCacheNamespace } from "./OfflineCacheNamespace.Policy";
-import { normalizeOfflineEpubChecksum } from "./OfflineEpubAsset.Policy";
 import {
-  verifyOfflineEpubBlob,
-  type OfflineEpubVerificationResult,
-} from "./OfflineEpubVerification.Actions";
-import type { OfflineEpubAssetRepository } from "./OfflineRepositories.Types";
+  normalizePublicationChecksum,
+  normalizePublicationFormat,
+} from "./OfflinePublicationAsset.Policy";
+import {
+  verifyOfflinePublicationBlob,
+  type OfflinePublicationVerificationResult,
+} from "./OfflinePublicationVerification.Actions";
+import type { OfflinePublicationAssetRepository } from "./OfflineRepositories.Types";
 import { classifyOfflineStorageAdmission } from "./OfflineStorageAdmission.Policy";
 
-const OFFLINE_EPUB_ASSET_SCHEMA_VERSION = 1;
+const OFFLINE_PUBLICATION_ASSET_SCHEMA_VERSION = 1;
 
 type AcquisitionContext = {
   capability: BrowserOfflineCapability;
@@ -30,12 +33,13 @@ type AcquisitionContext = {
 type AcquiredAsset = AcquisitionContext & {
   namespaceKey: string;
   bookId: string;
+  format: string;
   checksum: string;
   byteLength: number;
   fileSizeMismatch: boolean | null;
 };
 
-export type OfflineEpubAcquisitionResult =
+export type OfflinePublicationAcquisitionResult =
   | (AcquiredAsset & { status: "already-available" })
   | (AcquiredAsset & { status: "stored" })
   | {
@@ -60,14 +64,15 @@ export type OfflineEpubAcquisitionResult =
     })
   | (AcquisitionContext & { status: "storage-failed" });
 
-export async function acquireOfflineEpubAsset(input: {
+export async function acquireOfflinePublicationAsset(input: {
   namespace: OfflineCacheNamespace;
   book: BookDetail;
   spl: SecondPassClient;
-  repository: OfflineEpubAssetRepository<Blob>;
+  repository: OfflinePublicationAssetRepository<Blob>;
+  supportedFormat: string;
   requestPersistentStorage?: boolean;
-}): Promise<OfflineEpubAcquisitionResult> {
-  const metadata = validateInput(input.namespace, input.book);
+}): Promise<OfflinePublicationAcquisitionResult> {
+  const metadata = validateInput(input.namespace, input.book, input.supportedFormat);
   if (!metadata.ok) return { status: "unverifiable", reason: metadata.reason };
 
   let capability: BrowserOfflineCapability;
@@ -82,15 +87,16 @@ export async function acquireOfflineEpubAsset(input: {
 
   let existingAsset;
   try {
-    existingAsset = await input.repository.get(metadata.namespaceKey, metadata.bookId);
+    existingAsset = await input.repository.get(metadata.namespaceKey, metadata.bookId, metadata.format);
   } catch {
     return { status: "storage-failed", capability, persistence: null };
   }
-  if (normalizeOfflineEpubChecksum(existingAsset?.checksum) === metadata.checksum) {
+  if (normalizePublicationChecksum(existingAsset?.checksum) === metadata.checksum) {
     return {
       status: "already-available",
       namespaceKey: metadata.namespaceKey,
       bookId: metadata.bookId,
+      format: metadata.format,
       checksum: metadata.checksum,
       byteLength: existingAsset!.byteLength,
       fileSizeMismatch: existingAsset!.byteLength !== metadata.fileSize,
@@ -146,9 +152,9 @@ export async function acquireOfflineEpubAsset(input: {
     return { status: "download-failed", reason: "empty-blob", ...context };
   }
 
-  let verification: OfflineEpubVerificationResult;
+  let verification: OfflinePublicationVerificationResult;
   try {
-    verification = await verifyOfflineEpubBlob({
+    verification = await verifyOfflinePublicationBlob({
       blob,
       expectedChecksum: metadata.checksum,
       expectedFileSize: metadata.fileSize,
@@ -178,9 +184,10 @@ export async function acquireOfflineEpubAsset(input: {
       status: "complete",
       namespaceKey: metadata.namespaceKey,
       bookId: metadata.bookId,
+      format: metadata.format,
       checksum: verification.checksum,
       byteLength: verification.observedByteLength,
-      schemaVersion: OFFLINE_EPUB_ASSET_SCHEMA_VERSION,
+      schemaVersion: OFFLINE_PUBLICATION_ASSET_SCHEMA_VERSION,
       payload: blob,
     });
   } catch {
@@ -191,6 +198,7 @@ export async function acquireOfflineEpubAsset(input: {
     status: "stored",
     namespaceKey: metadata.namespaceKey,
     bookId: metadata.bookId,
+    format: metadata.format,
     checksum: verification.checksum,
     byteLength: verification.observedByteLength,
     fileSizeMismatch: verification.fileSizeMismatch,
@@ -199,28 +207,34 @@ export async function acquireOfflineEpubAsset(input: {
 }
 
 type ValidatedInput =
-  | { ok: false; reason: Extract<OfflineEpubAcquisitionResult, { status: "unverifiable" }>["reason"] }
+  | { ok: false; reason: Extract<OfflinePublicationAcquisitionResult, { status: "unverifiable" }>["reason"] }
   | {
       ok: true;
       namespaceKey: string;
       bookId: string;
+      format: string;
       checksum: string;
       fileSize: number;
     };
 
-function validateInput(namespace: OfflineCacheNamespace, book: BookDetail): ValidatedInput {
+function validateInput(
+  namespace: OfflineCacheNamespace,
+  book: BookDetail,
+  supportedFormat: string,
+): ValidatedInput {
   const namespaceKey = namespace?.key.trim();
   const bookId = book?.id?.trim();
   if (!namespaceKey || !bookId) return { ok: false, reason: "invalid-identity" };
   if (!book.file) return { ok: false, reason: "missing-file" };
-  if (book.file.format.trim().toLowerCase() !== "epub") {
+  const format = normalizePublicationFormat(book.file.format);
+  if (!format || format !== normalizePublicationFormat(supportedFormat)) {
     return { ok: false, reason: "unsupported-format" };
   }
   if (!Number.isFinite(book.file.fileSize) || book.file.fileSize < 0) {
     return { ok: false, reason: "invalid-file-size" };
   }
-  const checksum = normalizeOfflineEpubChecksum(book.file.checksum);
+  const checksum = normalizePublicationChecksum(book.file.checksum);
   if (!checksum) return { ok: false, reason: "invalid-checksum" };
 
-  return { ok: true, namespaceKey, bookId, checksum, fileSize: book.file.fileSize };
+  return { ok: true, namespaceKey, bookId, format, checksum, fileSize: book.file.fileSize };
 }

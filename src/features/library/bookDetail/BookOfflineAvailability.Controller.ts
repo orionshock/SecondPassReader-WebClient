@@ -3,18 +3,21 @@ import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import { getBrowserOfflinePersistenceCapability } from "../../../app/offline/BrowserOfflineCapability.State";
 import { buildOfflineCacheNamespace } from "../../../app/offline/OfflineCacheNamespace.Policy";
 import {
-  classifyOfflineEpubAssetAvailability,
-  normalizeOfflineEpubChecksum,
-} from "../../../app/offline/OfflineEpubAsset.Policy";
+  classifyOfflinePublicationAssetAvailability,
+  normalizePublicationChecksum,
+  normalizePublicationFormat,
+} from "../../../app/offline/OfflinePublicationAsset.Policy";
 import {
-  acquireOfflineEpubAsset,
-  type OfflineEpubAcquisitionResult,
-} from "../../../app/offline/OfflineEpubAcquisition.Actions";
+  acquireOfflinePublicationAsset,
+  type OfflinePublicationAcquisitionResult,
+} from "../../../app/offline/OfflinePublicationAcquisition.Actions";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
 } from "../../../app/offline/OfflineRepositories.IndexedDb";
 import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Store";
+
+const BOOK_DETAIL_OFFLINE_FORMAT = "epub";
 
 type StableStatus =
   | "not-available"
@@ -65,7 +68,11 @@ export function useBookOfflineAvailabilityController({
     message: string | null = null,
   ) => {
     if (!book || !namespace) return;
-    const asset = await repositories.epubAssets.get(namespace.key, String(book.id));
+    const asset = await repositories.publicationAssets.get(
+      namespace.key,
+      String(book.id),
+      normalizePublicationFormat(book.file?.format)!,
+    );
     if (generation !== generationRef.current) return;
     updateState(classifyStoredAsset(book, asset, message));
   }, [book, namespace, updateState]);
@@ -136,11 +143,12 @@ export function useBookOfflineAvailabilityController({
     const previousState = stateRef.current;
     updateState({ status: "working", operation: "acquire" });
     try {
-      const result = await acquireOfflineEpubAsset({
+      const result = await acquireOfflinePublicationAsset({
         namespace,
         book,
         spl,
-        repository: repositories.epubAssets,
+        repository: repositories.publicationAssets,
+        supportedFormat: BOOK_DETAIL_OFFLINE_FORMAT,
         requestPersistentStorage: true,
       });
       if (generation !== generationRef.current) return;
@@ -168,7 +176,11 @@ export function useBookOfflineAvailabilityController({
     const previousState = stateRef.current;
     updateState({ status: "working", operation: "remove" });
     try {
-      await repositories.epubAssets.delete(namespace.key, String(book.id));
+      await repositories.publicationAssets.delete(
+        namespace.key,
+        String(book.id),
+        normalizePublicationFormat(book.file?.format)!,
+      );
       if (generation === generationRef.current) {
         updateState({ status: "not-available", message: null });
       }
@@ -185,20 +197,22 @@ export function useBookOfflineAvailabilityController({
 }
 
 function hasVerifiableEpub(book: BookDetail): boolean {
+  const file = book.file;
+  if (!file) return false;
   return Boolean(
-    book.file?.format?.trim().toLowerCase() === "epub" &&
-    Number.isFinite(book.file.fileSize) &&
-    book.file.fileSize >= 0 &&
-    normalizeOfflineEpubChecksum(book.file.checksum),
+    normalizePublicationFormat(file.format) === BOOK_DETAIL_OFFLINE_FORMAT &&
+    Number.isFinite(file.fileSize) &&
+    file.fileSize >= 0 &&
+    normalizePublicationChecksum(file.checksum),
   );
 }
 
 function classifyStoredAsset(
   book: BookDetail,
-  asset: Awaited<ReturnType<IndexedDbOfflineRepositories<Blob>["epubAssets"]["get"]>>,
+  asset: Awaited<ReturnType<IndexedDbOfflineRepositories<Blob>["publicationAssets"]["get"]>>,
   message: string | null,
 ): BookOfflineAvailabilityState {
-  const availability = classifyOfflineEpubAssetAvailability({
+  const availability = classifyOfflinePublicationAssetAvailability({
     fileMetadata: book.file,
     assetRecord: asset,
   });
@@ -210,7 +224,7 @@ function classifyStoredAsset(
 }
 
 function acquisitionFailureState(
-  result: Exclude<OfflineEpubAcquisitionResult, { status: "stored" | "already-available" }>,
+  result: Exclude<OfflinePublicationAcquisitionResult, { status: "stored" | "already-available" }>,
   previousState: BookOfflineAvailabilityState,
 ): BookOfflineAvailabilityState {
   if (result.status === "unsupported") {

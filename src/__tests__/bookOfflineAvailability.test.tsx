@@ -4,11 +4,11 @@ import { createRoot, type Root } from "react-dom/client";
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.State";
-import { acquireOfflineEpubAsset } from "../app/offline/OfflineEpubAcquisition.Actions";
+import { acquireOfflinePublicationAsset } from "../app/offline/OfflinePublicationAcquisition.Actions";
 import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
 import type {
-  OfflineEpubAssetCompleteRecord,
-  OfflineEpubAssetRepository,
+  OfflinePublicationAssetCompleteRecord,
+  OfflinePublicationAssetRepository,
 } from "../app/offline/OfflineRepositories.Types";
 import { BookDetailPanel } from "../features/library/BookDetail.Panel";
 import {
@@ -21,8 +21,8 @@ import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 vi.mock("../app/offline/BrowserOfflineCapability.State", () => ({
   getBrowserOfflinePersistenceCapability: vi.fn(),
 }));
-vi.mock("../app/offline/OfflineEpubAcquisition.Actions", () => ({
-  acquireOfflineEpubAsset: vi.fn(),
+vi.mock("../app/offline/OfflinePublicationAcquisition.Actions", () => ({
+  acquireOfflinePublicationAsset: vi.fn(),
 }));
 vi.mock("../app/offline/OfflineRepositories.IndexedDb", () => ({
   openIndexedDbOfflineRepositories: vi.fn(),
@@ -32,7 +32,7 @@ const CHECKSUM_A = "a".repeat(64);
 const CHECKSUM_B = "b".repeat(64);
 const TEST_SPL = {} as SecondPassClient;
 const capabilityMock = vi.mocked(getBrowserOfflinePersistenceCapability);
-const acquisitionMock = vi.mocked(acquireOfflineEpubAsset);
+const acquisitionMock = vi.mocked(acquireOfflinePublicationAsset);
 const repositoriesMock = vi.mocked(openIndexedDbOfflineRepositories);
 
 let root: Root;
@@ -98,7 +98,8 @@ describe("Book Detail offline availability", () => {
     await act(async () => button("Make available offline")?.click());
 
     expect(acquisitionMock).toHaveBeenCalledWith(expect.objectContaining({
-      repository: repositories.epubAssets,
+      repository: repositories.publicationAssets,
+      supportedFormat: "epub",
       requestPersistentStorage: true,
     }));
     expect(container.textContent).toContain("Available offline");
@@ -133,9 +134,10 @@ describe("Book Detail offline availability", () => {
     await renderController(book(CHECKSUM_B));
     await act(async () => button("Remove offline copy")?.click());
 
-    expect(repositories.epubAssets.delete).toHaveBeenCalledWith(
+    expect(repositories.publicationAssets.delete).toHaveBeenCalledWith(
       "server:https%3A%2F%2Flibrary.example|profile:reader-1",
       "book-1",
+      "epub",
     );
     expect(repositories.projections.deleteNamespace).not.toHaveBeenCalled();
     expect(repositories.projections.delete).not.toHaveBeenCalled();
@@ -149,7 +151,7 @@ describe("Book Detail offline availability", () => {
   it("keeps an available asset visible when removal fails", async () => {
     const oldAsset = completeAsset(CHECKSUM_B);
     const repositories = repositorySet(oldAsset);
-    vi.mocked(repositories.epubAssets.delete).mockRejectedValueOnce(new Error("private database detail"));
+    vi.mocked(repositories.publicationAssets.delete).mockRejectedValueOnce(new Error("private database detail"));
     repositoriesMock.mockResolvedValue(repositories.value);
 
     await renderController(book(CHECKSUM_B));
@@ -290,9 +292,9 @@ function button(label: string): HTMLButtonElement | undefined {
   return Array.from(container.querySelectorAll("button")).find((candidate) => candidate.textContent === label);
 }
 
-function repositorySet(initialAsset: OfflineEpubAssetCompleteRecord<Blob> | null = null) {
+function repositorySet(initialAsset: OfflinePublicationAssetCompleteRecord<Blob> | null = null) {
   let asset = initialAsset;
-  const epubAssets: OfflineEpubAssetRepository<Blob> = {
+  const publicationAssets: OfflinePublicationAssetRepository<Blob> = {
     get: vi.fn(async () => asset),
     putComplete: vi.fn(async (record) => { asset = record; }),
     delete: vi.fn(async () => { asset = null; }),
@@ -308,13 +310,13 @@ function repositorySet(initialAsset: OfflineEpubAssetCompleteRecord<Blob> | null
     list: vi.fn(), upsertIntent: vi.fn(), remove: vi.fn(), deleteNamespace: vi.fn(),
   };
   return {
-    epubAssets,
+    publicationAssets,
     projections,
     readerState,
     readerOutbox,
-    value: { epubAssets, projections, readerState, readerOutbox, close: vi.fn() } as never,
+    value: { publicationAssets, projections, readerState, readerOutbox, close: vi.fn() } as never,
     asset: () => asset,
-    setAsset: (next: OfflineEpubAssetCompleteRecord<Blob>) => { asset = next; },
+    setAsset: (next: OfflinePublicationAssetCompleteRecord<Blob>) => { asset = next; },
   };
 }
 
@@ -346,12 +348,13 @@ function profile(): ConnectionProfile {
   };
 }
 
-function completeAsset(checksum: string): OfflineEpubAssetCompleteRecord<Blob> {
+function completeAsset(checksum: string): OfflinePublicationAssetCompleteRecord<Blob> {
   const payload = new Blob(["old"]);
   return {
     status: "complete",
     namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
     bookId: "book-1",
+    format: "epub",
     checksum,
     byteLength: payload.size,
     schemaVersion: 1,
@@ -375,6 +378,7 @@ function storedResult() {
     status: "stored" as const,
     namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
     bookId: "book-1",
+    format: "epub",
     checksum: CHECKSUM_B,
     byteLength: 3,
     fileSizeMismatch: false,

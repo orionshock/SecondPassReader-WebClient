@@ -16,13 +16,13 @@ It does not select a complete storage or synchronization architecture.
 - **Cached:** The client may show recent Home or reading state as a resilience convenience. Cached
   data may be stale or evicted and is not a promise that a book can be opened offline.
 - **Available offline:** The reader has explicitly requested offline-stable access to a book. A
-  later implementation must retain the required EPUB asset and Reader state, report when that
-  availability is lost, and provide an explicit removal path.
+  verified publication asset exists and the app has a Reader capable of its format. The client
+  must report when that availability is lost and provide an explicit removal path.
 
 ## Initial Scope
 
 - Cache the application shell, Home snapshot, and recent reading state later as conveniences.
-- Add explicit offline-ready books in a later phase.
+- Offer explicit offline-ready EPUB files from Book Detail; consuming them in Reader remains later.
 - Support offline Reader progress and annotation activity for those books later.
 - Keep library search and paginated browsing online-dependent.
 - Keep shelf mutations and library or administration mutations online-only.
@@ -48,8 +48,8 @@ semantics where applicable:
 
 ## Web-Specific Choices
 
-- Durable EPUB retention requires an explicit **Available offline** action. Opening a book does not
-  silently make its EPUB durable.
+- Durable publication-asset retention requires an explicit **Available offline** action. Opening a
+  book does not silently make its file durable.
 - Large assets and durable Reader data belong in the app-owned IndexedDB database, not
   `localStorage`.
 - A service worker is not required for the first phase. Add one only when a defined runtime behavior
@@ -68,7 +68,7 @@ semantics where applicable:
 | Connection profile and bearer token | Keep existing behavior unchanged in this phase; credential persistence policy remains an open question. |
 | Home and recent snapshots | Cache later as replaceable convenience data. |
 | Library search and pages | Do not promise offline availability. |
-| EPUB assets | Retain later only through explicit offline availability. |
+| Publication assets | Retain only through explicit offline availability. EPUB is the only currently supported Reader format. |
 | Progress | Store one durable latest local value later, scoped to the correct book and session lifecycle. |
 | Annotations | Store durable desired-state operations later with stable client IDs and exact acknowledgement. |
 | Shelves | Online-only initially. |
@@ -88,7 +88,7 @@ ID from `/accounts/me`. Both are required. The serialized namespace is
   locations, not cache identity.
 
 Future records remain inside that namespace and add their own identity: Home/recent uses a fixed
-snapshot category; EPUB assets use book identity and the file checksum when present; Reader state
+snapshot category; publication assets use Book, format, and file-checksum identity; Reader state
 uses book and session identity; catalog results and contextual tag aggregates use the exact query
 context; scope-level tag endpoints remain separate tag universes.
 
@@ -103,20 +103,20 @@ book-asset availability remain separate concerns. Initial loading and failure wi
 value remain page or query states; they must not be presented as stale cached data. Cache records
 must also retain enough query context to establish which projection was fetched.
 
-## EPUB Asset Availability
+## Publication Asset Availability
 
-Cached Book metadata and cover images do not admit a book to the offline Reader. **Available
-offline** requires a complete local EPUB asset whose recorded SHA-256 checksum matches the checksum
-from current Book file metadata. The asset identity is cache namespace, Book ID, and checksum;
-title, author, description, cover, download URL, and file size are not identity.
+Cached Book metadata and cover images do not admit a book to the offline Reader. A stored
+publication asset is valid only when it is complete and its recorded SHA-256 checksum matches the
+current Book file metadata. Its identity is cache namespace, Book ID, normalized format, and
+checksum; title, author, description, cover, download URL, and file size are not identity.
 
-Missing, partial, unsupported, or checksum-mismatched assets are not offline-readable. Complete
+Missing, partial, format-mismatched, or checksum-mismatched assets are not offline-readable. Complete
 assets without a valid server and recorded checksum are `unverifiable` and do not receive the
 offline-stable promise. File size is diagnostic metadata only: a mismatch must be reported, but a
 matching checksum remains decisive. A known checksum change requires replacement; different Book
 IDs remain different assets and no CFI portability is inferred between editions.
 
-Downloaded EPUBs are verified by streaming Blob chunks through an incremental SHA-256 hash. This
+Downloaded publication files are verified by streaming Blob chunks through an incremental SHA-256 hash. This
 avoids the whole-file `arrayBuffer()` copy required by Web Crypto's non-streaming digest API, so
 working memory is bounded to the browser-owned Blob, the current stream chunk, and hash state as
 far as the runtime permits. There is no arbitrary file-size limit. Missing or malformed server
@@ -130,15 +130,20 @@ failure is advisory. Only a verified complete Blob is published. A previous veri
 in place until its replacement commits successfully. Partial and resumable downloads remain out of
 scope.
 
-Book Detail is the first explicit offline-stability surface. It can make one Book available
-offline, update a changed EPUB, or remove its EPUB asset. Removal does not clear cached projections,
+Book Detail is the first explicit offline-stability surface. It can make one supported Book file
+available offline, update a changed file, or remove its publication asset. Removal does not clear cached projections,
 Reader continuity state, annotations, or pending Reader intents. Library-wide asset management in
-Settings and Reader consumption of stored EPUBs remain separate later phases.
+Settings and Reader consumption of stored assets remain separate later phases.
 
-## EPUB Storage Admission
+The shared asset policy, storage, checksum verification, and acquisition ownership are
+format-neutral. EPUB is the only currently supported Reader format. Future formats require their
+own engines and format-owned navigation, location, selection, and annotation semantics; EPUB CFI
+is not a generic publication location model.
 
-Before retaining an EPUB, the client uses the browser's advisory origin usage and quota estimate.
-There is no universal EPUB size cap. Admission preserves the greater of 10% of estimated quota or
+## Publication Asset Storage Admission
+
+Before retaining a publication asset, the client uses the browser's advisory origin usage and quota estimate.
+There is no universal asset size cap. Admission preserves the greater of 10% of estimated quota or
 100 MiB, and declines an attempt that would cross the remaining usable budget. Missing, incomplete,
 or failed estimates remain explicit unknown or unavailable capacity; they are not evidence of free
 space.
@@ -158,12 +163,12 @@ and request APIs provide full capability; missing or failed StorageManager featu
 best-effort storage as limited capability rather than making IndexedDB unusable.
 
 Capability checks are read-only except for creating the empty versioned IndexedDB schema when it
-does not exist. They query `persisted()` but never call `persist()`. A later explicit **Available
+  does not exist. They query `persisted()` but never call `persist()`. The explicit **Available
 offline** action owns any persistence request. Persistent permission reduces automatic eviction,
 but browser or user site-data clearing can still remove local data.
 
 Persistent storage is never requested during startup, capability inspection, or background work.
-A future explicit offline-availability action first checks `persisted()` and calls `persist()` at
+An explicit offline-availability action first checks `persisted()` and calls `persist()` at
 most once when needed. A denied request does not make IndexedDB unusable; it leaves any later
 offline-retention attempt subject to best-effort eviction. A grant reduces automatic eviction risk
 but does not prevent the user or browser controls from clearing site data.
@@ -191,8 +196,8 @@ through normal `open`; `start-over` is never automatic recovery.
 ## Durable Repository Boundaries
 
 Browser persistence uses one versioned native IndexedDB database, split by ownership: successful
-authoritative projections, complete EPUB assets, local Reader continuity state, and Reader outbox
-intents use separate async repositories. Complete EPUB payloads use structured-clone-safe browser
+authoritative projections, complete publication assets, local Reader continuity state, and Reader outbox
+intents use separate async repositories. Complete publication payloads use structured-clone-safe browser
 `Blob` values.
 All account-owned records and operations are namespace-scoped, namespace purge is isolated, and
 repository reads and writes do not expose mutable stored object identity.
@@ -231,7 +236,7 @@ boundary and renderer details behind the Reader bridge:
   connectivity signals only and does not infer server, authentication, cache, or book availability
 - server/account-profile cache namespace independent of storage implementation
 - cache repositories for replaceable snapshots and durable Reader state
-- EPUB asset store
+- publication asset store, keyed by Book and format
 - annotation desired-state outbox
 - replay executor with exact outcomes
 - sync outcome notice presenter

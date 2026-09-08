@@ -18,10 +18,11 @@ describe("IndexedDB offline repository lifecycle", () => {
       fetchedAt: 1_000,
       schemaVersion: 1,
     });
-    await repositories.epubAssets.putComplete({
+    await repositories.publicationAssets.putComplete({
       status: "complete",
       namespaceKey: "account-a",
       bookId: "book-1",
+      format: "epub",
       checksum: "a".repeat(64),
       byteLength: 1,
       schemaVersion: 1,
@@ -31,7 +32,7 @@ describe("IndexedDB offline repository lifecycle", () => {
     await repositories.readerOutbox.upsertIntent(progressIntent(1, "epubcfi(/6/2)"));
 
     expect(await repositories.projections.get("account-a", "home")).not.toBeNull();
-    expect(await repositories.epubAssets.get("account-a", "book-1")).not.toBeNull();
+    expect(await repositories.publicationAssets.get("account-a", "book-1", "epub")).not.toBeNull();
     expect(await repositories.readerState.getBookState("account-a", "book-1")).not.toBeNull();
     expect(await repositories.readerOutbox.list("account-a")).toHaveLength(1);
     repositories.close();
@@ -43,10 +44,11 @@ describe("IndexedDB offline repository lifecycle", () => {
     const first = await openIndexedDbOfflineRepositories(options);
     const payload = new Blob([new Uint8Array([1, 2, 3])], { type: "application/epub+zip" });
 
-    await first.epubAssets.putComplete({
+    await first.publicationAssets.putComplete({
       status: "complete",
       namespaceKey: "account-a",
       bookId: "book-1",
+      format: "epub",
       checksum: "a".repeat(64),
       byteLength: payload.size,
       schemaVersion: 1,
@@ -56,11 +58,32 @@ describe("IndexedDB offline repository lifecycle", () => {
     first.close();
 
     const reopened = await openIndexedDbOfflineRepositories(options);
-    const asset = await reopened.epubAssets.get("account-a", "book-1");
+    const asset = await reopened.publicationAssets.get("account-a", "book-1", "epub");
 
     expect(new Uint8Array(await asset!.payload.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
     expect(await reopened.readerState.getBookState("account-a", "book-1")).toEqual(readerState());
     reopened.close();
+  });
+
+  it("migrates version 1 EPUB records into format-aware publication assets", async () => {
+    const indexedDb = new IDBFactory();
+    const databaseName = "offline-version-1-migration";
+    await putVersionOneAsset(indexedDb, databaseName);
+
+    const repositories = await openIndexedDbOfflineRepositories<Uint8Array>({ indexedDb, databaseName });
+    const migrated = await repositories.publicationAssets.get("account-a", "book-1", "epub");
+
+    expect(migrated).toEqual({
+      status: "complete",
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      format: "epub",
+      checksum: "a".repeat(64),
+      byteLength: 1,
+      schemaVersion: 1,
+      payload: new Uint8Array([1]),
+    });
+    repositories.close();
   });
 
   it("serializes overlapping outbox coalescing for one resource", async () => {
@@ -113,4 +136,32 @@ function progressIntent(intentRevision: number, cfi: string): ReplaceReaderProgr
     intentRevision,
     progress: { cfi, percentage: 10, locationLabel: "010% - Location" },
   };
+}
+
+function putVersionOneAsset(indexedDb: IDBFactory, databaseName: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDb.open(databaseName, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore("epubAssets", { keyPath: ["namespaceKey", "bookId"] });
+    };
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction("epubAssets", "readwrite");
+      transaction.objectStore("epubAssets").put({
+        status: "complete",
+        namespaceKey: "account-a",
+        bookId: "book-1",
+        checksum: "a".repeat(64),
+        byteLength: 1,
+        schemaVersion: 1,
+        payload: new Uint8Array([1]),
+      });
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    };
+  });
 }

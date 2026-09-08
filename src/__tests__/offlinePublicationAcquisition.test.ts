@@ -5,11 +5,11 @@ import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOf
 import { requestBrowserPersistentStorage } from "../app/offline/BrowserPersistentStorage.Actions";
 import { getBrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.State";
 import type { OfflineCacheNamespace } from "../app/offline/OfflineCacheNamespace.Policy";
-import { acquireOfflineEpubAsset } from "../app/offline/OfflineEpubAcquisition.Actions";
-import { verifyOfflineEpubBlob } from "../app/offline/OfflineEpubVerification.Actions";
+import { acquireOfflinePublicationAsset } from "../app/offline/OfflinePublicationAcquisition.Actions";
+import { verifyOfflinePublicationBlob } from "../app/offline/OfflinePublicationVerification.Actions";
 import type {
-  OfflineEpubAssetCompleteRecord,
-  OfflineEpubAssetRepository,
+  OfflinePublicationAssetCompleteRecord,
+  OfflinePublicationAssetRepository,
 } from "../app/offline/OfflineRepositories.Types";
 import { classifyOfflineStorageAdmission } from "../app/offline/OfflineStorageAdmission.Policy";
 
@@ -22,8 +22,8 @@ vi.mock("../app/offline/BrowserPersistentStorage.Actions", () => ({
 vi.mock("../app/offline/BrowserStorageEstimate.State", () => ({
   getBrowserStorageEstimate: vi.fn(),
 }));
-vi.mock("../app/offline/OfflineEpubVerification.Actions", () => ({
-  verifyOfflineEpubBlob: vi.fn(),
+vi.mock("../app/offline/OfflinePublicationVerification.Actions", () => ({
+  verifyOfflinePublicationBlob: vi.fn(),
 }));
 vi.mock("../app/offline/OfflineStorageAdmission.Policy", () => ({
   classifyOfflineStorageAdmission: vi.fn(),
@@ -58,9 +58,9 @@ const capabilityMock = vi.mocked(getBrowserOfflinePersistenceCapability);
 const estimateMock = vi.mocked(getBrowserStorageEstimate);
 const admissionMock = vi.mocked(classifyOfflineStorageAdmission);
 const persistenceMock = vi.mocked(requestBrowserPersistentStorage);
-const verificationMock = vi.mocked(verifyOfflineEpubBlob);
+const verificationMock = vi.mocked(verifyOfflinePublicationBlob);
 
-describe("offline EPUB acquisition", () => {
+describe("offline publication acquisition", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     capabilityMock.mockResolvedValue(CAPABILITY_SUPPORTED);
@@ -84,7 +84,7 @@ describe("offline EPUB acquisition", () => {
     const store = assetStore(asset);
     const client = downloadClient(new Blob(["unused"]));
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(client, store.repository, {
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository, {
       requestPersistentStorage: true,
     }));
 
@@ -105,7 +105,7 @@ describe("offline EPUB acquisition", () => {
       return verified(CHECKSUM_B);
     });
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(client, store.repository));
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository));
 
     expect(result.status).toBe("stored");
     expect(store.current()).toMatchObject({ checksum: CHECKSUM_B, payload: newBlob });
@@ -121,7 +121,7 @@ describe("offline EPUB acquisition", () => {
       fileSizeMismatch: false,
     });
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(
       downloadClient(new Blob(["new"])),
       store.repository,
     ));
@@ -136,7 +136,7 @@ describe("offline EPUB acquisition", () => {
     const store = assetStore();
     const client = downloadClient(new Blob(["unused"]));
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(client, store.repository));
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository));
 
     expect(result.status).toBe("unsupported");
     expect(client.download).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe("offline EPUB acquisition", () => {
     capabilityMock.mockResolvedValue(CAPABILITY_LIMITED);
     const store = assetStore();
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(
       downloadClient(new Blob(["new"])),
       store.repository,
     ));
@@ -164,7 +164,7 @@ describe("offline EPUB acquisition", () => {
     const store = assetStore();
     const client = downloadClient(new Blob(["unused"]));
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(client, store.repository));
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository));
 
     expect(result.status).toBe("insufficient-storage");
     expect(admissionMock).toHaveBeenCalledWith({
@@ -185,7 +185,7 @@ describe("offline EPUB acquisition", () => {
       persistenceMock.mockResolvedValue({ status: persistenceStatus });
       const store = assetStore();
 
-      const result = await acquireOfflineEpubAsset(acquisitionInput(
+      const result = await acquireOfflinePublicationAsset(acquisitionInput(
         downloadClient(new Blob(["new"])),
         store.repository,
         { requestPersistentStorage: true },
@@ -205,7 +205,7 @@ describe("offline EPUB acquisition", () => {
       const store = assetStore();
       const client = downloadClient(new Blob(["unused"]));
 
-      const result = await acquireOfflineEpubAsset(acquisitionInput(client, store.repository, {
+      const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository, {
         book: book(checksum),
       }));
 
@@ -215,10 +215,25 @@ describe("offline EPUB acquisition", () => {
     },
   );
 
+  it("rejects a format unsupported by the current Reader before download", async () => {
+    const unsupportedBook = book(CHECKSUM_B);
+    unsupportedBook.file!.format = "cbz";
+    const store = assetStore();
+    const client = downloadClient(new Blob(["unused"]));
+
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository, {
+      book: unsupportedBook,
+    }));
+
+    expect(result).toEqual({ status: "unverifiable", reason: "unsupported-format" });
+    expect(capabilityMock).not.toHaveBeenCalled();
+    expect(client.download).not.toHaveBeenCalled();
+  });
+
   it("rejects an empty download without verification or publish", async () => {
     const store = assetStore();
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(
       downloadClient(new Blob([])),
       store.repository,
     ));
@@ -238,7 +253,7 @@ describe("offline EPUB acquisition", () => {
       fileSizeMismatch: false,
     });
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(
       downloadClient(new Blob(["new"])),
       store.repository,
     ));
@@ -255,12 +270,13 @@ describe("offline EPUB acquisition", () => {
     const blob = new Blob(["new"]);
     const store = assetStore();
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(downloadClient(blob), store.repository));
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(downloadClient(blob), store.repository));
 
     expect(result).toMatchObject({
       status: "stored",
       namespaceKey: "account-a",
       bookId: "book-1",
+      format: "epub",
       checksum: CHECKSUM_B,
       byteLength: 3,
       fileSizeMismatch: false,
@@ -270,6 +286,7 @@ describe("offline EPUB acquisition", () => {
       status: "complete",
       namespaceKey: "account-a",
       bookId: "book-1",
+      format: "epub",
       checksum: CHECKSUM_B,
       byteLength: 3,
       schemaVersion: 1,
@@ -281,7 +298,7 @@ describe("offline EPUB acquisition", () => {
     const oldAsset = completeAsset(CHECKSUM_A, new Blob(["old"]));
     const store = assetStore(oldAsset, new Error("sensitive storage failure"));
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(
       downloadClient(new Blob(["new"])),
       store.repository,
     ));
@@ -297,7 +314,7 @@ describe("offline EPUB acquisition", () => {
       new Error("https://library.example/private.epub?token=secret"),
     ));
 
-    const result = await acquireOfflineEpubAsset(acquisitionInput(client, store.repository));
+    const result = await acquireOfflinePublicationAsset(acquisitionInput(client, store.repository));
 
     expect(result).toMatchObject({ status: "download-failed", reason: "request-failed" });
     expect(JSON.stringify(result)).not.toContain("library.example");
@@ -307,7 +324,7 @@ describe("offline EPUB acquisition", () => {
 
 function acquisitionInput(
   client: ReturnType<typeof downloadClient>,
-  repository: OfflineEpubAssetRepository<Blob>,
+  repository: OfflinePublicationAssetRepository<Blob>,
   overrides: { requestPersistentStorage?: boolean; book?: BookDetail } = {},
 ) {
   return {
@@ -319,6 +336,7 @@ function acquisitionInput(
     book: overrides.book ?? book(CHECKSUM_B),
     spl: client.spl,
     repository,
+    supportedFormat: "epub",
     requestPersistentStorage: overrides.requestPersistentStorage,
   };
 }
@@ -346,11 +364,12 @@ function downloadClient(result: Blob | Promise<Blob>) {
 function completeAsset(
   checksum: string,
   payload: Blob,
-): OfflineEpubAssetCompleteRecord<Blob> {
+): OfflinePublicationAssetCompleteRecord<Blob> {
   return {
     status: "complete",
     namespaceKey: "account-a",
     bookId: "book-1",
+    format: "epub",
     checksum,
     byteLength: payload.size,
     schemaVersion: 1,
@@ -359,15 +378,15 @@ function completeAsset(
 }
 
 function assetStore(
-  initial: OfflineEpubAssetCompleteRecord<Blob> | null = null,
+  initial: OfflinePublicationAssetCompleteRecord<Blob> | null = null,
   putFailure?: Error,
 ) {
   let current = initial;
-  const put = vi.fn(async (record: OfflineEpubAssetCompleteRecord<Blob>) => {
+  const put = vi.fn(async (record: OfflinePublicationAssetCompleteRecord<Blob>) => {
     if (putFailure) throw putFailure;
     current = record;
   });
-  const repository: OfflineEpubAssetRepository<Blob> = {
+  const repository: OfflinePublicationAssetRepository<Blob> = {
     get: vi.fn(async () => current),
     putComplete: put,
     delete: vi.fn(async () => undefined),

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { verifyOfflineEpubBlob } from "../app/offline/OfflineEpubVerification.Actions";
+import { verifyOfflinePublicationBlob } from "../app/offline/OfflinePublicationVerification.Actions";
 
 const ABC_SHA256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-describe("offline EPUB verification", () => {
+describe("offline publication verification", () => {
   it("verifies a known Blob SHA-256", async () => {
-    await expect(verifyOfflineEpubBlob({
+    await expect(verifyOfflinePublicationBlob({
       blob: new Blob(["abc"]),
       expectedChecksum: ABC_SHA256,
     })).resolves.toEqual({
@@ -18,7 +18,7 @@ describe("offline EPUB verification", () => {
   });
 
   it("normalizes an uppercase expected checksum", async () => {
-    const result = await verifyOfflineEpubBlob({
+    const result = await verifyOfflinePublicationBlob({
       blob: new Blob(["abc"]),
       expectedChecksum: ABC_SHA256.toUpperCase(),
     });
@@ -27,7 +27,7 @@ describe("offline EPUB verification", () => {
   });
 
   it("reports expected and observed checksums when bytes differ", async () => {
-    const result = await verifyOfflineEpubBlob({
+    const result = await verifyOfflinePublicationBlob({
       blob: new Blob(["different"]),
       expectedChecksum: ABC_SHA256,
     });
@@ -47,7 +47,7 @@ describe("offline EPUB verification", () => {
       });
       const blob = { size: 3, stream } as unknown as Blob;
 
-      await expect(verifyOfflineEpubBlob({ blob, expectedChecksum })).resolves.toEqual({
+      await expect(verifyOfflinePublicationBlob({ blob, expectedChecksum })).resolves.toEqual({
         status: "unverifiable",
         observedByteLength: 3,
         fileSizeMismatch: null,
@@ -57,7 +57,7 @@ describe("offline EPUB verification", () => {
   );
 
   it("verifies an empty Blob", async () => {
-    await expect(verifyOfflineEpubBlob({
+    await expect(verifyOfflinePublicationBlob({
       blob: new Blob([]),
       expectedChecksum: EMPTY_SHA256,
       expectedFileSize: 0,
@@ -70,7 +70,7 @@ describe("offline EPUB verification", () => {
   });
 
   it("keeps file-size mismatch diagnostic when the checksum verifies", async () => {
-    await expect(verifyOfflineEpubBlob({
+    await expect(verifyOfflinePublicationBlob({
       blob: new Blob(["abc"]),
       expectedChecksum: ABC_SHA256,
       expectedFileSize: 4,
@@ -92,7 +92,7 @@ describe("offline EPUB verification", () => {
       }),
     } as Blob;
 
-    const result = await verifyOfflineEpubBlob({ blob, expectedChecksum: ABC_SHA256 });
+    const result = await verifyOfflinePublicationBlob({ blob, expectedChecksum: ABC_SHA256 });
 
     expect(result).toEqual({
       status: "failed",
@@ -113,7 +113,7 @@ describe("offline EPUB verification", () => {
       }),
     } as Blob;
 
-    const result = await verifyOfflineEpubBlob({ blob, expectedChecksum: ABC_SHA256 });
+    const result = await verifyOfflinePublicationBlob({ blob, expectedChecksum: ABC_SHA256 });
 
     expect(result).toEqual({
       status: "failed",

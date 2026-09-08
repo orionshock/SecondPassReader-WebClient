@@ -1,14 +1,15 @@
 export const OFFLINE_DATABASE_NAME = "secondpass-reader-offline";
-export const OFFLINE_DATABASE_VERSION = 1;
+export const OFFLINE_DATABASE_VERSION = 2;
 
 export const OFFLINE_STORE_NAMES = {
   projections: "projections",
-  epubAssets: "epubAssets",
+  publicationAssets: "publicationAssets",
   readerState: "readerState",
   readerOutbox: "readerOutbox",
 } as const;
 
 const NAMESPACE_INDEX = "namespaceKey";
+const LEGACY_ASSET_STORE_NAME = "epubAssets";
 
 export type OfflineDatabaseOptions = {
   databaseName?: string;
@@ -31,9 +32,10 @@ export function openOfflineDatabase(options: OfflineDatabaseOptions = {}): Promi
     request.onupgradeneeded = () => {
       const database = request.result;
       createNamespaceStore(database, OFFLINE_STORE_NAMES.projections, ["namespaceKey", "projectionKey"]);
-      createNamespaceStore(database, OFFLINE_STORE_NAMES.epubAssets, ["namespaceKey", "bookId"]);
+      createNamespaceStore(database, OFFLINE_STORE_NAMES.publicationAssets, ["namespaceKey", "bookId", "format"]);
       createNamespaceStore(database, OFFLINE_STORE_NAMES.readerState, ["namespaceKey", "bookId"]);
       createNamespaceStore(database, OFFLINE_STORE_NAMES.readerOutbox, ["namespaceKey", "resourceKey"]);
+      migrateLegacyAssets(database, request.transaction);
     };
     request.onerror = () => {
       settled = true;
@@ -53,6 +55,26 @@ export function openOfflineDatabase(options: OfflineDatabaseOptions = {}): Promi
       resolve(request.result);
     };
   });
+}
+
+function migrateLegacyAssets(
+  database: IDBDatabase,
+  transaction: IDBTransaction | null,
+): void {
+  if (!transaction || !database.objectStoreNames.contains(LEGACY_ASSET_STORE_NAME)) return;
+
+  const source = transaction.objectStore(LEGACY_ASSET_STORE_NAME);
+  const target = transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets);
+  const cursorRequest = source.openCursor();
+  cursorRequest.onsuccess = () => {
+    const cursor = cursorRequest.result;
+    if (!cursor) {
+      database.deleteObjectStore(LEGACY_ASSET_STORE_NAME);
+      return;
+    }
+    target.put({ ...cursor.value, format: "epub" });
+    cursor.continue();
+  };
 }
 
 export function requestResult<T>(request: IDBRequest<T>): Promise<T> {

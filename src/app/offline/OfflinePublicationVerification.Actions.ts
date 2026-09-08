@@ -1,30 +1,30 @@
 import { sha256 } from "@noble/hashes/sha2.js";
-import { normalizeOfflineEpubChecksum } from "./OfflineEpubAsset.Policy";
+import { normalizePublicationChecksum } from "./OfflinePublicationAsset.Policy";
 
-type OfflineEpubVerificationDiagnostic = {
+type OfflinePublicationVerificationDiagnostic = {
   observedByteLength: number;
   fileSizeMismatch: boolean | null;
 };
 
-export type OfflineEpubVerificationResult =
-  | (OfflineEpubVerificationDiagnostic & {
+export type OfflinePublicationVerificationResult =
+  | (OfflinePublicationVerificationDiagnostic & {
       status: "verified";
       checksum: string;
     })
-  | (OfflineEpubVerificationDiagnostic & {
+  | (OfflinePublicationVerificationDiagnostic & {
       status: "checksum-mismatch";
       expectedChecksum: string;
       observedChecksum: string;
     })
-  | (OfflineEpubVerificationDiagnostic & { status: "unverifiable" })
-  | (OfflineEpubVerificationDiagnostic & { status: "failed" });
+  | (OfflinePublicationVerificationDiagnostic & { status: "unverifiable" })
+  | (OfflinePublicationVerificationDiagnostic & { status: "failed" });
 
-export async function verifyOfflineEpubBlob(input: {
+export async function verifyOfflinePublicationBlob(input: {
   blob: Blob;
   expectedChecksum?: string | null;
   expectedFileSize?: number | null;
-}): Promise<OfflineEpubVerificationResult> {
-  const expectedChecksum = normalizeOfflineEpubChecksum(input.expectedChecksum);
+}): Promise<OfflinePublicationVerificationResult> {
+  const expectedChecksum = normalizePublicationChecksum(input.expectedChecksum);
   const diagnostic = buildDiagnostic(input.blob.size, input.expectedFileSize);
   if (!expectedChecksum) return { status: "unverifiable", ...diagnostic };
 
@@ -74,7 +74,7 @@ export async function verifyOfflineEpubBlob(input: {
 function buildDiagnostic(
   observedByteLength: number,
   expectedFileSize: number | null | undefined,
-): OfflineEpubVerificationDiagnostic {
+): OfflinePublicationVerificationDiagnostic {
   return {
     observedByteLength,
     fileSizeMismatch: Number.isFinite(expectedFileSize) && expectedFileSize !== undefined

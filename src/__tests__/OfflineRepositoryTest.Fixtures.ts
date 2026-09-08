@@ -1,6 +1,6 @@
 import type {
-  OfflineEpubAssetCompleteRecord,
-  OfflineEpubAssetRepository,
+  OfflinePublicationAssetCompleteRecord,
+  OfflinePublicationAssetRepository,
   OfflineProjectionRecord,
   OfflineProjectionRepository,
   OfflineReaderBookState,
@@ -15,7 +15,7 @@ import {
 
 export type OfflineRepositoryTestFactories = {
   createProjectionRepository(): OfflineProjectionRepository | Promise<OfflineProjectionRepository>;
-  createEpubAssetRepository(): OfflineEpubAssetRepository<Uint8Array> | Promise<OfflineEpubAssetRepository<Uint8Array>>;
+  createPublicationAssetRepository(): OfflinePublicationAssetRepository<Uint8Array> | Promise<OfflinePublicationAssetRepository<Uint8Array>>;
   createReaderStateRepository(): OfflineReaderStateRepository | Promise<OfflineReaderStateRepository>;
   createReaderOutboxRepository(): ReaderOutboxRepository | Promise<ReaderOutboxRepository>;
 };
@@ -23,7 +23,7 @@ export type OfflineRepositoryTestFactories = {
 export function createInMemoryOfflineRepositoryFactories(): OfflineRepositoryTestFactories {
   return {
     createProjectionRepository: () => new InMemoryOfflineProjectionRepository(),
-    createEpubAssetRepository: () => new InMemoryOfflineEpubAssetRepository(),
+    createPublicationAssetRepository: () => new InMemoryOfflinePublicationAssetRepository(),
     createReaderStateRepository: () => new InMemoryOfflineReaderStateRepository(),
     createReaderOutboxRepository: () => new InMemoryReaderOutboxRepository(),
   };
@@ -52,20 +52,20 @@ class InMemoryOfflineProjectionRepository implements OfflineProjectionRepository
   }
 }
 
-class InMemoryOfflineEpubAssetRepository implements OfflineEpubAssetRepository<Uint8Array> {
-  private readonly records = new Map<string, OfflineEpubAssetCompleteRecord<Uint8Array>>();
+class InMemoryOfflinePublicationAssetRepository implements OfflinePublicationAssetRepository<Uint8Array> {
+  private readonly records = new Map<string, OfflinePublicationAssetCompleteRecord<Uint8Array>>();
 
-  async get(namespaceKey: string, bookId: string): Promise<OfflineEpubAssetCompleteRecord<Uint8Array> | null> {
-    const record = this.records.get(scopedKey(namespaceKey, bookId));
+  async get(namespaceKey: string, bookId: string, format: string): Promise<OfflinePublicationAssetCompleteRecord<Uint8Array> | null> {
+    const record = this.records.get(assetKey(namespaceKey, bookId, format));
     return record ? clone(record) : null;
   }
 
-  async putComplete(record: OfflineEpubAssetCompleteRecord<Uint8Array>): Promise<void> {
-    this.records.set(scopedKey(record.namespaceKey, record.bookId), clone(record));
+  async putComplete(record: OfflinePublicationAssetCompleteRecord<Uint8Array>): Promise<void> {
+    this.records.set(assetKey(record.namespaceKey, record.bookId, record.format), clone(record));
   }
 
-  async delete(namespaceKey: string, bookId: string): Promise<void> {
-    this.records.delete(scopedKey(namespaceKey, bookId));
+  async delete(namespaceKey: string, bookId: string, format: string): Promise<void> {
+    this.records.delete(assetKey(namespaceKey, bookId, format));
   }
 
   async deleteNamespace(namespaceKey: string): Promise<void> {
@@ -131,6 +131,10 @@ class InMemoryReaderOutboxRepository implements ReaderOutboxRepository {
 
 function scopedKey(namespaceKey: string, resourceKey: string): string {
   return JSON.stringify([namespaceKey, resourceKey]);
+}
+
+function assetKey(namespaceKey: string, bookId: string, format: string): string {
+  return JSON.stringify([namespaceKey, bookId, format]);
 }
 
 function clone<T>(value: T): T {
