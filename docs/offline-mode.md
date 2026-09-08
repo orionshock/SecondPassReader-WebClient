@@ -149,6 +149,26 @@ conformance cases before feature wiring uses it. Storage technology, transaction
 outbox coalescing, schema migration, and cross-tab single-writer or replay coordination remain
 later decisions.
 
+## Retry and Replay Policy
+
+Delivery failures are classified without retaining raw response bodies or request URLs. Network
+interruption, `429`, known in-progress idempotency work, and `5xx` retry later; `401` requires
+reauthentication; `403` and ambiguous `404` require authority refresh rather than blind retry;
+validation failures are terminal for the unchanged intent. `409 SESSION_CLOSED` remains distinct
+because eligible Reader state may continue through a newly opened writable Session.
+
+Transient retries use deterministic exponential backoff beginning at 30 seconds and capped at 15
+minutes, unless a valid server retry delay is supplied. Policy computes delay only: there is no
+fixed periodic sync loop, timer, or background job. Time-dependent code receives a clock with a
+`now()` function so tests need no wall-clock sleeps.
+
+Replay is grouped by account namespace and Book, then ordered deterministically as writable Session
+authority, annotations, and latest progress. Repository list order has no meaning. Mutable intents
+are acknowledged only when the delivered revision still exactly matches current desired state.
+Closed-Session continuation retains Phase 0F transfer/drop rules, and `start-over` is never
+automatic recovery. A future executor must enforce one active replay writer per account namespace
+across browser tabs.
+
 ## Architecture Seams
 
 Keep these seams explicit before broad feature wiring, with server calls behind the existing client
