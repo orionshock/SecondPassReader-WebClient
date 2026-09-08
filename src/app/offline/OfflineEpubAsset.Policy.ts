@@ -40,8 +40,8 @@ export function classifyOfflineEpubAssetAvailability(input: {
   if (assetRecord.status === "partial") return { status: "partial" };
 
   const fileSizeMismatch = getFileSizeMismatch(fileMetadata.fileSize, assetRecord.byteLength);
-  const expectedChecksum = normalizeSha256(fileMetadata.checksum);
-  const assetChecksum = normalizeSha256(assetRecord.checksum);
+  const expectedChecksum = normalizeOfflineEpubChecksum(fileMetadata.checksum);
+  const assetChecksum = normalizeOfflineEpubChecksum(assetRecord.checksum);
   if (!expectedChecksum || !assetChecksum) return { status: "unverifiable", fileSizeMismatch };
   if (expectedChecksum !== assetChecksum) return { status: "checksum-mismatch", fileSizeMismatch };
 
@@ -59,7 +59,7 @@ export function buildOfflineEpubAssetKey(input: {
 }): string | null {
   const namespaceKey = input.namespace?.key.trim();
   const bookId = input.bookId === null || input.bookId === undefined ? "" : String(input.bookId).trim();
-  const checksum = normalizeSha256(input.checksum);
+  const checksum = normalizeOfflineEpubChecksum(input.checksum);
   if (!namespaceKey || !bookId || !checksum) return null;
 
   return `${namespaceKey}|book:${encodeURIComponent(bookId)}|checksum:${checksum}`;
@@ -69,12 +69,12 @@ export function shouldReplaceOfflineEpubAsset(input: {
   currentChecksum?: string | null;
   nextChecksum?: string | null;
 }): boolean {
-  const currentChecksum = normalizeSha256(input.currentChecksum);
-  const nextChecksum = normalizeSha256(input.nextChecksum);
+  const currentChecksum = normalizeOfflineEpubChecksum(input.currentChecksum);
+  const nextChecksum = normalizeOfflineEpubChecksum(input.nextChecksum);
   return Boolean(currentChecksum && nextChecksum && currentChecksum !== nextChecksum);
 }
 
-function normalizeSha256(checksum: string | null | undefined): string | null {
+export function normalizeOfflineEpubChecksum(checksum: string | null | undefined): string | null {
   const value = checksum?.trim();
   return value && /^[a-f0-9]{64}$/i.test(value) ? value.toLowerCase() : null;
 }

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@likecoin/epub-ts": "^0.7.1",
+    "@noble/hashes": "^2.4.0",
     "@secondpass/client": "workspace:*",
     "@tiptap/extension-list": "^3.31.3",
     "@tiptap/react": "^3.31.3",

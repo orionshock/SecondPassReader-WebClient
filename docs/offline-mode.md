@@ -116,6 +116,13 @@ offline-stable promise. File size is diagnostic metadata only: a mismatch must b
 matching checksum remains decisive. A known checksum change requires replacement; different Book
 IDs remain different assets and no CFI portability is inferred between editions.
 
+Downloaded EPUBs are verified by streaming Blob chunks through an incremental SHA-256 hash. This
+avoids the whole-file `arrayBuffer()` copy required by Web Crypto's non-streaming digest API, so
+working memory is bounded to the browser-owned Blob, the current stream chunk, and hash state as
+far as the runtime permits. There is no arbitrary file-size limit. Missing or malformed server
+checksums skip hashing and remain unverifiable; completed bytes are not published as an offline
+asset until the checksum matches.
+
 ## EPUB Storage Admission
 
 Before retaining an EPUB, the client uses the browser's advisory origin usage and quota estimate.
