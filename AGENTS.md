@@ -1,251 +1,169 @@
-# Agent instructions (SecondPassReader-WebClient)
+# Agent instructions: SecondPassReader-WebClient
 
-This repo is a **standalone browser app**. Keep it statically deployable and independent of the Django server implementation.
+## Scope and authority
 
-## Hard constraints
+This repository is a standalone, statically deployable browser application.
+Keep the client independent of the Django server implementation.
 
-- Do **not** couple the app to Django templates, server-rendered pages, or Django-specific routing assumptions.
-- Do **not** introduce styling frameworks or state-management libraries without asking first.
-- Do **not** add OAuth/OIDC libraries unless explicitly requested.
-- This project is pre-release. Do **not** add compatibility aliases, deprecated API shims, dual method names, legacy fallbacks, or migration layers unless explicitly requested. Update callers directly.
-- Assume the primary dev environment is **Windows 10 + VS Code**.
+- Do not depend on Django templates, server-rendered pages, or Django-specific routing.
+- Work within this repository and the scope of the current task.
+- Treat published server contracts as authoritative. Do not inspect or modify an adjacent repository unless the task explicitly authorizes it.
+- If a server contract or another ownership boundary prevents a correct client implementation, stop and report the local evidence, the blocking contract, why a client-side workaround would be wrong, and the smallest contract change needed. A human authorizes any cross-boundary change.
 
-## Architecture rules of thumb
+Before making a consequential change, inspect the target code, its direct callers and callees, the nearest relevant tests, and the nearest analogous implementation. Expand the search only when that evidence is insufficient.
 
-- Isolate all server calls behind a `ServerBridge` / API client layer.
-- Isolate renderer-specific code behind a `ReaderBridge` abstraction.
-- Renderer state must **not** become the app's canonical data model.
-- Canonical annotation/session data is **W3C Web Annotation JSON-LD** (with EPUB CFI selectors), not epub.js internal state.
+## Dependencies and compatibility
 
-## Auth/linking
+- Establish the concrete need before proposing a new dependency, framework, or project-wide pattern. Explain the problem it solves, why existing project primitives are insufficient, and its runtime and maintenance impact. Obtain user approval before adding it.
+- Do not add a styling framework, state-management library, or OAuth/OIDC library without that approval.
+- This project is pre-release. Change the current API and its callers together. Do not add compatibility aliases, deprecated API shims, dual method names, legacy fallbacks, or migration layers unless the task explicitly requires compatibility behavior.
+- Assume the primary development environment is Windows 10 with VS Code.
 
-- Use the server's PIN/code based Client API linking flow:
-  - Discover via `/.well-known/secondpass`
-  - Create login request
-  - Display `code` and `authorize_url`
-  - Poll `poll_url` for a one-time bearer token
-  - Verify with `GET /api/v1/accounts/me/` and `GET /api/v1/server/info/`
-- Treat bearer tokens as password-equivalent: never log them and avoid persisting unless explicitly designed.
+## Architecture and data contracts
 
-## Coding style
+- Isolate server calls behind the existing `ServerBridge` or API-client boundary.
+- Isolate renderer-specific code behind the existing `ReaderBridge` boundary.
+- Renderer state must not become the application's canonical data model.
+- Canonical annotation and session data is W3C Web Annotation JSON-LD with EPUB CFI selectors, not epub.js internal state.
 
-- Prefer simple, boring, understandable code.
-- Keep layers explicit; avoid "magic" abstractions.
-- If a change would introduce a large new dependency or framework, ask first and explain why.
+Use the server's PIN/code-based Client API linking flow:
 
-## Testing policy
+1. Discover via `/.well-known/secondpass`.
+2. Create a login request.
+3. Display `code` and `authorize_url`.
+4. Poll `poll_url` for a one-time bearer token.
+5. Verify with `GET /api/v1/accounts/me/` and `GET /api/v1/server/info/`.
 
-- Tests protect executable behavior, contracts, and invariants.
-- Prefer the smallest set of tests that strongly protects the important behavior; test volume and coverage percentage are not goals by themselves.
-- Do not add tests for documentation, copy, repository layout, implementation details, generated artifacts, or configuration text merely because those things changed.
-- Tooling and deployment code warrant tests only when they contain meaningful executable behavior whose failure would materially affect the product or delivery process.
-- Do not edit existing tests merely as part of implementation cleanup or to make the suite pass. Preserve existing tests by default. If an implementation intentionally changes a tested contract or invariant, evaluate and justify the test change separately before editing it.
-- Every new test or materially new test case requires a substantive justification that explains both:
-  - exactly what executable behavior, contract, or invariant the test covers
-  - why protecting that behavior is important to the product or delivery process
-- A test justification must be specific enough to review. A one-word label or one-line restatement of the test name is not sufficient.
-- When an existing test fails after a change, evaluate before editing code or the test:
-  - what behavior, contract, or invariant the test is intended to protect
-  - whether the underlying behavior actually changed
-  - whether the current testing approach is still the best way to protect that behavior
-  - whether the test remains necessary
-- If changing an existing test is justified after that evaluation, document what behavior changed, why the old expectation is no longer correct, and why the revised test remains valuable. Do not change expectations merely to match the current implementation.
-- Do not write production code solely to make a test pass when that code does not serve the intended product behavior or contract.
-- Do not weaken, rewrite, or delete a test solely to make the suite green. A green suite is useful only when its tests still protect meaningful behavior.
-- Implementation reports must include:
-  - existing test commands run and their results
-  - each new test's specific coverage and why that coverage matters
-  - any existing test failures encountered and the evaluation performed
-  - any justified existing-test changes, including the behavioral reason for each change
+Treat bearer tokens as secrets. Never log them. Do not persist them unless an approved design explicitly defines the storage and security behavior.
 
-## Refactor conventions
+## Implementation boundaries
 
-- When adding non-trivial new behavior, prefer a dedicated file/module/hook/component instead of growing an already-large file.
-- Large files should usually only be modified to wire new modules in.
-- Keep responsibilities narrow:
-  - components render UI
-  - hooks own interaction/lifecycle state
-  - helpers own pure mapping/formatting/sorting
-  - adapters own API/schema translation
-  - orchestrators wire behavior together; avoid "dumping ground" growth
-- When extracting, avoid broad rewrites; make small focused modules with explicit boundaries.
+- Make the smallest coherent change that satisfies the requested behavior and preserves existing contracts.
+- Reuse existing project primitives. Do not add speculative configurability, parallel implementation paths, generic frameworks for one use case, or abstractions without a current need.
+- Keep code together while it has one responsibility and changes for the same reason. Extract only when the new unit has a clear owner and purpose.
+- Components render UI; hooks own interaction and lifecycle state; adapters translate external schemas or service contracts; orchestrators coordinate owners without absorbing their internals.
+- Prefer feature-local folders and ownership. Do not create generic `utils`, `helpers`, `common`, or `misc` files or folders when the code has a feature, lifecycle, or domain owner.
+- Do not create barrel files. The existing SDK barrel is permitted because it performs required SDK work; this exception does not establish a general barrel-file pattern.
 
-## Folders and file size
+Treat roughly 300 lines of code as a review trigger, not a mechanical ceiling. At that point, review the file for a clear focus and purpose before adding more behavior. Do not split solely to reduce line count. A split must provide a real benefit, such as a clearer responsibility, dependency boundary, lifecycle boundary, ownership boundary, or independently testable unit. Name and organize extracted files according to the project-wide role suffixes below.
 
-- If an activity has more than one meaningful subview, it should become a folder.
-- If a component needs dedicated hooks, helpers, or local types, it should usually become a folder.
-- If a file crosses ~300 lines, split by responsibility before adding more behavior.
-- Treat 300 lines as a heuristic, not a hard rule; prefer extraction when adding new behavior to an already-large mixed-responsibility file.
-- Prefer folder layouts that make boundaries obvious, e.g.:
-  - `ComponentName.tsx`
-  - `useComponentBehavior.ts`
-  - `componentHelpers.ts`
-  - `componentTypes.ts`
-  - subcomponents as needed
-- Avoid creating index/barrel files unless the package already consistently uses them.
+## Project-wide role suffixes
 
-## File size and organization
+These conventions are authoritative for new files throughout the project. Apply them to meaningfully changed files when the rename clarifies ownership and the resulting import churn is proportionate to the task. Do not mass-rename unrelated files for cosmetic consistency.
 
-- Prefer smaller, focused feature-local files over large multi-responsibility files.
-- A file can have one clear job and still be too large. If it becomes hard to scan, split it by sub-responsibility inside that job.
-- Soft size guidance:
-  - ~100 lines: comfortable
-  - 150-220 lines: usually fine for UI/components
-  - 250+ lines: look for obvious sub-responsibilities to extract
-  - 350+ lines: split unless it is truly orchestration/glue
-- Do not split into micro-files just to reduce line count. Split when the new file has a clear name and stable responsibility.
-- Prefer feature-local folders over generic shared utility folders.
-- Avoid broad `utils` dumping grounds.
+Use PascalCase for component files, classes, and types. Group related files in feature-local folders and use readable repeated prefixes. Do not use underscore-based filename grouping.
 
-## Naming and grouping
+Use the following role suffixes according to the file's actual responsibility:
 
-- These naming and grouping conventions apply project-wide, across every feature and layer. Reading/client names below are examples, not a scope restriction.
-- Prefer folders for grouping related files, not underscore-based file names.
-- Use standard React/TypeScript naming with explicit role suffixes throughout the project:
-  - PascalCase for component files/classes/types, e.g. `ReaderBookSearch.Drawer.tsx`, `ReaderBookSearch.ResultRow.tsx`
-  - PascalCase role owners for hooks/helpers, e.g. `ReaderBookSearch.Controller.ts`, `ReaderBookSearch.Labels.ts`
-- For related UI pieces, prefer a feature folder with repeated readable prefixes:
+- `.Activity.tsx`: route-level product entry that connects navigation, loading, and major feature composition.
+- `.Orchestrator.tsx`: composition root that coordinates multiple domain owners without implementing their internals.
+- `.Controller.ts`: imperative sequencing or stateful operation ownership for one feature lifecycle.
+- `.Coordinator.ts`: ordering and synchronization across multiple systems or lifecycles.
+- `.Bridge.ts`: stable renderer-neutral or service-neutral capability contract.
+- `.Engine.ts`: concrete renderer or processing-engine implementation behind a bridge.
+- `.Adapter.ts`: translation at an external schema, library, or service contract boundary.
+- `.Mapper.ts`: pure conversion between internal data shapes.
+- `.Presenter.ts`: view-model construction and user-facing text or display formatting.
+- `.Types.ts`: shared types only, with no runtime behavior.
+- `.State.ts`: reducers, state transitions, and state invariants.
+- `.Store.ts`: persisted local-storage ownership and serialization.
+- `.Queries.ts`: query generation and other read-side helpers.
+- `.Actions.ts`: mutation construction and other write-side operations.
+- `.Lifecycle.ts`: setup, teardown, subscription, and lifecycle state-machine behavior.
+- `.Placement.ts`: pure geometry and layout-position calculation.
+- `.Renderer.ts`: visual mark, canvas, or renderer-output creation and cleanup.
 
-  `bookSearch/`
-  - `ReaderBookSearch.Drawer.tsx`
-  - `ReaderBookSearch.InputBar.tsx`
-  - `ReaderBookSearch.ResultList.tsx`
-  - `ReaderBookSearch.ResultRow.tsx`
-  - `ReaderBookSearch.Controller.ts`
-  - `ReaderBookSearch.Labels.ts`
+UI role suffixes:
 
-- Avoid underscore grouping such as:
-  - `BookSearch_Drawer.tsx`
-  - `BookSearch_InputBar.tsx`
+- `.Panel.tsx`: persistent or docked feature surface.
+- `.Drawer.tsx`: dismissible edge-attached feature surface.
+- `.Toolbar.tsx`: compact action controls for a current context or selection.
+- `.Row.tsx`: one row in a table-like or metadata-heavy collection.
+- `.Item.tsx`: one general collection entry when row semantics do not apply.
+- `.Dialog.tsx`: modal interaction requiring focused user action.
 
-### Project-wide role suffixes
+Example feature layout:
 
-- New or meaningfully touched files anywhere in the project should use an explicit role suffix when practical. Use folders when they clarify real ownership; do not mass-rename existing files for cosmetics.
-- Rename a touched file only when the name materially clarifies its responsibility and the import churn is reasonable.
-- Preferred roles:
-  - `.Activity.tsx`: route-level product entry that connects navigation, loading, and major feature composition.
-  - `.Orchestrator.tsx`: composition root that coordinates multiple domain owners without implementing their internals.
-  - `.Controller.ts`: imperative sequencing or stateful operation ownership for one feature lifecycle.
-  - `.Coordinator.ts`: ordering and synchronization across multiple systems or lifecycles.
-  - `.Bridge.ts`: stable renderer-neutral or service-neutral capability contract.
-  - `.Engine.ts`: concrete renderer or processing-engine implementation behind a bridge.
-  - `.Adapter.ts`: translation at an external schema, library, or service contract boundary.
-  - `.Mapper.ts`: pure conversion between internal data shapes.
-  - `.Presenter.ts`: view-model construction and user-facing text or display formatting.
-  - `.Types.ts`: shared types only; no runtime behavior.
-  - `.State.ts`: reducers, state transitions, and state invariants.
-  - `.Store.ts`: persisted local-storage ownership and serialization.
-  - `.Queries.ts`: query generation and other read-side helpers.
-  - `.Actions.ts`: mutation construction and other write-side operations.
-  - `.Lifecycle.ts`: setup, teardown, subscription, and lifecycle state-machine behavior.
-  - `.Placement.ts`: pure geometry and layout-position calculation.
-  - `.Renderer.ts`: visual mark, canvas, or renderer-output creation and cleanup.
-- UI roles:
-  - `.Panel.tsx`: persistent or docked feature surface.
-  - `.Drawer.tsx`: dismissible edge-attached feature surface.
-  - `.Toolbar.tsx`: compact action controls for a current context or selection.
-  - `.Row.tsx`: one row in a table-like or metadata-heavy collection.
-  - `.Item.tsx`: one general collection entry when row semantics do not apply.
-  - `.Dialog.tsx`: modal interaction requiring focused user action.
-- Prefer feature-local ownership over global abstractions. Avoid vague `utils`, `helpers`, or `misc` folders when a lifecycle or domain owner exists.
-- Boundary files may include a short ownership comment when the name alone is insufficient.
+```text
+bookSearch/
+  ReaderBookSearch.Drawer.tsx
+  ReaderBookSearch.Toolbar.tsx
+  ReaderBookSearch.Row.tsx
+  ReaderBookSearch.Controller.ts
+  ReaderBookSearch.Presenter.ts
+```
 
-## Rationale
+If no listed suffix accurately describes a genuinely new responsibility, establish the need and obtain user approval before introducing another project-wide role suffix.
 
-- Folder grouping is more conventional in React/TypeScript projects.
-- Prefixed file names remain searchable and understandable when viewed outside the folder.
-- Smaller feature-local files are easier for humans and AI agents to parse safely.
-- Prefer clear local composition over clever generic abstraction.
+## Stateful lifecycle boundaries
 
-## Hook dependency stability
+- Treat lifecycle-heavy components and hooks as sensitive boundaries. These include reader engines, editors, canvases, media players, websocket or session clients, long-running workers, and embedded third-party widgets.
+- Opening or closing ordinary UI such as menus, drawers, dialogs, popovers, tabs, or tool panels must not unintentionally initialize, destroy, reconnect, or remount a stateful subsystem.
+- Keep initialization dependencies limited to values whose changes genuinely require rebuilding the subsystem, such as document identity, mount target, connection identity, or a setting that requires teardown and reinitialization.
+- Preserve callback, array, and object identity when identity participates in initialization or cleanup behavior. Use `useCallback`, `useMemo`, or a latest-value ref according to the required behavior; do not memoize values merely by default.
+- Do not add ordinary UI callbacks or aggregate hook-result objects to initialization-effect dependency lists unless their change must rebuild the underlying system.
+- UI state changes should update the UI only unless a rebuild is explicitly intended.
 
-- Custom hooks that return callbacks/arrays/objects used by shell/engine/orchestrator components should be referentially stable where practical.
-- Wrap returned callbacks in `useCallback`; wrap derived arrays/objects passed as props in `useMemo`. Consider memoizing the returned hook object itself.
-- At call sites, destructure the specific values/callbacks needed; avoid depending on aggregate hook result objects in dependency arrays (e.g. `sessionAnnotations`, `stagedToolbar`).
-- Reader engine lifecycle effects are especially sensitive: unstable props/callbacks can cause destroy/re-init loops, duplicated network requests, or blank viewports.
-- When extracting around reader shell/orchestrator code, verify engine init effects do not begin depending on rapidly changing UI state (e.g. staged selection/toolbar state, derived annotation arrays, aggregate hook objects).
-- If a stable callback needs current mutable state, prefer a ref pattern over putting that state into a lifecycle effect dependency list.
+After changing lifecycle-sensitive code, verify that ordinary UI interactions do not reset, blank, disconnect, duplicate network requests from, or recreate the underlying subsystem.
 
-## Lifecycle boundaries and callback stability
+## Temporary-state handoffs
 
-- Treat lifecycle-heavy components and hooks as sensitive boundaries.
-- Opening/closing ordinary UI chrome such as menus, drawers, modals, popovers, tabs, or tool panels should not accidentally tear down and recreate expensive or stateful systems.
-- Examples of lifecycle-heavy systems include:
-  - EPUB/rendering engines
-  - editors
-  - canvases
-  - media players
-  - websocket/session clients
-  - long-running workers/tasks
-  - embedded third-party widgets
-- Before adding props/callbacks to a lifecycle-heavy component or hook, check whether callback identity changes can affect initialization/cleanup effect dependencies.
-- If a callback needs to stay current but should not participate in lifecycle identity, store it behind a ref and call the latest ref value from a stable callback.
-- Do not include ordinary chrome/UI callbacks in initialization effect dependency lists unless they truly require rebuilding the underlying system.
-- Keep initialization dependencies limited to actual lifecycle identity inputs, such as source/document identity, mount target, connection identity, or settings that genuinely require teardown/reinit.
-- UI state changes should update UI only; they should not remount expensive/stateful systems unless explicitly intended.
-- When reviewing changes around lifecycle-heavy code, explicitly check:
-  - Did this add a new dependency to an initialization effect?
-  - Did this pass a newly-created object/function into lifecycle-sensitive code?
-  - Could opening a menu/drawer/modal recreate the underlying system?
-  - Should this callback be memoized or moved behind a ref?
-  - Is this dependency needed for correctness, or only to satisfy a local hook warning?
-- After changes near lifecycle-heavy code, manually verify that ordinary chrome interactions do not reset, blank, disconnect, or recreate the underlying stateful system.
+- Each layer owns and cleans up the temporary state it creates.
+- Before handing data to another layer, pass only the state accepted by the receiving contract. Do not require downstream layers to interpret an upstream interaction's temporary lifecycle state.
+- Provide explicit cleanup for every applicable exit: commit, cancel, failed commit, skip, clear, and navigation- or focus-driven teardown.
+- Remove temporary renderer marks before creating or restoring durable marks. Search flashes, staged previews, and durable annotation marks must remain distinct.
+- Annotation persistence receives confirmed annotation intent. Durable annotation views must not depend on whether an annotation originated from manual selection, search, or import.
 
-Rationale:
-- React callback/object identity changes from ordinary UI state can accidentally cascade into hook dependency changes.
-- If those values are dependencies of initialization or cleanup effects, harmless UI interactions can destroy/recreate expensive systems.
-- Stateful systems should be controlled by explicit lifecycle inputs, not incidental UI rerenders.
+## Testing and validation
 
-## Temporary debug logging
+- Tests protect important runtime behavior, public contracts, regressions, and invariants.
+- Add or change a test when failure of the protected behavior would materially affect the product or delivery process.
+- Do not add tests merely to lock down prose, copy, repository layout, formatting, generated artifacts, tooling, deployment code, or configuration text.
+- Tooling and deployment code generally do not require tests because they are not runtime product code. Test them only when their behavior affects runtime code or an observable runtime contract; focus the test on that runtime effect.
+- Prefer the smallest focused test set that strongly protects the behavior. Test count and coverage percentage are not goals by themselves.
+- Preserve existing tests by default. Do not change production behavior, weaken a test, or change an expectation merely to make the suite green.
+- When an existing test fails, determine what behavior or contract it protects and whether the failure is a regression or an intentional behavior change before editing the code or test.
+- Change an existing test only when the intended protected behavior changed or the test no longer validly protects it.
 
-- For any project work, prefer adding scoped temporary `console.debug` logs early when behavior is unclear, runtime paths are hard to verify, or async/stateful code is involved.
-- Use stable searchable prefixes such as `[SPR reader]`, `[SPR engine]`, `[SPR annotations]`, `[SPR import]`, or another focused `[SPR ...]` prefix for the area being changed.
-- Log inputs, derived outputs, skip reasons, and cleanup/cancellation decisions.
-- Leave logs in place while the feature is under active development.
-- Before a production/polish pass, remove temporary debug logs or gate them behind an explicit debug flag.
-- Do not replace understanding with broad rewrites; use logs to verify the actual runtime path first.
+For each changed or removed existing test, the implementation report must explain:
 
-## Layer handoff cleanup
+- the behavior, contract, regression, or invariant the test protected;
+- what intended behavior changed, if any;
+- why the old expectation or test method is no longer correct; and
+- how the revised test continues to protect important runtime behavior.
 
-- Each layer owns the lifecycle of the temporary state it creates.
-- Before passing control or data to another layer, clean up or resolve that layer's temporary state.
-- Do not hand downstream layers messy intermediate state and expect them to understand where it came from.
-- Origin is upstream context.
-- Lifecycle is local responsibility.
-- Durability is downstream concern.
+An explanation that only says the change makes the test pass is not sufficient.
 
-Examples:
-- Search/import code may create temporary search-match state, but must clear or release it when done.
-- Shell/staged-selection code may create temporary visual range state, but must clear or resolve it before save/cancel handoff.
-- Annotation persistence should receive confirmed annotation intent, not search/import/staging lifecycle details.
-- Annotation workspace should display durable annotations and should not care whether they began as manual selection, search, or import.
+Run the smallest focused validation first, followed by broader project checks when the change reaches those boundaries. Report exact commands, results, skipped checks, and relevant pre-existing failures.
 
-For reader highlights specifically:
-- Search flashes, staged previews, and durable annotation marks must not be layered casually.
-- Temporary renderer marks should be removed before creating or restoring durable marks.
-- Cleanup paths must be explicit for cancel, commit, failed commit, skip, clear, and navigation/focus-driven teardown.
+## Logging and diagnostics
 
-## Spec junction (read-only reference)
+- Use the project's existing logging system. Do not introduce a parallel logging mechanism.
+- Add diagnostic logging at failure-prone boundaries where a user-provided log would materially help identify the cause, such as initialization, external calls, parsing, persistence, lifecycle transitions, cleanup, retries, and error recovery.
+- Choose the log level according to purpose. Expected failures and actionable operational problems should be visible at the appropriate enabled level; detailed state used only for diagnosis belongs at a diagnostic or debug level.
+- Keep normal interactions quiet. Do not log every click, render, state update, successful request, or routine action.
+- Include enough context to identify the affected subsystem, operation, and outcome. Use stable, searchable area labels such as `[SPR reader]`, `[SPR engine]`, or another specific `[SPR ...]` label when that matches the existing logging convention.
+- Never log bearer tokens, credentials, secrets, or unnecessarily sensitive user content. Prefer identifiers and bounded metadata over complete payloads.
+- Avoid duplicate logging of the same failure at several layers. Log where the failure is understood well enough to add actionable context or where it crosses an ownership boundary.
+- Logs intended for ongoing user diagnostics may remain when they use the existing logging system and respect its configured levels. Remove temporary ad hoc instrumentation before completing the task unless the user approves retaining it behind an explicit diagnostic setting.
 
-- `docs/specs/reading-session-annotation-profile` is a **Windows junction** / reference copy of a **server-owned** spec.
-- Do **not** edit files inside that folder from this client repo.
-- If the spec needs changes, stop and ask; changes must be made in the server/spec owner project first.
-- Client implementation may reference the spec, but runtime TypeScript types belong in `src/schemas/`.
-- Do not import runtime app code from `docs/` (docs are reference material only).
+## Server-owned specification
 
-## Text and character policy
+`docs/specs/reading-session-annotation-profile` is a Windows junction or reference copy of a server-owned specification.
 
-When editing repository files, prefer plain ASCII characters unless the file already clearly requires Unicode or the requested user-facing text specifically needs it.
+- Do not edit files inside that directory from this repository.
+- If the specification must change, stop and request an authorized change in the owning project.
+- Client implementation may reference the specification, but runtime TypeScript types belong in `src/schemas/`.
+- Do not import runtime application code from `docs/`.
 
-Use ASCII equivalents by default:
+## Final report
 
-* Use `...` instead of `...`
-* Use `'` and `"` instead of smart quotes
-* Use `-` or `--` instead of en/em dashes
-* Use `(c)`, `(r)`, `->`, `<-`, `=>`, etc. instead of symbol substitutions unless the project already uses the Unicode form
+Report:
 
-Do not introduce non-ASCII punctuation, invisible characters, non-breaking spaces, or typographic substitutions into source code, JSX, Markdown, JSON, YAML, SQL, shell scripts, or config files unless there is a clear functional or localization requirement.
-
-Before producing a patch, preserve the file's existing character style. If the surrounding text uses ASCII punctuation, continue using ASCII punctuation. If a non-ASCII character is needed, mention it explicitly in the final summary.
-
-Patch anchors should avoid non-ASCII text when possible. Prefer stable ASCII-only surrounding code, identifiers, class names, props, or structural JSX.
+- what repository evidence shaped the implementation;
+- what changed and which contracts remain unchanged;
+- validation commands and results;
+- checks that could not be run;
+- relevant pre-existing failures;
+- test changes with the justification required above; and
+- unresolved issues or boundary changes requiring human approval.
