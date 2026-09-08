@@ -69,6 +69,7 @@ routes.
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Offline and cached mode](docs/offline-mode.md)
 - [Development](docs/development.md)
 - [Deployment](docs/deployment.md)
 - [Reader architecture and current limits](docs/reader.md)
