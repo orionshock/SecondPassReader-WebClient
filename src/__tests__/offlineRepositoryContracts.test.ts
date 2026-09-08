@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { IDBFactory } from "fake-indexeddb";
 import type {
   OfflineEpubAssetCompleteRecord,
   OfflineProjectionRecord,
@@ -15,11 +16,36 @@ import {
   createInMemoryOfflineRepositoryFactories,
   type OfflineRepositoryTestFactories,
 } from "./OfflineRepositoryTest.Fixtures";
+import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
 
 defineOfflineRepositoryContractTests(
   "in-memory offline repositories",
   createInMemoryOfflineRepositoryFactories(),
 );
+
+let indexedDbRepositorySequence = 0;
+defineOfflineRepositoryContractTests("IndexedDB offline repositories", {
+  createProjectionRepository: async () => (
+    await createIndexedDbRepositories()
+  ).projections,
+  createEpubAssetRepository: async () => (
+    await createIndexedDbRepositories()
+  ).epubAssets,
+  createReaderStateRepository: async () => (
+    await createIndexedDbRepositories()
+  ).readerState,
+  createReaderOutboxRepository: async () => (
+    await createIndexedDbRepositories()
+  ).readerOutbox,
+});
+
+function createIndexedDbRepositories() {
+  indexedDbRepositorySequence += 1;
+  return openIndexedDbOfflineRepositories<Uint8Array>({
+    indexedDb: new IDBFactory(),
+    databaseName: `offline-conformance-${indexedDbRepositorySequence}`,
+  });
+}
 
 function defineOfflineRepositoryContractTests(
   implementationName: string,
@@ -27,7 +53,7 @@ function defineOfflineRepositoryContractTests(
 ): void {
   describe(`${implementationName}: projection repository`, () => {
     it("round-trips successful projections without exposing stored object identity", async () => {
-      const repository = factories.createProjectionRepository();
+      const repository = await factories.createProjectionRepository();
       const record = projectionRecord("account-a", "recent", { count: 1 });
 
       await repository.put(record);
@@ -41,7 +67,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("replaces the same projection key within a namespace", async () => {
-      const repository = factories.createProjectionRepository();
+      const repository = await factories.createProjectionRepository();
       await repository.put(projectionRecord("account-a", "recent", { count: 1 }));
       const replacement = projectionRecord("account-a", "recent", { count: 2 });
 
@@ -51,7 +77,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("isolates equal projection keys across namespaces and targeted deletion", async () => {
-      const repository = factories.createProjectionRepository();
+      const repository = await factories.createProjectionRepository();
       const first = projectionRecord("account-a", "recent", { count: 1 });
       const second = projectionRecord("account-b", "recent", { count: 2 });
       await repository.put(first);
@@ -64,7 +90,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("purges only the requested projection namespace", async () => {
-      const repository = factories.createProjectionRepository();
+      const repository = await factories.createProjectionRepository();
       await repository.put(projectionRecord("account-a", "recent", { count: 1 }));
       await repository.put(projectionRecord("account-a", "home", { count: 2 }));
       const retained = projectionRecord("account-b", "recent", { count: 3 });
@@ -80,7 +106,7 @@ function defineOfflineRepositoryContractTests(
 
   describe(`${implementationName}: EPUB asset repository`, () => {
     it("round-trips a complete asset without exposing stored bytes", async () => {
-      const repository = factories.createEpubAssetRepository();
+      const repository = await factories.createEpubAssetRepository();
       const record = assetRecord("account-a", "book-1", "a", new Uint8Array([1, 2, 3]));
 
       await repository.putComplete(record);
@@ -94,7 +120,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("isolates Book IDs by namespace and replaces a changed checksum", async () => {
-      const repository = factories.createEpubAssetRepository();
+      const repository = await factories.createEpubAssetRepository();
       const first = assetRecord("account-a", "book-1", "a", new Uint8Array([1]));
       const replacement = assetRecord("account-a", "book-1", "b", new Uint8Array([2]));
       const otherAccount = assetRecord("account-b", "book-1", "c", new Uint8Array([3]));
@@ -108,7 +134,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("isolates targeted asset deletion and namespace purge", async () => {
-      const repository = factories.createEpubAssetRepository();
+      const repository = await factories.createEpubAssetRepository();
       const retainedBook = assetRecord("account-a", "book-2", "b", new Uint8Array([2]));
       const retainedAccount = assetRecord("account-b", "book-1", "c", new Uint8Array([3]));
       await repository.putComplete(assetRecord("account-a", "book-1", "a", new Uint8Array([1])));
@@ -127,7 +153,7 @@ function defineOfflineRepositoryContractTests(
 
   describe(`${implementationName}: Reader state repository`, () => {
     it("round-trips local Reader continuity without exposing stored state", async () => {
-      const repository = factories.createReaderStateRepository();
+      const repository = await factories.createReaderStateRepository();
       const state = readerState("account-a", "book-1", "epubcfi(/6/2)");
 
       await repository.putBookState(state);
@@ -141,7 +167,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("isolates Books by account and replaces the latest local state", async () => {
-      const repository = factories.createReaderStateRepository();
+      const repository = await factories.createReaderStateRepository();
       const replacement = readerState("account-a", "book-1", "epubcfi(/6/8)");
       const otherAccount = readerState("account-b", "book-1", "epubcfi(/6/4)");
       await repository.putBookState(readerState("account-a", "book-1", "epubcfi(/6/2)"));
@@ -154,7 +180,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("isolates targeted Reader-state deletion and namespace purge", async () => {
-      const repository = factories.createReaderStateRepository();
+      const repository = await factories.createReaderStateRepository();
       const retainedBook = readerState("account-a", "book-2", "epubcfi(/6/4)");
       const retainedAccount = readerState("account-b", "book-1", "epubcfi(/6/6)");
       await repository.putBookState(readerState("account-a", "book-1", "epubcfi(/6/2)"));
@@ -173,7 +199,7 @@ function defineOfflineRepositoryContractTests(
 
   describe(`${implementationName}: Reader outbox repository`, () => {
     it("atomically coalesces progress to the latest desired state", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       const latest = progressIntent("account-a", "book-1", "session-1", 3, "epubcfi(/6/4)");
       await repository.upsertIntent(progressIntent("account-a", "book-1", "session-1", 1, "epubcfi(/6/2)"));
       await repository.upsertIntent(progressIntent("account-a", "book-1", "session-1", 2, "epubcfi(/6/100)"));
@@ -184,7 +210,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("coalesces annotation create, edit, and unconfirmed delete", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       const edited = annotationUpsert("account-a", "book-1", "session-1", "annotation-1", 2, "edited", "local-unconfirmed");
       await repository.upsertIntent(annotationUpsert("account-a", "book-1", "session-1", "annotation-1", 1, "created", "local-unconfirmed"));
       await repository.upsertIntent(edited);
@@ -196,7 +222,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("coalesces confirmed edit-delete and delete-restore transitions", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       const deleted = annotationDelete("account-a", "book-1", "session-1", "annotation-1", 2, "server-confirmed");
       await repository.upsertIntent(annotationUpsert("account-a", "book-1", "session-1", "annotation-1", 1, "edited", "server-confirmed"));
 
@@ -209,7 +235,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("keeps repeated deletes as one latest intent", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       await repository.upsertIntent(annotationDelete("account-a", "book-1", "session-1", "annotation-1", 1, "server-confirmed"));
       const latest = annotationDelete("account-a", "book-1", "session-1", "annotation-1", 2, "server-confirmed");
 
@@ -219,7 +245,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("keeps different account, Book, Session, and annotation resources separate", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       const intents: ReaderOutboxIntent[] = [
         annotationUpsert("account-a", "book-1", "session-1", "annotation-1", 1, "one", "local-unconfirmed"),
         annotationUpsert("account-a", "book-1", "session-1", "annotation-2", 1, "two", "local-unconfirmed"),
@@ -234,7 +260,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("does not let a stale acknowledgement remove a newer revision", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       const current = progressIntent("account-a", "book-1", "session-1", 2, "epubcfi(/6/4)");
       await repository.upsertIntent(progressIntent("account-a", "book-1", "session-1", 1, "epubcfi(/6/2)"));
       await repository.upsertIntent(current);
@@ -248,7 +274,7 @@ function defineOfflineRepositoryContractTests(
     });
 
     it("returns detached intents and purges only the requested namespace", async () => {
-      const repository = factories.createReaderOutboxRepository();
+      const repository = await factories.createReaderOutboxRepository();
       const first = progressIntent("account-a", "book-1", "session-1", 1, "epubcfi(/6/2)");
       const retained = progressIntent("account-b", "book-1", "session-1", 1, "epubcfi(/6/4)");
       await repository.upsertIntent(first);

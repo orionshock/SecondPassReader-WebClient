@@ -50,8 +50,8 @@ semantics where applicable:
 
 - Durable EPUB retention requires an explicit **Available offline** action. Opening a book does not
   silently make its EPUB durable.
-- Large assets and durable Reader data belong in app-owned browser storage such as IndexedDB, not
-  `localStorage`. The specific storage design remains a later decision.
+- Large assets and durable Reader data belong in the app-owned IndexedDB database, not
+  `localStorage`.
 - A service worker is not required for the first phase. Add one only when a defined runtime behavior
   requires it.
 - Browser quota and eviction are expected conditions. The app must be able to detect and explain
@@ -138,16 +138,17 @@ through normal `open`; `start-over` is never automatic recovery.
 
 ## Durable Repository Boundaries
 
-Browser persistence is split by ownership: successful authoritative projections, complete EPUB
-assets, local Reader continuity state, and Reader outbox intents use separate async repositories.
+Browser persistence uses one versioned native IndexedDB database, split by ownership: successful
+authoritative projections, complete EPUB assets, local Reader continuity state, and Reader outbox
+intents use separate async repositories. Complete EPUB payloads use structured-clone-safe browser
+`Blob` values.
 All account-owned records and operations are namespace-scoped, namespace purge is isolated, and
 repository reads and writes do not expose mutable stored object identity.
 
 The outbox repository owns atomic read-coalesce-write and exact-revision removal. Listing order is
-not a replay contract. A future browser-backed implementation must satisfy the shared repository
-conformance cases before feature wiring uses it. Storage technology, transactions beyond atomic
-outbox coalescing, schema migration, and cross-tab single-writer or replay coordination remain
-later decisions.
+not a replay contract. IndexedDB adapters must satisfy the shared repository conformance cases.
+Persistence failures remain failures: there is no silent `localStorage` or in-memory fallback.
+Service-worker behavior and cross-tab single-writer or replay coordination remain later decisions.
 
 ## Retry and Replay Policy
 

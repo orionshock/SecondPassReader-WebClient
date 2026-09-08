@@ -14,10 +14,10 @@ import {
 } from "../app/offline/ReaderOutbox.Policy";
 
 export type OfflineRepositoryTestFactories = {
-  createProjectionRepository(): OfflineProjectionRepository;
-  createEpubAssetRepository(): OfflineEpubAssetRepository<Uint8Array>;
-  createReaderStateRepository(): OfflineReaderStateRepository;
-  createReaderOutboxRepository(): ReaderOutboxRepository;
+  createProjectionRepository(): OfflineProjectionRepository | Promise<OfflineProjectionRepository>;
+  createEpubAssetRepository(): OfflineEpubAssetRepository<Uint8Array> | Promise<OfflineEpubAssetRepository<Uint8Array>>;
+  createReaderStateRepository(): OfflineReaderStateRepository | Promise<OfflineReaderStateRepository>;
+  createReaderOutboxRepository(): ReaderOutboxRepository | Promise<ReaderOutboxRepository>;
 };
 
 export function createInMemoryOfflineRepositoryFactories(): OfflineRepositoryTestFactories {
