@@ -791,6 +791,26 @@
   position: relative;
 }
 
+.bookOfflineAvailability {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--sp-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bookOfflineAvailabilityStatus {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.bookOfflineAvailability > .button {
+  flex: 0 0 auto;
+}
+
 .bookDetailShelfTrigger {
   display: block;
   box-sizing: border-box;
@@ -1083,6 +1103,11 @@
   .bookDetailShelfPopover {
     right: auto;
     left: 0;
+  }
+
+  .bookOfflineAvailability {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .libraryCatalogLayout {

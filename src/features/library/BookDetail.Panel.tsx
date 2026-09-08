@@ -5,6 +5,8 @@ import { BookDescription } from "./BookDescription.Presenter";
 import { InlineMeta } from "../../components/Metadata.Presenter";
 import { formatBookPublishedDate } from "./display/BookDisplay.Presenter";
 import { AddToShelfMenu } from "./bookDetail/AddToShelf.Menu";
+import type { BookOfflineAvailabilityController } from "./bookDetail/BookOfflineAvailability.Controller";
+import { BookOfflineAvailabilityPanel } from "./bookDetail/BookOfflineAvailability.Panel";
 
 function formatFileSize(bytes?: number | null) {
   if (!bytes || bytes <= 0) return null;
@@ -30,6 +32,7 @@ export function BookDetailPanel({
   activitySummary,
   activitySummaryFailed,
   downloadState,
+  offlineAvailability,
 }: {
   book: BookDetail;
   serverBaseUrl?: string;
@@ -50,6 +53,7 @@ export function BookDetailPanel({
     | { phase: "opening_reader" }
     | { phase: "success"; result: { blob: Blob; contentType?: string; contentLength?: number; contentDisposition?: string; filename?: string } }
     | { phase: "error"; message: string };
+  offlineAvailability: BookOfflineAvailabilityController;
 }) {
   const seriesText =
     book.series?.name && book.series.seriesIndex != null ? `${book.series.name} #${book.series.seriesIndex}` : book.series?.name;
@@ -185,6 +189,8 @@ export function BookDetailPanel({
           {spl ? <AddToShelfMenu spl={spl} bookId={String(book.id)} onManageShelves={onManageShelves} /> : null}
         </div>
       </div>
+
+      <BookOfflineAvailabilityPanel controller={offlineAvailability} />
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
       {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}

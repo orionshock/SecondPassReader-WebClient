@@ -130,6 +130,11 @@ failure is advisory. Only a verified complete Blob is published. A previous veri
 in place until its replacement commits successfully. Partial and resumable downloads remain out of
 scope.
 
+Book Detail is the first explicit offline-stability surface. It can make one Book available
+offline, update a changed EPUB, or remove its EPUB asset. Removal does not clear cached projections,
+Reader continuity state, annotations, or pending Reader intents. Library-wide asset management in
+Settings and Reader consumption of stored EPUBs remain separate later phases.
+
 ## EPUB Storage Admission
 
 Before retaining an EPUB, the client uses the browser's advisory origin usage and quota estimate.
@@ -140,9 +145,9 @@ space.
 
 An admitted write is still subject to quota races and browser eviction. A stored asset does not
 become offline-readable until the checksum admission rules above verify it. Persistent storage may
-reduce automatic eviction, but grant behavior varies by browser and users can still clear it. A
-future explicit **Available offline** flow may check `persisted()` and request `persist()` from that
-user-driven action; startup does not request persistence.
+reduce automatic eviction, but grant behavior varies by browser and users can still clear it. The
+explicit Book Detail offline action may check `persisted()` and request `persist()`; startup does
+not request persistence.
 
 ## Browser Offline Capability
 

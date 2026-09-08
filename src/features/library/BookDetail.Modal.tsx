@@ -3,6 +3,7 @@ import { ApiError } from "@secondpass/client";
 import type { BookDetail, CompactBook, MarginaliaBookSummary, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { BookDetailPanel } from "./BookDetail.Panel";
+import { useBookOfflineAvailabilityController } from "./bookDetail/BookOfflineAvailability.Controller";
 
 export function BookDetailModal({
   profile,
@@ -48,6 +49,7 @@ export function BookDetailModal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const offlineAvailability = useBookOfflineAvailabilityController({ profile, book, spl });
 
   useEffect(() => {
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -190,6 +192,7 @@ export function BookDetailModal({
               activitySummary={activitySummary}
               activitySummaryFailed={activitySummaryFailed}
               downloadState={downloadState}
+              offlineAvailability={offlineAvailability}
             />
           ) : null}
         </div>

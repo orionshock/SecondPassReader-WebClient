@@ -36,7 +36,8 @@ type AcquiredAsset = AcquisitionContext & {
 };
 
 export type OfflineEpubAcquisitionResult =
-  | (AcquiredAsset & { status: "already-available" | "stored" })
+  | (AcquiredAsset & { status: "already-available" })
+  | (AcquiredAsset & { status: "stored" })
   | {
       status: "unsupported";
       reason: "capability-unavailable" | "capability-check-failed";
