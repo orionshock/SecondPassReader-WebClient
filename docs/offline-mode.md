@@ -116,6 +116,26 @@ offline-stable promise. File size is diagnostic metadata only: a mismatch must b
 matching checksum remains decisive. A known checksum change requires replacement; different Book
 IDs remain different assets and no CFI portability is inferred between editions.
 
+## Reader Outbox Intents
+
+The Reader outbox stores domain desired state, never serialized HTTP requests. Initial queued scope
+is limited to establishing a writable Session through normal `open`, latest progress, and complete
+annotation upsert or delete intent. Session close, `start-over`, Session metadata, Shelves, and
+other library mutations remain excluded. Bearer tokens and request URLs do not belong in intents.
+
+Progress coalesces to the latest CFI, percentage, and stable location label without comparing CFI
+order. Annotation intent coalesces by account namespace, Book, target Session, and stable
+`clientId`: edits replace earlier upserts, an unconfirmed create followed by delete disappears,
+confirmed edit followed by delete becomes one delete, restore replaces delete, and repeated deletes
+become one. Mutable intents carry a local revision so later replay can acknowledge only the exact
+version it delivered.
+
+After `SESSION_CLOSED`, unresolved progress and annotation upserts may transfer to the writable
+continuation Session. Upserts that originated as confirmed annotations retain their original
+server Session identity so a future reconciler can assign a new `clientId` when required. Deletes
+of annotations confirmed in the closed Session do not transfer. Session establishment resolves
+through normal `open`; `start-over` is never automatic recovery.
+
 ## Architecture Seams
 
 Keep these seams explicit before broad feature wiring, with server calls behind the existing client
