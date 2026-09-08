@@ -73,6 +73,25 @@ semantics where applicable:
 | Annotations | Store durable desired-state operations later with stable client IDs and exact acknowledgement. |
 | Shelves | Online-only initially. |
 
+## Cache Identity
+
+Account-owned cached data is isolated by normalized server origin and the verified account profile
+ID from `/accounts/me`. Both are required. The serialized namespace is
+`server:<encoded-origin>|profile:<encoded-profile-id>`.
+
+- Server display metadata, bearer tokens, local connection IDs, client-session IDs, and release
+  fields are never part of cache identity.
+- Token refresh and re-pairing do not create a new namespace for the same server account.
+- Identity that is missing or invalid produces no namespace; account-owned data must not be cached,
+  displayed, or replayed without one.
+- Server identity follows the current origin-level discovery model. API paths are endpoint
+  locations, not cache identity.
+
+Future records remain inside that namespace and add their own identity: Home/recent uses a fixed
+snapshot category; EPUB assets use book identity and the file checksum when present; Reader state
+uses book and session identity; catalog results and contextual tag aggregates use the exact query
+context; scope-level tag endpoints remain separate tag universes.
+
 ## Architecture Seams
 
 Keep these seams explicit before broad feature wiring, with server calls behind the existing client
@@ -80,7 +99,7 @@ boundary and renderer details behind the Reader bridge:
 
 - browser connectivity source limited to `online`, `offline`, or `unknown`; it reports browser
   connectivity signals only and does not infer server, authentication, cache, or book availability
-- account/profile-scoped cache namespace
+- server/account-profile cache namespace independent of storage implementation
 - cache repositories for replaceable snapshots and durable Reader state
 - EPUB asset store
 - annotation desired-state outbox
