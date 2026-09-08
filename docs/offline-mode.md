@@ -116,6 +116,20 @@ offline-stable promise. File size is diagnostic metadata only: a mismatch must b
 matching checksum remains decisive. A known checksum change requires replacement; different Book
 IDs remain different assets and no CFI portability is inferred between editions.
 
+## EPUB Storage Admission
+
+Before retaining an EPUB, the client uses the browser's advisory origin usage and quota estimate.
+There is no universal EPUB size cap. Admission preserves the greater of 10% of estimated quota or
+100 MiB, and declines an attempt that would cross the remaining usable budget. Missing, incomplete,
+or failed estimates remain explicit unknown or unavailable capacity; they are not evidence of free
+space.
+
+An admitted write is still subject to quota races and browser eviction. A stored asset does not
+become offline-readable until the checksum admission rules above verify it. Persistent storage may
+reduce automatic eviction, but grant behavior varies by browser and users can still clear it. A
+future explicit **Available offline** flow may check `persisted()` and request `persist()` from that
+user-driven action; startup does not request persistence.
+
 ## Reader Outbox Intents
 
 The Reader outbox stores domain desired state, never serialized HTTP requests. Initial queued scope
