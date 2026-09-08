@@ -130,6 +130,19 @@ reduce automatic eviction, but grant behavior varies by browser and users can st
 future explicit **Available offline** flow may check `persisted()` and request `persist()` from that
 user-driven action; startup does not request persistence.
 
+## Browser Offline Capability
+
+Browser offline capability is separate from connectivity, current quota admission, and whether a
+specific Book asset is verified. IndexedDB must pass a lightweight open-and-close probe before the
+client can claim offline-stable support. A useful storage estimate plus working persistence query
+and request APIs provide full capability; missing or failed StorageManager features leave
+best-effort storage as limited capability rather than making IndexedDB unusable.
+
+Capability checks are read-only except for creating the empty versioned IndexedDB schema when it
+does not exist. They query `persisted()` but never call `persist()`. A later explicit **Available
+offline** action owns any persistence request. Persistent permission reduces automatic eviction,
+but browser or user site-data clearing can still remove local data.
+
 ## Reader Outbox Intents
 
 The Reader outbox stores domain desired state, never serialized HTTP requests. Initial queued scope
