@@ -116,8 +116,12 @@ function readerState(): OfflineReaderBookState {
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,
-    localSessionId: "local-book-1",
-    serverSessionId: "session-1",
+    session: {
+      kind: "server-confirmed",
+      localSessionId: "local-book-1",
+      serverSessionId: "session-1",
+      lastKnownServerStatus: "active",
+    },
     progress: {
       cfi: "epubcfi(/6/2)",
       percentage: 10,

@@ -7,6 +7,7 @@ import type {
   ReaderOutboxIntent,
   ReplaceReaderProgressIntent,
 } from "./ReaderOutbox.Policy";
+import type { OfflineReaderSession } from "./OfflineReaderSession.Policy";
 
 export type OfflineProjectionRecord<T> = {
   namespaceKey: string;
@@ -59,8 +60,7 @@ export type OfflineReaderBookState = {
   namespaceKey: string;
   bookId: string;
   schemaVersion: number;
-  localSessionId: string;
-  serverSessionId: string | null;
+  session: OfflineReaderSession;
   progress: ReplaceReaderProgressIntent["progress"] | null;
   annotations: OfflineReaderAnnotationProjection[];
 };

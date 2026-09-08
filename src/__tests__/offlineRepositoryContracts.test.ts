@@ -331,8 +331,12 @@ function readerState(namespaceKey: string, bookId: string, cfi: string): Offline
     namespaceKey,
     bookId,
     schemaVersion: 1,
-    localSessionId: `local-${bookId}`,
-    serverSessionId: "session-1",
+    session: {
+      kind: "server-confirmed",
+      localSessionId: `local-${bookId}`,
+      serverSessionId: "session-1",
+      lastKnownServerStatus: "active",
+    },
     progress: { cfi, percentage: 10, locationLabel: "010% - Location" },
     annotations: [],
   };

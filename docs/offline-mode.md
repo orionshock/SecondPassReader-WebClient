@@ -193,6 +193,20 @@ server Session identity so a future reconciler can assign a new `clientId` when 
 of annotations confirmed in the closed Session do not transfer. Session establishment resolves
 through normal `open`; `start-over` is never automatic recovery.
 
+## Local Reader Continuity
+
+Local Reader Session identity is separate from server Session authority. A server-confirmed local
+record carries its server Session ID and last-known `active`, `closed`, or unknown status. Only a
+last-known-active confirmed Session is selected for offline local writes. A confirmed closed or
+authority-unknown Session is never treated as writable or reopened.
+
+When no writable confirmed Session exists, the client creates or reuses one Book-scoped
+provisional Session for the account namespace. Its durable identity is prefixed `local:` and its
+server Session ID is always null. It is only a container for local Reader continuity and authored
+intent. Repeated loads reuse that identity and ensure one coalesced `establish-session` intent.
+Reconnect authority resolution through active-session/open remains a later phase; `start-over` is
+not a recovery path.
+
 ## Durable Repository Boundaries
 
 Browser persistence uses one versioned native IndexedDB database, split by ownership: successful
