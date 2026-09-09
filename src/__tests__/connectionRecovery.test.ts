@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "@secondpass/client";
 import { describe, expect, it } from "vitest";
 import { ConnectionRecoveryBannerForState } from "../app/ConnectionRecovery.Banner";
-import { reduceAuthorizationFailure } from "../app/ConnectionRecovery.Context";
+import { reduceAuthenticationRepairRequired, reduceAuthorizationFailure } from "../app/ConnectionRecovery.Context";
 
 describe("top-level connection recovery", () => {
   it("shows the recovery banner after an authorization failure is reported", () => {
@@ -14,9 +14,22 @@ describe("top-level connection recovery", () => {
       route: { kind: "home" },
     }));
 
-    expect(html).toContain("This device is no longer authorized by the library server.");
-    expect(html).toContain("Manage the connection to log out, forget this device, or pair again.");
+    expect(html).toContain("This device cannot access this library resource.");
+    expect(html).toContain("Manage connection");
     expect(html).toContain('href="#/settings?tab=library-server"');
+  });
+
+  it("offers credential repair for an authentication rejection", () => {
+    const html = renderToStaticMarkup(createElement(ConnectionRecoveryBannerForState, {
+      authorizationFailure: true,
+      authenticationRepairRequired: true,
+      hasConnection: true,
+      route: { kind: "home" },
+    }));
+
+    expect(html).toContain("This saved connection needs to be repaired.");
+    expect(html).toContain("Offline reading data remains stored.");
+    expect(html).toContain("Repair connection");
   });
 
   it("does not show the banner for a non-authorization failure", () => {
@@ -28,6 +41,11 @@ describe("top-level connection recovery", () => {
     }));
 
     expect(html).toBe("");
+  });
+
+  it("enters credential repair only for authentication rejection", () => {
+    expect(reduceAuthenticationRepairRequired(false, new ApiError({ kind: "unauthorized", status: 401, message: "No" }))).toBe(true);
+    expect(reduceAuthenticationRepairRequired(false, authError())).toBe(false);
   });
 
   it("hides the banner on Settings > Library Server", () => {

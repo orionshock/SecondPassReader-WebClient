@@ -21,6 +21,18 @@ export function isAuthorizationError(error: unknown): boolean {
   return /\btoken\b[^.\n]*\bnot allowed\b/i.test(getErrorMessage(error));
 }
 
+export function isAuthenticationRepairError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.kind === "unauthorized") return true;
+  }
+
+  if (error instanceof Error && "cause" in error && error.cause !== error) {
+    return isAuthenticationRepairError(error.cause);
+  }
+
+  return false;
+}
+
 export function getAuthRecoveryMessage(resourceAction: string): string {
   return `This device is not authorized to ${resourceAction}.`;
 }

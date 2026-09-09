@@ -55,6 +55,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   }, [selectedProfileId, profilesVersion, state.phase]);
 
   const discovery = useMemo(() => (profile ? toDiscovery(profile) : null), [profile]);
+  const repairing = profile?.authenticationState === "repair-required";
 
   useEffect(() => {
     if (!profile) return;
@@ -109,6 +110,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
             clientSessionName: consumed.clientSession.name || clientName.trim() || profile.clientSessionName,
             linkedAt: now,
             lastUsedAt: now,
+            authenticationState: profile.authenticationState === "repair-required" ? "verifying-repair" : profile.authenticationState,
           };
           saveConnectionProfile(updated);
           onProfilesChanged?.();
@@ -153,7 +155,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   return (
     <section className="panel pairScreen">
       <div className="pairHeader">
-        <h1 className="pairTitle">Connect to SecondPass Library</h1>
+        <h1 className="pairTitle">{repairing ? "Repair library connection" : "Connect to SecondPass Library"}</h1>
         <div className="pairLibraryName">{profile.serverName ?? profile.label}</div>
         <ServerRichText value={profile.serverDescription} className="pairLibraryDescription" />
         <div className="pairLibraryAddress">
@@ -194,7 +196,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
         <div className="formActions pairActions">
           <button type="button" className="button" onClick={onCancel}>
-            Cancel
+            {repairing ? "Sign out locally" : "Cancel"}
           </button>
           <button
             type="button"
@@ -203,7 +205,11 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
             disabled={!discovery || state.phase === "starting" || state.phase === "waiting"}
           >
             <MaterialIcon name="link" />
-            {state.phase === "starting" ? `Starting${"\u2026"}` : state.phase === "waiting" ? `Linking${"\u2026"}` : "Start linking"}
+            {state.phase === "starting"
+              ? `Starting${"\u2026"}`
+              : state.phase === "waiting"
+                ? `Linking${"\u2026"}`
+                : repairing ? "Repair connection" : "Start linking"}
           </button>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { navigateTo, parseCurrentRoute } from "./AppNavigation.Router";
 import {
   clearActiveConnection,
   getActiveConnection,
+  saveConnectionProfile,
   type ConnectionProfile,
 } from "../storage/ConnectionProfiles.Store";
 import { AppHeader } from "./App.Header";
@@ -31,6 +32,7 @@ import {
 import { showOfflineReaderSyncOutcome } from "./offline/OfflineReaderSyncNotice.Controller";
 import { OfflineReaderSyncNoticePanel } from "./offline/OfflineReaderSyncNotice.Panel";
 import { clearOfflineReaderSyncNotice } from "./offline/OfflineReaderSyncNotice.State";
+import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
 
 const SettingsPanel = lazy(async () => {
   const module = await import("./Settings.Panel");
@@ -42,9 +44,11 @@ function AppShell() {
   const [view, setView] = useState<"main" | "settings">("main");
   const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
   const {
+    authenticationRepairRequired,
     authorizationFailure,
     clearAuthorizationFailure,
     reportAuthorizationFailure,
+    requireAuthenticationRepair,
   } = useConnectionRecovery();
 
   const selectedProfile = useMemo(() => {
@@ -57,9 +61,10 @@ function AppShell() {
   }, []);
 
   const splClient: SecondPassClient | null = useMemo(() => {
+    if (selectedProfile?.authenticationState === "repair-required") return null;
     if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return null;
     return createSplClientFromProfile(selectedProfile);
-  }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.tokenType]);
+  }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.authenticationState, selectedProfile?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
   const offlineNamespaceKey = useMemo(() => {
@@ -90,6 +95,14 @@ function AppShell() {
       clearAuthorizationFailure();
     }
   }, [clearAuthorizationFailure, route]);
+
+  useEffect(() => {
+    if (!authenticationRepairRequired || !selectedProfile) return;
+    if (selectedProfile.authenticationState === "repair-required") return;
+    saveConnectionProfile(markConnectionRepairRequired(selectedProfile));
+    refreshProfiles();
+    navigateTo({ kind: "pair" }, { replace: true });
+  }, [authenticationRepairRequired, refreshProfiles, selectedProfile]);
 
   useEffect(() => {
     const handler = () => setRoute(parseCurrentRoute());
@@ -125,9 +138,12 @@ function AppShell() {
       namespaceKey: offlineNamespaceKey,
       client: splClient,
       generation: automaticSyncGeneration,
-      onSweepCompleted: showOfflineReaderSyncOutcome,
+      onSweepCompleted: (result) => {
+        showOfflineReaderSyncOutcome(result);
+        if (result.outcome.reauthenticateBooks > 0) requireAuthenticationRepair();
+      },
     });
-  }, [automaticSyncGeneration, automaticSyncGenerationKey, offlineNamespaceKey, splClient]);
+  }, [automaticSyncGeneration, automaticSyncGenerationKey, offlineNamespaceKey, requireAuthenticationRepair, splClient]);
 
   const {
     openedBook,
@@ -245,8 +261,15 @@ function AppShell() {
     navigateTo({ kind: "connect" }, options);
   }
 
-  function handleForgetServer() {
+  function handleDisconnect() {
     returnToConnect();
+  }
+
+  function handleRepairConnection() {
+    if (!selectedProfile) return;
+    saveConnectionProfile(markConnectionRepairRequired(selectedProfile));
+    refreshProfiles();
+    navigateTo({ kind: "pair" });
   }
 
   function handleCancelPairing() {
@@ -286,6 +309,7 @@ function AppShell() {
 
       <ConnectionRecoveryBannerForState
         authorizationFailure={authorizationFailure}
+        authenticationRepairRequired={authenticationRepairRequired}
         hasConnection={Boolean(selectedProfile)}
         route={route}
       />
@@ -307,7 +331,8 @@ function AppShell() {
             <SettingsPanel
               profile={selectedProfile}
               onProfilesChanged={handleConnectionChanged}
-              onForgetServer={handleForgetServer}
+              onDisconnect={handleDisconnect}
+              onRepairConnection={handleRepairConnection}
               appTheme={appTheme}
               onAppThemeChange={setAppTheme}
               route={route?.kind === "settings" ? route : { kind: "settings" }}

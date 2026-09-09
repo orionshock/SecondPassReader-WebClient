@@ -46,11 +46,13 @@ export function applyAuthenticatedContextToProfile(
   isoNow: string,
   options: { markVerified?: boolean } = {},
 ): ConnectionProfile {
-  return applyServerInfoToProfile(
+  const authenticated = applyServerInfoToProfile(
     applyCurrentAccountToProfile(profile, currentUser, isoNow, options),
     serverInfo,
     isoNow,
   );
+  const { authenticationState: _authenticationState, ...readyProfile } = authenticated;
+  return readyProfile;
 }
 
 export function hasCurrentAccountProfileChanged(profile: ConnectionProfile, next: ConnectionProfile): boolean {

@@ -12,19 +12,23 @@ export function shouldShowConnectionRecoveryBanner(input: {
   return !(input.route?.kind === "settings" && input.route.tab === "library-server");
 }
 
-export function ConnectionRecoveryBanner() {
+export function ConnectionRecoveryBanner({ repairRequired = false }: { repairRequired?: boolean }) {
   return (
     <section className="connectionRecoveryBanner" role="status" aria-labelledby="connection-recovery-title">
       <div className="connectionRecoveryCopy">
         <h2 id="connection-recovery-title" className="connectionRecoveryTitle">
-          This device is no longer authorized by the library server.
+          {repairRequired
+            ? "This saved connection needs to be repaired."
+            : "This device cannot access this library resource."}
         </h2>
         <p className="connectionRecoveryDescription">
-          Manage the connection to log out, forget this device, or pair again.
+          {repairRequired
+            ? "Sign in again to keep using this library. Offline reading data remains stored."
+            : "Manage the connection or try again after access is restored."}
         </p>
       </div>
       <a className="button buttonPrimary buttonCompact" href="#/settings?tab=library-server">
-        Manage connection
+        {repairRequired ? "Repair connection" : "Manage connection"}
       </a>
     </section>
   );
@@ -32,8 +36,11 @@ export function ConnectionRecoveryBanner() {
 
 export function ConnectionRecoveryBannerForState(input: {
   authorizationFailure: boolean;
+  authenticationRepairRequired?: boolean;
   hasConnection: boolean;
   route: AppRoute | null;
 }) {
-  return shouldShowConnectionRecoveryBanner(input) ? <ConnectionRecoveryBanner /> : null;
+  return shouldShowConnectionRecoveryBanner(input)
+    ? <ConnectionRecoveryBanner repairRequired={input.authenticationRepairRequired} />
+    : null;
 }

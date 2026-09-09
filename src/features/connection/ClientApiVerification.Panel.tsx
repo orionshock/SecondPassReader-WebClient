@@ -4,7 +4,7 @@ import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } f
 import { createSplClientFromProfile } from "../../app/AppSplClient.Factory";
 import { applyAuthenticatedContextToProfile } from "./ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "./AuthenticatedContext.Queries";
-import { isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
+import { isAuthenticationRepairError, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -34,12 +34,12 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     if (!profile) return;
     if (!profile.accessToken) return;
     if (!profile.apiBaseUrl) return;
-    if (profile.verifiedAt) return;
+    if (profile.verifiedAt && profile.authenticationState !== "verifying-repair") return;
     if (autoVerifyAttemptedRef.current) return;
     autoVerifyAttemptedRef.current = true;
     void verify();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoVerify, profile?.id]);
+  }, [autoVerify, profile?.authenticationState, profile?.id]);
 
   async function verify() {
     if (!profile) return;
@@ -65,9 +65,16 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
       setState({ phase: "success", me: currentUser });
     } catch (e) {
       if (isAuthorizationError(e)) {
+        const authenticationRejected = isAuthenticationRepairError(e);
+        if (profile.authenticationState === "verifying-repair" && authenticationRejected) {
+          saveConnectionProfile({ ...profile, authenticationState: "repair-required" });
+          onProfilesChanged?.();
+        }
         setState({
           phase: "error",
-          message: "Token is invalid/revoked/not allowed. Re-link this library if needed, then verify again.",
+          message: authenticationRejected
+            ? "These credentials were rejected. Repair the connection and verify again."
+            : "The library server did not allow verification for this account.",
         });
         return;
       }
@@ -106,7 +113,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     <section className="panel">
       <h2 className="panelTitle">Verify connection</h2>
 
-      {profile.verifiedAt && profile.verifiedUser ? (
+      {profile.verifiedAt && profile.verifiedUser && !profile.authenticationState ? (
         <div className="discoveryBox">
           <div>
             <span className="muted">Status:</span> <span className="pill pillOk">verified</span>

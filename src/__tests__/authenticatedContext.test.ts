@@ -46,7 +46,8 @@ describe("authenticated bootstrap context", () => {
     const settings = renderToStaticMarkup(createElement(SettingsPanel, {
       profile,
       onProfilesChanged: vi.fn(),
-      onForgetServer: vi.fn(),
+      onDisconnect: vi.fn(),
+      onRepairConnection: vi.fn(),
       appTheme: "light",
       onAppThemeChange: vi.fn(),
       route: { kind: "settings", tab: "library-server" },
@@ -59,6 +60,8 @@ describe("authenticated bootstrap context", () => {
     expect(settings).toContain("Authenticated Server Name");
     expect(settings).toContain("Authenticated server description");
     expect(settings).toContain("&lt;Read Er&gt;@reader-user");
+    expect(settings).toContain("Downloaded books and reading changes");
+    expect(settings).toContain("Forget connection and local data");
     expect(profile.advancedLibraryGroupsEnabled).toBe(true);
   });
 

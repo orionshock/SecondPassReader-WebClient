@@ -8,8 +8,9 @@ export type SettingsLibraryServerActionState =
   | { phase: "idle" }
   | { phase: "checking" }
   | { phase: "logging_out" }
+  | { phase: "forgetting" }
   | { phase: "success"; message: string }
-  | { phase: "error"; message: string; action: "check" | "logout"; technicalDetail?: string | null };
+  | { phase: "error"; message: string; action: "check" | "logout" | "forget"; technicalDetail?: string | null };
 
 export function SettingsLibraryServerPanel({
   profile,
@@ -18,6 +19,8 @@ export function SettingsLibraryServerPanel({
   onConnect,
   onCheckConnection,
   onLogOut,
+  onSignOutLocally,
+  onRepairConnection,
   onForgetLocally,
 }: {
   profile: ConnectionProfile | null;
@@ -26,6 +29,8 @@ export function SettingsLibraryServerPanel({
   onConnect: () => void;
   onCheckConnection: () => void;
   onLogOut: () => void;
+  onSignOutLocally: () => void;
+  onRepairConnection: () => void;
   onForgetLocally: () => void;
 }) {
   const status = getConnectionStatus(profile);
@@ -66,6 +71,9 @@ export function SettingsLibraryServerPanel({
               <button type="button" className="button" onClick={onCheckConnection} disabled={busy}>
                 {state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
               </button>
+              <button type="button" className="button buttonPrimary" onClick={onRepairConnection} disabled={busy}>
+                Repair connection
+              </button>
             </div>
           </>
         )}
@@ -76,8 +84,8 @@ export function SettingsLibraryServerPanel({
           <h2 className="panelTitle">This Device</h2>
         </div>
         <p className="muted">
-          Log out revokes this device session on the server and removes the local connection from this browser. Server
-          books and annotations are not deleted.
+          Log out revokes this device session and removes its saved credentials. Downloaded books and reading changes
+          remain on this device for the same verified account.
         </p>
         <div className="settingsGrid">
           <SettingsDetailRow label="Web client version" value={APP_BUILD_INFO.version} mono />
@@ -90,14 +98,23 @@ export function SettingsLibraryServerPanel({
         </div>
         {profile ? (
           <div className="settingsLocalFallback">
-            <span className="muted">If logout fails, you can forget this connection locally.</span>
+            <span className="muted">Local sign-out keeps downloaded books and reading changes for a later verified sign-in.</span>
+            <button
+              type="button"
+              className="settingsLinkButton"
+              onClick={onSignOutLocally}
+              disabled={busy}
+            >
+              Sign out locally
+            </button>
+            <span className="muted">To erase this account's downloaded books and local reading data, forget it explicitly.</span>
             <button
               type="button"
               className="settingsLinkButton"
               onClick={onForgetLocally}
-              disabled={state.phase === "logging_out"}
+              disabled={busy}
             >
-              Forget locally
+              {state.phase === "forgetting" ? `Removing${"\u2026"}` : "Forget connection and local data"}
             </button>
           </div>
         ) : null}

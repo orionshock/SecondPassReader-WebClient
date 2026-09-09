@@ -18,6 +18,7 @@ export type ConnectionProfile = {
     description: string;
   };
   accessToken?: string;
+  authenticationState?: "repair-required" | "verifying-repair";
   tokenType?: string;
   clientSessionId?: string;
   clientSessionName?: string;

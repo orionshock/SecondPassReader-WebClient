@@ -251,6 +251,22 @@ deletes projections, Reader continuity, progress, annotations, outbox intent, or
 already-open Reader retains its in-memory Blob URL until its existing lifecycle closes. There is no
 periodic retry, service-worker delivery, background sync, or repair console.
 
+Credential rejection is a repairable connection state, not a deletion signal. A rejected token
+does not clear publication assets, cached projections, Reader continuity, annotations, or pending
+Reader intent. Repair uses the normal pair-and-verify flow. Only the verified normalized server
+origin and `/accounts/me` profile ID may reclaim an existing namespace: the same identity resumes
+it unchanged, while a different server or profile receives an isolated namespace. Retained data is
+not exposed through authenticated feature UI until verification succeeds.
+
+Ordinary logout or local sign-out removes the saved connection and credentials but retains its
+namespace data for a later verified sign-in. `Forget connection and local data` is the separate
+destructive operation. It inspects pending Reader work, makes one waiting coordinated sync attempt
+when online, rechecks durable state, and requires confirmation before deleting projections,
+publication assets, Reader state, and outbox records for that exact namespace. Failure keeps the
+connection available for another attempt. Settings `Remove all offline copies` remains
+publication-asset-only and does not use complete namespace cleanup. There is still no periodic
+retry, background sync, service worker, or authored-work repair console.
+
 ## Publication Asset Storage Admission
 
 Before retaining a publication asset, the client uses the browser's advisory origin usage and quota estimate.

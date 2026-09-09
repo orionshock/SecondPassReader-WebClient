@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getAuthRecoveryMessage,
   getPageLoadErrorMessage,
+  isAuthenticationRepairError,
   isAuthorizationError,
 } from "../app/AppUserFacingErrors.Mapper";
 import { apiError } from "./ApiErrorTest.Fixtures";
@@ -10,6 +11,12 @@ describe("user-facing API errors", () => {
   it("classifies 401 and 403 API errors as authorization failures", () => {
     expect(isAuthorizationError(apiError(401, "Unauthorized"))).toBe(true);
     expect(isAuthorizationError(apiError(403, "Forbidden"))).toBe(true);
+  });
+
+  it("requires credential repair for 401 but not authority drift", () => {
+    expect(isAuthenticationRepairError(apiError(401, "Unauthorized"))).toBe(true);
+    expect(isAuthenticationRepairError(apiError(403, "Forbidden"))).toBe(false);
+    expect(isAuthenticationRepairError(apiError(404, "Not found"))).toBe(false);
   });
 
   it("classifies token-not-allowed messages as authorization failures", () => {

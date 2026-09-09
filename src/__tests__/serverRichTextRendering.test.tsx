@@ -95,6 +95,8 @@ describe("server descriptive rich text", () => {
         onConnect={noop}
         onCheckConnection={noop}
         onLogOut={noop}
+        onSignOutLocally={noop}
+        onRepairConnection={noop}
         onForgetLocally={noop}
       />,
     );

@@ -8,7 +8,7 @@ import { applyAuthenticatedContextToProfile } from "../features/connection/Conne
 import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import { createSplClientFromProfile } from "./AppSplClient.Factory";
 import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
-import { getTechnicalErrorDetail, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
+import { getTechnicalErrorDetail, isAuthenticationRepairError, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 import { SettingsAppearancePanel } from "./settings/SettingsAppearance.Panel";
 import {
   SettingsLibraryServerPanel,
@@ -17,11 +17,14 @@ import {
 import { SettingsToolsPanel } from "./settings/SettingsTools.Panel";
 import type { OfflineReaderSyncClient } from "./offline/OfflineReaderSync.Actions";
 import { OfflineSettingsPanel } from "./settings/offline/OfflineSettings.Panel";
+import { getBrowserConnectivitySnapshot } from "./connectivity/BrowserConnectivity.State";
+import { forgetConnectionAndOfflineData } from "../features/connection/ConnectionRemoval.Controller";
 
 type Props = {
   profile: ConnectionProfile | null;
   onProfilesChanged: () => void;
-  onForgetServer: () => void;
+  onDisconnect: () => void;
+  onRepairConnection: () => void;
   appTheme: AppTheme;
   onAppThemeChange: (theme: AppTheme) => void;
   route: Extract<AppRoute, { kind: "settings" }>;
@@ -32,7 +35,8 @@ type Props = {
 export function SettingsPanel({
   profile,
   onProfilesChanged,
-  onForgetServer,
+  onDisconnect,
+  onRepairConnection,
   appTheme,
   onAppThemeChange,
   route,
@@ -69,12 +73,15 @@ export function SettingsPanel({
       onProfilesChanged();
       setState({ phase: "success", message: "Connection checked successfully." });
     } catch (e) {
+      if (isAuthenticationRepairError(e)) onRepairConnection();
       setState({
         phase: "error",
         action: "check",
-        message: isAuthorizationError(e)
-          ? "This device is no longer authorized."
-          : "Connection check failed.",
+        message: isAuthenticationRepairError(e)
+          ? "This saved connection needs to be repaired."
+          : isAuthorizationError(e)
+            ? "The library server did not allow this connection check."
+            : "Connection check failed.",
         technicalDetail: getTechnicalErrorDetail(e),
       });
     }
@@ -111,15 +118,36 @@ export function SettingsPanel({
           message: `Logout failed with HTTP ${response.status}.`,
         });
       }
-      onForgetServer();
+      onDisconnect();
     } catch (e) {
       setState({
         phase: "error",
         action: "logout",
         message: isAuthorizationError(e)
-          ? "This device is no longer authorized. Forget it locally if server logout is unavailable."
+          ? "This device is no longer authorized. Sign out locally if server logout is unavailable."
           : "Logout failed.",
         technicalDetail: getTechnicalErrorDetail(e),
+      });
+    }
+  }
+
+  async function forgetConnection() {
+    if (!profile || state.phase === "forgetting") return;
+    setState({ phase: "forgetting" });
+    const result = await forgetConnectionAndOfflineData({
+      namespaceKey: offlineNamespaceKey,
+      client: offlineSyncClient,
+      connectivity: getBrowserConnectivitySnapshot(),
+      confirm: (message) => window.confirm(message),
+      onRemoved: onDisconnect,
+    });
+    if (result.status === "cancelled") {
+      setState({ phase: "idle" });
+    } else if (result.status === "failed") {
+      setState({
+        phase: "error",
+        action: "forget",
+        message: "The connection and its local data could not be removed.",
       });
     }
   }
@@ -158,11 +186,13 @@ export function SettingsPanel({
         <SettingsLibraryServerPanel
           profile={profile}
           state={state}
-          busy={state.phase === "checking" || state.phase === "logging_out"}
+          busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "forgetting"}
           onConnect={() => navigateTo({ kind: "connect" })}
           onCheckConnection={() => void checkConnection()}
           onLogOut={() => void logOut()}
-          onForgetLocally={onForgetServer}
+          onSignOutLocally={onDisconnect}
+          onRepairConnection={onRepairConnection}
+          onForgetLocally={() => void forgetConnection()}
         />
       ) : null}
 

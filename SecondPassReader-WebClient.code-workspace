@@ -51,7 +51,6 @@
   "extensions": {
     "recommendations": [
       "vitest.explorer",
-      "ms-vscode.powershell",
       "mhutchie.git-graph",
       "openai.chatgpt",
       "guwidoe.vscode-repo-stats"
