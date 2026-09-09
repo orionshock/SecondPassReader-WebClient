@@ -267,6 +267,22 @@ connection available for another attempt. Settings `Remove all offline copies` r
 publication-asset-only and does not use complete namespace cleanup. There is still no periodic
 retry, background sync, service worker, or authored-work repair console.
 
+Offline Settings presents pending Reader work by Book using cached titles when available and a
+Book-ID fallback otherwise. It describes session reconnection, reading position, annotation
+changes, and annotation deletions in user terms without exposing outbox keys, revisions, Session
+IDs, or payloads. A Book can be selected through
+`#/settings?tab=offline&book=<book-id>` and retried through the existing coordinated sync action
+with waiting lock semantics. Book Detail links retained offline copies to that selected management
+state; Reader opening still uses the normal Reader route and admission policy.
+
+Pending reading-position delivery may be explicitly discarded without removing the durable local
+position used for local resume. Later Reader movement can create a new latest progress intent.
+Annotation discard is not offered yet: the current durable projection does not retain a separate
+authoritative baseline for safely undoing confirmed edits/deletes, and local projection plus outbox
+updates do not yet share one transaction. Terminal classification is also sweep-scoped rather than
+durable, so pending Books are not persistently labeled as terminal or needing attention. Offline
+asset removal remains separate from Reader-authored pending state.
+
 ## Publication Asset Storage Admission
 
 Before retaining a publication asset, the client uses the browser's advisory origin usage and quota estimate.

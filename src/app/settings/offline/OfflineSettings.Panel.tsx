@@ -7,13 +7,20 @@ import {
   type OfflineSettingsState,
 } from "./OfflineSettings.Controller";
 import { formatOfflineAssetBytes } from "./OfflineSettings.Presenter";
+import type { OfflinePendingBook } from "./OfflinePendingBook.State";
 
 export function OfflineSettingsPanel({
   namespaceKey,
   client,
+  selectedBookId,
+  onSelectBook,
+  onOpenReader,
 }: {
   namespaceKey: string | null;
   client: OfflineReaderSyncClient | null;
+  selectedBookId: string | null;
+  onSelectBook(bookId: string): void;
+  onOpenReader(bookId: string): void;
 }) {
   const controller = useMemo(
     () => createOfflineSettingsController({ namespaceKey, client }),
@@ -23,17 +30,32 @@ export function OfflineSettingsPanel({
 
   useEffect(() => controller.start(), [controller]);
 
-  return <OfflineSettingsView state={state} controller={controller} clientAvailable={Boolean(client)} />;
+  return (
+    <OfflineSettingsView
+      state={state}
+      controller={controller}
+      clientAvailable={Boolean(client)}
+      selectedBookId={selectedBookId}
+      onSelectBook={onSelectBook}
+      onOpenReader={onOpenReader}
+    />
+  );
 }
 
 export function OfflineSettingsView({
   state,
   controller,
   clientAvailable,
+  selectedBookId = null,
+  onSelectBook = () => undefined,
+  onOpenReader = () => undefined,
 }: {
   state: OfflineSettingsState;
   controller: OfflineSettingsController;
   clientAvailable: boolean;
+  selectedBookId?: string | null;
+  onSelectBook?(bookId: string): void;
+  onOpenReader?(bookId: string): void;
 }) {
   const [confirmRemoveAll, setConfirmRemoveAll] = useState(false);
 
@@ -76,11 +98,33 @@ export function OfflineSettingsView({
           </button>
         </div>
         {state.pending.intents > 0 ? (
-          <div className="settingsStatRow muted">
-            <span>{state.pending.intents} pending change{state.pending.intents === 1 ? "" : "s"}</span>
-            <span>{state.pending.annotations} annotation{state.pending.annotations === 1 ? "" : "s"}</span>
-            <span>{state.pending.progress} progress update{state.pending.progress === 1 ? "" : "s"}</span>
-            <span>{state.pending.sessionEstablishment} session continuation{state.pending.sessionEstablishment === 1 ? "" : "s"}</span>
+          <div>
+            <div className="settingsStatRow muted">
+              <span>{state.pending.intents} pending change{state.pending.intents === 1 ? "" : "s"}</span>
+              <span>{state.pending.annotations} annotation{state.pending.annotations === 1 ? "" : "s"}</span>
+              <span>{state.pending.progress} progress update{state.pending.progress === 1 ? "" : "s"}</span>
+              <span>{state.pending.sessionEstablishment} session continuation{state.pending.sessionEstablishment === 1 ? "" : "s"}</span>
+            </div>
+            <div className="settingsOfflineAssetList">
+              {state.pendingBooks.map((book) => (
+                <PendingBookRow
+                  key={book.bookId}
+                  book={book}
+                  selected={selectedBookId === book.bookId}
+                  disabled={busy}
+                  connectivity={state.connectivity}
+                  working={state.activeBookId === book.bookId}
+                  onSelect={() => onSelectBook(book.bookId)}
+                  onRetry={() => void controller.retryBook(book.bookId)}
+                  onOpenReader={() => onOpenReader(book.bookId)}
+                  onDiscardProgress={() => {
+                    if (window.confirm("Discard this pending reading position? Your local reading position will remain available on this device.")) {
+                      void controller.discardPendingProgress(book.bookId);
+                    }
+                  }}
+                />
+              ))}
+            </div>
           </div>
         ) : <p className="muted">All offline changes are synced.</p>}
         {state.connectivity !== "online" && state.pending.books > 0 ? (
@@ -125,6 +169,8 @@ export function OfflineSettingsView({
                 asset={asset}
                 disabled={busy}
                 removing={state.action === "removing" && state.removingAssetKey === asset.key}
+                selected={selectedBookId === asset.bookId}
+                onSelect={() => onSelectBook(asset.bookId)}
                 onRemove={() => void controller.removeAsset(asset)}
               />
             ))}
@@ -140,24 +186,97 @@ function OfflineAssetRow({
   asset,
   disabled,
   removing,
+  selected,
+  onSelect,
   onRemove,
 }: {
   asset: OfflineSettingsAsset;
   disabled: boolean;
   removing: boolean;
+  selected: boolean;
+  onSelect(): void;
   onRemove(): void;
 }) {
   return (
-    <div className="settingsOfflineAssetRow">
+    <div className="settingsOfflineAssetRow" aria-current={selected ? "true" : undefined}>
       <div className="settingsOfflineAssetCopy">
         <div className="settingsLabel">{asset.title}</div>
         <div className="muted">{asset.format.toUpperCase()} - {formatOfflineAssetBytes(asset.byteLength)}</div>
+        {selected
+          ? <span className="muted">Selected</span>
+          : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>View details</button>}
       </div>
       <button type="button" className="button" disabled={disabled} onClick={onRemove}>
         {removing ? "Removing..." : "Remove"}
       </button>
     </div>
   );
+}
+
+function PendingBookRow({
+  book,
+  selected,
+  disabled,
+  connectivity,
+  working,
+  onSelect,
+  onRetry,
+  onOpenReader,
+  onDiscardProgress,
+}: {
+  book: OfflinePendingBook;
+  selected: boolean;
+  disabled: boolean;
+  connectivity: OfflineSettingsState["connectivity"];
+  working: boolean;
+  onSelect(): void;
+  onRetry(): void;
+  onOpenReader(): void;
+  onDiscardProgress(): void;
+}) {
+  return (
+    <div className="settingsOfflineAssetRow" aria-current={selected ? "true" : undefined}>
+      <div className="settingsOfflineAssetCopy">
+        <div className="settingsLabel">{book.title}</div>
+        <div className="muted">
+          {book.pendingIntentCount} pending change{book.pendingIntentCount === 1 ? "" : "s"}
+        </div>
+        {selected
+          ? <span className="muted">Selected</span>
+          : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>View details</button>}
+        {selected ? (
+          <div className="settingsGrid">
+            {book.needsSessionEstablishment ? <div>Reading session needs to reconnect</div> : null}
+            {book.hasProgress ? <div>Reading position waiting to sync</div> : null}
+            {book.annotationUpsertCount > 0 ? (
+              <div>{countLabel(book.annotationUpsertCount, "annotation change", "annotation changes")} waiting to sync</div>
+            ) : null}
+            {book.annotationDeleteCount > 0 ? (
+              <div>{countLabel(book.annotationDeleteCount, "annotation deletion", "annotation deletions")} waiting to sync</div>
+            ) : null}
+            {book.hasOfflineAsset ? (
+              <div className="muted">Offline copy: {book.assetFormats.join(", ")} - {formatOfflineAssetBytes(book.assetBytes)}</div>
+            ) : null}
+            <div className="settingsActions">
+              <button type="button" className="button buttonPrimary" disabled={disabled || connectivity !== "online"} onClick={onRetry}>
+                {working ? "Retrying this book..." : "Retry this book"}
+              </button>
+              <button type="button" className="button" disabled={disabled} onClick={onOpenReader}>Open reader</button>
+              {book.hasProgress ? (
+                <button type="button" className="button" disabled={disabled} onClick={onDiscardProgress}>
+                  Discard pending reading position
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function countLabel(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function pendingLabel(books: number): string {

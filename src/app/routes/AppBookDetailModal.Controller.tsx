@@ -80,6 +80,7 @@ export function AppBookDetailModalController({
         });
       }}
       onManageShelves={() => navigateTo({ kind: "shelves" })}
+      onManageOffline={(book) => navigateTo({ kind: "settings", tab: "offline", bookId: String(book.id) })}
       launchMessage={null}
       downloadState={{ phase: "idle" }}
     />

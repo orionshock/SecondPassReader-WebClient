@@ -23,7 +23,7 @@ export type AppRoute =
   | { kind: "shelves"; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelf"; shelfId: string; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelfEdit"; shelfId: string }
-  | { kind: "settings"; tab?: SettingsTab }
+  | { kind: "settings"; tab?: SettingsTab; bookId?: string }
   | { kind: "reader"; bookId: string; search?: string }
   | { kind: "unknown"; raw: string };
 
@@ -118,7 +118,7 @@ export function routeToHash(route: AppRoute): string {
     case "shelfEdit":
       return `#/shelves/${encodeURIComponent(route.shelfId)}/edit`;
     case "settings":
-      return `#/settings${buildQuery({ tab: route.tab ?? "appearance" })}`;
+      return `#/settings${buildQuery({ tab: route.tab ?? "appearance", book: route.bookId })}`;
     case "reader":
       return `#/reader/${encodeURIComponent(route.bookId)}${buildQuery({ search: route.search })}`;
     case "unknown":
@@ -256,7 +256,8 @@ export function parseCurrentRoute(): AppRoute | null {
       tabRaw === "appearance" || tabRaw === "offline" || tabRaw === "library-server" || tabRaw === "tools"
         ? tabRaw
         : undefined;
-    return tab ? { kind: "settings", tab } : { kind: "settings" };
+    if (tab) return bookId ? { kind: "settings", tab, bookId } : { kind: "settings", tab };
+    return bookId ? { kind: "settings", bookId } : { kind: "settings" };
   }
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {
     const search = queryParams.get("search")?.trim() ?? "";

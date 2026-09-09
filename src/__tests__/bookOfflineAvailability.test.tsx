@@ -91,6 +91,22 @@ describe("Book Detail offline availability", () => {
     expect(button("Update offline copy")).toBeTruthy();
   });
 
+  it("offers Settings management for a retained offline asset without changing removal", async () => {
+    const onManageOffline = vi.fn();
+    const remove = vi.fn(async () => undefined);
+    await act(async () => root.render(
+      <BookOfflineAvailabilityPanel
+        controller={{ state: { status: "available", message: null }, acquire: vi.fn(), remove }}
+        onManageOffline={onManageOffline}
+      />,
+    ));
+
+    await act(async () => button("Manage offline")?.click());
+    expect(onManageOffline).toHaveBeenCalledOnce();
+    await act(async () => button("Remove offline copy")?.click());
+    expect(remove).toHaveBeenCalledOnce();
+  });
+
   it("acquires with a user-driven persistence request and adopts the stored result", async () => {
     const repositories = repositorySet();
     repositoriesMock.mockResolvedValue(repositories.value);
@@ -237,6 +253,7 @@ describe("Book Detail offline availability", () => {
         onViewSeries={vi.fn()}
         onViewTag={vi.fn()}
         onManageShelves={vi.fn()}
+        onManageOffline={vi.fn()}
         spl={null}
         activitySummary={{ sessionCount: 1 } as never}
         downloadState={{ phase: "idle" }}
@@ -290,7 +307,7 @@ function ControllerHarness({
     spl: TEST_SPL,
   });
   useEffect(() => observe?.(controller), [controller, observe]);
-  return <BookOfflineAvailabilityPanel controller={controller} />;
+  return <BookOfflineAvailabilityPanel controller={controller} onManageOffline={vi.fn()} />;
 }
 
 function button(label: string): HTMLButtonElement | undefined {

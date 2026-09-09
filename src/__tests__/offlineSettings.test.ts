@@ -6,8 +6,9 @@ import {
 import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
 import type { OfflinePublicationAssetCompleteRecord } from "../app/offline/OfflineRepositories.Types";
 import type { OfflineReaderSyncClient } from "../app/offline/OfflineReaderSync.Actions";
-import type { ReaderOutboxIntent } from "../app/offline/ReaderOutbox.Policy";
+import { readerIntentResourceKey, type ReaderOutboxIntent } from "../app/offline/ReaderOutbox.Policy";
 import { createOfflineReaderSyncOutcome } from "../app/offline/OfflineReaderSyncOutcome.State";
+import { discardPendingReaderProgress } from "../app/offline/OfflineReaderPendingRepair.Actions";
 import { formatOfflineAssetBytes } from "../app/settings/offline/OfflineSettings.Presenter";
 
 describe("Offline Settings controller", () => {
@@ -29,6 +30,10 @@ describe("Offline Settings controller", () => {
     expect(harness.controller.getSnapshot()).toMatchObject({
       status: "ready",
       pending: { books: 2, intents: 3, sessionEstablishment: 1, progress: 1, annotations: 1 },
+      pendingBooks: [
+        expect.objectContaining({ bookId: "book-1", title: "A Known Book", pendingIntentCount: 2, hasProgress: true }),
+        expect.objectContaining({ bookId: "book-2", title: "Book book-2", annotationUpsertCount: 1 }),
+      ],
       totalAssetBytes: 8,
       assets: [
         { bookId: "book-1", title: "A Known Book", titleAvailable: true },
@@ -86,6 +91,74 @@ describe("Offline Settings controller", () => {
 
     expect(harness.dependencies.syncPending).not.toHaveBeenCalled();
     expect(harness.controller.getSnapshot().message).toContain("Connect to the library");
+    stop();
+  });
+
+  it("retries one Book through coordinated wait mode and refreshes its pending state", async () => {
+    const harness = createHarness({ intents: [progress("book-1"), annotation("book-2")] });
+    harness.dependencies.syncBook.mockImplementation(async (input) => {
+      harness.setIntents([annotation("book-2")]);
+      return {
+        status: "completed",
+        sync: {
+          status: "synced",
+          serverSessionId: input.bookId,
+          annotationsSynced: 0,
+          progressSynced: true,
+          continuation: null,
+        },
+      };
+    });
+    const stop = harness.controller.start();
+    await harness.ready();
+
+    await harness.controller.retryBook("book-1");
+
+    expect(harness.dependencies.syncBook).toHaveBeenCalledWith(expect.objectContaining({
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      mode: "wait",
+    }));
+    expect(harness.dependencies.showSyncOutcome).toHaveBeenCalledOnce();
+    expect(harness.controller.getSnapshot().pendingBooks.map((book) => book.bookId)).toEqual(["book-2"]);
+    stop();
+  });
+
+  it("guards duplicate Book retry and refuses it without online connectivity", async () => {
+    const harness = createHarness({ intents: [progress("book-1")] });
+    const gate = deferred<void>();
+    harness.dependencies.syncBook.mockImplementation(async () => {
+      await gate.promise;
+      return { status: "completed", sync: { status: "nothing-to-sync" } };
+    });
+    const stop = harness.controller.start();
+    await harness.ready();
+
+    const first = harness.controller.retryBook("book-1");
+    const duplicate = harness.controller.retryBook("book-1");
+    expect(harness.dependencies.syncBook).toHaveBeenCalledOnce();
+    gate.resolve();
+    await Promise.all([first, duplicate]);
+    harness.setConnectivity("offline");
+    await harness.controller.retryBook("book-1");
+    expect(harness.dependencies.syncBook).toHaveBeenCalledOnce();
+    stop();
+  });
+
+  it("discards only pending progress delivery and retains local Reader state", async () => {
+    const harness = createHarness({ intents: [progress("book-1"), annotation("book-1"), progress("book-2")] });
+    const stop = harness.controller.start();
+    await harness.ready();
+
+    await harness.controller.discardPendingProgress("book-1");
+
+    expect(harness.repositories.readerOutbox.remove).toHaveBeenCalledOnce();
+    expect(harness.repositories.readerState.putBookState).not.toHaveBeenCalled();
+    expect(harness.repositories.readerState.deleteBookState).not.toHaveBeenCalled();
+    expect(harness.controller.getSnapshot().pendingBooks).toEqual([
+      expect.objectContaining({ bookId: "book-1", hasProgress: false, annotationUpsertCount: 1 }),
+      expect.objectContaining({ bookId: "book-2", hasProgress: true }),
+    ]);
     stop();
   });
 
@@ -235,7 +308,18 @@ function createHarness(options: {
   };
   const readerOutbox = {
     list: vi.fn(async (namespaceKey: string) => intents.filter((intent) => intent.namespaceKey === namespaceKey)),
-    upsertIntent: vi.fn(), remove: vi.fn(), replace: vi.fn(), deleteNamespace: vi.fn(),
+    upsertIntent: vi.fn(),
+    remove: vi.fn(async (namespaceKey: string, resourceKey: string, expectedRevision: number | null) => {
+      const index = intents.findIndex((intent) => (
+        intent.namespaceKey === namespaceKey
+        && readerIntentResourceKey(intent) === resourceKey
+        && ("intentRevision" in intent ? intent.intentRevision : null) === expectedRevision
+      ));
+      if (index < 0) return false;
+      intents.splice(index, 1);
+      return true;
+    }),
+    replace: vi.fn(), deleteNamespace: vi.fn(),
   };
   const repositories = {
     publicationAssets,
@@ -250,6 +334,11 @@ function createHarness(options: {
     subscribeConnectivity: connectivity.subscribe,
     subscribeFocus: focus.subscribe,
     syncPending: vi.fn<OfflineSettingsDependencies["syncPending"]>(async () => completedSweep()),
+    syncBook: vi.fn<OfflineSettingsDependencies["syncBook"]>(async () => ({
+      status: "completed",
+      sync: { status: "nothing-to-sync" },
+    })),
+    discardProgress: vi.fn<OfflineSettingsDependencies["discardProgress"]>(discardPendingReaderProgress),
     showSyncOutcome: vi.fn(),
   } satisfies OfflineSettingsDependencies;
   const controller = createOfflineSettingsController({

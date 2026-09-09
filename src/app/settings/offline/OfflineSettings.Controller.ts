@@ -11,6 +11,16 @@ import {
 import type { OfflinePublicationAssetCompleteRecord } from "../../offline/OfflineRepositories.Types";
 import type { ReaderOutboxIntent } from "../../offline/ReaderOutbox.Policy";
 import type { BrowserConnectivityStatus } from "../../connectivity/BrowserConnectivity.State";
+import type {
+  OfflineReaderCoordinatedSyncInput,
+  OfflineReaderCoordinatedSyncResult,
+} from "../../offline/OfflineReaderCoordinatedSync.Actions";
+import {
+  addOfflineReaderSyncBookOutcome,
+  createOfflineReaderSyncOutcome,
+} from "../../offline/OfflineReaderSyncOutcome.State";
+import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.State";
+import { discardPendingReaderProgress } from "../../offline/OfflineReaderPendingRepair.Actions";
 
 export type OfflineSettingsAsset = {
   key: string;
@@ -33,9 +43,11 @@ export type OfflineSettingsState = {
   status: "loading" | "ready" | "unavailable" | "error";
   connectivity: BrowserConnectivityStatus;
   pending: OfflineSettingsPendingSummary;
+  pendingBooks: OfflinePendingBook[];
   assets: OfflineSettingsAsset[];
   totalAssetBytes: number;
-  action: "idle" | "syncing" | "removing" | "removing-all";
+  action: "idle" | "syncing" | "syncing-book" | "discarding-progress" | "removing" | "removing-all";
+  activeBookId: string | null;
   removingAssetKey: string | null;
   message: string | null;
 };
@@ -55,6 +67,8 @@ export type OfflineSettingsDependencies = {
     onCompleted(result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>): void;
   }): Promise<OfflineReaderPendingSyncResult>;
   showSyncOutcome(result: OfflineReaderPendingSyncResult): void;
+  syncBook(input: OfflineReaderCoordinatedSyncInput): Promise<OfflineReaderCoordinatedSyncResult>;
+  discardProgress: typeof discardPendingReaderProgress;
 };
 
 export type OfflineSettingsController = {
@@ -63,6 +77,8 @@ export type OfflineSettingsController = {
   start(): () => void;
   refresh(): Promise<void>;
   retrySync(): Promise<void>;
+  retryBook(bookId: string): Promise<void>;
+  discardPendingProgress(bookId: string): Promise<void>;
   removeAsset(asset: OfflineSettingsAsset): Promise<void>;
   removeAllAssets(): Promise<void>;
 };
@@ -78,6 +94,8 @@ export function createOfflineSettingsController(
     subscribeFocus: subscribeWindowFocus,
     syncPending: syncPendingOfflineReaderWork,
     showSyncOutcome: showOfflineReaderSyncOutcome,
+    syncBook: syncProductionBook,
+    discardProgress: discardPendingReaderProgress,
     ...dependencyOverrides,
   };
   const namespaceKey = input.namespaceKey?.trim() ?? "";
@@ -101,22 +119,29 @@ export function createOfflineSettingsController(
         currentRepositories.readerOutbox.list(namespaceKey),
         currentRepositories.publicationAssets.list(namespaceKey),
       ]);
-      const assets = await Promise.all(records.map((record) => assetView(record, currentRepositories)));
+      const bookIds = [...new Set([...intents.map((intent) => intent.bookId), ...records.map((record) => record.bookId)])];
+      const titles = new Map(await Promise.all(bookIds.map(async (bookId) => [
+        bookId,
+        await loadBookTitle(namespaceKey, bookId, currentRepositories),
+      ] as const)));
+      const assets = records.map((record) => assetView(record, titles.get(record.bookId) ?? null));
       if (!isCurrent(expected)) return;
       assets.sort(compareAssets);
       publish({
         status: "ready",
         connectivity: dependencies.getConnectivitySnapshot(),
         pending: summarizePending(intents),
+        pendingBooks: presentOfflinePendingBooks({ intents, titles, assets: records }),
         assets,
         totalAssetBytes: assets.reduce((total, asset) => total + asset.byteLength, 0),
         action: "idle",
+        activeBookId: null,
         removingAssetKey: null,
         message,
       });
     } catch {
       if (!isCurrent(expected)) return;
-      publish({ ...state, status: "error", action: "idle", removingAssetKey: null, message: "Offline data could not be loaded." });
+      publish({ ...state, status: "error", action: "idle", activeBookId: null, removingAssetKey: null, message: "Offline data could not be loaded." });
     }
   };
 
@@ -130,11 +155,12 @@ export function createOfflineSettingsController(
     operation: (currentRepositories: Repositories, expected: number) => Promise<void>,
     failureMessage: string,
     removingAssetKey: string | null = null,
+    activeBookId: string | null = null,
   ) => {
     const currentRepositories = repositories;
     if (!currentRepositories || state.status !== "ready" || state.action !== "idle") return;
     const expected = generation;
-    publish({ ...state, action, removingAssetKey, message: null });
+    publish({ ...state, action, activeBookId, removingAssetKey, message: null });
     try {
       await operation(currentRepositories, expected);
     } catch {
@@ -205,6 +231,46 @@ export function createOfflineSettingsController(
         await load(expected, result.status === "failed" ? "Sync could not be retried." : null);
       }, "Sync could not be retried.");
     },
+    async retryBook(bookId) {
+      const normalizedBookId = bookId.trim();
+      if (!input.client || !normalizedBookId || state.connectivity !== "online") {
+        if (state.status === "ready" && state.connectivity !== "online") {
+          publish({ ...state, message: "Connect to the library before retrying sync." });
+        }
+        return;
+      }
+      if (!state.pendingBooks.some((book) => book.bookId === normalizedBookId)) return;
+      await runAction("syncing-book", async (currentRepositories, expected) => {
+        const result = await dependencies.syncBook({
+          namespaceKey,
+          bookId: normalizedBookId,
+          client: input.client!,
+          stateRepository: currentRepositories.readerState,
+          outboxRepository: currentRepositories.readerOutbox,
+          mode: "wait",
+        });
+        const completed: Extract<OfflineReaderPendingSyncResult, { status: "completed" }> = {
+          status: "completed",
+          discoveredBooks: 1,
+          attemptedBooks: 1,
+          outcome: addOfflineReaderSyncBookOutcome(createOfflineReaderSyncOutcome(), result),
+        };
+        dependencies.showSyncOutcome(completed);
+        if (isCurrent(expected)) await load(expected);
+      }, "This book could not be retried.", null, normalizedBookId);
+    },
+    async discardPendingProgress(bookId) {
+      const normalizedBookId = bookId.trim();
+      if (!normalizedBookId) return;
+      await runAction("discarding-progress", async (currentRepositories, expected) => {
+        await dependencies.discardProgress({
+          namespaceKey,
+          bookId: normalizedBookId,
+          outboxRepository: currentRepositories.readerOutbox,
+        });
+        if (isCurrent(expected)) await load(expected);
+      }, "The pending reading position could not be discarded.", null, normalizedBookId);
+    },
     async removeAsset(asset) {
       await runAction("removing", async (currentRepositories, expected) => {
         await currentRepositories.publicationAssets.delete(namespaceKey, asset.bookId, asset.format);
@@ -225,9 +291,11 @@ function initialState(connectivity: BrowserConnectivityStatus): OfflineSettingsS
     status: "loading",
     connectivity,
     pending: { books: 0, intents: 0, sessionEstablishment: 0, progress: 0, annotations: 0 },
+    pendingBooks: [],
     assets: [],
     totalAssetBytes: 0,
     action: "idle",
+    activeBookId: null,
     removingAssetKey: null,
     message: null,
   };
@@ -243,24 +311,39 @@ function summarizePending(intents: readonly ReaderOutboxIntent[]): OfflineSettin
   };
 }
 
-async function assetView(
+function assetView(
   record: OfflinePublicationAssetCompleteRecord<Blob>,
-  repositories: Repositories,
-): Promise<OfflineSettingsAsset> {
-  const book = await loadOfflineReaderBookMetadata({
-    namespaceKey: record.namespaceKey,
-    bookId: record.bookId,
-    repository: repositories.projections,
-  });
-  const title = book?.title?.trim();
+  title: string | null,
+): OfflineSettingsAsset {
+  const normalizedTitle = title?.trim();
   return {
     key: JSON.stringify([record.bookId, record.format]),
     bookId: record.bookId,
     format: record.format,
     byteLength: record.payload.size,
-    title: title || `Book ${shortBookId(record.bookId)}`,
-    titleAvailable: Boolean(title),
+    title: normalizedTitle || `Book ${shortBookId(record.bookId)}`,
+    titleAvailable: Boolean(normalizedTitle),
   };
+}
+
+async function loadBookTitle(
+  namespaceKey: string,
+  bookId: string,
+  repositories: Repositories,
+): Promise<string | null> {
+  const book = await loadOfflineReaderBookMetadata({
+    namespaceKey,
+    bookId,
+    repository: repositories.projections,
+  });
+  return book?.title?.trim() || null;
+}
+
+async function syncProductionBook(
+  input: OfflineReaderCoordinatedSyncInput,
+): Promise<OfflineReaderCoordinatedSyncResult> {
+  const { syncOfflineReaderWithCrossTabCoordination } = await import("../../offline/OfflineReaderCoordinatedSync.Actions");
+  return syncOfflineReaderWithCrossTabCoordination(input);
 }
 
 function compareAssets(left: OfflineSettingsAsset, right: OfflineSettingsAsset): number {

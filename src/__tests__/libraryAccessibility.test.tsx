@@ -81,7 +81,7 @@ describe("Library accessibility semantics", () => {
       <BookDetailModal
         profile={null} spl={null} bookId="7" initialBook={initialBook} onClose={noop}
         onOpenReader={noop} onViewSessions={noop} onViewAuthor={noop} onViewSeries={noop}
-        onViewTag={noop} onManageShelves={noop} launchMessage={null} downloadState={{ phase: "idle" }}
+        onViewTag={noop} onManageShelves={noop} onManageOffline={noop} launchMessage={null} downloadState={{ phase: "idle" }}
       />,
     );
     expect(html).toContain('role="dialog"');

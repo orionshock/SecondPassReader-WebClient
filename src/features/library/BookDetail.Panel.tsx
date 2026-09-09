@@ -28,6 +28,7 @@ export function BookDetailPanel({
   onViewSeries,
   onViewTag,
   onManageShelves,
+  onManageOffline,
   spl,
   activitySummary,
   activitySummaryFailed,
@@ -43,6 +44,7 @@ export function BookDetailPanel({
   onViewSeries: (seriesId: string) => void;
   onViewTag: (tagSlug: string) => void;
   onManageShelves: () => void;
+  onManageOffline: () => void;
   spl: SecondPassClient | null;
   activitySummary?: MarginaliaBookSummary | null;
   activitySummaryFailed?: boolean;
@@ -190,7 +192,7 @@ export function BookDetailPanel({
         </div>
       </div>
 
-      <BookOfflineAvailabilityPanel controller={offlineAvailability} />
+      <BookOfflineAvailabilityPanel controller={offlineAvailability} onManageOffline={onManageOffline} />
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
       {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}

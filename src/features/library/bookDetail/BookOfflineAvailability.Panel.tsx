@@ -2,8 +2,10 @@ import type { BookOfflineAvailabilityController } from "./BookOfflineAvailabilit
 
 export function BookOfflineAvailabilityPanel({
   controller,
+  onManageOffline,
 }: {
   controller: BookOfflineAvailabilityController;
+  onManageOffline: () => void;
 }) {
   const { state } = controller;
   const working = state.status === "working";
@@ -30,9 +32,15 @@ export function BookOfflineAvailabilityPanel({
         </button>
       ) : null}
       {state.status === "available" ? (
-        <button type="button" className="button" onClick={() => void controller.remove()}>
-          Remove offline copy
-        </button>
+        <>
+          <button type="button" className="button" onClick={onManageOffline}>Manage offline</button>
+          <button type="button" className="button" onClick={() => void controller.remove()}>
+            Remove offline copy
+          </button>
+        </>
+      ) : null}
+      {state.status === "needs-update" ? (
+        <button type="button" className="button" onClick={onManageOffline}>Manage offline</button>
       ) : null}
       {working ? (
         <button type="button" className="button" disabled>

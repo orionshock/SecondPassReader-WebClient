@@ -17,6 +17,7 @@ export function BookDetailModal({
   onViewSeries,
   onViewTag,
   onManageShelves,
+  onManageOffline,
   launchMessage,
   downloadState,
 }: {
@@ -31,6 +32,7 @@ export function BookDetailModal({
   onViewSeries: (seriesId: string) => void;
   onViewTag: (tagSlug: string) => void;
   onManageShelves: () => void;
+  onManageOffline: (book: BookDetail) => void;
   launchMessage: string | null;
   downloadState:
     | { phase: "idle" }
@@ -188,6 +190,7 @@ export function BookDetailModal({
               onViewSeries={onViewSeries}
               onViewTag={onViewTag}
               onManageShelves={onManageShelves}
+              onManageOffline={() => onManageOffline(book)}
               spl={spl}
               activitySummary={activitySummary}
               activitySummaryFailed={activitySummaryFailed}

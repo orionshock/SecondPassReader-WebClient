@@ -23,6 +23,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
+  vi.restoreAllMocks();
 });
 
 describe("Offline Settings surface", () => {
@@ -46,6 +47,57 @@ describe("Offline Settings surface", () => {
     expect(controller.removeAllAssets).toHaveBeenCalledOnce();
   });
 
+  it("expands a route-selected pending Book into semantic actions", async () => {
+    const controller = controllerStub();
+    const state = readyState();
+    const onOpenReader = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await act(async () => root.render(
+      <OfflineSettingsView
+        state={state}
+        controller={controller}
+        clientAvailable
+        selectedBookId="book-1"
+        onSelectBook={vi.fn()}
+        onOpenReader={onOpenReader}
+      />,
+    ));
+
+    expect(container.textContent).toContain("Reading position waiting to sync");
+    expect(container.textContent).toContain("1 annotation change waiting to sync");
+    await act(async () => button("Retry this book")?.click());
+    expect(controller.retryBook).toHaveBeenCalledWith("book-1");
+    await act(async () => button("Open reader")?.click());
+    expect(onOpenReader).toHaveBeenCalledWith("book-1");
+    await act(async () => button("Discard pending reading position")?.click());
+    expect(controller.discardPendingProgress).toHaveBeenCalledWith("book-1");
+  });
+
+  it("selects an asset-only deep link and ignores a missing selection", async () => {
+    const state = { ...readyState(), pending: emptyPending(), pendingBooks: [] };
+    await act(async () => root.render(
+      <OfflineSettingsView state={state} controller={controllerStub()} clientAvailable selectedBookId="book-1" />,
+    ));
+    expect(container.querySelector('[aria-current="true"]')?.textContent).toContain("Stored Book");
+
+    await act(async () => root.render(
+      <OfflineSettingsView state={state} controller={controllerStub()} clientAvailable selectedBookId="missing" />,
+    ));
+    expect(container.querySelector('[aria-current="true"]')).toBeNull();
+    expect(container.textContent).toContain("Stored Book");
+  });
+
+  it("does not discard authored progress when confirmation is cancelled", async () => {
+    const controller = controllerStub();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    await act(async () => root.render(
+      <OfflineSettingsView state={readyState()} controller={controller} clientAvailable selectedBookId="book-1" />,
+    ));
+
+    await act(async () => button("Discard pending reading position")?.click());
+    expect(controller.discardPendingProgress).not.toHaveBeenCalled();
+  });
+
   it("shows empty states and disables retry without pending work", async () => {
     const state = { ...readyState(), pending: emptyPending(), assets: [], totalAssetBytes: 0 };
     await act(async () => root.render(
@@ -65,6 +117,8 @@ function button(label: string): HTMLButtonElement | null {
 
 function controllerStub(): OfflineSettingsController & {
   retrySync: ReturnType<typeof vi.fn>;
+  retryBook: ReturnType<typeof vi.fn>;
+  discardPendingProgress: ReturnType<typeof vi.fn>;
   removeAsset: ReturnType<typeof vi.fn>;
   removeAllAssets: ReturnType<typeof vi.fn>;
 } {
@@ -74,6 +128,8 @@ function controllerStub(): OfflineSettingsController & {
     start: () => () => undefined,
     refresh: vi.fn(async () => undefined),
     retrySync: vi.fn(async () => undefined),
+    retryBook: vi.fn(async () => undefined),
+    discardPendingProgress: vi.fn(async () => undefined),
     removeAsset: vi.fn(async () => undefined),
     removeAllAssets: vi.fn(async () => undefined),
   };
@@ -84,6 +140,19 @@ function readyState(): OfflineSettingsState {
     status: "ready",
     connectivity: "online",
     pending: { books: 1, intents: 2, sessionEstablishment: 0, progress: 1, annotations: 1 },
+    pendingBooks: [{
+      bookId: "book-1",
+      title: "Stored Book",
+      titleAvailable: true,
+      pendingIntentCount: 2,
+      needsSessionEstablishment: false,
+      hasProgress: true,
+      annotationUpsertCount: 1,
+      annotationDeleteCount: 0,
+      hasOfflineAsset: true,
+      assetFormats: ["EPUB"],
+      assetBytes: 2 * 1024 * 1024,
+    }],
     assets: [{
       key: '["book-1","epub"]',
       bookId: "book-1",
@@ -94,6 +163,7 @@ function readyState(): OfflineSettingsState {
     }],
     totalAssetBytes: 2 * 1024 * 1024,
     action: "idle",
+    activeBookId: null,
     removingAssetKey: null,
     message: null,
   };

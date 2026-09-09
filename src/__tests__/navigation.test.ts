@@ -214,6 +214,8 @@ describe("navigation route ordering params", () => {
     expect(routeToHash({ kind: "settings" })).toBe("#/settings?tab=appearance");
     expect(routeToHash({ kind: "settings", tab: "appearance" })).toBe("#/settings?tab=appearance");
     expect(routeToHash({ kind: "settings", tab: "offline" })).toBe("#/settings?tab=offline");
+    expect(routeToHash({ kind: "settings", tab: "offline", bookId: "book / one" }))
+      .toBe("#/settings?tab=offline&book=book+%2F+one");
     expect(routeToHash({ kind: "settings", tab: "library-server" })).toBe("#/settings?tab=library-server");
     expect(routeToHash({ kind: "settings", tab: "tools" })).toBe("#/settings?tab=tools");
 
@@ -222,6 +224,9 @@ describe("navigation route ordering params", () => {
 
     vi.stubGlobal("window", { location: { hash: "#/settings?tab=offline" } });
     expect(parseCurrentRoute()).toEqual({ kind: "settings", tab: "offline" });
+
+    window.location.hash = "#/settings?tab=offline&book=book-1";
+    expect(parseCurrentRoute()).toEqual({ kind: "settings", tab: "offline", bookId: "book-1" });
 
     vi.stubGlobal("window", { location: { hash: "#/settings?tab=bogus" } });
     expect(parseCurrentRoute()).toEqual({ kind: "settings" });

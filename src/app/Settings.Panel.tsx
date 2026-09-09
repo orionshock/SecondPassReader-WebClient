@@ -197,7 +197,13 @@ export function SettingsPanel({
       ) : null}
 
       {activeTab === "offline" ? (
-        <OfflineSettingsPanel namespaceKey={offlineNamespaceKey} client={offlineSyncClient} />
+        <OfflineSettingsPanel
+          namespaceKey={offlineNamespaceKey}
+          client={offlineSyncClient}
+          selectedBookId={route.bookId ?? null}
+          onSelectBook={(bookId) => navigateTo({ kind: "settings", tab: "offline", bookId })}
+          onOpenReader={(bookId) => navigateTo({ kind: "reader", bookId })}
+        />
       ) : null}
 
       <SettingsToolsPanel active={activeTab === "tools"} />
