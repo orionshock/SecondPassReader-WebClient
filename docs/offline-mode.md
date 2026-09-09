@@ -191,7 +191,16 @@ local-unconfirmed upserts continue with the same client ID, while confirmed hist
 copied forward under a new stable client ID and become local-unconfirmed. Confirmed deletes against
 the closed Session are dropped rather than applied to the continuation Session. The action returns
 continuation counts for later notification, but automatic sync and notification UI remain future
-work. Progress replay remains separate, and `start-over` is never automatic recovery.
+work. `start-over` is never automatic recovery.
+
+Progress replay is a separate explicit action after Session authority resolution and annotation
+replay. It sends only the progress value that still matches durable local desired state and
+exact-acknowledges only the delivered revision. A newer local revision written during delivery
+remains visible and pending; CFI strings are never compared for recency. `SESSION_CLOSED` stops
+delivery to that Session, resolves a writable continuation, reloads the current desired progress,
+and sends that latest value to the continuation. Same-runtime delivery is serialized per account
+and Book because server progress is last-write-wins. Automatic sync and cross-tab coordination
+remain later work.
 
 ## Publication Asset Storage Admission
 
@@ -264,8 +273,8 @@ otherwise normal `open` converges on the server's one writable Session. A succes
 the local Session identity, progress, annotations, tombstones, and annotation origins while adding
 the authoritative active server Session ID. It may then exact-remove only the fulfilled
 `establish-session` intent. Provisional IDs are never sent as server Session IDs, and `start-over`
-remains explicit user intent rather than a recovery path. Progress and annotation replay remain a
-separate phase.
+remains explicit user intent rather than a recovery path. Progress and annotation delivery remain
+explicit replay actions rather than automatic reconnect behavior.
 
 ## Durable Repository Boundaries
 
