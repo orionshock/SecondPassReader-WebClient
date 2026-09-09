@@ -16,6 +16,7 @@ import {
   toSessionAnnotationHighlights,
   type SessionAnnotationDescriptionEntry,
 } from "./SessionAnnotations.Presenter";
+import { mapOfflineReaderAnnotations } from "./OfflineReaderAnnotations.Mapper";
 
 export type SessionAnnotations = {
   raw: MarginaliaAnnotation[];
@@ -115,15 +116,14 @@ export function useSessionAnnotations(args: {
   // Seed from the open bootstrap response immediately when available.
   const lastSeedKeyRef = useRef<string>("");
   useEffect(() => {
-    const open = args.openedBook.marginaliaBootstrap;
-    const id = open?.session?.id ?? "";
-    if (!id) return;
     if (lastSeedKeyRef.current === activeKey) return;
-    const seeded = getSeedAnnotationsFromOpen(open?.annotations);
+    const seeded = args.openedBook.bootstrap.kind === "server"
+      ? getSeedAnnotationsFromOpen(args.openedBook.bootstrap.marginalia.annotations)
+      : mapOfflineReaderAnnotations(args.openedBook.bootstrap.continuity.annotations);
     if (!seeded) return;
     lastSeedKeyRef.current = activeKey;
     setRaw(seeded);
-  }, [activeKey, args.openedBook.marginaliaBootstrap, setRaw]);
+  }, [activeKey, args.openedBook.bootstrap, setRaw]);
 
   // Load annotations for the session (non-blocking).
   useEffect(() => {

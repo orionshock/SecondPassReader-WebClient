@@ -15,6 +15,7 @@ import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
 } from "../../../app/offline/OfflineRepositories.IndexedDb";
+import { retainOfflineReaderBookMetadata } from "../../../app/offline/OfflineReaderOpen.Actions";
 import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Store";
 
 const BOOK_DETAIL_OFFLINE_FORMAT = "epub";
@@ -74,7 +75,16 @@ export function useBookOfflineAvailabilityController({
       normalizePublicationFormat(book.file?.format)!,
     );
     if (generation !== generationRef.current) return;
-    updateState(classifyStoredAsset(book, asset, message));
+    const nextState = classifyStoredAsset(book, asset, message);
+    if (nextState.status === "available") {
+      await retainOfflineReaderBookMetadata({
+        namespaceKey: namespace.key,
+        book,
+        repository: repositories.projections,
+      });
+      if (generation !== generationRef.current) return;
+    }
+    updateState(nextState);
   }, [book, namespace, updateState]);
 
   useEffect(() => {

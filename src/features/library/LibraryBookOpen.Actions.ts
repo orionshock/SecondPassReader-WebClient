@@ -32,11 +32,12 @@ export async function openBookForReader(input: {
   const blob = await withTimeout(spl.library.books.download(book), 120_000, "Downloading book");
   const objectUrl = URL.createObjectURL(blob);
   return {
+    source: "online",
     book,
     blob,
     objectUrl,
     openedAt: new Date().toISOString(),
-    marginaliaBootstrap,
+    bootstrap: { kind: "server", marginalia: marginaliaBootstrap },
     returnTarget,
   };
 }

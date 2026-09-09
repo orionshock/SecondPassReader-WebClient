@@ -49,10 +49,28 @@ function stubObjectUrlRevocation() {
 
 function openedBook(): OpenedBook {
   return {
+    source: "offline",
     book: { id: "42", title: "Book" } as OpenedBook["book"],
     blob: new Blob(),
     objectUrl: "blob:reader-book",
     openedAt: "2026-08-09T00:00:00.000Z",
+    bootstrap: {
+      kind: "local",
+      serverWritesAllowed: false,
+      continuity: {
+        namespaceKey: "account-a",
+        bookId: "42",
+        schemaVersion: 1,
+        session: {
+          kind: "provisional",
+          localSessionId: "local:test",
+          serverSessionId: null,
+          lastKnownServerStatus: null,
+        },
+        progress: null,
+        annotations: [],
+      },
+    },
     returnTarget: { kind: "home", label: "Home", route: "#/home" },
   };
 }

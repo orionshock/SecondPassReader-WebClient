@@ -76,6 +76,11 @@ describe("Book Detail offline availability", () => {
     repositoriesMock.mockResolvedValue(repositories.value);
     await renderController(book(CHECKSUM_B));
     expect(container.textContent).toContain("Available offline");
+    expect(repositories.projections.put).toHaveBeenCalledWith(expect.objectContaining({
+      namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+      projectionKey: "reader-book:book-1",
+      value: expect.objectContaining({ id: "book-1" }),
+    }));
     expect(button("Remove offline copy")).toBeTruthy();
 
     act(() => root.unmount());

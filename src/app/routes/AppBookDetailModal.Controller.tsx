@@ -1,7 +1,6 @@
-import type { SecondPassClient } from "@secondpass/client";
+import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { BookDetailModal } from "../../features/library/BookDetail.Modal";
-import { saveReaderReturnTarget } from "../../features/reader/ReaderReturnTarget.Store";
 import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, routeToHash, withoutBookModal } from "../AppNavigation.Router";
@@ -10,10 +9,12 @@ export function AppBookDetailModalController({
   route,
   profile,
   spl,
+  onOpenReader,
 }: {
   route: AppRoute | null;
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
+  onOpenReader: (book: BookDetail, returnTarget: ReaderReturnTarget) => void;
 }) {
   const modalBookId =
     route?.kind === "home"
@@ -38,7 +39,7 @@ export function AppBookDetailModalController({
         navigateTo(withoutBookModal(route), { replace: true });
       }}
       onOpenReader={(book) => {
-        openReaderWithReturnTarget(book.id, getReaderReturnTargetForRoute(route));
+        onOpenReader(book, getReaderReturnTargetForRoute(route));
       }}
       onViewSessions={(book) => {
         navigateTo({ kind: "sessions", bookId: String(book.id) });
@@ -126,10 +127,4 @@ function getReaderReturnTargetForRoute(route: AppRoute | null): ReaderReturnTarg
     };
   }
   return { kind: "home", label: "Home", route: "#/home" };
-}
-
-function openReaderWithReturnTarget(bookId: string | number, returnTarget: ReaderReturnTarget) {
-  const id = String(bookId);
-  saveReaderReturnTarget(id, returnTarget);
-  navigateTo({ kind: "reader", bookId: id });
 }

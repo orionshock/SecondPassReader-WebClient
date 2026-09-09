@@ -26,6 +26,7 @@ import {
   buildReadingSessionState,
   composeReadingSessionDurableMarks,
 } from "./ReadingSessionRender.Presenter";
+import { getReaderBootstrapState } from "./ReaderBootstrap.State";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -130,19 +131,24 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       : undefined,
     [progressLocation?.cfi, progressLocationLabel],
   );
-  const bootstrapSession = props.openedBook.marginaliaBootstrap?.session ?? null;
-  const sessionId = bootstrapSession?.id ?? null;
-  const canMutateSession = bootstrapSession?.status === "active";
+  const {
+    serverBootstrap,
+    localBootstrap,
+    sessionId,
+    canMutateSession,
+  } = getReaderBootstrapState(props.openedBook);
+  const serverSpl = serverBootstrap ? props.spl : null;
+  const bootstrapSession = serverBootstrap?.session ?? null;
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
-    const progress = props.openedBook.marginaliaBootstrap?.session?.progress;
+    const progress = serverBootstrap?.session?.progress ?? localBootstrap?.continuity.progress;
     const cfi = progress?.cfi ?? null;
     if (typeof cfi === "string" && cfi.trim()) return { type: "cfi", cfi: cfi.trim() };
     return undefined;
-  }, [props.openedBook.marginaliaBootstrap?.session?.progress]);
+  }, [localBootstrap?.continuity.progress, serverBootstrap?.session?.progress]);
 
   const sessionAnnotations = useSessionAnnotations({
     openedBook: props.openedBook,
-    spl: props.spl,
+    spl: serverSpl,
     sessionId,
     location,
     toc,
@@ -169,7 +175,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   );
 
   const previousLayers = usePreviousSessionLayers({
-    spl: props.spl,
+    spl: serverSpl,
     bookId: props.openedBook.book.id,
     currentSessionId: sessionId,
     describeCfi,
@@ -190,7 +196,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const { autosave, prepareProgressForClose, resumeProgressAfterCloseFailure } = useReadingProgressAutosave({
     enabled: canMutateSession,
     autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
-    spl: props.spl,
+    spl: serverSpl,
     sessionId: state.sessionId,
     location: progressLocation,
     toc,
@@ -198,7 +204,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     savedProgress: bootstrapSession?.progress ?? null,
   });
   const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
-    spl: props.spl,
+    spl: serverSpl,
     sessionId,
     finalProgress,
     prepareProgressForClose,
@@ -231,8 +237,9 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, nowMs, state.sessionId]);
 
   const statusLine = useMemo(() => {
-    return buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });
-  }, [props.openedBook.book.title, state.location, state.toc]);
+    const lines = buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });
+    return localBootstrap ? ["Offline", ...lines] : lines;
+  }, [localBootstrap, props.openedBook.book.title, state.location, state.toc]);
 
   const visibleHighlightMarks = useMemo(
     () => composeReadingSessionDurableMarks(highlightMarks, previousLayers.selectedHighlightMarks),
@@ -260,7 +267,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     createHighlight,
   } = useCurrentSessionAnnotationActions({
     identity: `${activeBookKey}|${sessionId ?? ""}`,
-    spl: props.spl,
+    spl: serverSpl,
     sessionId,
     location,
     locationLabel: generatedLocationLabel,
@@ -294,11 +301,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onStagedSelectionCanceled={handleStagedSelectionCanceled}
         onUnrelatedNavigation={props.onUnrelatedNavigation}
         annotationToolbarItems={annotationToolbarItems}
-        onUpdateHighlight={updateHighlight}
-        onRemoveAnnotation={removeById}
+        onUpdateHighlight={canMutateSession ? updateHighlight : undefined}
+        onRemoveAnnotation={canMutateSession ? removeById : undefined}
         onOpenAnnotationInWorkspace={props.onOpenAnnotationInWorkspace}
         highlightMarks={visibleHighlightMarks}
-        onCommitHighlight={async (arg) => createHighlight(arg)}
+        onCommitHighlight={canMutateSession ? async (arg) => createHighlight(arg) : undefined}
         highlightCommitBusy={annotationBusy}
         settings={props.settings}
         onSettingsChange={props.onSettingsChange}

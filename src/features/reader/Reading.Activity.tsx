@@ -33,6 +33,7 @@ export function ReadingActivity({
   const [searchOpen, setSearchOpen] = useState(false);
   const [workspaceFocusRequest, setWorkspaceFocusRequest] = useState<ReaderActivityWorkspaceFocusRequest | null>(null);
   const readerImport = useReaderImportJob();
+  const serverSpl = openedBook.source === "online" ? spl : null;
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
   const settingsPresentation = getReaderSettingsPresentation(displaySettings);
@@ -44,7 +45,7 @@ export function ReadingActivity({
     >
       <ReadingSessionOrchestrator
         openedBook={openedBook}
-        spl={spl}
+        spl={serverSpl}
         settings={displaySettings}
         onSettingsChange={readerDisplaySettings.updateSettings}
         onSettingsReset={readerDisplaySettings.resetSettings}
@@ -74,7 +75,7 @@ export function ReadingActivity({
             setSearchOpen={setSearchOpen}
             readerImport={readerImport}
             workspaceFocusRequest={workspaceFocusRequest}
-            spl={spl}
+            spl={serverSpl}
             initialSearchQuery={initialSearchQuery}
             readerWidth={settingsPresentation.viewport.width}
           />
@@ -164,8 +165,8 @@ function ReaderActivityContent({
         marginalia={marginalia}
         selectedPreviousSessionIds={selectedPreviousSessionIds}
         importJobActive={Boolean(readerImport.job)}
-        onImportMarginalia={activityImport.openModal}
-        onOpenImport={activityImport.openDrawer}
+        onImportMarginalia={readerState.canMutateSession ? activityImport.openModal : undefined}
+        onOpenImport={readerState.canMutateSession ? activityImport.openDrawer : undefined}
         onCloseSession={readerState.canMutateSession && currentSessionId ? completion.openCloseDialog : undefined}
         returnLabel={completion.returnLabel}
         onReturn={completion.returnToTarget}

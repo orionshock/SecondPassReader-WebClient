@@ -54,8 +54,8 @@ export function ReaderActivityHeader({
   marginalia: ReaderActivityRenderState["marginalia"];
   selectedPreviousSessionIds: Set<string>;
   importJobActive: boolean;
-  onImportMarginalia: () => void;
-  onOpenImport: () => void;
+  onImportMarginalia?: () => void;
+  onOpenImport?: () => void;
   onCloseSession?: () => void;
   returnLabel: string;
   onReturn: () => void;

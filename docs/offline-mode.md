@@ -22,7 +22,8 @@ It does not select a complete storage or synchronization architecture.
 ## Initial Scope
 
 - Cache the application shell, Home snapshot, and recent reading state later as conveniences.
-- Offer explicit offline-ready EPUB files from Book Detail; consuming them in Reader remains later.
+- Offer explicit offline-ready EPUB files from Book Detail and admit verified files to a local,
+  read-only Reader bootstrap while the browser explicitly reports offline.
 - Support offline Reader progress and annotation activity for those books later.
 - Keep library search and paginated browsing online-dependent.
 - Keep shelf mutations and library or administration mutations online-only.
@@ -133,12 +134,27 @@ scope.
 Book Detail is the first explicit offline-stability surface. It can make one supported Book file
 available offline, update a changed file, or remove its publication asset. Removal does not clear cached projections,
 Reader continuity state, annotations, or pending Reader intents. Library-wide asset management in
-Settings and Reader consumption of stored assets remain separate later phases.
+Settings remains a separate later phase.
 
 The shared asset policy, storage, checksum verification, and acquisition ownership are
 format-neutral. EPUB is the only currently supported Reader format. Future formats require their
 own engines and format-owned navigation, location, selection, and annotation semantics; EPUB CFI
 is not a generic publication location model.
+
+## Offline Reader Admission
+
+Reader opening branches only on an explicit browser `offline` signal. `online` and `unknown` keep
+the existing server-authorized Session-open and download path; arbitrary server failure does not
+fall back to cached bytes. Offline opening requires the account namespace, a retained Book-detail
+projection, current EPUB Reader support, and a complete stored Blob whose format and checksum
+match that Book metadata.
+
+The local bootstrap carries local continuity and its distinct local Session identity. It is not a
+server marginalia bootstrap and never exposes a provisional identity to SDK mutation owners. This
+first offline Reader slice permits EPUB reading, navigation, TOC, search, and display settings, but
+keeps progress, annotations, Session metadata, close, and other server-backed mutations disabled.
+The existing Reader lifecycle owns and revokes object URLs for both downloaded and stored Blobs.
+Outbox mutation integration and reconnect authority resolution remain later work.
 
 ## Publication Asset Storage Admission
 

@@ -1,13 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, type SecondPassClient } from "@secondpass/client";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ApiError, type BookDetail, type SecondPassClient } from "@secondpass/client";
 import { openBookForReader } from "../features/library/LibraryBookOpen.Actions";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
-import type { OpenedBook } from "../features/reader/Reader.Types";
+import { saveReaderReturnTarget } from "../features/reader/ReaderReturnTarget.Store";
+import type { OpenedBook, ReaderReturnTarget } from "../features/reader/Reader.Types";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 import type { AppRoute } from "./AppNavigation.Router";
 import { navigateTo } from "./AppNavigation.Router";
 import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
+import {
+  getBrowserConnectivitySnapshot,
+  subscribeToBrowserConnectivity,
+} from "./connectivity/BrowserConnectivity.State";
+import { buildOfflineCacheNamespace } from "./offline/OfflineCacheNamespace.Policy";
+import {
+  loadOfflineReaderBookMetadata,
+  openOfflineBookForReader,
+} from "./offline/OfflineReaderOpen.Actions";
+import { openIndexedDbOfflineRepositories } from "./offline/OfflineRepositories.IndexedDb";
 
 export function useAppReaderOpenController({
   route,
@@ -28,8 +39,14 @@ export function useAppReaderOpenController({
   const activeOpenedBookRef = useRef<OpenedBook | null>(null);
   const openingBookRef = useRef<string | null>(null);
   const navigationSequenceRef = useRef(0);
+  const preparedOfflineBookRef = useRef<BookDetail | null>(null);
   const routeRef = useRef<AppRoute | null>(route);
   routeRef.current = route;
+  const connectivity = useSyncExternalStore(
+    subscribeToBrowserConnectivity,
+    getBrowserConnectivitySnapshot,
+    getBrowserConnectivitySnapshot,
+  );
 
   const closeReader = useCallback(() => {
     debugLog("reader", "reader closed");
@@ -38,6 +55,7 @@ export function useAppReaderOpenController({
     releaseOpenedBook(active);
     setOpenedBook(null);
     openingBookRef.current = null;
+    preparedOfflineBookRef.current = null;
   }, []);
 
   const retryReaderRestore = useCallback(() => {
@@ -45,6 +63,12 @@ export function useAppReaderOpenController({
     openingBookRef.current = null;
     setReaderRestoreError(null);
     setReaderRestoreAttempt((attempt) => attempt + 1);
+  }, []);
+
+  const openReaderFromBookDetail = useCallback((book: BookDetail, returnTarget: ReaderReturnTarget) => {
+    preparedOfflineBookRef.current = book;
+    saveReaderReturnTarget(book.id, returnTarget);
+    navigateTo({ kind: "reader", bookId: String(book.id) });
   }, []);
 
   // Bump a sequence number on any route change so async opens can be cancelled logically.
@@ -63,7 +87,8 @@ export function useAppReaderOpenController({
     // Reader route restore/open: on reload (or direct navigation) open the requested book.
     if (workflowStep !== "library_home") return;
     if (!route || route.kind !== "reader") return;
-    if (!profile?.apiBaseUrl || !profile.accessToken || !spl) return;
+    if (!profile) return;
+    if (connectivity !== "offline" && (!profile.apiBaseUrl || !profile.accessToken || !spl)) return;
 
     const requestedBookId = route.bookId;
     if (openedBook?.book?.id === requestedBookId) return;
@@ -91,14 +116,52 @@ export function useAppReaderOpenController({
           }
         };
 
-        const book = await withTimeout(
-          spl.library.books.get(requestedBookId),
-          30_000,
-          "Loading book details",
-        );
-        if (cancelled) return;
-        if (sequence !== navigationSequenceRef.current) return;
-        const opened = await openBookForReader({ spl, book });
+        let opened: OpenedBook;
+        if (connectivity === "offline") {
+          try {
+            const namespace = buildOfflineCacheNamespace({
+              serverBaseUrl: profile.serverBaseUrl,
+              accountProfileId: profile.verifiedUser?.profileId,
+            });
+            if (!namespace) throw new OfflineReaderAdmissionError();
+
+            const repositories = await openIndexedDbOfflineRepositories<Blob>();
+            try {
+              const preparedBook = preparedOfflineBookRef.current;
+              const book = preparedBook && String(preparedBook.id) === requestedBookId
+                ? preparedBook
+                : await loadOfflineReaderBookMetadata({
+                    namespaceKey: namespace.key,
+                    bookId: requestedBookId,
+                    repository: repositories.projections,
+                  });
+              if (!book) throw new OfflineReaderAdmissionError();
+              const result = await openOfflineBookForReader({
+                namespace,
+                book,
+                assetRepository: repositories.publicationAssets,
+                readerStateRepository: repositories.readerState,
+                outboxRepository: repositories.readerOutbox,
+              });
+              if (result.status !== "opened") throw new OfflineReaderAdmissionError();
+              opened = result.openedBook;
+            } finally {
+              repositories.close();
+            }
+          } catch {
+            throw new OfflineReaderAdmissionError();
+          }
+        } else {
+          const onlineSpl = spl!;
+          const book = await withTimeout(
+            onlineSpl.library.books.get(requestedBookId),
+            30_000,
+            "Loading book details",
+          );
+          if (cancelled) return;
+          if (sequence !== navigationSequenceRef.current) return;
+          opened = await openBookForReader({ spl: onlineSpl, book });
+        }
         const currentRoute = routeRef.current;
         const currentOpened = resolveReaderOpenCompletion(
           opened,
@@ -115,12 +178,17 @@ export function useAppReaderOpenController({
           return;
         }
         const previous = activeOpenedBookRef.current;
+        preparedOfflineBookRef.current = null;
         activeOpenedBookRef.current = currentOpened;
         releaseOpenedBook(previous);
         setOpenedBook(currentOpened);
         navigateTo({ kind: "reader", bookId: String(currentOpened.book.id), search: route.search });
       } catch (error) {
         if (cancelled) return;
+        if (error instanceof OfflineReaderAdmissionError) {
+          setReaderRestoreError("This book is not available offline.");
+          return;
+        }
         reportAuthorizationFailure(error);
         const message =
           error instanceof ApiError && error.status === 404
@@ -145,6 +213,7 @@ export function useAppReaderOpenController({
     };
   }, [
     openedBook?.book?.id,
+    connectivity,
     profile,
     readerRestoreAttempt,
     reportAuthorizationFailure,
@@ -157,6 +226,9 @@ export function useAppReaderOpenController({
     openedBook,
     readerRestoreError,
     closeReader,
+    openReaderFromBookDetail,
     retryReaderRestore,
   };
 }
+
+class OfflineReaderAdmissionError extends Error {}

@@ -1,4 +1,5 @@
 import type { BookDetail, CompactBook, MarginaliaBootstrap } from "@secondpass/client";
+import type { OfflineReaderBookState } from "../../app/offline/OfflineRepositories.Types";
 
 export type ReaderReturnTarget = {
   kind: "home" | "library" | "shelves" | "shelf" | "sessions" | "bookDetail" | "series";
@@ -10,11 +11,31 @@ export type ReaderReturnTarget = {
   seriesId?: string;
 };
 
-export type OpenedBook = {
+type OpenedBookBase = {
   book: CompactBook | BookDetail;
   blob: Blob;
   objectUrl: string;
   openedAt: string;
-  marginaliaBootstrap?: MarginaliaBootstrap;
   returnTarget: ReaderReturnTarget;
 };
+
+export type OnlineOpenedBook = OpenedBookBase & {
+  source: "online";
+  bootstrap: {
+    kind: "server";
+    marginalia: MarginaliaBootstrap;
+  };
+};
+
+export type OfflineReaderBootstrap = {
+  kind: "local";
+  continuity: OfflineReaderBookState;
+  serverWritesAllowed: false;
+};
+
+export type OfflineOpenedBook = OpenedBookBase & {
+  source: "offline";
+  bootstrap: OfflineReaderBootstrap;
+};
+
+export type OpenedBook = OnlineOpenedBook | OfflineOpenedBook;

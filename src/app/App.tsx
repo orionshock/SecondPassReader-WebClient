@@ -97,6 +97,7 @@ function AppShell() {
     openedBook,
     readerRestoreError,
     closeReader,
+    openReaderFromBookDetail,
     retryReaderRestore,
   } = useAppReaderOpenController({
     route,
@@ -322,7 +323,12 @@ function AppShell() {
       </main>
 
       {workflowStep === "library_home" && route?.kind !== "reader" ? (
-        <AppBookDetailModalController route={route} profile={selectedProfile} spl={splClient} />
+        <AppBookDetailModalController
+          route={route}
+          profile={selectedProfile}
+          spl={splClient}
+          onOpenReader={openReaderFromBookDetail}
+        />
       ) : null}
     </div>
   );
