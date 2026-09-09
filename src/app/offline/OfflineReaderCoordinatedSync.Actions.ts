@@ -15,13 +15,13 @@ export type OfflineReaderCoordinatedSyncResult =
   | { status: "coordination-unavailable" }
   | { status: "failed" };
 
-type CoordinatedSyncInput = OfflineReaderSyncInput & {
+export type OfflineReaderCoordinatedSyncInput = OfflineReaderSyncInput & {
   mode?: BrowserOfflineSyncLockMode;
   lockManager?: BrowserOfflineSyncLockManager | null;
 };
 
 export async function syncOfflineReaderWithCrossTabCoordination(
-  input: CoordinatedSyncInput,
+  input: OfflineReaderCoordinatedSyncInput,
 ): Promise<OfflineReaderCoordinatedSyncResult> {
   const result = await withBrowserOfflineSyncLock({
     namespaceKey: input.namespaceKey,

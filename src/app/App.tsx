@@ -23,6 +23,8 @@ import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
+import { buildOfflineCacheNamespace } from "./offline/OfflineCacheNamespace.Policy";
+import { startOfflineReaderReconnectSyncLifecycle } from "./offline/OfflineReaderReconnectSync.Lifecycle";
 
 const SettingsPanel = lazy(async () => {
   const module = await import("./Settings.Panel");
@@ -54,6 +56,13 @@ function AppShell() {
   }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
+  const offlineNamespaceKey = useMemo(() => {
+    if (workflowStep !== "library_home" || !selectedProfile?.verifiedAt) return null;
+    return buildOfflineCacheNamespace({
+      serverBaseUrl: selectedProfile.serverBaseUrl,
+      accountProfileId: selectedProfile.verifiedUser?.profileId,
+    })?.key ?? null;
+  }, [selectedProfile?.serverBaseUrl, selectedProfile?.verifiedAt, selectedProfile?.verifiedUser?.profileId, workflowStep]);
 
   const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
 
@@ -92,6 +101,11 @@ function AppShell() {
     reportAuthorizationFailure,
     onProfileChanged: refreshProfiles,
   });
+
+  useEffect(() => startOfflineReaderReconnectSyncLifecycle({
+    namespaceKey: offlineNamespaceKey,
+    client: splClient,
+  }), [offlineNamespaceKey, splClient]);
 
   const {
     openedBook,

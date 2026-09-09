@@ -215,8 +215,17 @@ account namespace and Book. Waiting is the default; a non-waiting caller may rec
 starting sync. Durable intent is inspected by the sync action only after ownership is acquired, so a
 waiter can observe that the previous tab already finished the work. Different Books and namespaces
 remain independent. Web Locks require a supporting browser and secure context; unsupported contexts
-report unavailable coordination rather than using a fragile storage mutex. Automatic reconnect
-invocation remains unwired and must use this coordinated entry point when introduced.
+report unavailable coordination rather than using a fragile storage mutex. Production deployment
+expects the operator's reverse proxy to provide HTTPS and its certificate configuration.
+
+Reader outbox sync runs one namespace-scoped pass when the centralized browser status makes an
+explicit `offline` to `online` transition. Initial `online` and `unknown` to `online` states do not
+trigger a startup sweep. The pass lists the namespace outbox once, derives distinct Books, and uses
+up to three workers to invoke non-waiting cross-tab coordination per Book. `busy` means another tab
+owns that Book and is not an error. Account lifecycle disposal prevents an old namespace pass from
+starting more Books, while already-started work settles before its shared repository connection
+closes. Failed work remains durable for a later reconnect or manual action; there is no retry timer,
+periodic sweep, service worker, background sync, or result UI yet.
 
 ## Publication Asset Storage Admission
 
