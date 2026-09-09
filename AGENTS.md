@@ -53,8 +53,11 @@ These conventions are authoritative for new files throughout the project. Apply 
 
 Use PascalCase for component files, classes, and types. Group related files in feature-local folders and use readable repeated prefixes. Do not use underscore-based filename grouping.
 
+The final dot-delimited name is the role suffix. It describes the file's broad responsibility, not its product domain or implementation technology. Put domain and implementation qualifiers before that suffix; for example, prefer `IndexedDbOfflinePublicationAsset.Repository.ts` over treating `IndexedDbRepository` as a new role.
+
 Use the following role suffixes according to the file's actual responsibility:
 
+- `.Api.ts`: remote API resource owner that exposes one service contract behind the transport boundary.
 - `.Activity.tsx`: route-level product entry that connects navigation, loading, and major feature composition.
 - `.Orchestrator.tsx`: composition root that coordinates multiple domain owners without implementing their internals.
 - `.Controller.ts`: imperative sequencing or stateful operation ownership for one feature lifecycle.
@@ -62,11 +65,21 @@ Use the following role suffixes according to the file's actual responsibility:
 - `.Bridge.ts`: stable renderer-neutral or service-neutral capability contract.
 - `.Engine.ts`: concrete renderer or processing-engine implementation behind a bridge.
 - `.Adapter.ts`: translation at an external schema, library, or service contract boundary.
+- `.Constants.ts`: named immutable values shared by one feature or subsystem; no runtime ownership.
+- `.Context.tsx`: React context definition, provider, and narrowly related context access behavior.
+- `.Diagnostics.ts`: opt-in diagnostics, instrumentation, or structured logging for one subsystem; not canonical product state.
+- `.Factory.ts`: construction of a configured client, owner, or implementation without retaining its lifecycle ownership.
+- `.Fixtures.ts`: test-only builders, fakes, and representative data shared by a focused test area.
+- `.Handler.ts`: one registered inbound event, command, or import-format strategy; do not use it as a generic home for unrelated actions.
 - `.Mapper.ts`: pure conversion between internal data shapes.
+- `.Policy.ts`: pure business rules, eligibility decisions, validation, or classification without I/O or lifecycle ownership.
 - `.Presenter.ts`: view-model construction and user-facing text or display formatting.
+- `.Registry.ts`: keyed discovery and selection of known strategies, formats, or capabilities.
+- `.Repository.ts`: asynchronous domain-record access and transactional persistence behind a storage-neutral contract; put storage-engine qualifiers earlier in the name.
+- `.Router.ts`: parsing, serialization, or deterministic dispatch between navigation or command destinations.
 - `.Types.ts`: shared types only, with no runtime behavior.
 - `.State.ts`: reducers, state transitions, and state invariants.
-- `.Store.ts`: persisted local-storage ownership and serialization.
+- `.Store.ts`: app-owned preference or configuration state with its persistence and serialization, typically using a small synchronous browser store.
 - `.Queries.ts`: query generation and other read-side helpers.
 - `.Actions.ts`: mutation construction and other write-side operations.
 - `.Lifecycle.ts`: setup, teardown, subscription, and lifecycle state-machine behavior.
@@ -75,12 +88,27 @@ Use the following role suffixes according to the file's actual responsibility:
 
 UI role suffixes:
 
+- `.Page.tsx`: screen-level feature content rendered within application routing; unlike an Activity, it does not own the route lifecycle or major subsystem composition.
+- `.Shell.tsx`: stable frame around a feature subsystem, including its chrome and primary content regions.
 - `.Panel.tsx`: persistent or docked feature surface.
 - `.Drawer.tsx`: dismissible edge-attached feature surface.
+- `.Header.tsx`: contextual heading, navigation, metadata, and actions for a page or feature surface.
+- `.Card.tsx`: self-contained summary or interaction surface for one item.
+- `.List.tsx`: linear collection ownership and item composition.
+- `.Grid.tsx`: two-dimensional collection layout and item composition.
+- `.Carousel.tsx`: ordered scrollable or paged collection surface.
+- `.Tabs.tsx`: tab selection and switching among sibling feature views.
+- `.Menu.tsx`: transient contextual choices or actions anchored to a trigger.
+- `.Control.tsx`: one reusable interactive input or compact setting control.
+- `.Editor.tsx`: focused editing surface that owns draft interaction and validation presentation.
+- `.Form.tsx`: cohesive field collection and submission interaction for one operation.
 - `.Toolbar.tsx`: compact action controls for a current context or selection.
 - `.Row.tsx`: one row in a table-like or metadata-heavy collection.
 - `.Item.tsx`: one general collection entry when row semantics do not apply.
+- `.Notice.tsx`: inline, contextual, nonblocking status or error feedback.
+- `.Banner.tsx`: prominent conditional status spanning a broad application or feature surface.
 - `.Dialog.tsx`: modal interaction requiring focused user action.
+- `.Viewport.tsx`: primary mounted content or renderer surface through which the user views and navigates a document or scene.
 
 Example feature layout:
 
