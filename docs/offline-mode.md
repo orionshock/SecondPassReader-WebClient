@@ -207,8 +207,16 @@ resolve writable Session authority, replay annotations, then replay progress aga
 Session returned by any annotation continuation. A failed later stage does not roll back successful
 earlier delivery; the result reports safe stage, count, continuation, and partial-success metadata.
 The coordinator shares one same-runtime cycle per account and Book and never mutates the outbox
-outside the lower-level exact-acknowledgement actions. Connectivity-driven invocation, retry loops,
-and cross-tab single-writer coordination remain future work.
+outside the lower-level exact-acknowledgement actions. Connectivity-driven invocation and retry
+loops remain future work.
+
+The cross-tab entry point wraps that explicit cycle in an exclusive Web Lock scoped by normalized
+account namespace and Book. Waiting is the default; a non-waiting caller may receive `busy` without
+starting sync. Durable intent is inspected by the sync action only after ownership is acquired, so a
+waiter can observe that the previous tab already finished the work. Different Books and namespaces
+remain independent. Web Locks require a supporting browser and secure context; unsupported contexts
+report unavailable coordination rather than using a fragile storage mutex. Automatic reconnect
+invocation remains unwired and must use this coordinated entry point when introduced.
 
 ## Publication Asset Storage Admission
 

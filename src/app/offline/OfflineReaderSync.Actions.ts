@@ -47,7 +47,7 @@ export type OfflineReaderSyncResult =
     } & SyncSummary)
   | (SyncFailure & { stage: SyncStage });
 
-type SyncInput = {
+export type OfflineReaderSyncInput = {
   namespaceKey: string;
   bookId: string;
   client: OfflineReaderSyncClient;
@@ -58,7 +58,7 @@ type SyncInput = {
 
 const activeSyncs = new Map<string, Promise<OfflineReaderSyncResult>>();
 
-export function syncOfflineReader(input: SyncInput): Promise<OfflineReaderSyncResult> {
+export function syncOfflineReader(input: OfflineReaderSyncInput): Promise<OfflineReaderSyncResult> {
   const namespaceKey = input.namespaceKey.trim();
   const bookId = input.bookId.trim();
   if (!namespaceKey || !bookId) {
@@ -78,7 +78,7 @@ export function syncOfflineReader(input: SyncInput): Promise<OfflineReaderSyncRe
   return operation;
 }
 
-async function runSync(input: SyncInput): Promise<OfflineReaderSyncResult> {
+async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSyncResult> {
   let pending: ReaderOutboxIntent[];
   try {
     pending = bookIntents(await input.outboxRepository.list(input.namespaceKey), input.bookId);
