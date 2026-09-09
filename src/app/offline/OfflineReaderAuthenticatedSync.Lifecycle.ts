@@ -6,6 +6,7 @@ import type { OfflineReaderPendingSyncResult } from "./OfflineReaderPendingSync.
 import {
   startOfflineReaderStartupSyncLifecycle,
 } from "./OfflineReaderStartupSync.Lifecycle";
+import { startOfflineReaderRetrySchedulerLifecycle } from "./OfflineReaderRetryScheduler.Lifecycle";
 
 export type OfflineReaderAuthenticatedSyncGeneration = {
   active: boolean;
@@ -22,6 +23,7 @@ type AuthenticatedSyncInput = {
 export type OfflineReaderAuthenticatedSyncDependencies = {
   startReconnect: typeof startOfflineReaderReconnectSyncLifecycle;
   startStartup: typeof startOfflineReaderStartupSyncLifecycle;
+  startRetryScheduler: typeof startOfflineReaderRetrySchedulerLifecycle;
 };
 
 export function createOfflineReaderAuthenticatedSyncGeneration(): OfflineReaderAuthenticatedSyncGeneration {
@@ -35,6 +37,7 @@ export function startOfflineReaderAuthenticatedSyncLifecycle(
   const dependencies: OfflineReaderAuthenticatedSyncDependencies = {
     startReconnect: startOfflineReaderReconnectSyncLifecycle,
     startStartup: startOfflineReaderStartupSyncLifecycle,
+    startRetryScheduler: startOfflineReaderRetrySchedulerLifecycle,
     ...dependencyOverrides,
   };
   input.generation.active = true;
@@ -56,10 +59,17 @@ export function startOfflineReaderAuthenticatedSyncLifecycle(
         },
         onSweepCompleted: input.onSweepCompleted,
       });
+  const stopRetryScheduler = dependencies.startRetryScheduler({
+    namespaceKey: input.namespaceKey,
+    client: input.client,
+    isCurrent,
+    onSweepCompleted: input.onSweepCompleted,
+  });
 
   return () => {
     input.generation.active = false;
     stopStartup();
     stopReconnect();
+    stopRetryScheduler();
   };
 }

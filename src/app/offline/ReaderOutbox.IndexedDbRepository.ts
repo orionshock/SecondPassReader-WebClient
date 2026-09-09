@@ -13,6 +13,7 @@ import {
   requestResult,
   runTransaction,
 } from "./OfflineDatabase.IndexedDb";
+import { publishOfflineReaderOutboxChange } from "./OfflineReaderOutboxChange.State";
 
 type StoredReaderOutboxIntent = {
   namespaceKey: string;
@@ -54,13 +55,14 @@ export class IndexedDbReaderOutboxRepository implements ReaderOutboxRepository {
         }));
       }
     });
+    publishOfflineReaderOutboxChange(intent.namespaceKey);
   }
 
   async remove(namespaceKey: string, resourceKey: string, expectedRevision: number | null): Promise<boolean> {
     const key = [namespaceKey, resourceKey];
     const transaction = this.database.transaction(OFFLINE_STORE_NAMES.readerOutbox, "readwrite");
     const store = transaction.objectStore(OFFLINE_STORE_NAMES.readerOutbox);
-    return runTransaction(transaction, async () => {
+    const removed = await runTransaction(transaction, async () => {
       const current = await requestResult<StoredReaderOutboxIntent | undefined>(store.get(key));
       const currentRevision = current ? readerIntentRevision(current.intent) : null;
 
@@ -68,6 +70,8 @@ export class IndexedDbReaderOutboxRepository implements ReaderOutboxRepository {
       await requestResult(store.delete(key));
       return true;
     });
+    if (removed) publishOfflineReaderOutboxChange(namespaceKey);
+    return removed;
   }
 
   async replace(
@@ -81,7 +85,7 @@ export class IndexedDbReaderOutboxRepository implements ReaderOutboxRepository {
     const replacementResourceKey = readerIntentResourceKey(replacement);
     const transaction = this.database.transaction(OFFLINE_STORE_NAMES.readerOutbox, "readwrite");
     const store = transaction.objectStore(OFFLINE_STORE_NAMES.readerOutbox);
-    return runTransaction(transaction, async () => {
+    const replaced = await runTransaction(transaction, async () => {
       const current = await requestResult<StoredReaderOutboxIntent | undefined>(store.get(currentKey));
       const currentRevision = current ? readerIntentRevision(current.intent) : null;
       if (!current || currentRevision !== expectedRevision) return false;
@@ -95,6 +99,8 @@ export class IndexedDbReaderOutboxRepository implements ReaderOutboxRepository {
       if (replacementResourceKey !== resourceKey) await requestResult(store.delete(currentKey));
       return true;
     });
+    if (replaced) publishOfflineReaderOutboxChange(namespaceKey);
+    return replaced;
   }
 
   async recordAttempt(
@@ -107,7 +113,7 @@ export class IndexedDbReaderOutboxRepository implements ReaderOutboxRepository {
     const key = [namespaceKey, resourceKey];
     const transaction = this.database.transaction(OFFLINE_STORE_NAMES.readerOutbox, "readwrite");
     const store = transaction.objectStore(OFFLINE_STORE_NAMES.readerOutbox);
-    return runTransaction(transaction, async () => {
+    const recorded = await runTransaction(transaction, async () => {
       const current = await requestResult<StoredReaderOutboxIntent | undefined>(store.get(key));
       if (!current || readerIntentRevision(current.intent) !== expectedRevision) return false;
       await requestResult(store.put({
@@ -116,9 +122,12 @@ export class IndexedDbReaderOutboxRepository implements ReaderOutboxRepository {
       }));
       return true;
     });
+    if (recorded) publishOfflineReaderOutboxChange(namespaceKey);
+    return recorded;
   }
 
-  deleteNamespace(namespaceKey: string): Promise<void> {
-    return deleteNamespaceRecords(this.database, OFFLINE_STORE_NAMES.readerOutbox, namespaceKey);
+  async deleteNamespace(namespaceKey: string): Promise<void> {
+    await deleteNamespaceRecords(this.database, OFFLINE_STORE_NAMES.readerOutbox, namespaceKey);
+    publishOfflineReaderOutboxChange(namespaceKey);
   }
 }

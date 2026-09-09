@@ -28,6 +28,7 @@ describe("authenticated offline Reader sync lifecycle", () => {
 
     expect(dependencies.startReconnect).toHaveBeenCalledTimes(2);
     expect(dependencies.startStartup).toHaveBeenCalledOnce();
+    expect(dependencies.startRetryScheduler).toHaveBeenCalledTimes(2);
     expect(generation.active).toBe(true);
     secondStop();
     expect(generation.active).toBe(false);
@@ -76,6 +77,7 @@ function lifecycleDependencies() {
   return {
     startReconnect: vi.fn<OfflineReaderAuthenticatedSyncDependencies["startReconnect"]>(() => stop),
     startStartup: vi.fn<OfflineReaderAuthenticatedSyncDependencies["startStartup"]>(() => stop),
+    startRetryScheduler: vi.fn<OfflineReaderAuthenticatedSyncDependencies["startRetryScheduler"]>(() => stop),
   } satisfies OfflineReaderAuthenticatedSyncDependencies;
 }
 
