@@ -63,6 +63,26 @@ describe("pending offline Reader sync", () => {
     expect(harness.close).toHaveBeenCalledOnce();
   });
 
+  it("runs an explicit wait-mode sweep after an in-flight automatic non-waiting sweep", async () => {
+    const harness = await createHarness([establishIntent("book-1")]);
+    const automaticGate = deferred<OfflineReaderCoordinatedSyncResult>();
+    harness.syncBook
+      .mockReturnValueOnce(automaticGate.promise)
+      .mockResolvedValue(completed());
+
+    const automatic = harness.run();
+    await waitFor(() => harness.syncBook.mock.calls.length === 1);
+    const manual = harness.run(undefined, undefined, "wait");
+    automaticGate.resolve(completed());
+    await automatic;
+    await manual;
+
+    expect(harness.syncBook).toHaveBeenCalledTimes(2);
+    expect(harness.syncBook.mock.calls.map(([input]) => input.mode)).toEqual(["if-available", "wait"]);
+    expect(harness.openRepositories).toHaveBeenCalledTimes(2);
+    expect(harness.close).toHaveBeenCalledTimes(2);
+  });
+
   it("allows independent namespace sweeps", async () => {
     const first = await createHarness([establishIntent("book-1")]);
     const second = await createHarness([establishIntent("book-2", "account-b")], "account-b");
@@ -226,11 +246,13 @@ async function createHarness(intents: ReaderOutboxIntent[], namespaceKey = "acco
   const run = (
     isCurrent?: () => boolean,
     onCompleted?: Parameters<typeof syncPendingOfflineReaderWork>[0]["onCompleted"],
+    mode?: Parameters<typeof syncPendingOfflineReaderWork>[0]["mode"],
   ) => syncPendingOfflineReaderWork({
     namespaceKey,
     client: client(),
     isCurrent,
     onCompleted,
+    mode,
   }, dependencies);
   return { close, list, openRepositories, syncBook, reportFailure, run };
 }

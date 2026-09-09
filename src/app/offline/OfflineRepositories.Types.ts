@@ -39,6 +39,7 @@ export type OfflinePublicationAssetCompleteRecord<TPayload> = {
 // TPayload remains storage-neutral but must be suitable for detached repository reads and writes.
 export interface OfflinePublicationAssetRepository<TPayload> {
   get(namespaceKey: string, bookId: string, format: string): Promise<OfflinePublicationAssetCompleteRecord<TPayload> | null>;
+  list(namespaceKey: string): Promise<OfflinePublicationAssetCompleteRecord<TPayload>[]>;
   putComplete(record: OfflinePublicationAssetCompleteRecord<TPayload>): Promise<void>;
   delete(namespaceKey: string, bookId: string, format: string): Promise<void>;
   deleteNamespace(namespaceKey: string): Promise<void>;

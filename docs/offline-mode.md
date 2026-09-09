@@ -236,7 +236,20 @@ annotation edits carried into a continuation Session, deletes that could not be 
 already-closed Session, and terminal authored work can produce one dismissible, nonblocking app
 notice for the sweep. Terminal work remains saved locally; the notice does not discard it or imply
 that a repair workflow exists. Cross-tab notice fan-out, retry scheduling, background sync, and a
-sync-management or repair UI remain future work.
+per-intent repair UI remain future work.
+
+Settings includes a focused Offline surface for the current verified account namespace. It reports
+distinct Books and resource counts with pending Reader work, and an explicit retry runs the shared
+pending-Book sweep with waiting cross-tab lock semantics. Automatic startup and reconnect sweeps
+remain non-waiting. Settings also lists locally retained publication assets using cached Book
+metadata when available, with an ID-based fallback when it is not, and reports Blob-backed file
+sizes without contacting the server.
+
+Removing one offline copy deletes only its namespace, Book, and format asset. Removing all offline
+copies uses the publication-asset namespace deletion and requires confirmation. Neither operation
+deletes projections, Reader continuity, progress, annotations, outbox intent, or account data; an
+already-open Reader retains its in-memory Blob URL until its existing lifecycle closes. There is no
+periodic retry, service-worker delivery, background sync, or repair console.
 
 ## Publication Asset Storage Admission
 

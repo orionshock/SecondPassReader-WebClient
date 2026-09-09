@@ -16,7 +16,9 @@ import {
 import type { ReaderOutboxIntent } from "./ReaderOutbox.Policy";
 
 const PENDING_SYNC_BOOK_CONCURRENCY = 3;
-const activePendingSyncs = new Map<string, Promise<OfflineReaderPendingSyncResult>>();
+type PendingSyncMode = NonNullable<OfflineReaderCoordinatedSyncInput["mode"]>;
+type ActivePendingSync = { mode: PendingSyncMode; operation: Promise<OfflineReaderPendingSyncResult> };
+const activePendingSyncs = new Map<string, ActivePendingSync>();
 
 type PendingSyncRepositories = Pick<
   IndexedDbOfflineRepositories<Blob>,
@@ -43,6 +45,7 @@ type PendingSyncInput = {
   namespaceKey: string;
   client: OfflineReaderSyncClient;
   isCurrent?: () => boolean;
+  mode?: PendingSyncMode;
   onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
@@ -53,8 +56,17 @@ export function syncPendingOfflineReaderWork(
   const namespaceKey = input.namespaceKey.trim();
   if (!namespaceKey) return Promise.resolve({ status: "failed", stage: "list-outbox" });
 
+  const mode = input.mode ?? "if-available";
   const active = activePendingSyncs.get(namespaceKey);
-  if (active) return active;
+  if (active) {
+    if (mode === "wait" && active.mode === "if-available") {
+      return active.operation.then(() => {
+        if (activePendingSyncs.get(namespaceKey) === active) activePendingSyncs.delete(namespaceKey);
+        return syncPendingOfflineReaderWork({ ...input, namespaceKey, mode }, dependencyOverrides);
+      });
+    }
+    return active.operation;
+  }
 
   const dependencies: OfflineReaderPendingSyncDependencies = {
     openRepositories: openProductionRepositories,
@@ -66,12 +78,14 @@ export function syncPendingOfflineReaderWork(
     namespaceKey,
     client: input.client,
     isCurrent: input.isCurrent ?? (() => true),
+    mode,
     onCompleted: input.onCompleted,
     dependencies,
   });
-  activePendingSyncs.set(namespaceKey, operation);
+  const activeSync = { mode, operation };
+  activePendingSyncs.set(namespaceKey, activeSync);
   const clear = () => {
-    if (activePendingSyncs.get(namespaceKey) === operation) activePendingSyncs.delete(namespaceKey);
+    if (activePendingSyncs.get(namespaceKey) === activeSync) activePendingSyncs.delete(namespaceKey);
   };
   void operation.then(clear, clear);
   return operation;
@@ -92,6 +106,7 @@ async function runPendingSync(input: {
   namespaceKey: string;
   client: OfflineReaderSyncClient;
   isCurrent(): boolean;
+  mode: PendingSyncMode;
   onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
   dependencies: OfflineReaderPendingSyncDependencies;
 }): Promise<OfflineReaderPendingSyncResult> {
@@ -124,7 +139,7 @@ async function runPendingSync(input: {
             client: input.client,
             stateRepository: repositories.readerState,
             outboxRepository: repositories.readerOutbox,
-            mode: "if-available",
+            mode: input.mode,
           });
           outcome = addOfflineReaderSyncBookOutcome(outcome, result);
           reportIncompleteResult(input.dependencies, bookId, result);

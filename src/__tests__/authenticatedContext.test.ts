@@ -50,6 +50,8 @@ describe("authenticated bootstrap context", () => {
       appTheme: "light",
       onAppThemeChange: vi.fn(),
       route: { kind: "settings", tab: "library-server" },
+      offlineNamespaceKey: null,
+      offlineSyncClient: null,
     }));
 
     expect(header).toContain("Authenticated Server Name");

@@ -27,7 +27,7 @@ export type AppRoute =
   | { kind: "reader"; bookId: string; search?: string }
   | { kind: "unknown"; raw: string };
 
-export type SettingsTab = "appearance" | "library-server" | "tools";
+export type SettingsTab = "appearance" | "offline" | "library-server" | "tools";
 
 function normalizeHash(hash: string): string {
   const h = (hash ?? "").trim();
@@ -253,7 +253,9 @@ export function parseCurrentRoute(): AppRoute | null {
   if (head === "settings") {
     const tabRaw = queryParams.get("tab")?.trim() ?? "";
     const tab: SettingsTab | undefined =
-      tabRaw === "appearance" || tabRaw === "library-server" || tabRaw === "tools" ? tabRaw : undefined;
+      tabRaw === "appearance" || tabRaw === "offline" || tabRaw === "library-server" || tabRaw === "tools"
+        ? tabRaw
+        : undefined;
     return tab ? { kind: "settings", tab } : { kind: "settings" };
   }
   if (head === "reader" && typeof parts[1] === "string" && parts[1]) {

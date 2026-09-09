@@ -146,6 +146,22 @@ function defineOfflineRepositoryContractTests(
       expect(await repository.get("account-a", "book-1", "cbz")).toEqual(alternateFormat);
     });
 
+    it("lists only publication assets in the requested namespace", async () => {
+      const repository = await factories.createPublicationAssetRepository();
+      const first = assetRecord("account-a", "book-1", "epub", "a", new Uint8Array([1]));
+      const second = assetRecord("account-a", "book-2", "epub", "b", new Uint8Array([2]));
+      const otherAccount = assetRecord("account-b", "book-1", "epub", "c", new Uint8Array([3]));
+      await repository.putComplete(first);
+      await repository.putComplete(second);
+      await repository.putComplete(otherAccount);
+
+      const listed = await repository.list("account-a");
+      listed[0].payload[0] = 9;
+
+      expect(listed.map((record) => record.bookId).sort()).toEqual(["book-1", "book-2"]);
+      expect((await repository.list("account-a")).map((record) => record.payload[0]).sort()).toEqual([1, 2]);
+    });
+
     it("isolates targeted asset deletion and namespace purge", async () => {
       const repository = await factories.createPublicationAssetRepository();
       const retainedBook = assetRecord("account-a", "book-2", "epub", "b", new Uint8Array([2]));

@@ -15,6 +15,8 @@ import {
   type SettingsLibraryServerActionState,
 } from "./settings/SettingsLibraryServer.Panel";
 import { SettingsToolsPanel } from "./settings/SettingsTools.Panel";
+import type { OfflineReaderSyncClient } from "./offline/OfflineReaderSync.Actions";
+import { OfflineSettingsPanel } from "./settings/offline/OfflineSettings.Panel";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -23,6 +25,8 @@ type Props = {
   appTheme: AppTheme;
   onAppThemeChange: (theme: AppTheme) => void;
   route: Extract<AppRoute, { kind: "settings" }>;
+  offlineNamespaceKey: string | null;
+  offlineSyncClient: OfflineReaderSyncClient | null;
 };
 
 export function SettingsPanel({
@@ -32,6 +36,8 @@ export function SettingsPanel({
   appTheme,
   onAppThemeChange,
   route,
+  offlineNamespaceKey,
+  offlineSyncClient,
 }: Props) {
   const [state, setState] = useState<SettingsLibraryServerActionState>({ phase: "idle" });
   const activeTab = route.tab ?? "appearance";
@@ -127,6 +133,7 @@ export function SettingsPanel({
       <div className="segmentedControl settingsTabs" role="tablist" aria-label="Settings sections">
         {([
           { value: "appearance", label: "Appearance" },
+          { value: "offline", label: "Offline" },
           { value: "library-server", label: "Library Server" },
           { value: "tools", label: "Tools" },
         ] as Array<{ value: SettingsTab; label: string }>).map((tab) => (
@@ -157,6 +164,10 @@ export function SettingsPanel({
           onLogOut={() => void logOut()}
           onForgetLocally={onForgetServer}
         />
+      ) : null}
+
+      {activeTab === "offline" ? (
+        <OfflineSettingsPanel namespaceKey={offlineNamespaceKey} client={offlineSyncClient} />
       ) : null}
 
       <SettingsToolsPanel active={activeTab === "tools"} />

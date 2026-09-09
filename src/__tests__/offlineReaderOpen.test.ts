@@ -170,6 +170,7 @@ async function repositoriesWithAsset(storedAsset: OfflinePublicationAssetComplet
   let currentAsset = storedAsset;
   const assetRepository: OfflinePublicationAssetRepository<Blob> = {
     get: vi.fn(async () => currentAsset),
+    list: vi.fn(async () => currentAsset ? [currentAsset] : []),
     putComplete: vi.fn(async (record) => { currentAsset = record; }),
     delete: vi.fn(async () => { currentAsset = null; }),
     deleteNamespace: vi.fn(async () => { currentAsset = null; }),

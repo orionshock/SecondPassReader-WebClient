@@ -30,6 +30,15 @@ implements OfflinePublicationAssetRepository<TPayload> {
     ));
   }
 
+  async list(namespaceKey: string): Promise<OfflinePublicationAssetCompleteRecord<TPayload>[]> {
+    const transaction = this.database.transaction(OFFLINE_STORE_NAMES.publicationAssets, "readonly");
+    return runTransaction(transaction, () => (
+      requestResult<OfflinePublicationAssetCompleteRecord<TPayload>[]>(
+        transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets).index("namespaceKey").getAll(namespaceKey),
+      )
+    ));
+  }
+
   async delete(namespaceKey: string, bookId: string, format: string): Promise<void> {
     const transaction = this.database.transaction(OFFLINE_STORE_NAMES.publicationAssets, "readwrite");
     await runTransaction(transaction, () => (

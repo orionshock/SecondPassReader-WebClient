@@ -388,6 +388,7 @@ function assetStore(
   });
   const repository: OfflinePublicationAssetRepository<Blob> = {
     get: vi.fn(async () => current),
+    list: vi.fn(async () => current ? [current] : []),
     putComplete: put,
     delete: vi.fn(async () => undefined),
     deleteNamespace: vi.fn(async () => undefined),

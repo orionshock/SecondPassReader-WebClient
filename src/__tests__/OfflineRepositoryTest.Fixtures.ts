@@ -64,6 +64,10 @@ class InMemoryOfflinePublicationAssetRepository implements OfflinePublicationAss
     this.records.set(assetKey(record.namespaceKey, record.bookId, record.format), clone(record));
   }
 
+  async list(namespaceKey: string): Promise<OfflinePublicationAssetCompleteRecord<Uint8Array>[]> {
+    return clone([...this.records.values()].filter((record) => record.namespaceKey === namespaceKey));
+  }
+
   async delete(namespaceKey: string, bookId: string, format: string): Promise<void> {
     this.records.delete(assetKey(namespaceKey, bookId, format));
   }

@@ -301,6 +301,7 @@ function repositorySet(initialAsset: OfflinePublicationAssetCompleteRecord<Blob>
   let asset = initialAsset;
   const publicationAssets: OfflinePublicationAssetRepository<Blob> = {
     get: vi.fn(async () => asset),
+    list: vi.fn(async () => asset ? [asset] : []),
     putComplete: vi.fn(async (record) => { asset = record; }),
     delete: vi.fn(async () => { asset = null; }),
     deleteNamespace: vi.fn(async () => undefined),
