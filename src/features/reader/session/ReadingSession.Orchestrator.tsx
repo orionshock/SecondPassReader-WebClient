@@ -27,6 +27,7 @@ import {
   composeReadingSessionDurableMarks,
 } from "./ReadingSessionRender.Presenter";
 import { getReaderBootstrapState } from "./ReaderBootstrap.State";
+import { useOfflineReadingProgress } from "./progress/OfflineReadingProgress.Lifecycle";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -203,6 +204,12 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     bookTitle: props.openedBook.book.title,
     savedProgress: bootstrapSession?.progress ?? null,
   });
+  const offlineProgress = useOfflineReadingProgress({
+    bootstrap: localBootstrap,
+    location: progressLocation,
+    toc,
+    bookTitle: props.openedBook.book.title,
+  });
   const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
     spl: serverSpl,
     sessionId,
@@ -227,6 +234,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [shouldTickAutosaveCountdown]);
 
   const autosaveStatus = useMemo((): { text: string; title?: string } | null => {
+    if (localBootstrap) {
+      return offlineProgress.status === "error"
+        ? { text: "Offline progress not saved." }
+        : null;
+    }
     return buildReadingSessionAutosaveStatus({
       sessionId: state.sessionId,
       status: autosave.status,
@@ -234,7 +246,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       nextSaveAt: autosave.nextSaveAt,
       nowMs,
     });
-  }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, nowMs, state.sessionId]);
+  }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, localBootstrap, nowMs, offlineProgress.status, state.sessionId]);
 
   const statusLine = useMemo(() => {
     const lines = buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });

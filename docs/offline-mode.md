@@ -150,11 +150,23 @@ projection, current EPUB Reader support, and a complete stored Blob whose format
 match that Book metadata.
 
 The local bootstrap carries local continuity and its distinct local Session identity. It is not a
-server marginalia bootstrap and never exposes a provisional identity to SDK mutation owners. This
-first offline Reader slice permits EPUB reading, navigation, TOC, search, and display settings, but
-keeps progress, annotations, Session metadata, close, and other server-backed mutations disabled.
+server marginalia bootstrap and never exposes a provisional identity to SDK mutation owners. The
+offline Reader permits EPUB reading, navigation, TOC, search, and display settings. Annotation,
+Session metadata, close, and other server-backed mutations remain disabled.
 The existing Reader lifecycle owns and revokes object URLs for both downloaded and stored Blobs.
-Outbox mutation integration and reconnect authority resolution remain later work.
+Reconnect authority resolution remains later work.
+
+### Durable Offline Progress
+
+Settled offline Reader movement persists the latest canonical CFI, integer percentage, and stable
+percent-first location label in local Reader continuity. Writes are debounced to reduce IndexedDB
+churn, and Reader hide, page exit, or close requests a bounded local-only flush. Reader state is
+written before its coalesced `replace-progress` outbox intent, so an outbox failure cannot erase the
+latest durable position. The intent is prepared for future delivery but is not replayed yet.
+
+Offline reopen prefers that durable local progress; CFI strings are never compared for ordering.
+The online three-second server autosave remains separate and unchanged. Server reconciliation,
+including protection against stale acknowledgements, remains a later phase.
 
 ## Publication Asset Storage Admission
 

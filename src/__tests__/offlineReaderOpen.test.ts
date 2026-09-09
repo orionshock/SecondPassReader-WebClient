@@ -63,6 +63,37 @@ describe("offline Reader admission", () => {
       .toBe(firstBootstrap.continuity.session.localSessionId);
   });
 
+  it("restores the latest durable local progress without a server bootstrap", async () => {
+    const repositories = await repositoriesWithAsset(asset(CHECKSUM));
+    await repositories.readerStateRepository.putBookState({
+      namespaceKey: namespace.key,
+      bookId: "book-1",
+      schemaVersion: 1,
+      session: {
+        kind: "provisional",
+        localSessionId: "local:existing",
+        serverSessionId: null,
+        lastKnownServerStatus: null,
+      },
+      progress: {
+        cfi: "epubcfi(/6/18)",
+        percentage: 75,
+        locationLabel: "075% - Latest local position",
+      },
+      annotations: [],
+    });
+
+    const result = await open(repositories, book(CHECKSUM));
+
+    expect(result.status).toBe("opened");
+    if (result.status !== "opened") return;
+    expect(result.openedBook.bootstrap.continuity.progress).toEqual({
+      cfi: "epubcfi(/6/18)",
+      percentage: 75,
+      locationLabel: "075% - Latest local position",
+    });
+  });
+
   it.each([
     [null, book(CHECKSUM), "missing-asset"],
     [asset(OTHER_CHECKSUM), book(CHECKSUM), "invalid-asset"],
