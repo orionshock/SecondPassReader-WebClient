@@ -22,9 +22,9 @@ It does not select a complete storage or synchronization architecture.
 ## Initial Scope
 
 - Cache the application shell, Home snapshot, and recent reading state later as conveniences.
-- Offer explicit offline-ready EPUB files from Book Detail and admit verified files to a local,
-  read-only Reader bootstrap while the browser explicitly reports offline.
-- Support offline Reader progress and annotation activity for those books later.
+- Offer explicit offline-ready EPUB files from Book Detail and admit verified files to a local
+  Reader bootstrap while the browser explicitly reports offline.
+- Support durable offline Reader progress and current-session annotation activity for those books.
 - Keep library search and paginated browsing online-dependent.
 - Keep shelf mutations and library or administration mutations online-only.
 - Keep reading-session metadata edits online-only initially.
@@ -59,8 +59,7 @@ semantics where applicable:
   when requested offline availability is no longer intact.
 - No background-sync guarantee is assumed. Replay must also work when the app is open and regains
   connectivity.
-- Cross-tab ownership, single-writer behavior, and replay coordination must be designed before
-  mutation queues are introduced.
+- Cross-tab ownership and single-writer behavior must be designed before replay is introduced.
 
 ## Data Categories
 
@@ -70,8 +69,8 @@ semantics where applicable:
 | Home and recent snapshots | Cache later as replaceable convenience data. |
 | Library search and pages | Do not promise offline availability. |
 | Publication assets | Retain only through explicit offline availability. EPUB is the only currently supported Reader format. |
-| Progress | Store one durable latest local value later, scoped to the correct book and session lifecycle. |
-| Annotations | Store durable desired-state operations later with stable client IDs and exact acknowledgement. |
+| Progress | Store one durable latest local value, scoped to the correct book and session lifecycle. |
+| Annotations | Store current local desired state and coalesced delivery intents with stable client IDs. |
 | Shelves | Online-only initially. |
 
 ## Cache Identity
@@ -151,8 +150,9 @@ match that Book metadata.
 
 The local bootstrap carries local continuity and its distinct local Session identity. It is not a
 server marginalia bootstrap and never exposes a provisional identity to SDK mutation owners. The
-offline Reader permits EPUB reading, navigation, TOC, search, and display settings. Annotation,
-Session metadata, close, and other server-backed mutations remain disabled.
+offline Reader permits EPUB reading, navigation, TOC, search, display settings, and local-first
+current-session annotation authoring. Session metadata, close, and other server-backed mutations
+remain disabled.
 The existing Reader lifecycle owns and revokes object URLs for both downloaded and stored Blobs.
 Reconnect authority resolution remains later work.
 
@@ -167,6 +167,19 @@ latest durable position. The intent is prepared for future delivery but is not r
 Offline reopen prefers that durable local progress; CFI strings are never compared for ordering.
 The online three-second server autosave remains separate and unchanged. Server reconciliation,
 including protection against stale acknowledgements, remains a later phase.
+
+### Durable Offline Annotations
+
+Offline current-session highlights, bookmarks, and notes update the local projection immediately,
+then persist Reader state before their coalesced outbox intent. Stable annotation client IDs and
+origin metadata are preserved through edits. An unconfirmed create followed by delete leaves no
+delivery intent; confirmed edits and deletes retain the authority context needed by later
+reconciliation. Previous-session annotations and known-closed Sessions remain read-only.
+
+Persistence failure does not roll back the visible authored change. State-write failure skips the
+outbox write; outbox failure retains the durable local projection and dirty intent for another
+local flush opportunity. No pending badge or server replay is included yet, and the existing
+online annotation path remains server-authoritative and unchanged.
 
 ## Publication Asset Storage Admission
 

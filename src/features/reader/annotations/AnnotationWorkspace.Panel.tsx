@@ -13,6 +13,7 @@ export function AnnotationWorkspace({
   error,
   busy,
   canMutateSession = true,
+  canMutateAnnotations = canMutateSession,
   currentSessionId,
   currentCfi,
   previousSessionGroups,
@@ -30,6 +31,7 @@ export function AnnotationWorkspace({
   error: string | null;
   busy: boolean;
   canMutateSession?: boolean;
+  canMutateAnnotations?: boolean;
   currentSessionId?: string | null;
   currentCfi?: string | null;
   previousSessionGroups?: PreviousSessionAnnotationGroup[];
@@ -90,7 +92,7 @@ export function AnnotationWorkspace({
                     key={a.id}
                     annotation={a}
                     busy={busy}
-                    readOnly={!canMutateSession}
+                    readOnly={!canMutateAnnotations}
                     currentCfi={currentCfi}
                     draftColor={draftColor}
                     draftNote={draftNote}

@@ -14,6 +14,7 @@ export function ReaderActivitySidePanels({
   shell,
   annotations,
   canMutateSession,
+  canMutateAnnotations,
   currentSessionId,
   currentCfi,
   workspaceFocusRequest,
@@ -31,6 +32,7 @@ export function ReaderActivitySidePanels({
   shell: ReactNode;
   annotations: ReaderActivityRenderState["annotations"];
   canMutateSession: boolean;
+  canMutateAnnotations: boolean;
   currentSessionId?: string | null;
   currentCfi?: string | null;
   workspaceFocusRequest: ReaderActivityWorkspaceFocusRequest | null;
@@ -62,6 +64,7 @@ export function ReaderActivitySidePanels({
             error={annotations.error}
             busy={annotations.busy}
             canMutateSession={canMutateSession}
+            canMutateAnnotations={canMutateAnnotations}
             currentSessionId={currentSessionId}
             currentCfi={currentCfi ?? null}
             previousSessionGroups={annotations.previousSessionGroups}

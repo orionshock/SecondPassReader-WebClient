@@ -13,11 +13,10 @@ export type ReaderBookmarkMutationResult =
   | { ok: false; reason: "missing-state" | "not-allowed" | "mutation-failed"; error?: unknown };
 
 export function canMutateReaderBookmark(input: {
-  canMutateSession: boolean;
-  sessionId: string | null;
+  canMutateAnnotations: boolean;
   cfi?: string | null;
 }): boolean {
-  return Boolean(input.canMutateSession && input.sessionId && input.cfi?.trim());
+  return Boolean(input.canMutateAnnotations && input.cfi?.trim());
 }
 
 export async function executeReaderBookmarkMutation(args: {

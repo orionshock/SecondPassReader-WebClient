@@ -28,6 +28,7 @@ import {
 } from "./ReadingSessionRender.Presenter";
 import { getReaderBootstrapState } from "./ReaderBootstrap.State";
 import { useOfflineReadingProgress } from "./progress/OfflineReadingProgress.Lifecycle";
+import { useOfflineCurrentSessionAnnotations } from "./annotations/OfflineCurrentSessionAnnotation.Lifecycle";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -42,6 +43,7 @@ export type ReadingSessionOrchestratorProps = {
   children: (arg: {
     state: ReadingSessionState;
     canMutateSession: boolean;
+    canMutateAnnotations: boolean;
     statusLine: string[];
     autosaveStatus: { text: string; title?: string } | null;
     shell: ReactNode;
@@ -272,11 +274,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   }, [handleShellEvent, onLocationsReady]);
 
   const {
-    annotationBusy,
-    removeById,
-    updateHighlight,
-    toggleBookmarkAtCurrentLocation,
-    createHighlight,
+    annotationBusy: onlineAnnotationBusy,
+    removeById: removeOnlineAnnotation,
+    updateHighlight: updateOnlineHighlight,
+    toggleBookmarkAtCurrentLocation: toggleOnlineBookmark,
+    createHighlight: createOnlineHighlight,
   } = useCurrentSessionAnnotationActions({
     identity: `${activeBookKey}|${sessionId ?? ""}`,
     spl: serverSpl,
@@ -289,10 +291,27 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     setAnnotationError,
     canMutate: canMutateSession,
   });
+  const offlineAnnotations = useOfflineCurrentSessionAnnotations({
+    bootstrap: localBootstrap,
+    location,
+    locationLabel: generatedLocationLabel,
+    currentBookmark,
+    setAnnotationsRaw,
+    setAnnotationError,
+  });
+  const canMutateAnnotations = canMutateSession || offlineAnnotations.canMutate;
+  const annotationBusy = localBootstrap ? offlineAnnotations.annotationBusy : onlineAnnotationBusy;
+  const removeById = localBootstrap ? offlineAnnotations.removeById : removeOnlineAnnotation;
+  const updateHighlight = localBootstrap ? offlineAnnotations.updateHighlight : updateOnlineHighlight;
+  const toggleBookmarkAtCurrentLocation = localBootstrap
+    ? offlineAnnotations.toggleBookmarkAtCurrentLocation
+    : toggleOnlineBookmark;
+  const createHighlight = localBootstrap ? offlineAnnotations.createHighlight : createOnlineHighlight;
 
   return props.children({
     state,
     canMutateSession,
+    canMutateAnnotations,
     statusLine,
     autosaveStatus,
     shell: (
@@ -313,11 +332,11 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         onStagedSelectionCanceled={handleStagedSelectionCanceled}
         onUnrelatedNavigation={props.onUnrelatedNavigation}
         annotationToolbarItems={annotationToolbarItems}
-        onUpdateHighlight={canMutateSession ? updateHighlight : undefined}
-        onRemoveAnnotation={canMutateSession ? removeById : undefined}
+        onUpdateHighlight={canMutateAnnotations ? updateHighlight : undefined}
+        onRemoveAnnotation={canMutateAnnotations ? removeById : undefined}
         onOpenAnnotationInWorkspace={props.onOpenAnnotationInWorkspace}
         highlightMarks={visibleHighlightMarks}
-        onCommitHighlight={canMutateSession ? async (arg) => createHighlight(arg) : undefined}
+        onCommitHighlight={canMutateAnnotations ? async (arg) => createHighlight(arg) : undefined}
         highlightCommitBusy={annotationBusy}
         settings={props.settings}
         onSettingsChange={props.onSettingsChange}

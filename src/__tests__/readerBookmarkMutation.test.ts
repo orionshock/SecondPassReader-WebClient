@@ -110,9 +110,8 @@ describe("reader bookmark mutations", () => {
   });
 
   it("allows the bookmark control only for mutable sessions with a known CFI", () => {
-    expect(canMutateReaderBookmark({ canMutateSession: true, sessionId: "session-1", cfi: "epubcfi(/6/2)" })).toBe(true);
-    expect(canMutateReaderBookmark({ canMutateSession: false, sessionId: "session-1", cfi: "epubcfi(/6/2)" })).toBe(false);
-    expect(canMutateReaderBookmark({ canMutateSession: true, sessionId: null, cfi: "epubcfi(/6/2)" })).toBe(false);
-    expect(canMutateReaderBookmark({ canMutateSession: true, sessionId: "session-1", cfi: " " })).toBe(false);
+    expect(canMutateReaderBookmark({ canMutateAnnotations: true, cfi: "epubcfi(/6/2)" })).toBe(true);
+    expect(canMutateReaderBookmark({ canMutateAnnotations: false, cfi: "epubcfi(/6/2)" })).toBe(false);
+    expect(canMutateReaderBookmark({ canMutateAnnotations: true, cfi: " " })).toBe(false);
   });
 });

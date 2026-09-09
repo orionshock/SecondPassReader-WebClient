@@ -115,8 +115,7 @@ function ReaderActivityContent({
   const { state, statusLine, autosaveStatus, shell, annotations, marginalia } = readerState;
   const currentSessionId = state.sessionId;
   const canBookmark = canMutateReaderBookmark({
-    canMutateSession: readerState.canMutateSession,
-    sessionId: state.sessionId,
+    canMutateAnnotations: readerState.canMutateAnnotations,
     cfi: state.location?.cfi,
   });
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
@@ -165,8 +164,8 @@ function ReaderActivityContent({
         marginalia={marginalia}
         selectedPreviousSessionIds={selectedPreviousSessionIds}
         importJobActive={Boolean(readerImport.job)}
-        onImportMarginalia={readerState.canMutateSession ? activityImport.openModal : undefined}
-        onOpenImport={readerState.canMutateSession ? activityImport.openDrawer : undefined}
+        onImportMarginalia={readerState.canMutateAnnotations ? activityImport.openModal : undefined}
+        onOpenImport={readerState.canMutateAnnotations ? activityImport.openDrawer : undefined}
         onCloseSession={readerState.canMutateSession && currentSessionId ? completion.openCloseDialog : undefined}
         returnLabel={completion.returnLabel}
         onReturn={completion.returnToTarget}
@@ -179,6 +178,7 @@ function ReaderActivityContent({
         shell={shell}
         annotations={annotations}
         canMutateSession={readerState.canMutateSession}
+        canMutateAnnotations={readerState.canMutateAnnotations}
         currentSessionId={currentSessionId}
         currentCfi={state.location?.cfi ?? null}
         workspaceFocusRequest={workspaceFocusRequest}
