@@ -245,8 +245,15 @@ When no writable confirmed Session exists, the client creates or reuses one Book
 provisional Session for the account namespace. Its durable identity is prefixed `local:` and its
 server Session ID is always null. It is only a container for local Reader continuity and authored
 intent. Repeated loads reuse that identity and ensure one coalesced `establish-session` intent.
-Reconnect authority resolution through active-session/open remains a later phase; `start-over` is
-not a recovery path.
+
+Reconnect resolves Session authority before any Reader intent is replayed. The client first uses
+the read-only active-session lookup and binds local continuity to its active Session when present;
+otherwise normal `open` converges on the server's one writable Session. A successful bind preserves
+the local Session identity, progress, annotations, tombstones, and annotation origins while adding
+the authoritative active server Session ID. It may then exact-remove only the fulfilled
+`establish-session` intent. Provisional IDs are never sent as server Session IDs, and `start-over`
+remains explicit user intent rather than a recovery path. Progress and annotation replay remain a
+separate phase.
 
 ## Durable Repository Boundaries
 
