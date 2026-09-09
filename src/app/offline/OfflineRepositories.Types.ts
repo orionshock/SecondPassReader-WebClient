@@ -4,6 +4,7 @@ import type {
 } from "@secondpass/client";
 import type {
   ReaderAnnotationOrigin,
+  ReaderOutboxAttempt,
   ReaderOutboxIntent,
   ReplaceReaderProgressIntent,
 } from "./ReaderOutbox.Policy";
@@ -87,6 +88,12 @@ export interface ReaderOutboxRepository {
     resourceKey: string,
     expectedRevision: number | null,
     replacement: ReaderOutboxIntent,
+  ): Promise<boolean>;
+  recordAttempt(
+    namespaceKey: string,
+    resourceKey: string,
+    expectedRevision: number | null,
+    attempt: ReaderOutboxAttempt,
   ): Promise<boolean>;
   deleteNamespace(namespaceKey: string): Promise<void>;
 }

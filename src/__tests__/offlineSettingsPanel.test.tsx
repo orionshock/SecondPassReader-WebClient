@@ -63,8 +63,8 @@ describe("Offline Settings surface", () => {
       />,
     ));
 
-    expect(container.textContent).toContain("Reading position waiting to sync");
-    expect(container.textContent).toContain("1 annotation change waiting to sync");
+    expect(container.textContent).toContain("Reading position - Waiting to sync");
+    expect(container.textContent).toContain("1 annotation change - Waiting to sync");
     await act(async () => button("Retry this book")?.click());
     expect(controller.retryBook).toHaveBeenCalledWith("book-1");
     await act(async () => button("Open reader")?.click());
@@ -139,7 +139,7 @@ function readyState(): OfflineSettingsState {
   return {
     status: "ready",
     connectivity: "online",
-    pending: { books: 1, intents: 2, sessionEstablishment: 0, progress: 1, annotations: 1 },
+    pending: { books: 1, intents: 2, sessionEstablishment: 0, progress: 1, annotations: 1, attentionBooks: 0, deferredBooks: 0 },
     pendingBooks: [{
       bookId: "book-1",
       title: "Stored Book",
@@ -152,6 +152,12 @@ function readyState(): OfflineSettingsState {
       hasOfflineAsset: true,
       assetFormats: ["EPUB"],
       assetBytes: 2 * 1024 * 1024,
+      status: "waiting",
+      attentionIntentCount: 0,
+      deferredIntentCount: 0,
+      sessionStatus: null,
+      progressStatus: "waiting",
+      annotationStatus: "waiting",
     }],
     assets: [{
       key: '["book-1","epub"]',
@@ -170,5 +176,5 @@ function readyState(): OfflineSettingsState {
 }
 
 function emptyPending() {
-  return { books: 0, intents: 0, sessionEstablishment: 0, progress: 0, annotations: 0 };
+  return { books: 0, intents: 0, sessionEstablishment: 0, progress: 0, annotations: 0, attentionBooks: 0, deferredBooks: 0 };
 }

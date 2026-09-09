@@ -21,6 +21,7 @@ import {
 } from "../../offline/OfflineReaderSyncOutcome.State";
 import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.State";
 import { discardPendingReaderProgress } from "../../offline/OfflineReaderPendingRepair.Actions";
+import { offlineReaderRetryEligibility } from "../../offline/OfflineReaderRetryEligibility.Policy";
 
 export type OfflineSettingsAsset = {
   key: string;
@@ -37,6 +38,8 @@ export type OfflineSettingsPendingSummary = {
   sessionEstablishment: number;
   progress: number;
   annotations: number;
+  attentionBooks: number;
+  deferredBooks: number;
 };
 
 export type OfflineSettingsState = {
@@ -63,6 +66,7 @@ export type OfflineSettingsDependencies = {
     namespaceKey: string;
     client: OfflineReaderSyncClient;
     mode: "wait";
+    attemptMode: "manual";
     isCurrent(): boolean;
     onCompleted(result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>): void;
   }): Promise<OfflineReaderPendingSyncResult>;
@@ -224,6 +228,7 @@ export function createOfflineSettingsController(
           namespaceKey,
           client: input.client!,
           mode: "wait",
+          attemptMode: "manual",
           isCurrent: () => isCurrent(expected),
           onCompleted: dependencies.showSyncOutcome,
         });
@@ -248,6 +253,7 @@ export function createOfflineSettingsController(
           stateRepository: currentRepositories.readerState,
           outboxRepository: currentRepositories.readerOutbox,
           mode: "wait",
+          attemptMode: "manual",
         });
         const completed: Extract<OfflineReaderPendingSyncResult, { status: "completed" }> = {
           status: "completed",
@@ -290,7 +296,7 @@ function initialState(connectivity: BrowserConnectivityStatus): OfflineSettingsS
   return {
     status: "loading",
     connectivity,
-    pending: { books: 0, intents: 0, sessionEstablishment: 0, progress: 0, annotations: 0 },
+    pending: { books: 0, intents: 0, sessionEstablishment: 0, progress: 0, annotations: 0, attentionBooks: 0, deferredBooks: 0 },
     pendingBooks: [],
     assets: [],
     totalAssetBytes: 0,
@@ -302,12 +308,19 @@ function initialState(connectivity: BrowserConnectivityStatus): OfflineSettingsS
 }
 
 function summarizePending(intents: readonly ReaderOutboxIntent[]): OfflineSettingsPendingSummary {
+  const grouped = new Map<string, ReaderOutboxIntent[]>();
+  for (const intent of intents) grouped.set(intent.bookId, [...(grouped.get(intent.bookId) ?? []), intent]);
+  const statuses = [...grouped.values()].map((bookIntents) => bookIntents.map((intent) => (
+    offlineReaderRetryEligibility({ intent, mode: "automatic", now: Date.now() })
+  )));
   return {
     books: new Set(intents.map((intent) => intent.bookId)).size,
     intents: intents.length,
     sessionEstablishment: intents.filter((intent) => intent.type === "establish-session").length,
     progress: intents.filter((intent) => intent.type === "replace-progress").length,
     annotations: intents.filter((intent) => intent.type === "upsert-annotation" || intent.type === "delete-annotation").length,
+    attentionBooks: statuses.filter((values) => values.includes("manual-only")).length,
+    deferredBooks: statuses.filter((values) => values.includes("deferred") && !values.includes("manual-only")).length,
   };
 }
 

@@ -104,6 +104,8 @@ export function OfflineSettingsView({
               <span>{state.pending.annotations} annotation{state.pending.annotations === 1 ? "" : "s"}</span>
               <span>{state.pending.progress} progress update{state.pending.progress === 1 ? "" : "s"}</span>
               <span>{state.pending.sessionEstablishment} session continuation{state.pending.sessionEstablishment === 1 ? "" : "s"}</span>
+              {state.pending.attentionBooks > 0 ? <span>{state.pending.attentionBooks} need{state.pending.attentionBooks === 1 ? "s" : ""} attention</span> : null}
+              {state.pending.deferredBooks > 0 ? <span>{state.pending.deferredBooks} waiting to retry</span> : null}
             </div>
             <div className="settingsOfflineAssetList">
               {state.pendingBooks.map((book) => (
@@ -240,19 +242,20 @@ function PendingBookRow({
         <div className="settingsLabel">{book.title}</div>
         <div className="muted">
           {book.pendingIntentCount} pending change{book.pendingIntentCount === 1 ? "" : "s"}
+          {book.status !== "waiting" ? ` - ${pendingBookStatusLabel(book.status)}` : ""}
         </div>
         {selected
           ? <span className="muted">Selected</span>
           : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>View details</button>}
         {selected ? (
           <div className="settingsGrid">
-            {book.needsSessionEstablishment ? <div>Reading session needs to reconnect</div> : null}
-            {book.hasProgress ? <div>Reading position waiting to sync</div> : null}
+            {book.needsSessionEstablishment ? <div>Reading session - {categoryStatusLabel(book.sessionStatus)}</div> : null}
+            {book.hasProgress ? <div>Reading position - {categoryStatusLabel(book.progressStatus)}</div> : null}
             {book.annotationUpsertCount > 0 ? (
-              <div>{countLabel(book.annotationUpsertCount, "annotation change", "annotation changes")} waiting to sync</div>
+              <div>{countLabel(book.annotationUpsertCount, "annotation change", "annotation changes")} - {categoryStatusLabel(book.annotationStatus)}</div>
             ) : null}
             {book.annotationDeleteCount > 0 ? (
-              <div>{countLabel(book.annotationDeleteCount, "annotation deletion", "annotation deletions")} waiting to sync</div>
+              <div>{countLabel(book.annotationDeleteCount, "annotation deletion", "annotation deletions")} - {categoryStatusLabel(book.annotationStatus)}</div>
             ) : null}
             {book.hasOfflineAsset ? (
               <div className="muted">Offline copy: {book.assetFormats.join(", ")} - {formatOfflineAssetBytes(book.assetBytes)}</div>
@@ -277,6 +280,20 @@ function PendingBookRow({
 
 function countLabel(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function pendingBookStatusLabel(status: OfflinePendingBook["status"]): string {
+  switch (status) {
+    case "waiting": return "Waiting to sync";
+    case "deferred": return "Waiting to retry";
+    case "needs-attention": return "Needs attention";
+    case "connection-repair": return "Connection needs repair";
+    case "authority-blocked": return "Waiting for server access";
+  }
+}
+
+function categoryStatusLabel(status: OfflinePendingBook["status"] | null): string {
+  return status ? pendingBookStatusLabel(status) : "Waiting to sync";
 }
 
 function pendingLabel(books: number): string {

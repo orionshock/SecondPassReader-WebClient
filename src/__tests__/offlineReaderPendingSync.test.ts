@@ -19,6 +19,17 @@ describe("pending offline Reader sync", () => {
     ])).toEqual(["book-1", "book-2", "book-3"]);
   });
 
+  it("skips automatic Books with only terminal or deferred resources but includes them for manual retry", () => {
+    const terminal = { ...annotationIntent("book-terminal"), attempt: attempt("terminal-request", null) };
+    const deferred = { ...progressIntent("book-deferred"), attempt: attempt("retry-later", 2_000) };
+    const clean = progressIntent("book-clean");
+
+    expect(pendingReaderSyncBookIds([terminal, deferred, clean], "automatic", 1_000)).toEqual(["book-clean"]);
+    expect(pendingReaderSyncBookIds([terminal, deferred, clean], "manual", 1_000)).toEqual([
+      "book-clean", "book-deferred", "book-terminal",
+    ]);
+  });
+
   it("lists one namespace, invokes each Book once with if-available, and closes repositories", async () => {
     const harness = await createHarness([
       establishIntent("book-1"),
@@ -265,6 +276,10 @@ function client(): OfflineReaderSyncClient {
       sessions: { batchAnnotations: unexpected, replaceProgress: unexpected },
     },
   };
+}
+
+function attempt(classification: "terminal-request" | "retry-later", retryEligibleAt: number | null) {
+  return { revision: 1, classification, attemptCount: 1, attemptedAt: 1_000, retryEligibleAt } as const;
 }
 
 function completed(): OfflineReaderCoordinatedSyncResult {

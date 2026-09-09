@@ -139,7 +139,14 @@ describe("offline Reader annotation replay", () => {
     const result = await replay(client, repositories, "session-1");
 
     expect(result).toEqual(expected);
-    expect(await repositories.outboxRepository.list("account-a")).toEqual([intent]);
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([{
+      ...intent,
+      attempt: expect.objectContaining({
+        revision: intent.intentRevision,
+        classification: expected.status === "terminal-request" ? "terminal-request" : expected.status,
+        attemptCount: 1,
+      }),
+    }]);
     expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.annotations)
       .toEqual([projection(intent)]);
     expect(JSON.stringify(result)).not.toContain("secret.invalid");

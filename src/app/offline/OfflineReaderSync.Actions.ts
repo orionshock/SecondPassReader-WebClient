@@ -18,6 +18,12 @@ import {
   type OfflineReaderSessionReconciliationResult,
 } from "./OfflineReaderSessionReconciliation.Actions";
 import type { ReaderOutboxIntent } from "./ReaderOutbox.Policy";
+import { recordOfflineReaderAttemptFailure } from "./OfflineReaderAttempt.Actions";
+import {
+  isOfflineReaderIntentEligible,
+  offlineReaderRetryEligibility,
+  type OfflineReaderAttemptMode,
+} from "./OfflineReaderRetryEligibility.Policy";
 
 export type OfflineReaderSyncClient = ReaderAnnotationReplayClient & ReaderProgressReplayClient;
 
@@ -39,6 +45,7 @@ type SyncSummary = {
 
 export type OfflineReaderSyncResult =
   | { status: "nothing-to-sync" }
+  | { status: "nothing-eligible"; reason: "deferred" | "manual-work-remains" }
   | ({ status: "synced" } & SyncSummary)
   | ({
       status: "partially-synced";
@@ -54,6 +61,8 @@ export type OfflineReaderSyncInput = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
   generateClientId?: () => string;
+  attemptMode?: OfflineReaderAttemptMode;
+  now?: () => number;
 };
 
 const activeSyncs = new Map<string, Promise<OfflineReaderSyncResult>>();
@@ -86,6 +95,10 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
     return { status: "failed", stage: "authority" };
   }
   if (pending.length === 0) return { status: "nothing-to-sync" };
+  const attemptMode = input.attemptMode ?? "manual";
+  const now = (input.now ?? Date.now)();
+  const eligible = pending.filter((intent) => isOfflineReaderIntentEligible({ intent, mode: attemptMode, now }));
+  if (eligible.length === 0) return ineligibleResult(pending, now);
 
   const authority = await reconcileOfflineReaderSessionAuthority({
     namespaceKey: input.namespaceKey,
@@ -94,7 +107,10 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
     stateRepository: input.stateRepository,
     outboxRepository: input.outboxRepository,
   });
-  if (authority.status !== "resolved") return authorityFailure(authority);
+  if (authority.status !== "resolved") {
+    await recordAuthorityFailure(input.outboxRepository, eligible, authority, now);
+    return authorityFailure(authority);
+  }
 
   const initialSessionId = authority.state.session.serverSessionId;
   if (!initialSessionId || initialSessionId.startsWith("local:")) {
@@ -109,8 +125,12 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
     stateRepository: input.stateRepository,
     outboxRepository: input.outboxRepository,
     generateClientId: input.generateClientId,
+    attemptMode,
+    now: input.now,
   });
-  if (annotations.status !== "replayed" && annotations.status !== "no-pending") {
+  if (annotations.status !== "replayed"
+    && annotations.status !== "no-pending"
+    && annotations.status !== "nothing-eligible") {
     return replayFailure(annotations, "annotations");
   }
 
@@ -126,8 +146,12 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
     client: input.client,
     stateRepository: input.stateRepository,
     outboxRepository: input.outboxRepository,
+    attemptMode,
+    now: input.now,
   });
-  if (progress.status !== "replayed" && progress.status !== "nothing-to-replay") {
+  if (progress.status !== "replayed"
+    && progress.status !== "nothing-to-replay"
+    && progress.status !== "nothing-eligible") {
     const failure = normalizedReplayFailure(progress);
     if (!annotationStageCommitted) return { ...failure, stage: "progress" };
     return {
@@ -160,6 +184,9 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
       ...summary,
     };
   }
+  if (remaining.length > 0 && annotationsSynced === 0 && !summary.progressSynced) {
+    return ineligibleResult(remaining, (input.now ?? Date.now)());
+  }
   return remaining.length === 0
     ? { status: "synced", ...summary }
     : {
@@ -168,6 +195,35 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
         failure: { status: "work-remains" },
         ...summary,
       };
+}
+
+function ineligibleResult(intents: readonly ReaderOutboxIntent[], now: number): OfflineReaderSyncResult {
+  const deferred = intents.some((intent) => (
+    offlineReaderRetryEligibility({ intent, mode: "automatic", now }) === "deferred"
+  ));
+  return { status: "nothing-eligible", reason: deferred ? "deferred" : "manual-work-remains" };
+}
+
+async function recordAuthorityFailure(
+  repository: ReaderOutboxRepository,
+  intents: readonly ReaderOutboxIntent[],
+  result: Exclude<OfflineReaderSessionReconciliationResult, { status: "resolved" }>,
+  now: number,
+): Promise<void> {
+  const classification = result.status === "unavailable" ? "terminal-request"
+    : result.status === "no-local-state" || result.status === "failed" ? "failed"
+      : result.status;
+  try {
+    await recordOfflineReaderAttemptFailure({
+      repository,
+      intents,
+      classification,
+      retryAfterMs: result.status === "retry-later" ? result.retryAfterMs : null,
+      now,
+    });
+  } catch {
+    // Preserve the normalized authority result when local attempt bookkeeping fails.
+  }
 }
 
 function bookIntents(intents: readonly ReaderOutboxIntent[], bookId: string): ReaderOutboxIntent[] {
@@ -188,7 +244,7 @@ function authorityFailure(
 }
 
 function replayFailure(
-  result: Exclude<OfflineReaderAnnotationReplayResult, { status: "replayed" | "no-pending" }>,
+  result: Exclude<OfflineReaderAnnotationReplayResult, { status: "replayed" | "no-pending" | "nothing-eligible" }>,
   stage: "annotations",
 ): OfflineReaderSyncResult {
   return { ...normalizedReplayFailure(result), stage };
@@ -196,8 +252,8 @@ function replayFailure(
 
 function normalizedReplayFailure(
   result:
-    | Exclude<OfflineReaderAnnotationReplayResult, { status: "replayed" | "no-pending" }>
-    | Exclude<OfflineReaderProgressReplayResult, { status: "replayed" | "nothing-to-replay" }>,
+    | Exclude<OfflineReaderAnnotationReplayResult, { status: "replayed" | "no-pending" | "nothing-eligible" }>
+    | Exclude<OfflineReaderProgressReplayResult, { status: "replayed" | "nothing-to-replay" | "nothing-eligible" }>,
 ): SyncFailure {
   switch (result.status) {
     case "retry-later": return result;

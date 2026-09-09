@@ -1,5 +1,8 @@
 import type { OfflinePublicationAssetCompleteRecord } from "../../offline/OfflineRepositories.Types";
 import type { ReaderOutboxIntent } from "../../offline/ReaderOutbox.Policy";
+import { offlineReaderRetryEligibility } from "../../offline/OfflineReaderRetryEligibility.Policy";
+
+export type OfflinePendingBookStatus = "waiting" | "deferred" | "needs-attention" | "connection-repair" | "authority-blocked";
 
 export type OfflinePendingBook = {
   bookId: string;
@@ -13,12 +16,19 @@ export type OfflinePendingBook = {
   hasOfflineAsset: boolean;
   assetFormats: string[];
   assetBytes: number;
+  status: OfflinePendingBookStatus;
+  attentionIntentCount: number;
+  deferredIntentCount: number;
+  sessionStatus: OfflinePendingBookStatus | null;
+  progressStatus: OfflinePendingBookStatus | null;
+  annotationStatus: OfflinePendingBookStatus | null;
 };
 
 export function presentOfflinePendingBooks(input: {
   intents: readonly ReaderOutboxIntent[];
   titles: ReadonlyMap<string, string | null>;
   assets: readonly OfflinePublicationAssetCompleteRecord<Blob>[];
+  now?: number;
 }): OfflinePendingBook[] {
   const grouped = new Map<string, ReaderOutboxIntent[]>();
   for (const intent of input.intents) {
@@ -30,6 +40,11 @@ export function presentOfflinePendingBooks(input: {
   const books = [...grouped].map(([bookId, intents]) => {
     const title = input.titles.get(bookId)?.trim();
     const assets = input.assets.filter((asset) => asset.bookId === bookId);
+    const states = intents.map((intent) => offlineReaderRetryEligibility({
+      intent,
+      mode: "automatic",
+      now: input.now ?? Date.now(),
+    }));
     return {
       bookId,
       title: title || `Book ${shortBookId(bookId)}`,
@@ -42,6 +57,14 @@ export function presentOfflinePendingBooks(input: {
       hasOfflineAsset: assets.length > 0,
       assetFormats: [...new Set(assets.map((asset) => asset.format.toUpperCase()))].sort(),
       assetBytes: assets.reduce((total, asset) => total + asset.byteLength, 0),
+      status: bookStatus(states),
+      attentionIntentCount: states.filter((value) => value === "manual-only").length,
+      deferredIntentCount: states.filter((value) => value === "deferred").length,
+      sessionStatus: categoryStatus(intents.filter((intent) => intent.type === "establish-session"), input.now),
+      progressStatus: categoryStatus(intents.filter((intent) => intent.type === "replace-progress"), input.now),
+      annotationStatus: categoryStatus(intents.filter((intent) => (
+        intent.type === "upsert-annotation" || intent.type === "delete-annotation"
+      )), input.now),
     };
   });
 
@@ -50,6 +73,19 @@ export function presentOfflinePendingBooks(input: {
     || left.title.localeCompare(right.title)
     || left.bookId.localeCompare(right.bookId)
   ));
+}
+
+function categoryStatus(intents: ReaderOutboxIntent[], now = Date.now()): OfflinePendingBookStatus | null {
+  if (intents.length === 0) return null;
+  return bookStatus(intents.map((intent) => offlineReaderRetryEligibility({ intent, mode: "automatic", now })));
+}
+
+function bookStatus(states: ReturnType<typeof offlineReaderRetryEligibility>[]): OfflinePendingBookStatus {
+  if (states.includes("blocked-auth")) return "connection-repair";
+  if (states.includes("manual-only")) return "needs-attention";
+  if (states.includes("blocked-authority")) return "authority-blocked";
+  if (states.includes("deferred")) return "deferred";
+  return "waiting";
 }
 
 export function shortOfflineBookId(bookId: string): string {

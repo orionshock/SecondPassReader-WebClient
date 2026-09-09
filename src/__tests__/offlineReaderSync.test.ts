@@ -15,10 +15,11 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../app/offline/OfflineRepositories.Types";
-import type {
-  ReaderOutboxIntent,
-  ReplaceReaderProgressIntent,
-  UpsertReaderAnnotationIntent,
+import {
+  readerIntentResourceKey,
+  type ReaderOutboxIntent,
+  type ReplaceReaderProgressIntent,
+  type UpsertReaderAnnotationIntent,
 } from "../app/offline/ReaderOutbox.Policy";
 import { createInMemoryOfflineRepositoryFactories } from "./OfflineRepositoryTest.Fixtures";
 
@@ -123,8 +124,43 @@ describe("explicit offline Reader sync", () => {
       annotationsSynced: 1,
       progressSynced: false,
     });
-    expect(await repositories.outboxRepository.list("account-a")).toEqual([progress]);
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([{
+      ...progress,
+      attempt: expect.objectContaining({ revision: progress.intentRevision, classification: "retry-later" }),
+    }]);
     expect(JSON.stringify(result)).not.toContain("secret.invalid");
+  });
+
+  it("automatically skips a terminal annotation while still delivering eligible progress", async () => {
+    const desired = progressIntent();
+    const annotation = annotationIntent();
+    annotation.attempt = {
+      revision: annotation.intentRevision,
+      classification: "terminal-request",
+      attemptCount: 1,
+      attemptedAt: 1_000,
+      retryEligibleAt: null,
+    };
+    const state = readerState(desired.progress);
+    state.annotations = [{ status: "present", origin: annotation.origin, annotation: annotation.annotation }];
+    const repositories = await repositoriesWithState(state, [annotation, desired]);
+    await repositories.outboxRepository.recordAttempt(
+      "account-a",
+      readerIntentResourceKey(annotation),
+      annotation.intentRevision,
+      annotation.attempt!,
+    );
+    const client = syncClient();
+
+    const result = await syncOfflineReader({
+      namespaceKey: "account-a", bookId: "book-1", client, ...repositories,
+      attemptMode: "automatic", now: () => 2_000,
+    });
+
+    expect(client.marginalia.sessions.batchAnnotations).not.toHaveBeenCalled();
+    expect(client.marginalia.sessions.replaceProgress).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ status: "partially-synced", progressSynced: true });
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([annotation]);
   });
 
   it("stops before progress when annotation delivery is terminal", async () => {

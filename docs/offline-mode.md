@@ -279,9 +279,8 @@ Pending reading-position delivery may be explicitly discarded without removing t
 position used for local resume. Later Reader movement can create a new latest progress intent.
 Annotation discard is not offered yet: the current durable projection does not retain a separate
 authoritative baseline for safely undoing confirmed edits/deletes, and local projection plus outbox
-updates do not yet share one transaction. Terminal classification is also sweep-scoped rather than
-durable, so pending Books are not persistently labeled as terminal or needing attention. Offline
-asset removal remains separate from Reader-authored pending state.
+updates do not yet share one transaction. Offline asset removal remains separate from Reader-authored
+pending state.
 
 ## Publication Asset Storage Admission
 
@@ -379,6 +378,16 @@ interruption, `429`, known in-progress idempotency work, and `5xx` retry later; 
 reauthentication; `403` and ambiguous `404` require authority refresh rather than blind retry;
 validation failures are terminal for the unchanged intent. `409 SESSION_CLOSED` remains distinct
 because eligible Reader state may continue through a newly opened writable Session.
+
+Each pending Reader resource retains only its latest normalized attempt state, tied to the exact
+resource revision. A newer edit or replacement clears the old failure state. Retry-later attempts
+store a computed eligibility time using the existing backoff and normalized server retry delay;
+terminal, authentication, authority, and unknown failures remain durable without raw errors or
+response data. Automatic startup and reconnect sweeps skip resources that are not currently
+eligible, while an explicit Settings retry may attempt deferred or manual-attention work. Eligible
+progress can still sync when an unrelated annotation requires manual attention. Settings therefore
+keeps `Needs attention` and deferred status across reloads. These timestamps are policy data only:
+there is still no retry scheduler or timer.
 
 Transient retries use deterministic exponential backoff beginning at 30 seconds and capped at 15
 minutes, unless a valid server retry delay is supplied. Policy computes delay only: there is no

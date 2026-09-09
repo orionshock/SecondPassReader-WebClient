@@ -19,6 +19,11 @@ import {
   type ReaderSessionAuthority,
 } from "./OfflineReaderSessionReconciliation.Actions";
 import { classifyOfflineDeliveryFailure } from "./OfflineRetry.Policy";
+import { recordOfflineReaderAttemptFailure } from "./OfflineReaderAttempt.Actions";
+import {
+  isOfflineReaderIntentEligible,
+  type OfflineReaderAttemptMode,
+} from "./OfflineReaderRetryEligibility.Policy";
 import { updateOfflineReaderBookState } from "./OfflineReaderStateWrite.Coordinator";
 import {
   readerIntentResourceKey,
@@ -49,12 +54,17 @@ export type OfflineReaderAnnotationReplayResult =
       continuation: ReaderAnnotationContinuationOutcome | null;
     }
   | { status: "no-pending"; continuation: ReaderAnnotationContinuationOutcome | null }
+  | { status: "nothing-eligible"; continuation: ReaderAnnotationContinuationOutcome | null }
   | { status: "no-local-state" }
   | { status: "retry-later"; retryAfterMs: number | null }
   | { status: "reauthenticate" }
   | { status: "refresh-authority" }
   | { status: "terminal-request" }
   | { status: "failed" };
+
+type AnnotationReplayFailure =
+  | { status: "retry-later"; retryAfterMs: number | null }
+  | { status: "reauthenticate" | "refresh-authority" | "terminal-request" | "failed" };
 
 type ReplayInput = {
   namespaceKey: string;
@@ -64,6 +74,8 @@ type ReplayInput = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
   generateClientId?: () => string;
+  attemptMode?: OfflineReaderAttemptMode;
+  now?: () => number;
 };
 
 const activeReplays = new Map<string, Promise<OfflineReaderAnnotationReplayResult>>();
@@ -111,19 +123,27 @@ async function deliver(
   mayContinue: boolean,
 ): Promise<OfflineReaderAnnotationReplayResult> {
   let intents: ReaderAnnotationIntent[];
+  let pendingCount = 0;
   let stateAtSend: Awaited<ReturnType<OfflineReaderStateRepository["getBookState"]>>;
   try {
     const [allIntents, currentState] = await Promise.all([
       input.outboxRepository.list(input.namespaceKey),
       input.stateRepository.getBookState(input.namespaceKey, input.bookId),
     ]);
-    intents = annotationIntents(allIntents, input.bookId).slice(0, ANNOTATION_BATCH_LIMIT);
+    const now = (input.now ?? Date.now)();
+    const pending = annotationIntents(allIntents, input.bookId);
+    pendingCount = pending.length;
+    intents = pending.filter((intent) => isOfflineReaderIntentEligible({
+      intent,
+      mode: input.attemptMode ?? "manual",
+      now,
+    })).slice(0, ANNOTATION_BATCH_LIMIT);
     stateAtSend = currentState;
   } catch {
     return { status: "failed" };
   }
   if (!stateAtSend) return { status: "no-local-state" };
-  if (intents.length === 0) return { status: "no-pending", continuation };
+  if (intents.length === 0) return { status: pendingCount > 0 ? "nothing-eligible" : "no-pending", continuation };
 
   let response: MarginaliaAnnotationCollection;
   try {
@@ -133,7 +153,10 @@ async function deliver(
     );
   } catch (error) {
     const failure = classifyReplayFailure(error);
-    if (failure.status !== "session-closed") return failure;
+    if (failure.status !== "session-closed") {
+      await recordReplayFailure(input, intents, failure);
+      return failure;
+    }
     if (!mayContinue) return { status: "refresh-authority" };
 
     const authority = await reconcileOfflineReaderSessionAuthority({
@@ -143,9 +166,17 @@ async function deliver(
       stateRepository: input.stateRepository,
       outboxRepository: input.outboxRepository,
     });
-    if (authority.status !== "resolved") return reconciliationFailure(authority);
+    if (authority.status !== "resolved") {
+      const mapped = reconciliationFailure(authority);
+      if (mapped.status !== "no-local-state") await recordReplayFailure(input, intents, mapped);
+      return mapped;
+    }
     const nextSessionId = authority.state.session.serverSessionId;
-    if (!nextSessionId || nextSessionId === serverSessionId) return { status: "refresh-authority" };
+    if (!nextSessionId || nextSessionId === serverSessionId) {
+      const failure = { status: "refresh-authority" } as const;
+      await recordReplayFailure(input, intents, failure);
+      return failure;
+    }
     const prepared = await prepareOfflineReaderAnnotationContinuation({
       ...input,
       toSessionId: nextSessionId,
@@ -228,7 +259,7 @@ function sameIntentRevision(left: ReaderAnnotationIntent, right: ReaderAnnotatio
     && left.intentRevision === right.intentRevision;
 }
 
-function classifyReplayFailure(error: unknown): OfflineReaderAnnotationReplayResult | { status: "session-closed" } {
+function classifyReplayFailure(error: unknown): AnnotationReplayFailure | { status: "session-closed" } {
   const failure = classifyOfflineDeliveryFailure(error instanceof TypeError ? { kind: "network" } : error);
   switch (failure.classification) {
     case "retry-later": return { status: "retry-later", retryAfterMs: failure.retryAfterMs };
@@ -240,9 +271,28 @@ function classifyReplayFailure(error: unknown): OfflineReaderAnnotationReplayRes
   }
 }
 
+async function recordReplayFailure(
+  input: ReplayInput,
+  intents: readonly ReaderAnnotationIntent[],
+  failure: AnnotationReplayFailure,
+): Promise<void> {
+  const classification = failure.status === "terminal-request" ? "terminal-request" : failure.status;
+  try {
+    await recordOfflineReaderAttemptFailure({
+      repository: input.outboxRepository,
+      intents,
+      classification,
+      retryAfterMs: failure.status === "retry-later" ? failure.retryAfterMs : null,
+      now: (input.now ?? Date.now)(),
+    });
+  } catch {
+    // The delivery failure remains authoritative; storage failure is normalized by the caller's next read.
+  }
+}
+
 function reconciliationFailure(
   result: Awaited<ReturnType<typeof reconcileOfflineReaderSessionAuthority>>,
-): OfflineReaderAnnotationReplayResult {
+): AnnotationReplayFailure | { status: "no-local-state" } {
   switch (result.status) {
     case "retry-later": return result;
     case "reauthenticate": return result;

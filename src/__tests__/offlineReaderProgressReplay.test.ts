@@ -12,7 +12,7 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../app/offline/OfflineRepositories.Types";
-import type { ReaderOutboxIntent, ReplaceReaderProgressIntent } from "../app/offline/ReaderOutbox.Policy";
+import { readerIntentResourceKey, type ReaderOutboxIntent, type ReplaceReaderProgressIntent } from "../app/offline/ReaderOutbox.Policy";
 import { createInMemoryOfflineRepositoryFactories } from "./OfflineRepositoryTest.Fixtures";
 
 describe("offline Reader progress replay", () => {
@@ -127,9 +127,37 @@ describe("offline Reader progress replay", () => {
     const result = await replay(client, repositories, "session-1");
 
     expect(result).toEqual(expected);
-    expect(await repositories.outboxRepository.list("account-a")).toEqual([intent]);
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([{
+      ...intent,
+      attempt: expect.objectContaining({
+        revision: intent.intentRevision,
+        classification: expected.status === "terminal-request" ? "terminal-request" : expected.status,
+        attemptCount: 1,
+      }),
+    }]);
     expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.progress).toEqual(desired);
     expect(JSON.stringify(result)).not.toContain("secret.invalid");
+  });
+
+  it("does not attach an older request failure to a newer progress revision", async () => {
+    const first = progress("epubcfi(/6/8)", 30);
+    const newer = progress("epubcfi(/6/10)", 40);
+    const repositories = await repositoriesWithState(readerState(first));
+    await repositories.outboxRepository.upsertIntent(progressIntent(first, 1));
+    const client = replayClient();
+    let rejectRequest!: (reason: unknown) => void;
+    vi.mocked(client.marginalia.sessions.replaceProgress).mockReturnValue(new Promise((_resolve, reject) => {
+      rejectRequest = reject;
+    }));
+
+    const running = replay(client, repositories, "session-1");
+    await vi.waitFor(() => expect(client.marginalia.sessions.replaceProgress).toHaveBeenCalledOnce());
+    await repositories.stateRepository.putBookState(readerState(newer));
+    await repositories.outboxRepository.upsertIntent(progressIntent(newer, 2));
+    rejectRequest(apiError(400));
+
+    await expect(running).resolves.toEqual({ status: "terminal-request" });
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([progressIntent(newer, 2)]);
   });
 
   it("reloads and sends only the newest progress after SESSION_CLOSED reconciliation", async () => {
@@ -215,9 +243,34 @@ describe("offline Reader progress replay", () => {
     first.close();
 
     const reopened = await openIndexedDbOfflineRepositories(options);
-    expect(await reopened.readerOutbox.list("account-a")).toEqual([progressIntent(desired, 1)]);
+    expect(await reopened.readerOutbox.list("account-a")).toEqual([{
+      ...progressIntent(desired, 1),
+      attempt: expect.objectContaining({ revision: 1, classification: "terminal-request", attemptCount: 1 }),
+    }]);
     expect((await reopened.readerState.getBookState("account-a", "book-1"))?.progress).toEqual(desired);
     reopened.close();
+  });
+
+  it("skips deferred progress automatically and allows an explicit manual retry", async () => {
+    const desired = progress("epubcfi(/6/8)", 30);
+    const repositories = await repositoriesWithState(readerState(desired));
+    await repositories.outboxRepository.upsertIntent(progressIntent(desired, 1));
+    const current = (await repositories.outboxRepository.list("account-a"))[0];
+    await repositories.outboxRepository.recordAttempt("account-a", readerIntentResourceKey(current), 1, {
+      revision: 1, classification: "retry-later", attemptCount: 1, attemptedAt: 1_000, retryEligibleAt: 2_000,
+    });
+    const client = replayClient();
+
+    await expect(replayOfflineReaderProgress({
+      namespaceKey: "account-a", bookId: "book-1", serverSessionId: "session-1", client,
+      ...repositories, attemptMode: "automatic", now: () => 1_500,
+    })).resolves.toEqual({ status: "nothing-eligible" });
+    expect(client.marginalia.sessions.replaceProgress).not.toHaveBeenCalled();
+
+    await expect(replayOfflineReaderProgress({
+      namespaceKey: "account-a", bookId: "book-1", serverSessionId: "session-1", client,
+      ...repositories, attemptMode: "manual", now: () => 1_500,
+    })).resolves.toMatchObject({ status: "replayed", acknowledged: true });
   });
 });
 

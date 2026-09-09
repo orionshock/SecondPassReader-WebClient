@@ -302,6 +302,30 @@ function defineOfflineRepositoryContractTests(
       expect(await repository.list("account-a")).toEqual([]);
     });
 
+    it("records failure only for an exact revision and clears it on a newer desired state", async () => {
+      const repository = await factories.createReaderOutboxRepository();
+      const first = progressIntent("account-a", "book-1", "session-1", 1, "epubcfi(/6/2)");
+      await repository.upsertIntent(first);
+      const key = readerIntentResourceKey(first);
+      const attempt = {
+        revision: 1,
+        classification: "terminal-request" as const,
+        attemptCount: 1,
+        attemptedAt: 1_000,
+        retryEligibleAt: null,
+      };
+
+      expect(await repository.recordAttempt("account-a", key, 2, attempt)).toBe(false);
+      expect(await repository.recordAttempt("account-a", key, 1, { ...attempt, revision: 2 })).toBe(false);
+      expect(await repository.recordAttempt("account-a", key, 1, attempt)).toBe(true);
+      expect((await repository.list("account-a"))[0].attempt).toEqual(attempt);
+
+      const newer = progressIntent("account-a", "book-1", "session-1", 2, "epubcfi(/6/4)");
+      await repository.upsertIntent(newer);
+      expect(await repository.list("account-a")).toEqual([newer]);
+      expect(await repository.recordAttempt("account-a", key, 1, attempt)).toBe(false);
+    });
+
     it("atomically replaces only an exact current revision under a new resource identity", async () => {
       const repository = await factories.createReaderOutboxRepository();
       const current = annotationUpsert("account-a", "book-1", "session-1", "annotation-1", 2, "edited", "server-confirmed");

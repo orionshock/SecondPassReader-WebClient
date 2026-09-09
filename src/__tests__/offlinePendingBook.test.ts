@@ -30,6 +30,30 @@ describe("offline pending Book presentation", () => {
       }),
     ]);
   });
+
+  it("presents durable terminal and deferred revisions without exposing internal classifications", () => {
+    const terminal = upsert("book-terminal");
+    terminal.attempt = {
+      revision: 1, classification: "terminal-request", attemptCount: 1, attemptedAt: 1_000, retryEligibleAt: null,
+    };
+    const deferred = progress("book-deferred");
+    deferred.attempt = {
+      revision: 1, classification: "retry-later", attemptCount: 2, attemptedAt: 1_000, retryEligibleAt: 3_000,
+    };
+
+    const books = presentOfflinePendingBooks({
+      intents: [terminal, deferred], titles: new Map(), assets: [], now: 2_000,
+    });
+
+    expect(books.find((book) => book.bookId === "book-terminal")).toMatchObject({
+      status: "needs-attention", attentionIntentCount: 1,
+    });
+    expect(books.find((book) => book.bookId === "book-deferred")).toMatchObject({
+      status: "deferred", deferredIntentCount: 1,
+    });
+    expect(JSON.stringify(books)).not.toContain("terminal-request");
+    expect(JSON.stringify(books)).not.toContain("retry-later");
+  });
 });
 
 function establish(bookId: string): ReaderOutboxIntent {

@@ -9,7 +9,9 @@ import type {
 } from "../app/offline/OfflineRepositories.Types";
 import {
   coalesceReaderIntent,
+  readerIntentRevision,
   readerIntentResourceKey,
+  type ReaderOutboxAttempt,
   type ReaderOutboxIntent,
 } from "../app/offline/ReaderOutbox.Policy";
 
@@ -121,7 +123,7 @@ class InMemoryReaderOutboxRepository implements ReaderOutboxRepository {
     if (index < 0) return false;
 
     const intent = this.intents[index];
-    const currentRevision = "intentRevision" in intent ? intent.intentRevision : null;
+    const currentRevision = readerIntentRevision(intent);
     if (currentRevision !== expectedRevision) return false;
 
     this.intents.splice(index, 1);
@@ -140,10 +142,25 @@ class InMemoryReaderOutboxRepository implements ReaderOutboxRepository {
     );
     if (index < 0 || replacement.namespaceKey !== namespaceKey) return false;
     const current = this.intents[index];
-    const currentRevision = "intentRevision" in current ? current.intentRevision : null;
+    const currentRevision = readerIntentRevision(current);
     if (currentRevision !== expectedRevision) return false;
     this.intents.splice(index, 1);
     this.intents = clone(coalesceReaderIntent(this.intents, clone(replacement)));
+    return true;
+  }
+
+  async recordAttempt(
+    namespaceKey: string,
+    resourceKey: string,
+    expectedRevision: number | null,
+    attempt: ReaderOutboxAttempt,
+  ): Promise<boolean> {
+    if (attempt.revision !== expectedRevision) return false;
+    const index = this.intents.findIndex((intent) => (
+      intent.namespaceKey === namespaceKey && readerIntentResourceKey(intent) === resourceKey
+    ));
+    if (index < 0 || readerIntentRevision(this.intents[index]) !== expectedRevision) return false;
+    this.intents[index] = clone({ ...this.intents[index], attempt });
     return true;
   }
 

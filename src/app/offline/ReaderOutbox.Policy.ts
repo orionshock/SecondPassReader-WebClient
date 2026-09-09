@@ -16,15 +16,32 @@ type MutableReaderIntent = {
   intentRevision: number;
 };
 
+export type ReaderOutboxAttemptClassification =
+  | "retry-later"
+  | "reauthenticate"
+  | "refresh-authority"
+  | "terminal-request"
+  | "failed";
+
+export type ReaderOutboxAttempt = {
+  revision: number | null;
+  classification: ReaderOutboxAttemptClassification;
+  attemptCount: number;
+  attemptedAt: number;
+  retryEligibleAt: number | null;
+};
+
+type AttemptedReaderIntent = { attempt?: ReaderOutboxAttempt };
+
 export type ReaderAnnotationOrigin =
   | { kind: "local-unconfirmed" }
   | { kind: "server-confirmed"; serverSessionId: string };
 
-export type EstablishReaderSessionIntent = ReaderIntentScope & {
+export type EstablishReaderSessionIntent = ReaderIntentScope & AttemptedReaderIntent & {
   type: "establish-session";
 };
 
-export type ReplaceReaderProgressIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & {
+export type ReplaceReaderProgressIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & AttemptedReaderIntent & {
   type: "replace-progress";
   progress: {
     cfi: string;
@@ -33,13 +50,13 @@ export type ReplaceReaderProgressIntent = ReaderIntentScope & SessionTarget & Mu
   };
 };
 
-export type UpsertReaderAnnotationIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & {
+export type UpsertReaderAnnotationIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & AttemptedReaderIntent & {
   type: "upsert-annotation";
   origin: ReaderAnnotationOrigin;
   annotation: MarginaliaHighlightUpsert | MarginaliaBookmarkUpsert;
 };
 
-export type DeleteReaderAnnotationIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & {
+export type DeleteReaderAnnotationIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & AttemptedReaderIntent & {
   type: "delete-annotation";
   origin: ReaderAnnotationOrigin;
   clientId: string;
@@ -73,12 +90,13 @@ export function coalesceReaderIntent(
   existing: readonly ReaderOutboxIntent[],
   incoming: ReaderOutboxIntent,
 ): ReaderOutboxIntent[] {
-  const resourceKey = readerIntentResourceKey(incoming);
+  const cleanIncoming = withoutReaderIntentAttempt(incoming);
+  const resourceKey = readerIntentResourceKey(cleanIncoming);
   const existingIndex = existing.findIndex(
     (intent) => readerIntentResourceKey(intent) === resourceKey,
   );
 
-  if (incoming.type === "delete-annotation" && incoming.origin.kind === "local-unconfirmed") {
+  if (cleanIncoming.type === "delete-annotation" && cleanIncoming.origin.kind === "local-unconfirmed") {
     const matching = existingIndex < 0 ? null : existing[existingIndex];
     if (matching?.type !== "upsert-annotation" || matching.origin.kind !== "local-unconfirmed") {
       return [...existing];
@@ -86,8 +104,22 @@ export function coalesceReaderIntent(
     return existing.filter((_intent, index) => index !== existingIndex);
   }
 
-  if (existingIndex < 0) return [...existing, incoming];
-  return existing.map((intent, index) => index === existingIndex ? incoming : intent);
+  if (existingIndex < 0) return [...existing, cleanIncoming];
+  return existing.map((intent, index) => {
+    if (index !== existingIndex) return intent;
+    return readerIntentRevision(intent) === readerIntentRevision(cleanIncoming) && intent.attempt
+      ? { ...cleanIncoming, attempt: intent.attempt }
+      : cleanIncoming;
+  });
+}
+
+export function readerIntentRevision(intent: ReaderOutboxIntent): number | null {
+  return "intentRevision" in intent ? intent.intentRevision : null;
+}
+
+export function withoutReaderIntentAttempt(intent: ReaderOutboxIntent): ReaderOutboxIntent {
+  const { attempt: _attempt, ...clean } = intent;
+  return clean as ReaderOutboxIntent;
 }
 
 export function classifyClosedSessionReaderIntent(

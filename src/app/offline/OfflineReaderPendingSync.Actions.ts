@@ -8,6 +8,7 @@ import {
   type IndexedDbOfflineRepositories,
 } from "./OfflineRepositories.IndexedDb";
 import type { OfflineReaderSyncClient } from "./OfflineReaderSync.Actions";
+import { isOfflineReaderIntentEligible, type OfflineReaderAttemptMode } from "./OfflineReaderRetryEligibility.Policy";
 import {
   addOfflineReaderSyncBookOutcome,
   createOfflineReaderSyncOutcome,
@@ -46,6 +47,7 @@ type PendingSyncInput = {
   client: OfflineReaderSyncClient;
   isCurrent?: () => boolean;
   mode?: PendingSyncMode;
+  attemptMode?: OfflineReaderAttemptMode;
   onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
@@ -79,6 +81,7 @@ export function syncPendingOfflineReaderWork(
     client: input.client,
     isCurrent: input.isCurrent ?? (() => true),
     mode,
+    attemptMode: input.attemptMode ?? (mode === "wait" ? "manual" : "automatic"),
     onCompleted: input.onCompleted,
     dependencies,
   });
@@ -107,6 +110,7 @@ async function runPendingSync(input: {
   client: OfflineReaderSyncClient;
   isCurrent(): boolean;
   mode: PendingSyncMode;
+  attemptMode: OfflineReaderAttemptMode;
   onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
   dependencies: OfflineReaderPendingSyncDependencies;
 }): Promise<OfflineReaderPendingSyncResult> {
@@ -122,7 +126,7 @@ async function runPendingSync(input: {
 
   try {
     const intents = await repositories.readerOutbox.list(input.namespaceKey);
-    const bookIds = pendingReaderSyncBookIds(intents);
+    const bookIds = pendingReaderSyncBookIds(intents, input.attemptMode, Date.now());
     let outcome = createOfflineReaderSyncOutcome();
     let nextIndex = 0;
     let attemptedBooks = 0;
@@ -140,6 +144,7 @@ async function runPendingSync(input: {
             stateRepository: repositories.readerState,
             outboxRepository: repositories.readerOutbox,
             mode: input.mode,
+            attemptMode: input.attemptMode,
           });
           outcome = addOfflineReaderSyncBookOutcome(outcome, result);
           reportIncompleteResult(input.dependencies, bookId, result);
@@ -172,8 +177,15 @@ async function runPendingSync(input: {
   }
 }
 
-export function pendingReaderSyncBookIds(intents: readonly ReaderOutboxIntent[]): string[] {
-  return [...new Set(intents.map((intent) => intent.bookId.trim()).filter(Boolean))].sort();
+export function pendingReaderSyncBookIds(
+  intents: readonly ReaderOutboxIntent[],
+  attemptMode: OfflineReaderAttemptMode = "automatic",
+  now = Date.now(),
+): string[] {
+  return [...new Set(intents
+    .filter((intent) => isOfflineReaderIntentEligible({ intent, mode: attemptMode, now }))
+    .map((intent) => intent.bookId.trim())
+    .filter(Boolean))].sort();
 }
 
 function reportIncompleteResult(
@@ -186,7 +198,9 @@ function reportIncompleteResult(
     dependencies.reportFailure(`coordination-${result.status}`, bookId);
     return;
   }
-  if (result.sync.status !== "synced" && result.sync.status !== "nothing-to-sync") {
+  if (result.sync.status !== "synced"
+    && result.sync.status !== "nothing-to-sync"
+    && result.sync.status !== "nothing-eligible") {
     dependencies.reportFailure(`sync-${result.sync.status}`, bookId);
   }
 }
