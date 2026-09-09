@@ -202,6 +202,14 @@ and sends that latest value to the continuation. Same-runtime delivery is serial
 and Book because server progress is last-write-wins. Automatic sync and cross-tab coordination
 remain later work.
 
+One explicit Reader sync action composes a complete manual cycle: inspect pending Book intent,
+resolve writable Session authority, replay annotations, then replay progress against the final
+Session returned by any annotation continuation. A failed later stage does not roll back successful
+earlier delivery; the result reports safe stage, count, continuation, and partial-success metadata.
+The coordinator shares one same-runtime cycle per account and Book and never mutates the outbox
+outside the lower-level exact-acknowledgement actions. Connectivity-driven invocation, retry loops,
+and cross-tab single-writer coordination remain future work.
+
 ## Publication Asset Storage Admission
 
 Before retaining a publication asset, the client uses the browser's advisory origin usage and quota estimate.
