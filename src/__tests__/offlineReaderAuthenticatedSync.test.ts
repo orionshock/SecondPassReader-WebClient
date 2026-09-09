@@ -54,6 +54,21 @@ describe("authenticated offline Reader sync lifecycle", () => {
     stopFirst();
     stopSecond();
   });
+
+  it("gives startup and reconnect the same completed-sweep notice owner", () => {
+    const dependencies = lifecycleDependencies();
+    const onSweepCompleted = vi.fn();
+    const stop = startOfflineReaderAuthenticatedSyncLifecycle({
+      namespaceKey: "account-a",
+      client: client(),
+      generation: createOfflineReaderAuthenticatedSyncGeneration(),
+      onSweepCompleted,
+    }, dependencies);
+
+    expect(dependencies.startStartup.mock.calls[0][0].onSweepCompleted).toBe(onSweepCompleted);
+    expect(dependencies.startReconnect.mock.calls[0][0].onSweepCompleted).toBe(onSweepCompleted);
+    stop();
+  });
 });
 
 function lifecycleDependencies() {

@@ -8,6 +8,11 @@ import {
   type IndexedDbOfflineRepositories,
 } from "./OfflineRepositories.IndexedDb";
 import type { OfflineReaderSyncClient } from "./OfflineReaderSync.Actions";
+import {
+  addOfflineReaderSyncBookOutcome,
+  createOfflineReaderSyncOutcome,
+  type OfflineReaderPendingSyncOutcome,
+} from "./OfflineReaderSyncOutcome.State";
 import type { ReaderOutboxIntent } from "./ReaderOutbox.Policy";
 
 const PENDING_SYNC_BOOK_CONCURRENCY = 3;
@@ -19,7 +24,12 @@ type PendingSyncRepositories = Pick<
 >;
 
 export type OfflineReaderPendingSyncResult =
-  | { status: "completed"; discoveredBooks: number; attemptedBooks: number }
+  | {
+      status: "completed";
+      discoveredBooks: number;
+      attemptedBooks: number;
+      outcome: OfflineReaderPendingSyncOutcome;
+    }
   | { status: "cancelled" }
   | { status: "failed"; stage: "open-repositories" | "list-outbox" };
 
@@ -33,6 +43,7 @@ type PendingSyncInput = {
   namespaceKey: string;
   client: OfflineReaderSyncClient;
   isCurrent?: () => boolean;
+  onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
 export function syncPendingOfflineReaderWork(
@@ -55,6 +66,7 @@ export function syncPendingOfflineReaderWork(
     namespaceKey,
     client: input.client,
     isCurrent: input.isCurrent ?? (() => true),
+    onCompleted: input.onCompleted,
     dependencies,
   });
   activePendingSyncs.set(namespaceKey, operation);
@@ -80,6 +92,7 @@ async function runPendingSync(input: {
   namespaceKey: string;
   client: OfflineReaderSyncClient;
   isCurrent(): boolean;
+  onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
   dependencies: OfflineReaderPendingSyncDependencies;
 }): Promise<OfflineReaderPendingSyncResult> {
   if (!input.isCurrent()) return { status: "cancelled" };
@@ -95,6 +108,7 @@ async function runPendingSync(input: {
   try {
     const intents = await repositories.readerOutbox.list(input.namespaceKey);
     const bookIds = pendingReaderSyncBookIds(intents);
+    let outcome = createOfflineReaderSyncOutcome();
     let nextIndex = 0;
     let attemptedBooks = 0;
     const worker = async () => {
@@ -112,15 +126,25 @@ async function runPendingSync(input: {
             outboxRepository: repositories.readerOutbox,
             mode: "if-available",
           });
+          outcome = addOfflineReaderSyncBookOutcome(outcome, result);
           reportIncompleteResult(input.dependencies, bookId, result);
         } catch {
+          outcome.failedBooks += 1;
           input.dependencies.reportFailure("sync-book", bookId);
         }
       }
     };
     const workerCount = Math.min(PENDING_SYNC_BOOK_CONCURRENCY, bookIds.length);
     await Promise.all(Array.from({ length: workerCount }, () => worker()));
-    return { status: "completed", discoveredBooks: bookIds.length, attemptedBooks };
+    const result = { status: "completed", discoveredBooks: bookIds.length, attemptedBooks, outcome } as const;
+    if (input.isCurrent() && input.onCompleted) {
+      try {
+        input.onCompleted(result);
+      } catch {
+        input.dependencies.reportFailure("publish-outcome");
+      }
+    }
+    return result;
   } catch {
     input.dependencies.reportFailure("list-outbox");
     return { status: "failed", stage: "list-outbox" };

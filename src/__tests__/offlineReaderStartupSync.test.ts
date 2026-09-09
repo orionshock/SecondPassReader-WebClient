@@ -119,7 +119,7 @@ class ControlledConnectivity {
 function createHarness(initial: BrowserConnectivityStatus) {
   const connectivity = new ControlledConnectivity(initial);
   const syncPending = vi.fn<OfflineReaderStartupSyncDependencies["syncPending"]>(
-    async () => ({ status: "completed", discoveredBooks: 0, attemptedBooks: 0 }),
+    async () => completedSweep(),
   );
   const eligibilityDecided = vi.fn();
   const dependencies: OfflineReaderStartupSyncDependencies = {
@@ -136,6 +136,33 @@ function createHarness(initial: BrowserConnectivityStatus) {
     onEligibilityDecided: eligibilityDecided,
   }, dependencies);
   return { connectivity, syncPending, eligibilityDecided, start };
+}
+
+function completedSweep() {
+  return {
+    status: "completed" as const,
+    discoveredBooks: 0,
+    attemptedBooks: 0,
+    outcome: emptyOutcome(),
+  };
+}
+
+function emptyOutcome() {
+  return {
+    completedBooks: 0,
+    partiallySyncedBooks: 0,
+    busyBooks: 0,
+    retryLaterBooks: 0,
+    reauthenticateBooks: 0,
+    refreshAuthorityBooks: 0,
+    terminalBooks: 0,
+    failedBooks: 0,
+    continuationBooks: 0,
+    meaningfulOutcomeBooks: 0,
+    forwardedConfirmedEdits: 0,
+    droppedConfirmedDeletes: 0,
+    continuedLocalUpserts: 0,
+  };
 }
 
 function client(): OfflineReaderSyncClient {

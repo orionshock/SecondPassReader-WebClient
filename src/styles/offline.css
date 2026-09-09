@@ -1,0 +1,24 @@
+.offlineReaderSyncNotice {
+  margin-bottom: 14px;
+  border: 1px solid var(--sp-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: var(--color-surface-raised);
+}
+
+.offlineReaderSyncNotice p {
+  margin: 0;
+}
+
+.offlineReaderSyncNotice-info {
+  border-color: var(--sp-primary-border);
+}
+
+.offlineReaderSyncNotice-warning {
+  border-color: rgba(185, 106, 0, 0.35);
+  background: rgba(185, 106, 0, 0.08);
+}

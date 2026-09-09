@@ -28,6 +28,9 @@ import {
   createOfflineReaderAuthenticatedSyncGeneration,
   startOfflineReaderAuthenticatedSyncLifecycle,
 } from "./offline/OfflineReaderAuthenticatedSync.Lifecycle";
+import { showOfflineReaderSyncOutcome } from "./offline/OfflineReaderSyncNotice.Controller";
+import { OfflineReaderSyncNoticePanel } from "./offline/OfflineReaderSyncNotice.Panel";
+import { clearOfflineReaderSyncNotice } from "./offline/OfflineReaderSyncNotice.State";
 
 const SettingsPanel = lazy(async () => {
   const module = await import("./Settings.Panel");
@@ -113,11 +116,16 @@ function AppShell() {
   });
 
   useEffect(() => {
+    clearOfflineReaderSyncNotice();
+  }, [automaticSyncGenerationKey]);
+
+  useEffect(() => {
     if (!automaticSyncGenerationKey || !offlineNamespaceKey || !splClient) return;
     return startOfflineReaderAuthenticatedSyncLifecycle({
       namespaceKey: offlineNamespaceKey,
       client: splClient,
       generation: automaticSyncGeneration,
+      onSweepCompleted: showOfflineReaderSyncOutcome,
     });
   }, [automaticSyncGeneration, automaticSyncGenerationKey, offlineNamespaceKey, splClient]);
 
@@ -281,6 +289,8 @@ function AppShell() {
         hasConnection={Boolean(selectedProfile)}
         route={route}
       />
+
+      {workflowStep === "library_home" ? <OfflineReaderSyncNoticePanel /> : null}
 
       <main className="appMain">
         {view === "settings" ? (

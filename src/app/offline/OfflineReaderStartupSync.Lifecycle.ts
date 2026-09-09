@@ -16,6 +16,7 @@ export type OfflineReaderStartupSyncDependencies = {
     namespaceKey: string;
     client: OfflineReaderSyncClient;
     isCurrent(): boolean;
+    onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
   }): Promise<OfflineReaderPendingSyncResult>;
 };
 
@@ -24,6 +25,7 @@ type StartupLifecycleInput = {
   client: OfflineReaderSyncClient | null;
   isCurrent?: () => boolean;
   onEligibilityDecided?: () => void;
+  onSweepCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
 export function startOfflineReaderStartupSyncLifecycle(
@@ -55,6 +57,7 @@ export function startOfflineReaderStartupSyncLifecycle(
       namespaceKey,
       client,
       isCurrent: () => !disposed && generationIsCurrent(),
+      onCompleted: input.onSweepCompleted,
     });
   };
 

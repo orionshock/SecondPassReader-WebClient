@@ -2,6 +2,7 @@ import {
   startOfflineReaderReconnectSyncLifecycle,
 } from "./OfflineReaderReconnectSync.Lifecycle";
 import type { OfflineReaderSyncClient } from "./OfflineReaderSync.Actions";
+import type { OfflineReaderPendingSyncResult } from "./OfflineReaderPendingSync.Actions";
 import {
   startOfflineReaderStartupSyncLifecycle,
 } from "./OfflineReaderStartupSync.Lifecycle";
@@ -15,6 +16,7 @@ type AuthenticatedSyncInput = {
   namespaceKey: string;
   client: OfflineReaderSyncClient;
   generation: OfflineReaderAuthenticatedSyncGeneration;
+  onSweepCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
 export type OfflineReaderAuthenticatedSyncDependencies = {
@@ -41,6 +43,7 @@ export function startOfflineReaderAuthenticatedSyncLifecycle(
     namespaceKey: input.namespaceKey,
     client: input.client,
     isCurrent,
+    onSweepCompleted: input.onSweepCompleted,
   });
   const stopStartup = input.generation.startupDecided
     ? () => undefined
@@ -51,6 +54,7 @@ export function startOfflineReaderAuthenticatedSyncLifecycle(
         onEligibilityDecided: () => {
           input.generation.startupDecided = true;
         },
+        onSweepCompleted: input.onSweepCompleted,
       });
 
   return () => {

@@ -154,7 +154,6 @@ offline Reader permits EPUB reading, navigation, TOC, search, display settings, 
 current-session annotation authoring. Session metadata, close, and other server-backed mutations
 remain disabled.
 The existing Reader lifecycle owns and revokes object URLs for both downloaded and stored Blobs.
-Reconnect authority resolution remains later work.
 
 ### Durable Offline Progress
 
@@ -162,11 +161,11 @@ Settled offline Reader movement persists the latest canonical CFI, integer perce
 percent-first location label in local Reader continuity. Writes are debounced to reduce IndexedDB
 churn, and Reader hide, page exit, or close requests a bounded local-only flush. Reader state is
 written before its coalesced `replace-progress` outbox intent, so an outbox failure cannot erase the
-latest durable position. The intent is prepared for future delivery but is not replayed yet.
+latest durable position.
 
 Offline reopen prefers that durable local progress; CFI strings are never compared for ordering.
-The online three-second server autosave remains separate and unchanged. Server reconciliation,
-including protection against stale acknowledgements, remains a later phase.
+The online three-second server autosave remains separate and unchanged. Foreground reconciliation
+uses exact revisions so a stale acknowledgement cannot clear newer local progress.
 
 ### Durable Offline Annotations
 
@@ -178,8 +177,8 @@ reconciliation. Previous-session annotations and known-closed Sessions remain re
 
 Persistence failure does not roll back the visible authored change. State-write failure skips the
 outbox write; outbox failure retains the durable local projection and dirty intent for another
-local flush opportunity. No pending badge or automatic replay is included yet, and the existing
-online annotation path remains server-authoritative and unchanged.
+local flush opportunity. The existing online annotation path remains server-authoritative and
+unchanged; per-annotation pending badges remain out of scope.
 
 Annotation replay is an explicit action after Session authority resolution. It sends one bounded
 batch of complete annotation desired state to the authoritative active Session, adopts the complete
@@ -190,8 +189,8 @@ If delivery reports `SESSION_CLOSED`, that Session receives no retry. Authority 
 local-unconfirmed upserts continue with the same client ID, while confirmed historical edits are
 copied forward under a new stable client ID and become local-unconfirmed. Confirmed deletes against
 the closed Session are dropped rather than applied to the continuation Session. The action returns
-continuation counts for later notification, but automatic sync and notification UI remain future
-work. `start-over` is never automatic recovery.
+continuation counts that the automatic foreground sweep can aggregate into a single notice.
+`start-over` is never automatic recovery.
 
 Progress replay is a separate explicit action after Session authority resolution and annotation
 replay. It sends only the progress value that still matches durable local desired state and
@@ -199,16 +198,15 @@ exact-acknowledges only the delivered revision. A newer local revision written d
 remains visible and pending; CFI strings are never compared for recency. `SESSION_CLOSED` stops
 delivery to that Session, resolves a writable continuation, reloads the current desired progress,
 and sends that latest value to the continuation. Same-runtime delivery is serialized per account
-and Book because server progress is last-write-wins. Automatic sync and cross-tab coordination
-remain later work.
+and Book because server progress is last-write-wins.
 
 One explicit Reader sync action composes a complete manual cycle: inspect pending Book intent,
 resolve writable Session authority, replay annotations, then replay progress against the final
 Session returned by any annotation continuation. A failed later stage does not roll back successful
 earlier delivery; the result reports safe stage, count, continuation, and partial-success metadata.
 The coordinator shares one same-runtime cycle per account and Book and never mutates the outbox
-outside the lower-level exact-acknowledgement actions. Connectivity-driven invocation and retry
-loops remain future work.
+outside the lower-level exact-acknowledgement actions. Automatic foreground triggers invoke the
+cross-tab coordinated entry point; retry loops remain future work.
 
 The cross-tab entry point wraps that explicit cycle in an exclusive Web Lock scoped by normalized
 account namespace and Book. Waiting is the default; a non-waiting caller may receive `busy` without
@@ -230,7 +228,15 @@ cross-tab coordination per Book. `busy` means another tab owns that Book and is 
 lifecycle disposal prevents an old namespace generation from starting more Books, while already
 started work settles before its shared repository connection closes. Failed work remains durable
 for a later reconnect or manual action; there is no retry timer, periodic sweep, service worker,
-background sync, or result UI yet.
+or background sync.
+
+Each completed automatic foreground sweep also aggregates safe reconciliation outcomes across its
+Books. Routine success, no work, cross-tab contention, and transient retry remain silent. Confirmed
+annotation edits carried into a continuation Session, deletes that could not be applied to an
+already-closed Session, and terminal authored work can produce one dismissible, nonblocking app
+notice for the sweep. Terminal work remains saved locally; the notice does not discard it or imply
+that a repair workflow exists. Cross-tab notice fan-out, retry scheduling, background sync, and a
+sync-management or repair UI remain future work.
 
 ## Publication Asset Storage Admission
 
@@ -318,7 +324,8 @@ repository reads and writes do not expose mutable stored object identity.
 The outbox repository owns atomic read-coalesce-write and exact-revision removal. Listing order is
 not a replay contract. IndexedDB adapters must satisfy the shared repository conformance cases.
 Persistence failures remain failures: there is no silent `localStorage` or in-memory fallback.
-Service-worker behavior and cross-tab single-writer or replay coordination remain later decisions.
+Cross-tab Reader replay uses namespace-and-Book-scoped Web Locks. Service-worker behavior remains a
+later decision.
 
 ## Retry and Replay Policy
 

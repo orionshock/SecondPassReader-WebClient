@@ -16,6 +16,7 @@ export type OfflineReaderReconnectSyncDependencies = {
     namespaceKey: string;
     client: OfflineReaderSyncClient;
     isCurrent(): boolean;
+    onCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
   }): Promise<OfflineReaderPendingSyncResult>;
 };
 
@@ -23,6 +24,7 @@ type ReconnectLifecycleInput = {
   namespaceKey: string | null;
   client: OfflineReaderSyncClient | null;
   isCurrent?: () => boolean;
+  onSweepCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
 export function startOfflineReaderReconnectSyncLifecycle(
@@ -52,6 +54,7 @@ export function startOfflineReaderReconnectSyncLifecycle(
       namespaceKey,
       client,
       isCurrent: () => !disposed && generationIsCurrent(),
+      onCompleted: input.onSweepCompleted,
     });
   });
 

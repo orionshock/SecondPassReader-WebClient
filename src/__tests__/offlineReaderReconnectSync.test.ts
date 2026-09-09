@@ -90,7 +90,26 @@ class ControlledConnectivity {
 function createHarness(initial: BrowserConnectivityStatus) {
   const connectivity = new ControlledConnectivity(initial);
   const syncPending = vi.fn<OfflineReaderReconnectSyncDependencies["syncPending"]>(
-    async () => ({ status: "completed", discoveredBooks: 0, attemptedBooks: 0 }),
+    async () => ({
+      status: "completed",
+      discoveredBooks: 0,
+      attemptedBooks: 0,
+      outcome: {
+        completedBooks: 0,
+        partiallySyncedBooks: 0,
+        busyBooks: 0,
+        retryLaterBooks: 0,
+        reauthenticateBooks: 0,
+        refreshAuthorityBooks: 0,
+        terminalBooks: 0,
+        failedBooks: 0,
+        continuationBooks: 0,
+        meaningfulOutcomeBooks: 0,
+        forwardedConfirmedEdits: 0,
+        droppedConfirmedDeletes: 0,
+        continuedLocalUpserts: 0,
+      },
+    }),
   );
   const dependencies: OfflineReaderReconnectSyncDependencies = {
     getConnectivitySnapshot: connectivity.getSnapshot,

@@ -28,7 +28,7 @@ describe("pending offline Reader sync", () => {
 
     const result = await harness.run();
 
-    expect(result).toEqual({ status: "completed", discoveredBooks: 2, attemptedBooks: 2 });
+    expect(result).toEqual(completedSweep(2, 2, { completedBooks: 2 }));
     expect(harness.list).toHaveBeenCalledWith("account-a");
     expect(harness.syncBook.mock.calls.map(([input]) => input.bookId).sort()).toEqual(["book-1", "book-2"]);
     expect(harness.syncBook.mock.calls.every(([input]) => input.mode === "if-available")).toBe(true);
@@ -39,11 +39,7 @@ describe("pending offline Reader sync", () => {
   it("closes quietly without Book calls when the namespace outbox is empty", async () => {
     const harness = await createHarness([]);
 
-    await expect(harness.run()).resolves.toEqual({
-      status: "completed",
-      discoveredBooks: 0,
-      attemptedBooks: 0,
-    });
+    await expect(harness.run()).resolves.toEqual(completedSweep(0, 0));
     expect(harness.syncBook).not.toHaveBeenCalled();
     expect(harness.close).toHaveBeenCalledOnce();
   });
@@ -60,8 +56,8 @@ describe("pending offline Reader sync", () => {
     gate.resolve(completed());
 
     await expect(Promise.all([startup, reconnect])).resolves.toEqual([
-      { status: "completed", discoveredBooks: 1, attemptedBooks: 1 },
-      { status: "completed", discoveredBooks: 1, attemptedBooks: 1 },
+      completedSweep(1, 1, { completedBooks: 1 }),
+      completedSweep(1, 1, { completedBooks: 1 }),
     ]);
     expect(harness.openRepositories).toHaveBeenCalledOnce();
     expect(harness.close).toHaveBeenCalledOnce();
@@ -75,7 +71,7 @@ describe("pending offline Reader sync", () => {
 
     const firstRun = first.run();
     await waitFor(() => first.syncBook.mock.calls.length === 1);
-    await expect(second.run()).resolves.toEqual({ status: "completed", discoveredBooks: 1, attemptedBooks: 1 });
+    await expect(second.run()).resolves.toEqual(completedSweep(1, 1, { completedBooks: 1 }));
     gate.resolve(completed());
     await firstRun;
 
@@ -142,12 +138,64 @@ describe("pending offline Reader sync", () => {
       return completed();
     });
 
-    await harness.run();
+    const result = await harness.run();
 
     expect(harness.syncBook).toHaveBeenCalledTimes(4);
+    expect(result).toEqual(completedSweep(4, 4, {
+      completedBooks: 1,
+      busyBooks: 1,
+      retryLaterBooks: 1,
+      failedBooks: 1,
+    }));
     expect(harness.reportFailure).toHaveBeenCalledWith("sync-retry-later", "book-2");
     expect(harness.reportFailure).toHaveBeenCalledWith("sync-book", "book-3");
     expect(JSON.stringify(harness.reportFailure.mock.calls)).not.toContain("secret.invalid");
+  });
+
+  it("aggregates continuation and terminal outcomes across Books and publishes once", async () => {
+    const harness = await createHarness([
+      establishIntent("book-1"),
+      establishIntent("book-2"),
+      establishIntent("book-3"),
+    ]);
+    const onCompleted = vi.fn();
+    harness.syncBook.mockImplementation(async ({ bookId }) => {
+      if (bookId === "book-1") return completedWithContinuation(2, 1, 3);
+      if (bookId === "book-2") {
+        return { status: "completed", sync: { status: "terminal", stage: "annotations" } };
+      }
+      return completedWithContinuation(1, 0, 0);
+    });
+
+    const result = await harness.run(undefined, onCompleted);
+
+    expect(result).toEqual(completedSweep(3, 3, {
+      completedBooks: 2,
+      terminalBooks: 1,
+      continuationBooks: 2,
+      meaningfulOutcomeBooks: 3,
+      forwardedConfirmedEdits: 3,
+      droppedConfirmedDeletes: 1,
+      continuedLocalUpserts: 3,
+    }));
+    expect(onCompleted).toHaveBeenCalledOnce();
+    expect(onCompleted).toHaveBeenCalledWith(result);
+  });
+
+  it("does not publish a completed sweep after its account generation expires", async () => {
+    const harness = await createHarness([establishIntent("book-1")]);
+    const gate = deferred<OfflineReaderCoordinatedSyncResult>();
+    const onCompleted = vi.fn();
+    let current = true;
+    harness.syncBook.mockReturnValue(gate.promise);
+
+    const running = harness.run(() => current, onCompleted);
+    await waitFor(() => harness.syncBook.mock.calls.length === 1);
+    current = false;
+    gate.resolve(completed());
+    await running;
+
+    expect(onCompleted).not.toHaveBeenCalled();
   });
 
   it("normalizes repository failure and closes an opened bundle", async () => {
@@ -175,10 +223,14 @@ async function createHarness(intents: ReaderOutboxIntent[], namespaceKey = "acco
   const syncBook = vi.fn<OfflineReaderPendingSyncDependencies["syncBook"]>(async () => completed());
   const reportFailure = vi.fn<OfflineReaderPendingSyncDependencies["reportFailure"]>();
   const dependencies: OfflineReaderPendingSyncDependencies = { openRepositories, syncBook, reportFailure };
-  const run = (isCurrent?: () => boolean) => syncPendingOfflineReaderWork({
+  const run = (
+    isCurrent?: () => boolean,
+    onCompleted?: Parameters<typeof syncPendingOfflineReaderWork>[0]["onCompleted"],
+  ) => syncPendingOfflineReaderWork({
     namespaceKey,
     client: client(),
     isCurrent,
+    onCompleted,
   }, dependencies);
   return { close, list, openRepositories, syncBook, reportFailure, run };
 }
@@ -195,6 +247,57 @@ function client(): OfflineReaderSyncClient {
 
 function completed(): OfflineReaderCoordinatedSyncResult {
   return { status: "completed", sync: { status: "nothing-to-sync" } };
+}
+
+function completedWithContinuation(
+  forwardedConfirmedEdits: number,
+  droppedConfirmedDeletes: number,
+  continuedLocalUpserts: number,
+): OfflineReaderCoordinatedSyncResult {
+  return {
+    status: "completed",
+    sync: {
+      status: "synced",
+      serverSessionId: "session-current",
+      annotationsSynced: 1,
+      progressSynced: false,
+      continuation: {
+        forwardedConfirmedEdits,
+        droppedConfirmedDeletes,
+        continuedLocalUpserts,
+        fromSessionId: "session-closed",
+        toSessionId: "session-current",
+      },
+    },
+  };
+}
+
+function completedSweep(
+  discoveredBooks: number,
+  attemptedBooks: number,
+  outcome: Partial<Extract<Awaited<ReturnType<typeof syncPendingOfflineReaderWork>>, { status: "completed" }>["outcome"]> = {},
+) {
+  return {
+    status: "completed",
+    discoveredBooks,
+    attemptedBooks,
+    outcome: {
+      completedBooks: 0,
+      partiallySyncedBooks: 0,
+      busyBooks: 0,
+      retryLaterBooks: 0,
+      reauthenticateBooks: 0,
+      refreshAuthorityBooks: 0,
+      terminalBooks: 0,
+      failedBooks: 0,
+      continuationBooks: 0,
+      meaningfulOutcomeBooks: 0,
+      forwardedConfirmedEdits: 0,
+      droppedConfirmedDeletes: 0,
+      continuedLocalUpserts: 0,
+      ...outcome,
+    },
+  };
 }
 
 function establishIntent(bookId: string, namespaceKey = "account-a"): ReaderOutboxIntent {
