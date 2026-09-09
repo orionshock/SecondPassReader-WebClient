@@ -124,6 +124,25 @@ class InMemoryReaderOutboxRepository implements ReaderOutboxRepository {
     return true;
   }
 
+  async replace(
+    namespaceKey: string,
+    resourceKey: string,
+    expectedRevision: number | null,
+    replacement: ReaderOutboxIntent,
+  ): Promise<boolean> {
+    const index = this.intents.findIndex(
+      (intent) => intent.namespaceKey === namespaceKey
+        && readerIntentResourceKey(intent) === resourceKey,
+    );
+    if (index < 0 || replacement.namespaceKey !== namespaceKey) return false;
+    const current = this.intents[index];
+    const currentRevision = "intentRevision" in current ? current.intentRevision : null;
+    if (currentRevision !== expectedRevision) return false;
+    this.intents.splice(index, 1);
+    this.intents = clone(coalesceReaderIntent(this.intents, clone(replacement)));
+    return true;
+  }
+
   async deleteNamespace(namespaceKey: string): Promise<void> {
     this.intents = this.intents.filter((intent) => intent.namespaceKey !== namespaceKey);
   }

@@ -178,8 +178,20 @@ reconciliation. Previous-session annotations and known-closed Sessions remain re
 
 Persistence failure does not roll back the visible authored change. State-write failure skips the
 outbox write; outbox failure retains the durable local projection and dirty intent for another
-local flush opportunity. No pending badge or server replay is included yet, and the existing
+local flush opportunity. No pending badge or automatic replay is included yet, and the existing
 online annotation path remains server-authoritative and unchanged.
+
+Annotation replay is an explicit action after Session authority resolution. It sends one bounded
+batch of complete annotation desired state to the authoritative active Session, adopts the complete
+server collection as baseline, overlays newer local intent, and exact-acknowledges only delivered
+revisions that are still current. Terminal validation failure retains authored state and intent.
+
+If delivery reports `SESSION_CLOSED`, that Session receives no retry. Authority is resolved again;
+local-unconfirmed upserts continue with the same client ID, while confirmed historical edits are
+copied forward under a new stable client ID and become local-unconfirmed. Confirmed deletes against
+the closed Session are dropped rather than applied to the continuation Session. The action returns
+continuation counts for later notification, but automatic sync and notification UI remain future
+work. Progress replay remains separate, and `start-over` is never automatic recovery.
 
 ## Publication Asset Storage Admission
 

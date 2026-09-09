@@ -286,6 +286,19 @@ function defineOfflineRepositoryContractTests(
       expect(await repository.list("account-a")).toEqual([]);
     });
 
+    it("atomically replaces only an exact current revision under a new resource identity", async () => {
+      const repository = await factories.createReaderOutboxRepository();
+      const current = annotationUpsert("account-a", "book-1", "session-1", "annotation-1", 2, "edited", "server-confirmed");
+      const replacement = annotationUpsert("account-a", "book-1", "session-2", "annotation-2", 3, "edited", "local-unconfirmed");
+      await repository.upsertIntent(current);
+      const key = readerIntentResourceKey(current);
+
+      expect(await repository.replace("account-a", key, 1, replacement)).toBe(false);
+      expect(await repository.list("account-a")).toEqual([current]);
+      expect(await repository.replace("account-a", key, 2, replacement)).toBe(true);
+      expect(await repository.list("account-a")).toEqual([replacement]);
+    });
+
     it("returns detached intents and purges only the requested namespace", async () => {
       const repository = await factories.createReaderOutboxRepository();
       const first = progressIntent("account-a", "book-1", "session-1", 1, "epubcfi(/6/2)");

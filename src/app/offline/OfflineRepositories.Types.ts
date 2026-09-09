@@ -80,5 +80,12 @@ export interface ReaderOutboxRepository {
   upsertIntent(intent: ReaderOutboxIntent): Promise<void>;
   // Removal succeeds only when namespace, resource key, and current revision all match.
   remove(namespaceKey: string, resourceKey: string, expectedRevision: number | null): Promise<boolean>;
+  // Replacement changes resource identity atomically and only for the exact current revision.
+  replace(
+    namespaceKey: string,
+    resourceKey: string,
+    expectedRevision: number | null,
+    replacement: ReaderOutboxIntent,
+  ): Promise<boolean>;
   deleteNamespace(namespaceKey: string): Promise<void>;
 }
