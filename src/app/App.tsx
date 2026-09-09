@@ -24,7 +24,10 @@ import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
 import { buildOfflineCacheNamespace } from "./offline/OfflineCacheNamespace.Policy";
-import { startOfflineReaderReconnectSyncLifecycle } from "./offline/OfflineReaderReconnectSync.Lifecycle";
+import {
+  createOfflineReaderAuthenticatedSyncGeneration,
+  startOfflineReaderAuthenticatedSyncLifecycle,
+} from "./offline/OfflineReaderAuthenticatedSync.Lifecycle";
 
 const SettingsPanel = lazy(async () => {
   const module = await import("./Settings.Panel");
@@ -63,6 +66,13 @@ function AppShell() {
       accountProfileId: selectedProfile.verifiedUser?.profileId,
     })?.key ?? null;
   }, [selectedProfile?.serverBaseUrl, selectedProfile?.verifiedAt, selectedProfile?.verifiedUser?.profileId, workflowStep]);
+  const automaticSyncGenerationKey = offlineNamespaceKey && selectedProfile
+    ? JSON.stringify([offlineNamespaceKey, selectedProfile.id, selectedProfile.verifiedAt])
+    : null;
+  const automaticSyncGeneration = useMemo(
+    () => createOfflineReaderAuthenticatedSyncGeneration(),
+    [automaticSyncGenerationKey],
+  );
 
   const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
 
@@ -102,10 +112,14 @@ function AppShell() {
     onProfileChanged: refreshProfiles,
   });
 
-  useEffect(() => startOfflineReaderReconnectSyncLifecycle({
-    namespaceKey: offlineNamespaceKey,
-    client: splClient,
-  }), [offlineNamespaceKey, splClient]);
+  useEffect(() => {
+    if (!automaticSyncGenerationKey || !offlineNamespaceKey || !splClient) return;
+    return startOfflineReaderAuthenticatedSyncLifecycle({
+      namespaceKey: offlineNamespaceKey,
+      client: splClient,
+      generation: automaticSyncGeneration,
+    });
+  }, [automaticSyncGeneration, automaticSyncGenerationKey, offlineNamespaceKey, splClient]);
 
   const {
     openedBook,

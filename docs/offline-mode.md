@@ -218,14 +218,19 @@ remain independent. Web Locks require a supporting browser and secure context; u
 report unavailable coordination rather than using a fragile storage mutex. Production deployment
 expects the operator's reverse proxy to provide HTTPS and its certificate configuration.
 
-Reader outbox sync runs one namespace-scoped pass when the centralized browser status makes an
-explicit `offline` to `online` transition. Initial `online` and `unknown` to `online` states do not
-trigger a startup sweep. The pass lists the namespace outbox once, derives distinct Books, and uses
-up to three workers to invoke non-waiting cross-tab coordination per Book. `busy` means another tab
-owns that Book and is not an error. Account lifecycle disposal prevents an old namespace pass from
-starting more Books, while already-started work settles before its shared repository connection
-closes. Failed work remains durable for a later reconnect or manual action; there is no retry timer,
-periodic sweep, service worker, background sync, or result UI yet.
+Pending Reader outbox work has two automatic foreground triggers: authenticated startup while the
+centralized browser status is explicitly `online`, and a later explicit `offline` to `online`
+transition. Startup initially at `unknown` waits for the first definite state; `online` runs its one
+catch-up attempt, while `offline` leaves later delivery to reconnect. Reconnect detection itself
+still ignores initial `online` and `unknown` to `online`.
+
+Both triggers share one namespace-scoped pending-Book sweep and same-runtime guard. The sweep lists
+the namespace outbox once, derives distinct Books, and uses up to three workers to invoke non-waiting
+cross-tab coordination per Book. `busy` means another tab owns that Book and is not an error. Account
+lifecycle disposal prevents an old namespace generation from starting more Books, while already
+started work settles before its shared repository connection closes. Failed work remains durable
+for a later reconnect or manual action; there is no retry timer, periodic sweep, service worker,
+background sync, or result UI yet.
 
 ## Publication Asset Storage Admission
 

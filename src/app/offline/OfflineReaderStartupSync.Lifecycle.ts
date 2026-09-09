@@ -9,7 +9,7 @@ import {
 } from "./OfflineReaderPendingSync.Actions";
 import type { OfflineReaderSyncClient } from "./OfflineReaderSync.Actions";
 
-export type OfflineReaderReconnectSyncDependencies = {
+export type OfflineReaderStartupSyncDependencies = {
   getConnectivitySnapshot(): BrowserConnectivityStatus;
   subscribeConnectivity(listener: () => void): () => void;
   syncPending(input: {
@@ -19,20 +19,21 @@ export type OfflineReaderReconnectSyncDependencies = {
   }): Promise<OfflineReaderPendingSyncResult>;
 };
 
-type ReconnectLifecycleInput = {
+type StartupLifecycleInput = {
   namespaceKey: string | null;
   client: OfflineReaderSyncClient | null;
   isCurrent?: () => boolean;
+  onEligibilityDecided?: () => void;
 };
 
-export function startOfflineReaderReconnectSyncLifecycle(
-  input: ReconnectLifecycleInput,
-  dependencyOverrides: Partial<OfflineReaderReconnectSyncDependencies> = {},
+export function startOfflineReaderStartupSyncLifecycle(
+  input: StartupLifecycleInput,
+  dependencyOverrides: Partial<OfflineReaderStartupSyncDependencies> = {},
 ): () => void {
   const namespaceKey = input.namespaceKey?.trim() ?? "";
   if (!namespaceKey || !input.client) return () => undefined;
 
-  const dependencies: OfflineReaderReconnectSyncDependencies = {
+  const dependencies: OfflineReaderStartupSyncDependencies = {
     getConnectivitySnapshot: getBrowserConnectivitySnapshot,
     subscribeConnectivity: subscribeToBrowserConnectivity,
     syncPending: syncPendingOfflineReaderWork,
@@ -40,20 +41,29 @@ export function startOfflineReaderReconnectSyncLifecycle(
   };
   const client = input.client;
   const generationIsCurrent = input.isCurrent ?? (() => true);
-  let previousStatus = dependencies.getConnectivitySnapshot();
   let disposed = false;
+  let decided = false;
+  let unsubscribe: () => void = () => undefined;
 
-  const unsubscribe = dependencies.subscribeConnectivity(() => {
-    const nextStatus = dependencies.getConnectivitySnapshot();
-    const reconnected = previousStatus === "offline" && nextStatus === "online";
-    previousStatus = nextStatus;
-    if (!reconnected || disposed || !generationIsCurrent()) return;
+  const decide = (status: BrowserConnectivityStatus) => {
+    if (decided || disposed || status === "unknown" || !generationIsCurrent()) return;
+    decided = true;
+    unsubscribe();
+    input.onEligibilityDecided?.();
+    if (status !== "online") return;
     void dependencies.syncPending({
       namespaceKey,
       client,
       isCurrent: () => !disposed && generationIsCurrent(),
     });
-  });
+  };
+
+  const initialStatus = dependencies.getConnectivitySnapshot();
+  if (initialStatus === "unknown") {
+    unsubscribe = dependencies.subscribeConnectivity(() => decide(dependencies.getConnectivitySnapshot()));
+  } else {
+    decide(initialStatus);
+  }
 
   return () => {
     if (disposed) return;
