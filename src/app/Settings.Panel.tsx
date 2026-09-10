@@ -18,6 +18,7 @@ import { SettingsToolsPanel } from "./settings/SettingsTools.Panel";
 import type { OfflineReaderSyncClient } from "./offline/OfflineReaderSync.Actions";
 import { OfflineSettingsPanel } from "./settings/offline/OfflineSettings.Panel";
 import { getBrowserConnectivitySnapshot } from "./connectivity/BrowserConnectivity.State";
+import type { BrowserConnectivityStatus } from "./connectivity/BrowserConnectivity.State";
 import { forgetConnectionAndOfflineData } from "../features/connection/ConnectionRemoval.Controller";
 
 type Props = {
@@ -30,6 +31,7 @@ type Props = {
   route: Extract<AppRoute, { kind: "settings" }>;
   offlineNamespaceKey: string | null;
   offlineSyncClient: OfflineReaderSyncClient | null;
+  connectivity: BrowserConnectivityStatus;
 };
 
 export function SettingsPanel({
@@ -42,6 +44,7 @@ export function SettingsPanel({
   route,
   offlineNamespaceKey,
   offlineSyncClient,
+  connectivity,
 }: Props) {
   const [state, setState] = useState<SettingsLibraryServerActionState>({ phase: "idle" });
   const activeTab = route.tab ?? "appearance";
@@ -193,6 +196,7 @@ export function SettingsPanel({
           onSignOutLocally={onDisconnect}
           onRepairConnection={onRepairConnection}
           onForgetLocally={() => void forgetConnection()}
+          serverActionsAvailable={connectivity !== "offline"}
         />
       ) : null}
 

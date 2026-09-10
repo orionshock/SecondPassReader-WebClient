@@ -13,6 +13,8 @@ import { useReaderActivityImportController } from "./activity/ReaderActivityImpo
 import { useReaderActivityCompletionController } from "./activity/ReaderActivityCompletion.Controller";
 import type { ReaderActivityRenderState, ReaderActivityWorkspaceFocusRequest } from "./activity/ReaderActivity.Types";
 import { canMutateReaderBookmark } from "./session/annotations/CurrentSessionBookmark.Actions";
+import type { BrowserConnectivityStatus } from "../../app/connectivity/BrowserConnectivity.State";
+import { selectReaderServerClient } from "./session/ReaderConnectivity.Policy";
 
 export function ReadingActivity({
   openedBook,
@@ -20,12 +22,14 @@ export function ReadingActivity({
   spl,
   settings,
   initialSearchQuery,
+  connectivity = "unknown",
 }: {
   openedBook: OpenedBook | null;
   onBackToLibrary: () => void;
   spl?: SecondPassClient | null;
   settings?: ReaderSettings;
   initialSearchQuery?: string | null;
+  connectivity?: BrowserConnectivityStatus;
 }) {
   if (!openedBook) return <p className="muted">No book open.</p>;
 
@@ -33,7 +37,7 @@ export function ReadingActivity({
   const [searchOpen, setSearchOpen] = useState(false);
   const [workspaceFocusRequest, setWorkspaceFocusRequest] = useState<ReaderActivityWorkspaceFocusRequest | null>(null);
   const readerImport = useReaderImportJob();
-  const serverSpl = openedBook.source === "online" ? spl : null;
+  const serverSpl = selectReaderServerClient({ source: openedBook.source, connectivity, client: spl });
   const readerDisplaySettings = useReaderDisplaySettings(settings);
   const displaySettings = readerDisplaySettings.settings;
   const settingsPresentation = getReaderSettingsPresentation(displaySettings);
@@ -78,6 +82,7 @@ export function ReadingActivity({
             spl={serverSpl}
             initialSearchQuery={initialSearchQuery}
             readerWidth={settingsPresentation.viewport.width}
+            connectivity={connectivity}
           />
         )}
       </ReadingSessionOrchestrator>
@@ -98,6 +103,7 @@ function ReaderActivityContent({
   spl,
   initialSearchQuery,
   readerWidth,
+  connectivity,
 }: {
   readerState: ReaderActivityRenderState;
   openedBook: OpenedBook;
@@ -111,6 +117,7 @@ function ReaderActivityContent({
   spl?: SecondPassClient | null;
   initialSearchQuery?: string | null;
   readerWidth: ReaderWidth;
+  connectivity: BrowserConnectivityStatus;
 }) {
   const { state, statusLine, autosaveStatus, shell, annotations, marginalia } = readerState;
   const currentSessionId = state.sessionId;
@@ -171,6 +178,7 @@ function ReaderActivityContent({
         onReturn={completion.returnToTarget}
         showHomeAction={completion.showHomeAction}
         onHome={onBackToLibrary}
+        showOfflineStatus={connectivity === "offline" && openedBook.source === "online"}
       />
 
       <ReaderActivitySidePanels

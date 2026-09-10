@@ -98,6 +98,7 @@ describe("server descriptive rich text", () => {
         onSignOutLocally={noop}
         onRepairConnection={noop}
         onForgetLocally={noop}
+        serverActionsAvailable
       />,
     );
     expect(html).toContain("<p>Server <strong>description</strong>.</p>");

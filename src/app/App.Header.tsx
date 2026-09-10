@@ -2,12 +2,14 @@ import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import type { AppRoute } from "./AppNavigation.Router";
 import { MaterialIcon } from "../components/Material.Icon";
 import { MetaSeparator } from "../components/Metadata.Presenter";
+import type { BrowserConnectivityStatus } from "./connectivity/BrowserConnectivity.State";
 
 export function AppHeader({
   profile,
   view,
   route,
   canNavigate,
+  connectivity,
   onShowHome,
   onShowLibrary,
   onShowSessions,
@@ -18,6 +20,7 @@ export function AppHeader({
   view: "main" | "settings";
   route: AppRoute | null;
   canNavigate: boolean;
+  connectivity: BrowserConnectivityStatus;
   onShowHome: () => void;
   onShowLibrary: () => void;
   onShowSessions: () => void;
@@ -97,6 +100,7 @@ export function AppHeader({
           </button>
         ) : null}
         <div className="appHeaderMeta muted">
+          {connectivity === "offline" ? <span className="pill pillWarn" role="status" aria-live="polite">Offline</span> : null}
           {serverName ? (
             <>
               <MaterialIcon name="local_library" className="appHeaderMetaIcon" ariaHidden />

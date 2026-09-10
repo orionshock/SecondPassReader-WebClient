@@ -16,6 +16,7 @@ describe("App header navigation", () => {
       view: "main",
       route: { kind: "library" },
       canNavigate: true,
+      connectivity: "online",
       onShowHome,
       onShowLibrary: vi.fn(),
       onShowSessions: vi.fn(),
@@ -27,6 +28,30 @@ describe("App header navigation", () => {
     expect(home).not.toBeNull();
     act(() => home?.click());
     expect(onShowHome).toHaveBeenCalledOnce();
+
+    act(() => root.unmount());
+  });
+
+  it("announces explicit offline connectivity without disabling local navigation", () => {
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    act(() => root.render(createElement(AppHeader, {
+      profile: null,
+      view: "main",
+      route: { kind: "home" },
+      canNavigate: true,
+      connectivity: "offline",
+      onShowHome: vi.fn(),
+      onShowLibrary: vi.fn(),
+      onShowSessions: vi.fn(),
+      onShowShelves: vi.fn(),
+      onShowSettings: vi.fn(),
+    })));
+
+    expect(container.querySelector('[role="status"]')?.textContent).toBe("Offline");
+    expect(container.querySelector<HTMLButtonElement>('button[aria-label="Home"]')?.disabled).toBe(false);
+    expect([...container.querySelectorAll("button")].find((button) => button.textContent === "Library")?.disabled).toBe(false);
 
     act(() => root.unmount());
   });

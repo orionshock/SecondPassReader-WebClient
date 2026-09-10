@@ -37,6 +37,7 @@ describe("authenticated bootstrap context", () => {
       view: "main",
       route: { kind: "home" },
       canNavigate: true,
+      connectivity: "online",
       onShowHome: vi.fn(),
       onShowLibrary: vi.fn(),
       onShowSessions: vi.fn(),
@@ -53,6 +54,7 @@ describe("authenticated bootstrap context", () => {
       route: { kind: "settings", tab: "library-server" },
       offlineNamespaceKey: null,
       offlineSyncClient: null,
+      connectivity: "online",
     }));
 
     expect(header).toContain("Authenticated Server Name");

@@ -29,6 +29,7 @@ import {
 import { getReaderBootstrapState } from "./ReaderBootstrap.State";
 import { useOfflineReadingProgress } from "./progress/OfflineReadingProgress.Lifecycle";
 import { useOfflineCurrentSessionAnnotations } from "./annotations/OfflineCurrentSessionAnnotation.Lifecycle";
+import { canMutateReaderServerSession } from "./ReaderConnectivity.Policy";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -138,9 +139,13 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     serverBootstrap,
     localBootstrap,
     sessionId,
-    canMutateSession,
+    canMutateSession: bootstrapCanMutateSession,
   } = getReaderBootstrapState(props.openedBook);
   const serverSpl = serverBootstrap ? props.spl : null;
+  const canMutateSession = canMutateReaderServerSession({
+    bootstrapCanMutateSession,
+    serverClientAvailable: Boolean(serverSpl),
+  });
   const bootstrapSession = serverBootstrap?.session ?? null;
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = serverBootstrap?.session?.progress ?? localBootstrap?.continuity.progress;

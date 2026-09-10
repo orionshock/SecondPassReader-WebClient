@@ -293,6 +293,7 @@ function AppShell() {
           view={view}
           route={route}
           canNavigate={workflowStep === "library_home"}
+          connectivity={browserConnectivity}
           onShowHome={() => {
             navigateTo({ kind: "home" });
             closeReader();
@@ -347,6 +348,7 @@ function AppShell() {
               route={route?.kind === "settings" ? route : { kind: "settings" }}
               offlineNamespaceKey={offlineNamespaceKey}
               offlineSyncClient={splClient}
+              connectivity={browserConnectivity}
             />
           </Suspense>
         ) : (

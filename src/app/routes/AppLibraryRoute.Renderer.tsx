@@ -12,6 +12,7 @@ import { ShelvesPage } from "../../features/shelves/Shelves.Page";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, withBookModal } from "../AppNavigation.Router";
 import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
+import { OfflineRouteUnavailableNotice } from "./OfflineRouteUnavailable.Notice";
 
 const ReadingActivity = lazy(async () => {
   const module = await import("../../features/reader/Reading.Activity");
@@ -88,10 +89,24 @@ export function AppLibraryRouteRenderer({
               onCloseReader();
             }}
             spl={spl}
+            connectivity={connectivity}
             initialSearchQuery={route.search ?? null}
           />
         </Suspense>
       </section>
+    );
+  }
+
+  if (connectivity === "offline" && isServerOnlyRoute(route)) {
+    return (
+      <div className="libraryScreen">
+        <OfflineRouteUnavailableNotice
+          area={route.kind === "sessions" || route.kind === "session" ? "Reading sessions" : "Shelves"}
+          onOpenHome={() => navigateTo({ kind: "home" })}
+          onOpenLibrary={() => navigateTo({ kind: "library" })}
+          onOpenOfflineSettings={() => navigateTo({ kind: "settings", tab: "offline" })}
+        />
+      </div>
     );
   }
 
@@ -336,4 +351,15 @@ export function AppLibraryRouteRenderer({
       <HomePage profile={profile} spl={spl} offlineNamespaceKey={offlineNamespaceKey} />
     </div>
   );
+}
+
+function isServerOnlyRoute(route: AppRoute | null): route is Extract<
+  AppRoute,
+  { kind: "sessions" | "session" | "shelves" | "shelf" | "shelfEdit" }
+> {
+  return route?.kind === "sessions"
+    || route?.kind === "session"
+    || route?.kind === "shelves"
+    || route?.kind === "shelf"
+    || route?.kind === "shelfEdit";
 }

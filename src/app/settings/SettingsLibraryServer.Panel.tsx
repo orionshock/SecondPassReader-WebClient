@@ -22,6 +22,7 @@ export function SettingsLibraryServerPanel({
   onSignOutLocally,
   onRepairConnection,
   onForgetLocally,
+  serverActionsAvailable,
 }: {
   profile: ConnectionProfile | null;
   state: SettingsLibraryServerActionState;
@@ -32,6 +33,7 @@ export function SettingsLibraryServerPanel({
   onSignOutLocally: () => void;
   onRepairConnection: () => void;
   onForgetLocally: () => void;
+  serverActionsAvailable: boolean;
 }) {
   const status = getConnectionStatus(profile);
 
@@ -48,7 +50,7 @@ export function SettingsLibraryServerPanel({
         {!profile ? (
           <div className="settingsEmpty">
             <p className="muted">No library is connected in this browser.</p>
-            <button type="button" className="button buttonPrimary" onClick={onConnect}>
+            <button type="button" className="button buttonPrimary" onClick={onConnect} disabled={!serverActionsAvailable}>
               Connect library
             </button>
           </div>
@@ -68,13 +70,14 @@ export function SettingsLibraryServerPanel({
               <SettingsDetailRow label="Last checked" value={formatTimestamp(profile.lastCheckedAt ?? profile.verifiedAt)} />
             </div>
             <div className="settingsActions">
-              <button type="button" className="button" onClick={onCheckConnection} disabled={busy}>
+              <button type="button" className="button" onClick={onCheckConnection} disabled={busy || !serverActionsAvailable}>
                 {state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
               </button>
-              <button type="button" className="button buttonPrimary" onClick={onRepairConnection} disabled={busy}>
+              <button type="button" className="button buttonPrimary" onClick={onRepairConnection} disabled={busy || !serverActionsAvailable}>
                 Repair connection
               </button>
             </div>
+            {!serverActionsAvailable ? <p className="muted">Library server actions are unavailable while offline.</p> : null}
           </>
         )}
       </section>
@@ -92,7 +95,7 @@ export function SettingsLibraryServerPanel({
           <SettingsDetailRow label="Web client release date" value={APP_BUILD_INFO.releaseDate} />
         </div>
         <div className="settingsActions">
-          <button type="button" className="button buttonDanger" onClick={onLogOut} disabled={!profile || busy}>
+          <button type="button" className="button buttonDanger" onClick={onLogOut} disabled={!profile || busy || !serverActionsAvailable}>
             {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}
           </button>
         </div>

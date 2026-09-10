@@ -205,6 +205,25 @@ There is no offline acquisition, Shelf mutation, Session history, marginalia fet
 fabricated server authority. Offline Home and Library now use this local detail as their normal Book
 navigation step.
 
+## Offline Surface Behavior
+
+The authenticated app shell shows a small `Offline` connectivity status while retaining navigation.
+Each destination then owns one explicit behavior:
+
+| Surface | Explicit offline behavior |
+| --- | --- |
+| Home | Last-known cached Recent and Shelf previews, with local Reader progress overlay. |
+| Library | Downloaded publication assets with local title search. |
+| Book Detail | Saved projection metadata and publication-asset management. |
+| Reader | Local EPUB reading and authored state when opened from an offline bootstrap. A Reader already opened online remains mounted but pauses server-owned mutations until connectivity returns. |
+| Settings | Local sync inspection, manual retry eligibility, asset management, and account-retention actions. Server connection checks, repair, and remote logout are disabled while offline. |
+| Sessions and Shelves | Intentional offline-unavailable state; their server query and mutation owners do not mount. |
+
+`Offline` describes connectivity, `Available offline` describes a verified retained publication
+asset, saved details/previews describe cached server snapshots, and `Waiting to sync` or `Needs
+attention` describes durable authored work. Repair-required authentication remains distinct from
+browser connectivity and continues to gate all namespace-owned personal data.
+
 ## Offline Reader Admission
 
 Reader opening branches only on an explicit browser `offline` signal. `online` and `unknown` keep
