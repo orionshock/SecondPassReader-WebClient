@@ -12,7 +12,6 @@ import { ShelvesPage } from "../../features/shelves/Shelves.Page";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, withBookModal } from "../AppNavigation.Router";
 import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
-import { saveReaderReturnTarget } from "../../features/reader/ReaderReturnTarget.Store";
 
 const ReadingActivity = lazy(async () => {
   const module = await import("../../features/reader/Reading.Activity");
@@ -176,14 +175,7 @@ export function AppLibraryRouteRenderer({
           <Suspense fallback={<p className="muted">{`Loading downloaded books${"\u2026"}`}</p>}>
             <OfflineLibraryPage
               namespaceKey={offlineNamespaceKey}
-              onOpenReader={(bookId) => {
-                saveReaderReturnTarget(bookId, {
-                  kind: "library",
-                  label: "Library",
-                  route: window.location.hash || "#/library",
-                });
-                navigateTo({ kind: "reader", bookId });
-              }}
+              onViewBook={(bookId) => navigateTo(withBookModal(route, bookId))}
             />
           </Suspense>
         </div>
@@ -332,10 +324,7 @@ export function AppLibraryRouteRenderer({
           <OfflineHomePage
             namespaceKey={offlineNamespaceKey}
             onOpenLibrary={() => navigateTo({ kind: "library" })}
-            onOpenReader={(bookId) => {
-              saveReaderReturnTarget(bookId, { kind: "home", label: "Home", route: "#/home" });
-              navigateTo({ kind: "reader", bookId });
-            }}
+            onViewBook={(bookId) => navigateTo({ kind: "home", bookId })}
           />
         </Suspense>
       </div>

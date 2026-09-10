@@ -1,19 +1,30 @@
+import { lazy, Suspense } from "react";
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { BookDetailModal } from "../../features/library/BookDetail.Modal";
 import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, routeToHash, withoutBookModal } from "../AppNavigation.Router";
+import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
+
+const OfflineBookDetailDialog = lazy(async () => {
+  const module = await import("../../features/library/bookDetail/offline/OfflineBookDetail.Dialog");
+  return { default: module.OfflineBookDetailDialog };
+});
 
 export function AppBookDetailModalController({
   route,
   profile,
   spl,
+  connectivity,
+  offlineNamespaceKey,
   onOpenReader,
 }: {
   route: AppRoute | null;
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
+  connectivity: BrowserConnectivityStatus;
+  offlineNamespaceKey: string | null;
   onOpenReader: (book: BookDetail, returnTarget: ReaderReturnTarget) => void;
 }) {
   const modalBookId =
@@ -27,6 +38,23 @@ export function AppBookDetailModalController({
             ? route.bookId ?? null
             : null;
   if (!modalBookId) return null;
+
+  if (connectivity === "offline") {
+    return (
+      <Suspense fallback={null}>
+        <OfflineBookDetailDialog
+          namespaceKey={offlineNamespaceKey}
+          bookId={modalBookId}
+          onClose={() => {
+            if (!route) return;
+            navigateTo(withoutBookModal(route), { replace: true });
+          }}
+          onOpenReader={(book) => onOpenReader(book, getReaderReturnTargetForRoute(route))}
+          onManageOffline={() => navigateTo({ kind: "settings", tab: "offline", bookId: modalBookId })}
+        />
+      </Suspense>
+    );
+  }
 
   return (
     <BookDetailModal

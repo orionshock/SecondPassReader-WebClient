@@ -157,10 +157,10 @@ no cover request.
 Reader admission remains stricter than storage listing: the current Web Reader opens only a
 complete EPUB Blob whose retained checksum and format match the cached Book file metadata. A
 retained asset that lacks usable metadata, is corrupt, or uses an unsupported format stays visible
-as unavailable rather than masquerading as readable. Offline Library opens eligible Books directly
-through the existing local Reader route because the current Book Detail owner is server-backed.
-Publication-asset changes refresh the current runtime, and focus refresh picks up later changes
-from another tab; there is no polling or cross-tab catalog channel.
+as unavailable rather than masquerading as readable. Offline Library opens a local cached Book
+Detail before the existing local Reader route. Publication-asset changes refresh the current
+runtime, and focus refresh picks up later changes from another tab; there is no polling or cross-tab
+catalog channel.
 
 ## Offline Home
 
@@ -180,13 +180,30 @@ Recent membership is not appended.
 Cached Shelves preserve the server preview membership and order but are read-only offline. There
 is no Shelf navigation, editing, pagination, or locally reconstructed organization. Home preview
 covers are remote URLs rather than durable image bytes, so the offline page uses placeholders and
-makes no image request. Recent Books can resume only when the existing verified EPUB asset
-admission policy succeeds; cached activity without publication bytes remains visible but disabled.
+makes no image request. Recent Books open the local cached Book Detail. Reader opening from there
+remains available only when the existing verified EPUB asset admission policy succeeds; cached
+activity without publication bytes remains visible and manageable but cannot open the Reader.
 
 Each cached section is independent. Missing Shelf data does not hide Recent data, and an empty
 cache presents a route to the downloaded-only Offline Library. Local Reader changes and window
 focus re-read durable state without polling. Offline Home remains an incomplete convenience
 snapshot; online Home remains server-authoritative.
+
+## Offline Book Detail
+
+When connectivity is explicitly `offline`, Book Detail branches before mounting its server Book,
+marginalia, Session, or Shelf owners. It renders the retained `reader-book:<bookId>` projection,
+with a stable Book-ID fallback when descriptive metadata is missing. `online` and `unknown` retain
+the existing server-authoritative Book Detail path. Retained cover references are remote URLs, so
+the offline detail deliberately uses a placeholder rather than requesting cover bytes.
+
+The local detail exposes only locally valid operations. `Open reader` uses the existing strict EPUB
+asset policy and remains disabled for missing, corrupt, mismatched, or unsupported assets. `Manage
+offline` opens the selected Book in Settings, and `Remove offline copy` removes only the publication
+asset; Reader progress, annotations, continuity, projections, and pending sync work remain intact.
+There is no offline acquisition, Shelf mutation, Session history, marginalia fetch, or other
+fabricated server authority. Offline Home and Library now use this local detail as their normal Book
+navigation step.
 
 ## Offline Reader Admission
 

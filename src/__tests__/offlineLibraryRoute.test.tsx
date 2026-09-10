@@ -50,6 +50,16 @@ describe("Library connectivity branch", () => {
     expect(onlineLibrary).not.toHaveBeenCalled();
   });
 
+  it("opens Offline Library Books through Book Detail route state", async () => {
+    window.location.hash = "#/library";
+    await render("offline");
+
+    const props = offlineLibrary.mock.calls[0]?.[0] as { onViewBook(bookId: string): void };
+    act(() => props.onViewBook("book-1"));
+
+    expect(window.location.hash).toBe("#/library?book=book-1");
+  });
+
   it.each(["online", "unknown"] as const)("preserves the server Library path while %s", async (connectivity) => {
     await render(connectivity);
 
@@ -64,6 +74,16 @@ describe("Library connectivity branch", () => {
     expect(container.textContent).toContain("Saved Home");
     expect(offlineHome).toHaveBeenCalledOnce();
     expect(onlineHome).not.toHaveBeenCalled();
+  });
+
+  it("opens saved Recent Books through Home Book Detail route state", async () => {
+    window.location.hash = "#/home";
+    await render("offline", { kind: "home" });
+
+    const props = offlineHome.mock.calls[0]?.[0] as { onViewBook(bookId: string): void };
+    act(() => props.onViewBook("book-1"));
+
+    expect(window.location.hash).toBe("#/home?book=book-1");
   });
 
   it.each(["online", "unknown"] as const)("preserves the server Home path while %s", async (connectivity) => {

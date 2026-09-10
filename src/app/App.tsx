@@ -398,11 +398,13 @@ function AppShell() {
         )}
       </main>
 
-      {workflowStep === "library_home" && route?.kind !== "reader" && browserConnectivity !== "offline" ? (
+      {workflowStep === "library_home" && route?.kind !== "reader" ? (
         <AppBookDetailModalController
           route={route}
           profile={selectedProfile}
           spl={splClient}
+          connectivity={browserConnectivity}
+          offlineNamespaceKey={offlineNamespaceKey}
           onOpenReader={openReaderFromBookDetail}
         />
       ) : null}

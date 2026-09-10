@@ -4,10 +4,10 @@ import type { OfflineLibraryBook } from "./OfflineLibrary.State";
 
 export function OfflineLibraryPage({
   namespaceKey,
-  onOpenReader,
+  onViewBook,
 }: {
   namespaceKey: string | null;
-  onOpenReader(bookId: string): void;
+  onViewBook(bookId: string): void;
 }) {
   const controller = useMemo(() => createOfflineLibraryController(namespaceKey), [namespaceKey]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
@@ -51,7 +51,7 @@ export function OfflineLibraryPage({
       ) : (
         <div className="bookList">
           {state.visibleBooks.map((book) => (
-            <OfflineLibraryRow key={book.key} book={book} onOpenReader={onOpenReader} />
+            <OfflineLibraryRow key={book.key} book={book} onViewBook={onViewBook} />
           ))}
         </div>
       )}
@@ -61,10 +61,10 @@ export function OfflineLibraryPage({
 
 function OfflineLibraryRow({
   book,
-  onOpenReader,
+  onViewBook,
 }: {
   book: OfflineLibraryBook;
-  onOpenReader(bookId: string): void;
+  onViewBook(bookId: string): void;
 }) {
   const available = book.admission === "available";
   const status = available
@@ -87,10 +87,9 @@ function OfflineLibraryRow({
         <button
           type="button"
           className="button buttonCompact"
-          disabled={!available}
-          onClick={() => onOpenReader(book.bookId)}
+          onClick={() => onViewBook(book.bookId)}
         >
-          Open reader
+          View details
         </button>
       </div>
     </article>

@@ -733,6 +733,10 @@
   background: var(--color-surface-raised);
 }
 
+.offlineBookDetailContext {
+  margin-bottom: 2px;
+}
+
 @media (max-width: 640px) {
   .offlineLibraryHeader {
     align-items: stretch;

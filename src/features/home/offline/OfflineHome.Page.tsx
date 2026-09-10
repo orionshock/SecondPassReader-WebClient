@@ -4,11 +4,11 @@ import { createOfflineHomeController } from "./OfflineHome.Controller";
 
 export function OfflineHomePage({
   namespaceKey,
-  onOpenReader,
+  onViewBook,
   onOpenLibrary,
 }: {
   namespaceKey: string | null;
-  onOpenReader(bookId: string): void;
+  onViewBook(bookId: string): void;
   onOpenLibrary(): void;
 }) {
   const controller = useMemo(() => createOfflineHomeController(namespaceKey), [namespaceKey]);
@@ -60,8 +60,7 @@ export function OfflineHomePage({
                   <button
                     type="button"
                     className="button buttonCompact"
-                    disabled={!item.offlineReadable}
-                    onClick={() => onOpenReader(item.bookId)}
+                    onClick={() => onViewBook(item.bookId)}
                   >
                     View details
                   </button>
