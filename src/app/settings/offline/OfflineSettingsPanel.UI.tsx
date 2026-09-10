@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import type { OfflineReaderSyncClient } from "../../offline/OfflineReaderSync.Actions";
+import type { OfflineReaderSyncClient } from "../../offline/reader/sync/OfflineReaderSync.Actions";
 import {
   createOfflineSettingsController,
   type OfflineSettingsAsset,

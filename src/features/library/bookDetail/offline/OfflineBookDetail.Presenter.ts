@@ -2,8 +2,8 @@ import type { BookDetail } from "@secondpass/client";
 import {
   classifyOfflinePublicationAssetAvailability,
   normalizePublicationFormat,
-} from "../../../../app/offline/OfflinePublicationAsset.Policy";
-import type { OfflinePublicationAssetCompleteRecord } from "../../../../app/offline/OfflineRepositories.Types";
+} from "../../../../app/offline/publication/OfflinePublicationAsset.Policy";
+import type { OfflinePublicationAssetCompleteRecord } from "../../../../app/offline/storage/OfflineRepositories.Types";
 
 const CURRENT_READER_FORMAT = "epub";
 

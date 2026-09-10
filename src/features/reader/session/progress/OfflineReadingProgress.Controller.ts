@@ -2,13 +2,13 @@ import type {
   OfflineReaderBookState,
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
-} from "../../../../app/offline/OfflineRepositories.Types";
+} from "../../../../app/offline/storage/OfflineRepositories.Types";
 import {
   readerIntentResourceKey,
   type ReplaceReaderProgressIntent,
-} from "../../../../app/offline/ReaderOutbox.Policy";
-import { canWriteLocalReaderState } from "../../../../app/offline/OfflineReaderSession.Policy";
-import { updateOfflineReaderBookState } from "../../../../app/offline/OfflineReaderStateWrite.Coordinator";
+} from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
+import { canWriteLocalReaderState } from "../../../../app/offline/reader/continuity/OfflineReaderSession.Policy";
+import { updateOfflineReaderBookState } from "../../../../app/offline/reader/continuity/OfflineReaderStateWrite.Coordinator";
 import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import { buildSavedReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
 

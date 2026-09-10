@@ -1,11 +1,11 @@
 import type { BookDetail } from "@secondpass/client";
-import { subscribeToOfflineReaderOutboxChange } from "../../../app/offline/OfflineReaderOutboxChange.State";
-import { loadOfflineReaderBookMetadata } from "../../../app/offline/OfflineReaderOpen.Actions";
+import { subscribeToOfflineReaderOutboxChange } from "../../../app/offline/reader/outbox/OfflineReaderOutboxChange.State";
+import { loadOfflineReaderBookMetadata } from "../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../app/offline/IndexedDbOfflineRepositories.Factory";
-import type { OfflineProjectionRecord } from "../../../app/offline/OfflineRepositories.Types";
+} from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
+import type { OfflineProjectionRecord } from "../../../app/offline/storage/OfflineRepositories.Types";
 import { buildOfflineLibraryBooks } from "../../library/offline/OfflineLibrary.Presenter";
 import {
   OFFLINE_HOME_RECENT_PROJECTION_KEY,

@@ -4,7 +4,7 @@ import type { MarginaliaAnnotation } from "@secondpass/client";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../../app/offline/IndexedDbOfflineRepositories.Factory";
+} from "../../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import type { OfflineReaderBootstrap } from "../../Reader.Types";
 import type { ReaderBookmark } from "../../annotations/ReaderBookmark.Mapper";
 import type { ReaderLocation, ReaderSelection } from "../../domain/ReaderDomain.Types";

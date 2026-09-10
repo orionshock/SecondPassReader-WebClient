@@ -13,12 +13,12 @@ import {
   getBrowserConnectivitySnapshot,
   subscribeToBrowserConnectivity,
 } from "./connectivity/BrowserConnectivity.State";
-import { buildOfflineCacheNamespace } from "./offline/OfflineCacheNamespace.Policy";
+import { buildOfflineCacheNamespace } from "./offline/namespace/OfflineCacheNamespace.Policy";
 import {
   loadOfflineReaderBookMetadata,
   openOfflineBookForReader,
-} from "./offline/OfflineReaderOpen.Actions";
-import { openIndexedDbOfflineRepositories } from "./offline/IndexedDbOfflineRepositories.Factory";
+} from "./offline/reader/continuity/OfflineReaderOpen.Actions";
+import { openIndexedDbOfflineRepositories } from "./offline/storage/IndexedDbOfflineRepositories.Factory";
 
 export function useAppReaderOpenController({
   route,

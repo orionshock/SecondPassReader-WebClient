@@ -15,7 +15,7 @@ import {
   type SettingsLibraryServerActionState,
 } from "./settings/SettingsLibraryServerPanel.UI";
 import { SettingsToolsPanel } from "./settings/SettingsToolsPanel.UI";
-import type { OfflineReaderSyncClient } from "./offline/OfflineReaderSync.Actions";
+import type { OfflineReaderSyncClient } from "./offline/reader/sync/OfflineReaderSync.Actions";
 import { OfflineSettingsPanel } from "./settings/offline/OfflineSettingsPanel.UI";
 import { getBrowserConnectivitySnapshot } from "./connectivity/BrowserConnectivity.State";
 import type { BrowserConnectivityStatus } from "./connectivity/BrowserConnectivity.State";

@@ -120,6 +120,14 @@ Vite configuration, and Docker files. Do not introduce `.Test` as a production r
 
 If no listed suffix accurately describes a genuinely new responsibility, establish the need and obtain user approval before introducing another project-wide role suffix.
 
+## Folder organization
+
+- Folders represent stable product ownership or cohesive subsystems; the final filename suffix represents responsibility.
+- Prefer shallow ownership trees. Add a nested folder only when several files share a durable boundary and the grouping improves discovery.
+- Do not create role-based folders such as `actions`, `controllers`, `policies`, or `repositories`.
+- Do not create dumping-ground folders such as `misc`, `common`, `utils`, or `helpers`.
+- Organize tests by the product or architecture behavior they protect. Mirror production folders only where doing so improves discovery rather than adding depth mechanically.
+
 ## Stateful lifecycle boundaries
 
 - Treat lifecycle-heavy components and hooks as sensitive boundaries. These include reader engines, editors, canvases, media players, websocket or session clients, long-running workers, and embedded third-party widgets.

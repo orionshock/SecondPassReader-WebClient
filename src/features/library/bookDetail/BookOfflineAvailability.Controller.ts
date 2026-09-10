@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
-import { getBrowserOfflinePersistenceCapability } from "../../../app/offline/BrowserOfflineCapability.Queries";
-import { buildOfflineCacheNamespace } from "../../../app/offline/OfflineCacheNamespace.Policy";
+import { getBrowserOfflinePersistenceCapability } from "../../../app/offline/browser/BrowserOfflineCapability.Queries";
+import { buildOfflineCacheNamespace } from "../../../app/offline/namespace/OfflineCacheNamespace.Policy";
 import {
   classifyOfflinePublicationAssetAvailability,
   normalizePublicationChecksum,
   normalizePublicationFormat,
-} from "../../../app/offline/OfflinePublicationAsset.Policy";
+} from "../../../app/offline/publication/OfflinePublicationAsset.Policy";
 import {
   acquireOfflinePublicationAsset,
   type OfflinePublicationAcquisitionResult,
-} from "../../../app/offline/OfflinePublicationAcquisition.Actions";
+} from "../../../app/offline/publication/OfflinePublicationAcquisition.Actions";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../app/offline/IndexedDbOfflineRepositories.Factory";
-import { retainOfflineReaderBookMetadata } from "../../../app/offline/OfflineReaderOpen.Actions";
+} from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
+import { retainOfflineReaderBookMetadata } from "../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
 import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Store";
 
 const BOOK_DETAIL_OFFLINE_FORMAT = "epub";

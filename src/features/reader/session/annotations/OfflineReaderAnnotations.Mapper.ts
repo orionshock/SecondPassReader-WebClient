@@ -1,5 +1,5 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import type { OfflineReaderAnnotationProjection } from "../../../../app/offline/OfflineRepositories.Types";
+import type { OfflineReaderAnnotationProjection } from "../../../../app/offline/storage/OfflineRepositories.Types";
 
 export function mapOfflineReaderAnnotations(
   projections: readonly OfflineReaderAnnotationProjection[],

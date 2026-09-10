@@ -45,7 +45,7 @@ Audit baseline:
 
 **Current status:** Locally patched for the browser ESM entry point in
 `patches/@likecoin+epub-ts+0.7.1.patch`. The patch is reapplied by the root `postinstall` script and
-is guarded by `src/__tests__/epubTsSectionSearchPatch.test.ts`.
+is guarded by `src/__tests__/reader/engine/epubTsSectionSearchPatch.test.ts`.
 
 **Impact:** Built-in search can miss exact visible prose near the end of a chapter. This affects
 normal Reader search and guided import matching.

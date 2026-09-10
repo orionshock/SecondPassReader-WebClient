@@ -10,15 +10,15 @@ import type {
   OfflineReaderBookState,
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
-} from "../../../../app/offline/OfflineRepositories.Types";
-import { canWriteLocalReaderState } from "../../../../app/offline/OfflineReaderSession.Policy";
-import { updateOfflineReaderBookState } from "../../../../app/offline/OfflineReaderStateWrite.Coordinator";
+} from "../../../../app/offline/storage/OfflineRepositories.Types";
+import { canWriteLocalReaderState } from "../../../../app/offline/reader/continuity/OfflineReaderSession.Policy";
+import { updateOfflineReaderBookState } from "../../../../app/offline/reader/continuity/OfflineReaderStateWrite.Coordinator";
 import {
   coalesceReaderIntent,
   readerIntentResourceKey,
   type ReaderAnnotationOrigin,
   type ReaderOutboxIntent,
-} from "../../../../app/offline/ReaderOutbox.Policy";
+} from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
 import type { ReaderBookmark } from "../../annotations/ReaderBookmark.Mapper";
 import type { ReaderSelection } from "../../domain/ReaderDomain.Types";
 import type { ReaderLocation } from "../../domain/ReaderDomain.Types";

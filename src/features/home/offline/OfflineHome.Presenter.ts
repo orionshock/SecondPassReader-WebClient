@@ -1,5 +1,5 @@
 import type { MarginaliaRecentSession, Shelf } from "@secondpass/client";
-import type { OfflineReaderBookState } from "../../../app/offline/OfflineRepositories.Types";
+import type { OfflineReaderBookState } from "../../../app/offline/storage/OfflineRepositories.Types";
 
 export type OfflineHomeRecentItem = {
   sessionId: string;

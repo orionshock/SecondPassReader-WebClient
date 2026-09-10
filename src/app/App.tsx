@@ -24,14 +24,14 @@ import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Orchestrator";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
-import { buildOfflineCacheNamespace } from "./offline/OfflineCacheNamespace.Policy";
+import { buildOfflineCacheNamespace } from "./offline/namespace/OfflineCacheNamespace.Policy";
 import {
   createOfflineReaderAuthenticatedSyncGeneration,
   startOfflineReaderAuthenticatedSyncLifecycle,
-} from "./offline/OfflineReaderAuthenticatedSync.Lifecycle";
-import { showOfflineReaderSyncOutcome } from "./offline/OfflineReaderSyncNotice.Controller";
-import { OfflineReaderSyncNoticePanel } from "./offline/OfflineReaderSyncNoticePanel.UI";
-import { clearOfflineReaderSyncNotice } from "./offline/OfflineReaderSyncNotice.State";
+} from "./offline/reader/sync/OfflineReaderAuthenticatedSync.Lifecycle";
+import { showOfflineReaderSyncOutcome } from "./offline/reader/sync/notice/OfflineReaderSyncNotice.Controller";
+import { OfflineReaderSyncNoticePanel } from "./offline/reader/sync/notice/OfflineReaderSyncNoticePanel.UI";
+import { clearOfflineReaderSyncNotice } from "./offline/reader/sync/notice/OfflineReaderSyncNotice.State";
 import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
 import {
   getBrowserConnectivitySnapshot,

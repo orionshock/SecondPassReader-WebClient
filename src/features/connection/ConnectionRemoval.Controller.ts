@@ -1,10 +1,10 @@
-import type { OfflineReaderSyncClient } from "../../app/offline/OfflineReaderSync.Actions";
+import type { OfflineReaderSyncClient } from "../../app/offline/reader/sync/OfflineReaderSync.Actions";
 import type { BrowserConnectivityStatus } from "../../app/connectivity/BrowserConnectivity.State";
 import {
   inspectOfflineNamespace,
   removeOfflineNamespace,
-} from "../../app/offline/OfflineNamespaceCleanup.Actions";
-import { offlineNamespaceRemovalConfirmation } from "../../app/offline/OfflineNamespaceRetention.Presenter";
+} from "../../app/offline/namespace/OfflineNamespaceCleanup.Actions";
+import { offlineNamespaceRemovalConfirmation } from "../../app/offline/namespace/OfflineNamespaceRetention.Presenter";
 
 export type ForgetConnectionResult =
   | { status: "removed" }
@@ -19,7 +19,7 @@ export async function forgetConnectionAndOfflineData(input: {
   onRemoved(): void;
   inspectNamespace?: typeof inspectOfflineNamespace;
   removeNamespace?: typeof removeOfflineNamespace;
-  syncPending?: typeof import("../../app/offline/OfflineReaderPendingSync.Actions")["syncPendingOfflineReaderWork"];
+  syncPending?: typeof import("../../app/offline/reader/sync/OfflineReaderPendingSync.Actions")["syncPendingOfflineReaderWork"];
 }): Promise<ForgetConnectionResult> {
   const namespaceKey = input.namespaceKey?.trim() ?? "";
   if (!namespaceKey) {
@@ -34,7 +34,7 @@ export async function forgetConnectionAndOfflineData(input: {
 
   if (summary.pendingIntents > 0 && input.connectivity === "online" && input.client) {
     const syncPending = input.syncPending
-      ?? (await import("../../app/offline/OfflineReaderPendingSync.Actions")).syncPendingOfflineReaderWork;
+      ?? (await import("../../app/offline/reader/sync/OfflineReaderPendingSync.Actions")).syncPendingOfflineReaderWork;
     await syncPending({ namespaceKey, client: input.client, mode: "wait" });
     summary = await inspect(namespaceKey);
     if (!summary) return { status: "failed" };

@@ -1,27 +1,27 @@
-import type { OfflineReaderSyncClient } from "../../offline/OfflineReaderSync.Actions";
-import type { OfflineReaderPendingSyncResult } from "../../offline/OfflineReaderPendingSync.Actions";
-import { syncPendingOfflineReaderWork } from "../../offline/OfflineReaderPendingSync.Actions";
-import { showOfflineReaderSyncOutcome } from "../../offline/OfflineReaderSyncNotice.Controller";
+import type { OfflineReaderSyncClient } from "../../offline/reader/sync/OfflineReaderSync.Actions";
+import type { OfflineReaderPendingSyncResult } from "../../offline/reader/sync/OfflineReaderPendingSync.Actions";
+import { syncPendingOfflineReaderWork } from "../../offline/reader/sync/OfflineReaderPendingSync.Actions";
+import { showOfflineReaderSyncOutcome } from "../../offline/reader/sync/notice/OfflineReaderSyncNotice.Controller";
 import { getBrowserConnectivitySnapshot, subscribeToBrowserConnectivity } from "../../connectivity/BrowserConnectivity.State";
-import { loadOfflineReaderBookMetadata } from "../../offline/OfflineReaderOpen.Actions";
+import { loadOfflineReaderBookMetadata } from "../../offline/reader/continuity/OfflineReaderOpen.Actions";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../offline/IndexedDbOfflineRepositories.Factory";
-import type { OfflinePublicationAssetCompleteRecord } from "../../offline/OfflineRepositories.Types";
-import type { ReaderOutboxIntent } from "../../offline/ReaderOutbox.Policy";
+} from "../../offline/storage/IndexedDbOfflineRepositories.Factory";
+import type { OfflinePublicationAssetCompleteRecord } from "../../offline/storage/OfflineRepositories.Types";
+import type { ReaderOutboxIntent } from "../../offline/reader/outbox/ReaderOutbox.Policy";
 import type { BrowserConnectivityStatus } from "../../connectivity/BrowserConnectivity.State";
 import type {
   OfflineReaderCoordinatedSyncInput,
   OfflineReaderCoordinatedSyncResult,
-} from "../../offline/OfflineReaderCoordinatedSync.Actions";
+} from "../../offline/reader/sync/OfflineReaderCoordinatedSync.Actions";
 import {
   addOfflineReaderSyncBookOutcome,
   createOfflineReaderSyncOutcome,
-} from "../../offline/OfflineReaderSyncOutcome.State";
+} from "../../offline/reader/sync/notice/OfflineReaderSyncOutcome.State";
 import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.Presenter";
-import { discardPendingReaderProgress } from "../../offline/OfflineReaderPendingRepair.Actions";
-import { offlineReaderRetryEligibility } from "../../offline/OfflineReaderRetryEligibility.Policy";
+import { discardPendingReaderProgress } from "../../offline/reader/outbox/OfflineReaderPendingRepair.Actions";
+import { offlineReaderRetryEligibility } from "../../offline/reader/retry/OfflineReaderRetryEligibility.Policy";
 
 export type OfflineSettingsAsset = {
   key: string;
@@ -355,7 +355,7 @@ async function loadBookTitle(
 async function syncProductionBook(
   input: OfflineReaderCoordinatedSyncInput,
 ): Promise<OfflineReaderCoordinatedSyncResult> {
-  const { syncOfflineReaderWithCrossTabCoordination } = await import("../../offline/OfflineReaderCoordinatedSync.Actions");
+  const { syncOfflineReaderWithCrossTabCoordination } = await import("../../offline/reader/sync/OfflineReaderCoordinatedSync.Actions");
   return syncOfflineReaderWithCrossTabCoordination(input);
 }
 

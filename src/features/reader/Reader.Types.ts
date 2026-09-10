@@ -1,5 +1,5 @@
 import type { BookDetail, CompactBook, MarginaliaBootstrap } from "@secondpass/client";
-import type { OfflineReaderBookState } from "../../app/offline/OfflineRepositories.Types";
+import type { OfflineReaderBookState } from "../../app/offline/storage/OfflineRepositories.Types";
 
 export type ReaderReturnTarget = {
   kind: "home" | "library" | "shelves" | "shelf" | "sessions" | "bookDetail" | "series";

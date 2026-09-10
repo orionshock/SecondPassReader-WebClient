@@ -1,6 +1,6 @@
-import type { OfflinePublicationAssetCompleteRecord } from "../../offline/OfflineRepositories.Types";
-import type { ReaderOutboxIntent } from "../../offline/ReaderOutbox.Policy";
-import { offlineReaderRetryEligibility } from "../../offline/OfflineReaderRetryEligibility.Policy";
+import type { OfflinePublicationAssetCompleteRecord } from "../../offline/storage/OfflineRepositories.Types";
+import type { ReaderOutboxIntent } from "../../offline/reader/outbox/ReaderOutbox.Policy";
+import { offlineReaderRetryEligibility } from "../../offline/reader/retry/OfflineReaderRetryEligibility.Policy";
 
 export type OfflinePendingBookStatus = "waiting" | "deferred" | "needs-attention" | "connection-repair" | "authority-blocked";
 

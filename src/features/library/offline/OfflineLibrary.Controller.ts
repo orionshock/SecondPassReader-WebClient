@@ -1,10 +1,10 @@
 import type { BookDetail } from "@secondpass/client";
-import { subscribeToOfflinePublicationAssetChange } from "../../../app/offline/OfflinePublicationAssetChange.State";
-import { loadOfflineReaderBookMetadata } from "../../../app/offline/OfflineReaderOpen.Actions";
+import { subscribeToOfflinePublicationAssetChange } from "../../../app/offline/publication/OfflinePublicationAssetChange.State";
+import { loadOfflineReaderBookMetadata } from "../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../app/offline/IndexedDbOfflineRepositories.Factory";
+} from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import {
   buildOfflineLibraryBooks,
   searchOfflineLibraryBooks,
