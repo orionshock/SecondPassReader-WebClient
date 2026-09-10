@@ -10,9 +10,11 @@ import { getHomeLibrarySearchRoute, HOME_LIBRARY_SEARCH_LABEL, HOME_LIBRARY_SEAR
 export function HomePage({
   profile,
   spl,
+  offlineNamespaceKey = null,
 }: {
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
+  offlineNamespaceKey?: string | null;
 }) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const [homeSearch, setHomeSearch] = useState("");
@@ -57,9 +59,13 @@ export function HomePage({
             </form>
           </div>
 
-          <RecentReadingSection profile={profile} spl={spl} />
+          <RecentReadingSection profile={profile} spl={spl} offlineNamespaceKey={offlineNamespaceKey} />
 
-          <ShelvesPreviewSection spl={spl} serverBaseUrl={profile?.serverBaseUrl} />
+          <ShelvesPreviewSection
+            spl={spl}
+            serverBaseUrl={profile?.serverBaseUrl}
+            offlineNamespaceKey={offlineNamespaceKey}
+          />
         </>
       ) : null}
     </section>

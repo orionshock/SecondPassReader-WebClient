@@ -37,9 +37,11 @@ export function RecentReadingLoadFailure({
 export function RecentReadingSection({
   profile,
   spl,
+  offlineNamespaceKey = null,
 }: {
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
+  offlineNamespaceKey?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -54,13 +56,18 @@ export function RecentReadingSection({
     try {
       const r = await loadRecentReading(spl, { includeClosed: showClosed });
       setData(r);
+      if (offlineNamespaceKey && Array.isArray(r.results)) {
+        void import("../home/offline/OfflineHomeCache.Actions")
+          .then((module) => module.cacheOfflineHomeRecent({ namespaceKey: offlineNamespaceKey, items: r.results }))
+          .catch(() => undefined);
+      }
     } catch (e) {
       setData(null);
       setError(e instanceof Error ? e : new Error(RECENT_READING_ERROR));
     } finally {
       setBusy(false);
     }
-  }, [showClosed, spl]);
+  }, [offlineNamespaceKey, showClosed, spl]);
 
   useEffect(() => {
     setData(null);

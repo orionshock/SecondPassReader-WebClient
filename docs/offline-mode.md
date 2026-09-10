@@ -21,7 +21,7 @@ It does not select a complete storage or synchronization architecture.
 
 ## Initial Scope
 
-- Cache the application shell, Home snapshot, and recent reading state later as conveniences.
+- Cache successful Home Recent and Shelf preview responses as replaceable convenience snapshots.
 - Offer explicit offline-ready EPUB files from Book Detail and admit verified files to a local
   Reader bootstrap while the browser explicitly reports offline.
 - Support durable offline Reader progress and current-session annotation activity for those books.
@@ -67,7 +67,7 @@ semantics where applicable:
 | Data | Initial stance |
 | --- | --- |
 | Connection profile and bearer token | Keep existing behavior unchanged in this phase; credential persistence policy remains an open question. |
-| Home and recent snapshots | Cache later as replaceable convenience data. |
+| Home and recent snapshots | Retain successful Recent and Shelf previews for a narrow read-only offline Home. |
 | Library search and pages | Offline mode lists downloaded Books only and searches their retained titles locally; the full catalog remains online-only. |
 | Publication assets | Retain only through explicit offline availability. EPUB is the only currently supported Reader format. |
 | Progress | Store one durable latest local value, scoped to the correct book and session lifecycle. |
@@ -161,6 +161,32 @@ as unavailable rather than masquerading as readable. Offline Library opens eligi
 through the existing local Reader route because the current Book Detail owner is server-backed.
 Publication-asset changes refresh the current runtime, and focus refresh picks up later changes
 from another tab; there is no polling or cross-tab catalog channel.
+
+## Offline Home
+
+When connectivity is explicitly `offline`, Home mounts a local cached-preview page before any of
+the server-backed Home owners. `online` and `unknown` keep the existing server Home. Successful
+online loads retain two normalized projections for the verified namespace: `home-recent` contains
+the most recently displayed Recent History items, and `home-shelves` contains the six-item Shelf
+preview. Failed loads never replace these snapshots, and cache persistence failure does not affect
+online rendering.
+
+Offline Recent preserves the cached server membership, order, Session identity, name, status, and
+activity metadata. A matching durable local Reader state may replace only the desired CFI,
+percentage, and stable location label; no CFI ordering comparison is performed. Provisional local
+continuity does not make a cached Session active, and Reader state for Books outside the cached
+Recent membership is not appended.
+
+Cached Shelves preserve the server preview membership and order but are read-only offline. There
+is no Shelf navigation, editing, pagination, or locally reconstructed organization. Home preview
+covers are remote URLs rather than durable image bytes, so the offline page uses placeholders and
+makes no image request. Recent Books can resume only when the existing verified EPUB asset
+admission policy succeeds; cached activity without publication bytes remains visible but disabled.
+
+Each cached section is independent. Missing Shelf data does not hide Recent data, and an empty
+cache presents a route to the downloaded-only Offline Library. Local Reader changes and window
+focus re-read durable state without polling. Offline Home remains an incomplete convenience
+snapshot; online Home remains server-authoritative.
 
 ## Offline Reader Admission
 

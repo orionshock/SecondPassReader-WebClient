@@ -1,0 +1,3 @@
+export const OFFLINE_HOME_RECENT_PROJECTION_KEY = "home-recent";
+export const OFFLINE_HOME_SHELVES_PROJECTION_KEY = "home-shelves";
+export const OFFLINE_HOME_PROJECTION_SCHEMA_VERSION = 1;

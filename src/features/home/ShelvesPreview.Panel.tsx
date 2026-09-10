@@ -29,7 +29,15 @@ export function ShelvesPreviewLoadFailure({
   );
 }
 
-export function ShelvesPreviewSection({ spl, serverBaseUrl }: { spl: SecondPassClient | null; serverBaseUrl?: string | null }) {
+export function ShelvesPreviewSection({
+  spl,
+  serverBaseUrl,
+  offlineNamespaceKey = null,
+}: {
+  spl: SecondPassClient | null;
+  serverBaseUrl?: string | null;
+  offlineNamespaceKey?: string | null;
+}) {
   const canLoad = Boolean(spl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -41,14 +49,20 @@ export function ShelvesPreviewSection({ spl, serverBaseUrl }: { spl: SecondPassC
     setError(null);
     try {
       const r = await spl.shelves.list({ pageSize: 6, includePreviewBooks: true });
-      setShelves(r.results ?? []);
+      const results = r.results ?? [];
+      setShelves(results);
+      if (offlineNamespaceKey && Array.isArray(r.results)) {
+        void import("./offline/OfflineHomeCache.Actions")
+          .then((module) => module.cacheOfflineHomeShelves({ namespaceKey: offlineNamespaceKey, items: results }))
+          .catch(() => undefined);
+      }
     } catch (e) {
       setError(e instanceof Error ? e : new Error("Could not load shelves."));
       setShelves(null);
     } finally {
       setBusy(false);
     }
-  }, [spl]);
+  }, [offlineNamespaceKey, spl]);
 
   useEffect(() => {
     setShelves(null);

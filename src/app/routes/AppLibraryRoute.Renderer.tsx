@@ -24,6 +24,11 @@ const OfflineLibraryPage = lazy(async () => {
   return { default: module.OfflineLibraryPage };
 });
 
+const OfflineHomePage = lazy(async () => {
+  const module = await import("../../features/home/offline/OfflineHome.Page");
+  return { default: module.OfflineHomePage };
+});
+
 export function AppLibraryRouteRenderer({
   route,
   profile,
@@ -320,9 +325,26 @@ export function AppLibraryRouteRenderer({
     );
   }
 
+  if (connectivity === "offline") {
+    return (
+      <div className="libraryScreen">
+        <Suspense fallback={<p className="muted">{`Loading saved Home${"\u2026"}`}</p>}>
+          <OfflineHomePage
+            namespaceKey={offlineNamespaceKey}
+            onOpenLibrary={() => navigateTo({ kind: "library" })}
+            onOpenReader={(bookId) => {
+              saveReaderReturnTarget(bookId, { kind: "home", label: "Home", route: "#/home" });
+              navigateTo({ kind: "reader", bookId });
+            }}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="libraryScreen">
-      <HomePage profile={profile} spl={spl} />
+      <HomePage profile={profile} spl={spl} offlineNamespaceKey={offlineNamespaceKey} />
     </div>
   );
 }
