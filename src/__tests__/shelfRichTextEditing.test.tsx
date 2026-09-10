@@ -8,13 +8,13 @@ import {
   LimitedRichTextEditor,
   createLimitedRichTextExtensions,
   serializeLimitedRichText,
-} from "../components/LimitedRichText.Editor";
+} from "../components/LimitedRichTextEditor.UI";
 import {
   ShelfForm,
   createPersonalShelfInput,
   updatePersonalShelfInput,
   type ShelfFormValues,
-} from "../features/shelves/Shelf.Form";
+} from "../features/shelves/ShelfForm.UI";
 import { canEditShelf } from "../features/shelves/ShelfMetadata.Presenter";
 
 const values: ShelfFormValues = {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { resolveReaderReflowCfi } from "../features/reader/engine/ReaderReflowTarget.Engine";
+import { resolveReaderReflowCfi } from "../features/reader/engine/ReaderReflowTarget.Policy";
 import { ReaderBootstrapProgressGuard } from "../features/reader/shell/ReaderBootstrapProgressGuard.State";
 import { bootstrapRestoreTransition } from "./ReaderCfiTest.Fixtures";
 

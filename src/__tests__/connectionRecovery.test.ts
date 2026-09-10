@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "@secondpass/client";
 import { describe, expect, it } from "vitest";
-import { ConnectionRecoveryBannerForState } from "../app/ConnectionRecovery.Banner";
+import { ConnectionRecoveryBannerForState } from "../app/ConnectionRecoveryBanner.UI";
 import { reduceAuthenticationRepairRequired, reduceAuthorizationFailure } from "../app/ConnectionRecovery.Context";
 
 describe("top-level connection recovery", () => {

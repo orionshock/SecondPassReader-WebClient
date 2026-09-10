@@ -3,8 +3,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { SecondPassClient } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RecentReadingSection } from "../features/library/RecentReading.Panel";
-import { ShelvesPreviewSection } from "../features/home/ShelvesPreview.Panel";
+import { RecentReadingSection } from "../features/library/RecentReadingPanel.UI";
+import { ShelvesPreviewSection } from "../features/home/ShelvesPreviewPanel.UI";
 import { recentSessionFixture } from "./SessionTest.Fixtures";
 
 const cacheSpies = vi.hoisted(() => ({

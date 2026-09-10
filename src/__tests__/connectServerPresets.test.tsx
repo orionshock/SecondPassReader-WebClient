@@ -17,7 +17,7 @@ vi.mock("../features/connection/ConnectionServer.Queries", () => ({
   verifySecondPassServer: verifySecondPassServerMock,
 }));
 
-import { ConnectServerScreen } from "../features/connection/ConnectServer.Page";
+import { ConnectServerScreen } from "../features/connection/ConnectServerPage.UI";
 
 let container: HTMLDivElement;
 let root: Root;

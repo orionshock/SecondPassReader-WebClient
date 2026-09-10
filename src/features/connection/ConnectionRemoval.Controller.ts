@@ -4,7 +4,7 @@ import {
   inspectOfflineNamespace,
   removeOfflineNamespace,
 } from "../../app/offline/OfflineNamespaceCleanup.Actions";
-import { offlineNamespaceRemovalConfirmation } from "../../app/offline/OfflineNamespaceRetention.State";
+import { offlineNamespaceRemovalConfirmation } from "../../app/offline/OfflineNamespaceRetention.Presenter";
 
 export type ForgetConnectionResult =
   | { status: "removed" }

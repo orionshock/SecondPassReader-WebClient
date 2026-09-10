@@ -3,7 +3,7 @@ import {
   cacheOfflineHomeRecent,
   cacheOfflineHomeShelves,
 } from "../features/home/offline/OfflineHomeCache.Actions";
-import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import type { IndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import { recentSessionFixture } from "./SessionTest.Fixtures";
 
 describe("offline Home cache writes", () => {

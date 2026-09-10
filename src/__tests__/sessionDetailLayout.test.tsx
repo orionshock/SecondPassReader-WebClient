@@ -2,10 +2,10 @@ import { createElement, Fragment } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { MarginaliaSession } from "@secondpass/client";
-import { SessionDetailAnnotationsList } from "../features/sessions/SessionDetailAnnotations.List";
-import { SessionDetailHeader } from "../features/sessions/SessionDetail.Header";
-import { SessionDetailMetadataEditor } from "../features/sessions/SessionDetailMetadata.Editor";
-import { SessionDetailTitleEditor } from "../features/sessions/SessionDetailTitle.Editor";
+import { SessionDetailAnnotationsList } from "../features/sessions/SessionDetailAnnotationsList.UI";
+import { SessionDetailHeader } from "../features/sessions/SessionDetailHeader.UI";
+import { SessionDetailMetadataEditor } from "../features/sessions/SessionDetailMetadataEditor.UI";
+import { SessionDetailTitleEditor } from "../features/sessions/SessionDetailTitleEditor.UI";
 import { rawSessionId, sessionFixture } from "./SessionTest.Fixtures";
 
 function session(status: MarginaliaSession["status"], notes = "Keep this note in the metadata area."): MarginaliaSession {

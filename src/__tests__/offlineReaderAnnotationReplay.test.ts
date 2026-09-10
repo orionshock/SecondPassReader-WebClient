@@ -11,7 +11,7 @@ import {
   replayOfflineReaderAnnotations,
   type ReaderAnnotationReplayClient,
 } from "../app/offline/OfflineReaderAnnotationReplay.Actions";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type {
   OfflineReaderBookState,
   OfflineReaderStateRepository,

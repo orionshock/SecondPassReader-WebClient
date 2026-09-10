@@ -12,7 +12,7 @@ import {
   showOfflineReaderSyncNotice,
   subscribeToOfflineReaderSyncNotice,
 } from "../app/offline/OfflineReaderSyncNotice.State";
-import { OfflineReaderSyncNoticePanel } from "../app/offline/OfflineReaderSyncNotice.Panel";
+import { OfflineReaderSyncNoticePanel } from "../app/offline/OfflineReaderSyncNoticePanel.UI";
 
 describe("offline Reader sync notice presentation", () => {
   it.each([

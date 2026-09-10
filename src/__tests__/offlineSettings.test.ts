@@ -3,7 +3,7 @@ import {
   createOfflineSettingsController,
   type OfflineSettingsDependencies,
 } from "../app/settings/offline/OfflineSettings.Controller";
-import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import type { IndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflinePublicationAssetCompleteRecord } from "../app/offline/OfflineRepositories.Types";
 import type { OfflineReaderSyncClient } from "../app/offline/OfflineReaderSync.Actions";
 import { readerIntentResourceKey, type ReaderOutboxIntent } from "../app/offline/ReaderOutbox.Policy";

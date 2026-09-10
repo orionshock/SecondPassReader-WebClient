@@ -1,4 +1,4 @@
-import type { BrowserStorageEstimate } from "./BrowserStorageEstimate.State";
+import type { BrowserStorageEstimate } from "./BrowserStorageEstimate.Queries";
 
 const MEBIBYTE = 1024 * 1024;
 

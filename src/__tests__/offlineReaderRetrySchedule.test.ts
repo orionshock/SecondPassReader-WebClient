@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getOfflineReaderRetrySchedule } from "../app/offline/OfflineReaderRetrySchedule.State";
+import { getOfflineReaderRetrySchedule } from "../app/offline/OfflineReaderRetrySchedule.Policy";
 import type { ReplaceReaderProgressIntent } from "../app/offline/ReaderOutbox.Policy";
 
 describe("offline Reader retry schedule", () => {

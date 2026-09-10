@@ -7,11 +7,11 @@ import { AppBookDetailModalController } from "../app/routes/AppBookDetailModal.C
 const serverDialog = vi.fn((_props: unknown) => <div>Server Book Detail</div>);
 const offlineDialog = vi.fn((_props: unknown) => <div>Saved Book Detail</div>);
 
-vi.mock("../features/library/BookDetail.Modal", () => ({
+vi.mock("../features/library/BookDetailModal.UI", () => ({
   BookDetailModal: (props: unknown) => serverDialog(props),
 }));
 
-vi.mock("../features/library/bookDetail/offline/OfflineBookDetail.Dialog", () => ({
+vi.mock("../features/library/bookDetail/offline/OfflineBookDetailDialog.UI", () => ({
   OfflineBookDetailDialog: (props: unknown) => offlineDialog(props),
 }));
 

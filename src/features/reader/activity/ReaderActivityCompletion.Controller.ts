@@ -1,7 +1,7 @@
 import type { CompactBook, SecondPassClient } from "@secondpass/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { navigateTo } from "../../../app/AppNavigation.Router";
-import type { CloseSessionAfterOption, CloseSessionInput } from "../../sessions/CloseSession.Dialog";
+import type { CloseSessionAfterOption, CloseSessionInput } from "../../sessions/CloseSessionDialog.UI";
 import { findNextSeriesBook, normalizeSeriesIndex } from "../../library/SeriesMetadata.Presenter";
 import { buildReturnLabel, saveReaderReturnTarget } from "../ReaderReturnTarget.Store";
 import type { OpenedBook } from "../Reader.Types";

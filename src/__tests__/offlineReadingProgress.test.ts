@@ -1,6 +1,6 @@
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type {
   OfflineReaderBookState,
   OfflineReaderStateRepository,

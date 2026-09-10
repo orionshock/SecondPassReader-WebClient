@@ -6,7 +6,7 @@ import type {
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "./OfflineRepositories.IndexedDb";
+} from "./IndexedDbOfflineRepositories.Factory";
 import type { OfflineReaderSyncClient } from "./OfflineReaderSync.Actions";
 import { isOfflineReaderIntentEligible, type OfflineReaderAttemptMode } from "./OfflineReaderRetryEligibility.Policy";
 import {

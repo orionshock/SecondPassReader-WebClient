@@ -7,7 +7,7 @@ import {
   selectOfflineReaderSession,
   type OfflineReaderSession,
 } from "../app/offline/OfflineReaderSession.Policy";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type {
   OfflineReaderBookState,
   OfflineReaderStateRepository,

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { RefObject } from "react";
-import type { AnnotationWorkspaceTabKey } from "./AnnotationWorkspace.Tabs";
+import type { AnnotationWorkspaceTabKey } from "./AnnotationWorkspaceTabs.UI";
 
 export type AnnotationWorkspaceFocusRequest = {
   annotationId: string;

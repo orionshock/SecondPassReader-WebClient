@@ -3,7 +3,7 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
-import { AppHeader } from "../app/App.Header";
+import { AppHeader } from "../app/AppHeader.UI";
 
 describe("App header navigation", () => {
   it("exposes an accessible Home control that activates Home navigation", () => {

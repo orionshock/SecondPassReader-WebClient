@@ -16,7 +16,7 @@ import {
   createInMemoryOfflineRepositoryFactories,
   type OfflineRepositoryTestFactories,
 } from "./OfflineRepositoryTest.Fixtures";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 
 defineOfflineRepositoryContractTests(
   "in-memory offline repositories",

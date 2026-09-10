@@ -1,7 +1,7 @@
-import { openIndexedDbOfflineRepositories } from "./OfflineRepositories.IndexedDb";
-import type { IndexedDbOfflineRepositories } from "./OfflineRepositories.IndexedDb";
-import type { OfflineNamespaceRetentionSummary } from "./OfflineNamespaceRetention.State";
-import { summarizeOfflineNamespaceRetention } from "./OfflineNamespaceRetention.State";
+import { openIndexedDbOfflineRepositories } from "./IndexedDbOfflineRepositories.Factory";
+import type { IndexedDbOfflineRepositories } from "./IndexedDbOfflineRepositories.Factory";
+import type { OfflineNamespaceRetentionSummary } from "./OfflineNamespaceRetention.Presenter";
+import { summarizeOfflineNamespaceRetention } from "./OfflineNamespaceRetention.Presenter";
 
 type NamespaceRepositories = IndexedDbOfflineRepositories<Blob>;
 

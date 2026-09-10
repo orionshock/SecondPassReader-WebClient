@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isReaderCfiRange } from "../features/reader/engine/ReaderCfiClassifier.Engine";
+import { isReaderCfiRange } from "../features/reader/engine/ReaderCfiClassifier.Adapter";
 import { readerCfi } from "./ReaderCfiTest.Fixtures";
 
 describe("reader CFI kind", () => {

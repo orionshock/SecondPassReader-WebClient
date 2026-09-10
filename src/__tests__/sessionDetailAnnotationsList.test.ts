@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
-import { SessionDetailAnnotationsList } from "../features/sessions/SessionDetailAnnotations.List";
+import { SessionDetailAnnotationsList } from "../features/sessions/SessionDetailAnnotationsList.UI";
 
 type HighlightAnnotation = Extract<MarginaliaAnnotation, { kind: "highlight" }>;
 

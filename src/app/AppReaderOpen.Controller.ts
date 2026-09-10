@@ -18,7 +18,7 @@ import {
   loadOfflineReaderBookMetadata,
   openOfflineBookForReader,
 } from "./offline/OfflineReaderOpen.Actions";
-import { openIndexedDbOfflineRepositories } from "./offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "./offline/IndexedDbOfflineRepositories.Factory";
 
 export function useAppReaderOpenController({
   route,

@@ -1,6 +1,6 @@
 import type { Shelf } from "@secondpass/client";
-import { InlineMeta } from "../../components/Metadata.Presenter";
-import { MaterialIcon } from "../../components/Material.Icon";
+import { InlineMeta } from "../../components/Metadata.UI";
+import { MaterialIcon } from "../../components/MaterialIcon.UI";
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;

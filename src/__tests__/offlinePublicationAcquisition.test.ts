@@ -1,9 +1,9 @@
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { BrowserOfflineCapability } from "../app/offline/BrowserOfflineCapability.State";
-import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.State";
+import type { BrowserOfflineCapability } from "../app/offline/BrowserOfflineCapability.Queries";
+import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.Queries";
 import { requestBrowserPersistentStorage } from "../app/offline/BrowserPersistentStorage.Actions";
-import { getBrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.State";
+import { getBrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.Queries";
 import type { OfflineCacheNamespace } from "../app/offline/OfflineCacheNamespace.Policy";
 import { acquireOfflinePublicationAsset } from "../app/offline/OfflinePublicationAcquisition.Actions";
 import { verifyOfflinePublicationBlob } from "../app/offline/OfflinePublicationVerification.Actions";
@@ -13,13 +13,13 @@ import type {
 } from "../app/offline/OfflineRepositories.Types";
 import { classifyOfflineStorageAdmission } from "../app/offline/OfflineStorageAdmission.Policy";
 
-vi.mock("../app/offline/BrowserOfflineCapability.State", () => ({
+vi.mock("../app/offline/BrowserOfflineCapability.Queries", () => ({
   getBrowserOfflinePersistenceCapability: vi.fn(),
 }));
 vi.mock("../app/offline/BrowserPersistentStorage.Actions", () => ({
   requestBrowserPersistentStorage: vi.fn(),
 }));
-vi.mock("../app/offline/BrowserStorageEstimate.State", () => ({
+vi.mock("../app/offline/BrowserStorageEstimate.Queries", () => ({
   getBrowserStorageEstimate: vi.fn(),
 }));
 vi.mock("../app/offline/OfflinePublicationVerification.Actions", () => ({

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import type { IndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import {
   inspectOfflineNamespace,
   removeOfflineNamespace,
@@ -7,7 +7,7 @@ import {
 import {
   offlineNamespaceRemovalConfirmation,
   summarizeOfflineNamespaceRetention,
-} from "../app/offline/OfflineNamespaceRetention.State";
+} from "../app/offline/OfflineNamespaceRetention.Presenter";
 import type { ReaderOutboxIntent } from "../app/offline/ReaderOutbox.Policy";
 
 describe("offline namespace retention", () => {

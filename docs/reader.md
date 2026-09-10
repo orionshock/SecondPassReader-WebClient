@@ -9,11 +9,11 @@ transient, not an annotation model.
 
 1. `src/app/AppReaderOpen.Controller.ts` restores the route, fetches book metadata, opens the
    marginalia session, downloads the EPUB, and manages object URL replacement and cleanup.
-2. `src/features/reader/Reading.Activity.tsx` renders Reader chrome, panels, dialogs, settings,
+2. `src/features/reader/ReadingActivity.Orchestrator.tsx` renders Reader chrome, panels, dialogs, settings,
    import review, and completion controls.
 3. `src/features/reader/session/ReadingSession.Orchestrator.tsx` wires server-backed session state
    to renderer-neutral bridge capabilities.
-4. `src/features/reader/shell/Reading.Shell.tsx` renders the viewport and wires shell lifecycles.
+4. `src/features/reader/shell/ReadingShell.Orchestrator.tsx` renders the viewport and wires shell lifecycles.
 5. `src/features/reader/engine/EpubTsBook.Engine.ts` is the public adapter around
    `@likecoin/epub-ts`.
 
@@ -26,9 +26,9 @@ starts an in-book search after the search capability is readable and ready.
 | --- | --- |
 | `ReaderActivityImport.Controller.ts` | Activity-level import modal/drawer wiring, activation handoff, manual completion, clear/hide cleanup, and layout resize requests. Matching and range repair remain under `imports/`. |
 | `ReaderActivityCompletion.Controller.ts` | End-of-book state, next-series lookup, close-dialog transitions, return-target persistence, and post-close navigation/reload choices. |
-| `ReaderActivity.Header.tsx` | Reader header controls and status presentation. |
-| `ReaderActivity.SidePanels.tsx` | Search, import, marginalia, and annotation workspace composition. |
-| `ReaderActivity.Dialogs.tsx` | Import, close-session, and end-of-book dialog composition. |
+| `ReaderActivityHeader.UI.tsx` | Reader header controls and status presentation. |
+| `ReaderActivitySidePanels.UI.tsx` | Search, import, marginalia, and annotation workspace composition. |
+| `ReaderActivityDialogs.UI.tsx` | Import, close-session, and end-of-book dialog composition. |
 
 Import code must clear its temporary search/staging state before hiding, clearing, skipping, or
 handing confirmed annotation intent to the session layer. It must not call annotation endpoints
@@ -71,7 +71,7 @@ with respect to Reader annotation mutation modules.
 
 ## Shell Owners
 
-`Reading.Shell.tsx` holds composition refs and renders chrome. The modules below own its behavior.
+`ReadingShell.Orchestrator.tsx` holds composition refs and renders chrome. The modules below own its behavior.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -105,12 +105,12 @@ published before then.
 | `ReaderSearch.Controller.ts` | Prevents concurrent full-book section traversal. |
 | `EpubTsHighlightRenderer.Engine.ts` | Durable, staged, and temporary renderer-mark reconciliation and click metadata. |
 | `EpubTsImportRangeRepair.Engine.ts` | DOM range reconstruction and epub-ts CFI conversion for imported fragments. |
-| `EpubImportRangeRepair.Matcher.ts` | Pure normalized-text and punctuation-tolerant repair matching. |
+| `EpubImportRangeRepair.Policy.ts` | Pure normalized-text and punctuation-tolerant repair matching. |
 | `EpubTsRenditionSettings.Engine.ts` | Scoped rendition theme/style application. |
 | `EpubTsLocation.Mapper.ts` | Renderer location and TOC mapping into Reader domain shapes. |
-| `EpubSelection.Extractor.ts` | Browser selection extraction and quote context handoff. |
+| `EpubSelection.Adapter.ts` | Browser selection extraction and quote context handoff. |
 | `EpubVisibleCfiRangeAnchor.Placement.ts` | Visible range geometry used by toolbar placement. |
-| `ReaderReflowTarget.Engine.ts` | Chooses the CFI preserved across resize/settings reflow. |
+| `ReaderReflowTarget.Policy.ts` | Chooses the CFI preserved across resize/settings reflow. |
 
 Known support-library defects and limitations are tracked in
 [epub-ts-support-issues.md](./epub-ts-support-issues.md).

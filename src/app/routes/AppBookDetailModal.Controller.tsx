@@ -1,14 +1,14 @@
 import { lazy, Suspense } from "react";
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
-import { BookDetailModal } from "../../features/library/BookDetail.Modal";
+import { BookDetailModal } from "../../features/library/BookDetailModal.UI";
 import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, routeToHash, withoutBookModal } from "../AppNavigation.Router";
 import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
 
 const OfflineBookDetailDialog = lazy(async () => {
-  const module = await import("../../features/library/bookDetail/offline/OfflineBookDetail.Dialog");
+  const module = await import("../../features/library/bookDetail/offline/OfflineBookDetailDialog.UI");
   return { default: module.OfflineBookDetailDialog };
 });
 

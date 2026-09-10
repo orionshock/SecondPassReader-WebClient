@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.State";
+import type { BrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.Queries";
 import { classifyOfflineStorageAdmission } from "../app/offline/OfflineStorageAdmission.Policy";
 
 const MEBIBYTE = 1024 * 1024;

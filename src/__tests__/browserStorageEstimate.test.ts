@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getBrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.State";
+import { getBrowserStorageEstimate } from "../app/offline/BrowserStorageEstimate.Queries";
 
 describe("browser storage estimate", () => {
   afterEach(() => vi.unstubAllGlobals());

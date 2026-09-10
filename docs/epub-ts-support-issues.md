@@ -245,7 +245,7 @@ reports can still be intermediate and viewport resize has a separate path.
 Client references:
 
 - `src/features/reader/shell/ReaderBootstrapProgressGuard.State.ts`
-- `src/features/reader/engine/ReaderReflowTarget.Engine.ts`
+- `src/features/reader/engine/ReaderReflowTarget.Policy.ts`
 - `src/features/reader/engine/EpubTsBook.Engine.ts`, `resizeToMount()`
 - `src/features/reader/shell/ReaderMountResize.Lifecycle.ts`
 

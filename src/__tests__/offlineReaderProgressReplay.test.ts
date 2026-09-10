@@ -6,7 +6,7 @@ import {
   replayOfflineReaderProgress,
   type ReaderProgressReplayClient,
 } from "../app/offline/OfflineReaderProgressReplay.Actions";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type {
   OfflineReaderBookState,
   OfflineReaderStateRepository,

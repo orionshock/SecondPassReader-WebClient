@@ -4,8 +4,8 @@ import {
   createOfflineHomeController,
   type OfflineHomeDependencies,
 } from "../features/home/offline/OfflineHome.Controller";
-import { presentOfflineHomeRecent, presentOfflineHomeShelves } from "../features/home/offline/OfflineHome.State";
-import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { presentOfflineHomeRecent, presentOfflineHomeShelves } from "../features/home/offline/OfflineHome.Presenter";
+import type { IndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflineReaderBookState } from "../app/offline/OfflineRepositories.Types";
 
 const CHECKSUM = "a".repeat(64);

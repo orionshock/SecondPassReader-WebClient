@@ -7,8 +7,8 @@ import {
 import {
   buildOfflineLibraryBooks,
   searchOfflineLibraryBooks,
-} from "../features/library/offline/OfflineLibrary.State";
-import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+} from "../features/library/offline/OfflineLibrary.Presenter";
+import type { IndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflinePublicationAssetCompleteRecord } from "../app/offline/OfflineRepositories.Types";
 
 const CHECKSUM = "a".repeat(64);

@@ -9,11 +9,11 @@ import {
   syncPendingOfflineReaderWork,
   type OfflineReaderPendingSyncResult,
 } from "./OfflineReaderPendingSync.Actions";
-import { getOfflineReaderRetrySchedule } from "./OfflineReaderRetrySchedule.State";
+import { getOfflineReaderRetrySchedule } from "./OfflineReaderRetrySchedule.Policy";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "./OfflineRepositories.IndexedDb";
+} from "./IndexedDbOfflineRepositories.Factory";
 import {
   subscribeToOfflineReaderOutboxChange,
 } from "./OfflineReaderOutboxChange.State";

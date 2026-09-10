@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReaderTocItem } from "../features/reader/domain/ReaderDomain.Types";
-import { TableOfContentsDrawer } from "../features/reader/shell/ReaderTableOfContents.Drawer";
+import { TableOfContentsDrawer } from "../features/reader/shell/ReaderTableOfContentsDrawer.UI";
 import { findCurrentTocItemKey } from "../features/reader/shell/ReaderTableOfContents.Presenter";
 
 const toc: ReaderTocItem[] = [

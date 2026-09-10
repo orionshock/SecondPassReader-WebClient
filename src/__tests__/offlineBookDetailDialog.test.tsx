@@ -3,7 +3,7 @@ import { act } from "react";
 import type { BookDetail } from "@secondpass/client";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OfflineBookDetailDialog } from "../features/library/bookDetail/offline/OfflineBookDetail.Dialog";
+import { OfflineBookDetailDialog } from "../features/library/bookDetail/offline/OfflineBookDetailDialog.UI";
 
 const controllerFactory = vi.hoisted(() => vi.fn());
 

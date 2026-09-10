@@ -3,28 +3,28 @@ import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.State";
+import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.Queries";
 import { acquireOfflinePublicationAsset } from "../app/offline/OfflinePublicationAcquisition.Actions";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type {
   OfflinePublicationAssetCompleteRecord,
   OfflinePublicationAssetRepository,
 } from "../app/offline/OfflineRepositories.Types";
-import { BookDetailPanel } from "../features/library/BookDetail.Panel";
+import { BookDetailPanel } from "../features/library/BookDetailPanel.UI";
 import {
   type BookOfflineAvailabilityController,
   useBookOfflineAvailabilityController,
 } from "../features/library/bookDetail/BookOfflineAvailability.Controller";
-import { BookOfflineAvailabilityPanel } from "../features/library/bookDetail/BookOfflineAvailability.Panel";
+import { BookOfflineAvailabilityPanel } from "../features/library/bookDetail/BookOfflineAvailabilityPanel.UI";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
-vi.mock("../app/offline/BrowserOfflineCapability.State", () => ({
+vi.mock("../app/offline/BrowserOfflineCapability.Queries", () => ({
   getBrowserOfflinePersistenceCapability: vi.fn(),
 }));
 vi.mock("../app/offline/OfflinePublicationAcquisition.Actions", () => ({
   acquireOfflinePublicationAsset: vi.fn(),
 }));
-vi.mock("../app/offline/OfflineRepositories.IndexedDb", () => ({
+vi.mock("../app/offline/IndexedDbOfflineRepositories.Factory", () => ({
   openIndexedDbOfflineRepositories: vi.fn(),
 }));
 

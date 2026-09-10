@@ -4,8 +4,8 @@ import {
   createOfflineBookDetailController,
   type OfflineBookDetailDependencies,
 } from "../features/library/bookDetail/offline/OfflineBookDetail.Controller";
-import { presentOfflineBookDetail } from "../features/library/bookDetail/offline/OfflineBookDetail.State";
-import type { IndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { presentOfflineBookDetail } from "../features/library/bookDetail/offline/OfflineBookDetail.Presenter";
+import type { IndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflinePublicationAssetCompleteRecord } from "../app/offline/OfflineRepositories.Types";
 
 const CHECKSUM_A = "a".repeat(64);

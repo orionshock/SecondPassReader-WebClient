@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SettingsLibraryServerPanel } from "../app/settings/SettingsLibraryServer.Panel";
+import { SettingsLibraryServerPanel } from "../app/settings/SettingsLibraryServerPanel.UI";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 
 let container: HTMLDivElement;

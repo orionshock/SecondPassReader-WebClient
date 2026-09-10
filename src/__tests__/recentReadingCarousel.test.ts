@@ -2,8 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { MarginaliaRecentSession } from "@secondpass/client";
-import { RecentReadingCarousel } from "../features/library/RecentReading.Carousel";
-import { RecentReadingSection } from "../features/library/RecentReading.Panel";
+import { RecentReadingCarousel } from "../features/library/RecentReadingCarousel.UI";
+import { RecentReadingSection } from "../features/library/RecentReadingPanel.UI";
 import { rawSessionId, recentSessionFixture } from "./SessionTest.Fixtures";
 
 describe("Home recent reading carousel", () => {

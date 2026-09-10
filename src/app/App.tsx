@@ -1,8 +1,8 @@
 import "./App.css";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ClientApiLinking } from "../features/connection/ClientApiLinking.Panel";
-import { ClientApiVerification } from "../features/connection/ClientApiVerification.Panel";
-import { ConnectServerScreen } from "../features/connection/ConnectServer.Page";
+import { ClientApiLinking } from "../features/connection/ClientApiLinkingPanel.UI";
+import { ClientApiVerification } from "../features/connection/ClientApiVerificationPanel.UI";
+import { ConnectServerScreen } from "../features/connection/ConnectServerPage.UI";
 import { getAppWorkflowStep } from "./AppWorkflow.Policy";
 import type { AppRoute } from "./AppNavigation.Router";
 import { navigateTo, parseCurrentRoute } from "./AppNavigation.Router";
@@ -12,15 +12,15 @@ import {
   saveConnectionProfile,
   type ConnectionProfile,
 } from "../storage/ConnectionProfiles.Store";
-import { AppHeader } from "./App.Header";
+import { AppHeader } from "./AppHeader.UI";
 import { createSplClientFromProfile } from "./AppSplClient.Factory";
 import type { SecondPassClient } from "@secondpass/client";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecovery.Context";
-import { ConnectionRecoveryBannerForState } from "./ConnectionRecovery.Banner";
+import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner.UI";
 import { ServerRichText } from "../components/ServerRichText.Renderer";
 import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
 import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
-import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Renderer";
+import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Orchestrator";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
@@ -30,7 +30,7 @@ import {
   startOfflineReaderAuthenticatedSyncLifecycle,
 } from "./offline/OfflineReaderAuthenticatedSync.Lifecycle";
 import { showOfflineReaderSyncOutcome } from "./offline/OfflineReaderSyncNotice.Controller";
-import { OfflineReaderSyncNoticePanel } from "./offline/OfflineReaderSyncNotice.Panel";
+import { OfflineReaderSyncNoticePanel } from "./offline/OfflineReaderSyncNoticePanel.UI";
 import { clearOfflineReaderSyncNotice } from "./offline/OfflineReaderSyncNotice.State";
 import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
 import {
@@ -39,7 +39,7 @@ import {
 } from "./connectivity/BrowserConnectivity.State";
 
 const SettingsPanel = lazy(async () => {
-  const module = await import("./Settings.Panel");
+  const module = await import("./SettingsPanel.UI");
   return { default: module.SettingsPanel };
 });
 

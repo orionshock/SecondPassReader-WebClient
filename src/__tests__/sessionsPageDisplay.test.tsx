@@ -13,7 +13,7 @@ vi.mock("../features/reader/ReaderMarginalia.Queries", () => ({
   loadSessionsPage: loadSessionsPageMock,
 }));
 
-import { SessionsPage } from "../features/sessions/Sessions.Page";
+import { SessionsPage } from "../features/sessions/SessionsPage.UI";
 import { rawSessionId, sessionListItemFixture } from "./SessionTest.Fixtures";
 
 let container: HTMLDivElement;

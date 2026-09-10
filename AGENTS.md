@@ -49,22 +49,24 @@ Treat roughly 300 lines of code as a review trigger, not a mechanical ceiling. A
 
 ## Project-wide role suffixes
 
-These conventions are authoritative for new files throughout the project. Apply them to meaningfully changed files when the rename clarifies ownership and the resulting import churn is proportionate to the task. Do not mass-rename unrelated files for cosmetic consistency.
+These conventions are authoritative throughout the project. Use the filename grammar
+`<PascalCaseSemanticStem>.<Role>.ts[x]`. The final dot-delimited segment is the sole architectural
+role. The semantic stem names the product area and may include feature, visual, domain, or
+implementation descriptors. Do not use dotted pseudo-roles inside the semantic stem.
 
-Use PascalCase for component files, classes, and types. Group related files in feature-local folders and use readable repeated prefixes. Do not use underscore-based filename grouping.
-
-The final dot-delimited name is the role suffix. It describes the file's broad responsibility, not its product domain or implementation technology. Put domain and implementation qualifiers before that suffix; for example, prefer `IndexedDbOfflinePublicationAsset.Repository.ts` over treating `IndexedDbRepository` as a new role.
+Use folder context to avoid needless repetition while keeping filenames understandable in search
+results. Prefer natural PascalCase English rather than mechanically concatenating every ancestor
+folder. Do not use underscore-based filename grouping.
 
 Use the following role suffixes according to the file's actual responsibility:
 
 - `.Api.ts`: remote API resource owner that exposes one service contract behind the transport boundary.
-- `.Activity.tsx`: route-level product entry that connects navigation, loading, and major feature composition.
 - `.Orchestrator.tsx`: composition root that coordinates multiple domain owners without implementing their internals.
 - `.Controller.ts`: imperative sequencing or stateful operation ownership for one feature lifecycle.
 - `.Coordinator.ts`: ordering and synchronization across multiple systems or lifecycles.
 - `.Bridge.ts`: stable renderer-neutral or service-neutral capability contract.
 - `.Engine.ts`: concrete renderer or processing-engine implementation behind a bridge.
-- `.Adapter.ts`: translation at an external schema, library, or service contract boundary.
+- `.Adapter.ts`: translation at an external schema, browser API, library, or service contract boundary.
 - `.Constants.ts`: named immutable values shared by one feature or subsystem; no runtime ownership.
 - `.Context.tsx`: React context definition, provider, and narrowly related context access behavior.
 - `.Diagnostics.ts`: opt-in diagnostics, instrumentation, or structured logging for one subsystem; not canonical product state.
@@ -84,42 +86,37 @@ Use the following role suffixes according to the file's actual responsibility:
 - `.Actions.ts`: mutation construction and other write-side operations.
 - `.Lifecycle.ts`: setup, teardown, subscription, and lifecycle state-machine behavior.
 - `.Placement.ts`: pure geometry and layout-position calculation.
-- `.Renderer.ts`: visual mark, canvas, or renderer-output creation and cleanup.
+- `.Renderer.ts[x]`: renderer-output, structured rich-content, visual-mark, or canvas creation and cleanup; not ordinary React UI.
+- `.UI.tsx`: ordinary visual or interactive React UI when no stronger architectural role owns the file.
 
-UI role suffixes:
-
-- `.Page.tsx`: screen-level feature content rendered within application routing; unlike an Activity, it does not own the route lifecycle or major subsystem composition.
-- `.Shell.tsx`: stable frame around a feature subsystem, including its chrome and primary content regions.
-- `.Panel.tsx`: persistent or docked feature surface.
-- `.Drawer.tsx`: dismissible edge-attached feature surface.
-- `.Header.tsx`: contextual heading, navigation, metadata, and actions for a page or feature surface.
-- `.Card.tsx`: self-contained summary or interaction surface for one item.
-- `.List.tsx`: linear collection ownership and item composition.
-- `.Grid.tsx`: two-dimensional collection layout and item composition.
-- `.Carousel.tsx`: ordered scrollable or paged collection surface.
-- `.Tabs.tsx`: tab selection and switching among sibling feature views.
-- `.Menu.tsx`: transient contextual choices or actions anchored to a trigger.
-- `.Control.tsx`: one reusable interactive input or compact setting control.
-- `.Editor.tsx`: focused editing surface that owns draft interaction and validation presentation.
-- `.Form.tsx`: cohesive field collection and submission interaction for one operation.
-- `.Toolbar.tsx`: compact action controls for a current context or selection.
-- `.Row.tsx`: one row in a table-like or metadata-heavy collection.
-- `.Item.tsx`: one general collection entry when row semantics do not apply.
-- `.Notice.tsx`: inline, contextual, nonblocking status or error feedback.
-- `.Banner.tsx`: prominent conditional status spanning a broad application or feature surface.
-- `.Dialog.tsx`: modal interaction requiring focused user action.
-- `.Viewport.tsx`: primary mounted content or renderer surface through which the user views and navigates a document or scene.
+Visual descriptors such as `Page`, `Shell`, `Panel`, `Drawer`, `Dialog`, `Modal`, `Header`, `Card`,
+`Row`, `List`, `Grid`, `Carousel`, `Tabs`, `Menu`, `Toolbar`, `Control`, `Editor`, `Form`, `Notice`,
+`Banner`, `Rail`, and `Viewport` belong in the semantic stem.
 
 Example feature layout:
 
 ```text
 bookSearch/
-  ReaderBookSearch.Drawer.tsx
-  ReaderBookSearch.Toolbar.tsx
-  ReaderBookSearch.Row.tsx
+  ReaderBookSearchDrawer.UI.tsx
+  ReaderBookSearchInputBar.UI.tsx
+  ReaderBookSearchResultRow.UI.tsx
   ReaderBookSearch.Controller.ts
-  ReaderBookSearch.Presenter.ts
+  ReaderBookSearchLabels.Presenter.ts
 ```
+
+A `.tsx` extension does not imply `.UI`. Keep a stronger role when the file owns rendering,
+presentation transformation, context, state, lifecycle, control, or composition; for example,
+`ServerRichText.Renderer.tsx`, `ReadingSession.Orchestrator.tsx`, and
+`AppBookDetailModal.Controller.tsx`.
+
+Put implementation qualifiers in the semantic stem. Prefer names such as
+`IndexedDbOfflinePublicationAsset.Repository.ts` and `IndexedDbOfflineRepositories.Factory.ts`;
+`IndexedDbRepository` and `IndexedDb` are not roles.
+
+Conventional framework, package, generated, configuration, test, stylesheet, documentation, and
+script names are exempt where applying an architectural suffix would be misleading. Examples
+include `App.tsx`, `main.tsx`, package `index.ts`, `vite-env.d.ts`, `*.test.ts[x]`, CSS files,
+Vite configuration, and Docker files. Do not introduce `.Test` as a production role.
 
 If no listed suffix accurately describes a genuinely new responsibility, establish the need and obtain user approval before introducing another project-wide role suffix.
 

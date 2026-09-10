@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { presentOfflinePendingBooks } from "../app/settings/offline/OfflinePendingBook.State";
+import { presentOfflinePendingBooks } from "../app/settings/offline/OfflinePendingBook.Presenter";
 import type { OfflinePublicationAssetCompleteRecord } from "../app/offline/OfflineRepositories.Types";
 import type { ReaderOutboxIntent } from "../app/offline/ReaderOutbox.Policy";
 

@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { Shelf } from "@secondpass/client";
-import { HomeShelfCard } from "../features/home/HomeShelf.Card";
+import { HomeShelfCard } from "../features/home/HomeShelfCard.UI";
 
 describe("Home shelf cards", () => {
   it("renders the exact server shelf name and group ownership with count", () => {

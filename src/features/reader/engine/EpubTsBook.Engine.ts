@@ -8,13 +8,13 @@ import { buildQuoteContext } from "../selection/ReaderQuoteContext.Policy";
 import type { ReaderHighlightMark, ReaderSearchOptions, ReaderSearchResult } from "../domain/ReaderDomain.Types";
 import { createEpubTsHighlightRenderer, type HighlightMarkClick } from "./EpubTsHighlightRenderer.Engine";
 import { normalizeLocation, normalizeTocItems, toRenditionTarget } from "./EpubTsLocation.Mapper";
-import { extractSelectionTextAndContext } from "./EpubSelection.Extractor";
+import { extractSelectionTextAndContext } from "./EpubSelection.Adapter";
 import { searchEpubTsBook } from "./EpubTsBookSearch.Engine";
 import { ReaderSearchController } from "./ReaderSearch.Controller";
 import {
   resolveReaderReflowCfi,
   type ReaderReflowTargetOptions,
-} from "./ReaderReflowTarget.Engine";
+} from "./ReaderReflowTarget.Policy";
 import { getVisibleCfiRangeAnchor } from "./EpubVisibleCfiRangeAnchor.Placement";
 import { createEpubTsRenditionSettingsEngine } from "./EpubTsRenditionSettings.Engine";
 

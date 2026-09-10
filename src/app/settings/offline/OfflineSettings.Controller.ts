@@ -7,7 +7,7 @@ import { loadOfflineReaderBookMetadata } from "../../offline/OfflineReaderOpen.A
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../offline/OfflineRepositories.IndexedDb";
+} from "../../offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflinePublicationAssetCompleteRecord } from "../../offline/OfflineRepositories.Types";
 import type { ReaderOutboxIntent } from "../../offline/ReaderOutbox.Policy";
 import type { BrowserConnectivityStatus } from "../../connectivity/BrowserConnectivity.State";
@@ -19,7 +19,7 @@ import {
   addOfflineReaderSyncBookOutcome,
   createOfflineReaderSyncOutcome,
 } from "../../offline/OfflineReaderSyncOutcome.State";
-import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.State";
+import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.Presenter";
 import { discardPendingReaderProgress } from "../../offline/OfflineReaderPendingRepair.Actions";
 import { offlineReaderRetryEligibility } from "../../offline/OfflineReaderRetryEligibility.Policy";
 

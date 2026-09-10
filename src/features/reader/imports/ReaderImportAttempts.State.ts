@@ -1,5 +1,5 @@
 import type { ReaderImportRow } from "./ReaderImport.Types";
-import { isReaderCfiRange } from "../engine/ReaderCfiClassifier.Engine";
+import { isReaderCfiRange } from "../engine/ReaderCfiClassifier.Adapter";
 import { isReaderImportRowTerminal } from "./ReaderImportJob.State";
 
 export type ReaderImportAttempt =

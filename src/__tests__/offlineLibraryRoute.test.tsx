@@ -2,7 +2,7 @@
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AppLibraryRouteRenderer } from "../app/routes/AppLibraryRoute.Renderer";
+import { AppLibraryRouteRenderer } from "../app/routes/AppLibraryRoute.Orchestrator";
 import type { AppRoute } from "../app/AppNavigation.Router";
 import type { OpenedBook } from "../features/reader/Reader.Types";
 
@@ -19,28 +19,28 @@ const readingActivity = vi.fn((_props: unknown) => undefined);
 let readerMounts = 0;
 let readerUnmounts = 0;
 
-vi.mock("../features/library/LibraryBrowse.Page", () => ({
+vi.mock("../features/library/LibraryBrowsePage.UI", () => ({
   LibraryBrowsePage: (props: unknown) => onlineLibrary(props),
 }));
 
-vi.mock("../features/library/offline/OfflineLibrary.Page", () => ({
+vi.mock("../features/library/offline/OfflineLibraryPage.UI", () => ({
   OfflineLibraryPage: (props: unknown) => offlineLibrary(props),
 }));
 
-vi.mock("../features/home/Home.Page", () => ({
+vi.mock("../features/home/HomePage.UI", () => ({
   HomePage: (props: unknown) => onlineHome(props),
 }));
 
-vi.mock("../features/home/offline/OfflineHome.Page", () => ({
+vi.mock("../features/home/offline/OfflineHomePage.UI", () => ({
   OfflineHomePage: (props: unknown) => offlineHome(props),
 }));
 
-vi.mock("../features/sessions/Sessions.Page", () => ({ SessionsPage: () => sessions() }));
-vi.mock("../features/sessions/SessionDetail.Page", () => ({ SessionDetailPage: () => sessionDetail() }));
-vi.mock("../features/shelves/Shelves.Page", () => ({ ShelvesPage: () => shelves() }));
-vi.mock("../features/shelves/ShelfDetail.Page", () => ({ ShelfDetailPage: () => shelfDetail() }));
-vi.mock("../features/shelves/ShelfEdit.Page", () => ({ ShelfEditPage: () => shelfEdit() }));
-vi.mock("../features/reader/Reading.Activity", () => ({ ReadingActivity: ReaderProbe }));
+vi.mock("../features/sessions/SessionsPage.UI", () => ({ SessionsPage: () => sessions() }));
+vi.mock("../features/sessions/SessionDetailPage.UI", () => ({ SessionDetailPage: () => sessionDetail() }));
+vi.mock("../features/shelves/ShelvesPage.UI", () => ({ ShelvesPage: () => shelves() }));
+vi.mock("../features/shelves/ShelfDetailPage.UI", () => ({ ShelfDetailPage: () => shelfDetail() }));
+vi.mock("../features/shelves/ShelfEditPage.UI", () => ({ ShelfEditPage: () => shelfEdit() }));
+vi.mock("../features/reader/ReadingActivity.Orchestrator", () => ({ ReadingActivity: ReaderProbe }));
 
 let container: HTMLDivElement;
 let root: Root;

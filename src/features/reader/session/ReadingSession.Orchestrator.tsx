@@ -1,7 +1,7 @@
 import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { ReadingShell } from "../shell/Reading.Shell";
+import { ReadingShell } from "../shell/ReadingShell.Orchestrator";
 import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
 import type { ReaderDescribeCfiHandle, ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
 import type { ReaderLocationTarget, ReaderSelection } from "../domain/ReaderDomain.Types";

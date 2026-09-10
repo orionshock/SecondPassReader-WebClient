@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../../app/offline/OfflineRepositories.IndexedDb";
+} from "../../../../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflineReaderBootstrap } from "../../Reader.Types";
 import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import {

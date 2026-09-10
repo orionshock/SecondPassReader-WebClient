@@ -1,6 +1,6 @@
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.State";
+import { getBrowserOfflinePersistenceCapability } from "../app/offline/BrowserOfflineCapability.Queries";
 
 describe("browser offline persistence capability", () => {
   afterEach(() => vi.unstubAllGlobals());

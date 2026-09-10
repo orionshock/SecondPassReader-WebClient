@@ -9,7 +9,7 @@ import {
   loadOfflineReaderBookMetadata,
   openOfflineBookForReader,
 } from "../app/offline/OfflineReaderOpen.Actions";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import { openBookForReader } from "../features/library/LibraryBookOpen.Actions";
 import type { OfflineOpenedBook, OpenedBook } from "../features/reader/Reader.Types";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
@@ -19,7 +19,7 @@ vi.mock("../app/connectivity/BrowserConnectivity.State", () => ({
   subscribeToBrowserConnectivity: vi.fn(() => () => undefined),
 }));
 vi.mock("../features/library/LibraryBookOpen.Actions", () => ({ openBookForReader: vi.fn() }));
-vi.mock("../app/offline/OfflineRepositories.IndexedDb", () => ({ openIndexedDbOfflineRepositories: vi.fn() }));
+vi.mock("../app/offline/IndexedDbOfflineRepositories.Factory", () => ({ openIndexedDbOfflineRepositories: vi.fn() }));
 vi.mock("../app/offline/OfflineReaderOpen.Actions", () => ({
   loadOfflineReaderBookMetadata: vi.fn(),
   openOfflineBookForReader: vi.fn(),

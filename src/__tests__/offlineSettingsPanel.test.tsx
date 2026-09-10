@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   OfflineSettingsView,
-} from "../app/settings/offline/OfflineSettings.Panel";
+} from "../app/settings/offline/OfflineSettingsPanel.UI";
 import type {
   OfflineSettingsController,
   OfflineSettingsState,

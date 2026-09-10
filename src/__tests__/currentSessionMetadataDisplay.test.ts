@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { CurrentSessionMetadataEditor } from "../features/reader/annotations/CurrentSessionMetadata.Editor";
+import { CurrentSessionMetadataEditor } from "../features/reader/annotations/CurrentSessionMetadataEditor.UI";
 import { rawSessionId, sessionFixture } from "./SessionTest.Fixtures";
 
 describe("Reader current-session metadata", () => {

@@ -1,7 +1,7 @@
 import type { Rendition } from "@likecoin/epub-ts";
 import { normalizeReaderSettings, type ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import { getReaderSettingsPresentation } from "../settings/ReaderDisplaySettings.Presenter";
-import { resolveReaderReflowCfi } from "./ReaderReflowTarget.Engine";
+import { resolveReaderReflowCfi } from "./ReaderReflowTarget.Policy";
 
 export function createEpubTsRenditionSettingsEngine({
   rendition,

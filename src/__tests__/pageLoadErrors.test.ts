@@ -1,16 +1,16 @@
 import { createElement, Fragment, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ShelvesPreviewLoadFailure } from "../features/home/ShelvesPreview.Panel";
-import { CatalogTagLoadErrorNotice } from "../features/library/catalogTags/CatalogTag.Rail";
-import { LibraryResultsLoadErrorNotice } from "../features/library/LibraryResultsLoadError.Notice";
-import { LibraryBooksResults } from "../features/library/results/LibraryBooks.Results";
+import { ShelvesPreviewLoadFailure } from "../features/home/ShelvesPreviewPanel.UI";
+import { CatalogTagLoadErrorNotice } from "../features/library/catalogTags/CatalogTagRail.UI";
+import { LibraryResultsLoadErrorNotice } from "../features/library/LibraryResultsLoadErrorNotice.UI";
+import { LibraryBooksResults } from "../features/library/results/LibraryBooksResults.UI";
 import {
   getSessionsLoadErrorMessage,
   SessionsLoadErrorNotice,
   SessionsNoDataState,
-} from "../features/sessions/Sessions.Page";
-import { ShelvesLoadErrorNotice } from "../features/shelves/Shelves.Page";
+} from "../features/sessions/SessionsPage.UI";
+import { ShelvesLoadErrorNotice } from "../features/shelves/ShelvesPage.UI";
 import { apiError, authorizationError } from "./ApiErrorTest.Fixtures";
 
 describe("page-local load errors", () => {

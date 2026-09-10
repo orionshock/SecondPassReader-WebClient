@@ -1,12 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { CompactBook, SecondPassClient } from "@secondpass/client";
-import { LibraryAxisTabs } from "../features/library/controls/LibraryAxis.Tabs";
-import { BookViewModeToggle } from "../features/library/display/BookViewMode.Control";
-import { LibraryScopeSelect } from "../features/library/libraryScope/LibraryScope.Select";
-import { CatalogTagRail } from "../features/library/catalogTags/CatalogTag.Rail";
-import { BookDetailModal } from "../features/library/BookDetail.Modal";
-import { AddToShelfMenu } from "../features/library/bookDetail/AddToShelf.Menu";
+import { LibraryAxisTabs } from "../features/library/controls/LibraryAxisTabs.UI";
+import { BookViewModeToggle } from "../features/library/display/BookViewModeControl.UI";
+import { LibraryScopeSelect } from "../features/library/libraryScope/LibraryScopeSelect.UI";
+import { CatalogTagRail } from "../features/library/catalogTags/CatalogTagRail.UI";
+import { BookDetailModal } from "../features/library/BookDetailModal.UI";
+import { AddToShelfMenu } from "../features/library/bookDetail/AddToShelfMenu.UI";
 
 vi.mock("../features/library/catalogTags/CatalogTags.Controller", () => ({
   useCatalogTags: () => ({

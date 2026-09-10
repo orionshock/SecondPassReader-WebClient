@@ -2,7 +2,7 @@ import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import {
   getBrowserOfflinePersistenceCapability,
   type BrowserOfflineCapability,
-} from "./BrowserOfflineCapability.State";
+} from "./BrowserOfflineCapability.Queries";
 import {
   requestBrowserPersistentStorage,
   type PersistentStorageRequestResult,
@@ -10,7 +10,7 @@ import {
 import {
   getBrowserStorageEstimate,
   type BrowserStorageEstimate,
-} from "./BrowserStorageEstimate.State";
+} from "./BrowserStorageEstimate.Queries";
 import type { OfflineCacheNamespace } from "./OfflineCacheNamespace.Policy";
 import {
   normalizePublicationChecksum,

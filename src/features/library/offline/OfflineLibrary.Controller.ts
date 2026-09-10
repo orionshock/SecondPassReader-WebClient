@@ -4,12 +4,12 @@ import { loadOfflineReaderBookMetadata } from "../../../app/offline/OfflineReade
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../app/offline/OfflineRepositories.IndexedDb";
+} from "../../../app/offline/IndexedDbOfflineRepositories.Factory";
 import {
   buildOfflineLibraryBooks,
   searchOfflineLibraryBooks,
   type OfflineLibraryBook,
-} from "./OfflineLibrary.State";
+} from "./OfflineLibrary.Presenter";
 
 type Repositories = IndexedDbOfflineRepositories<Blob>;
 

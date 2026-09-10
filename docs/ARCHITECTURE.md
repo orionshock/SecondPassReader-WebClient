@@ -101,7 +101,7 @@ SDK documentation has a separate package audience:
 : Wires the global workflow, routes, selected connection profile, connection recovery, and top-level
 route rendering. `AppReaderOpen.Controller.ts` owns Reader restore/open state and object URL cleanup.
 
-`Reading.Activity.tsx`
+`ReadingActivity.Orchestrator.tsx`
 : Renders Reader chrome and layout. Controllers under `src/features/reader/activity/` handle import
 review, completion, and end-of-book behavior.
 
@@ -109,7 +109,7 @@ review, completion, and end-of-book behavior.
 : Wires session metadata, progress autosave, annotations, previous-session layers, renderer-neutral
 bridge state, and shell render state.
 
-`Reading.Shell.tsx`
+`ReadingShell.Orchestrator.tsx`
 : Wires Reader chrome to the shell lifecycle modules under `src/features/reader/shell/`: bootstrap,
 capability publication, command routing, location publication, settings reflow, runtime
 serialization, and toolbar control.

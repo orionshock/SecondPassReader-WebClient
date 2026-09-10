@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features/reader/imports/ReaderImport.Drawer";
+import { ReaderImportDrawer, ReaderImportDrawerHeaderActions } from "../features/reader/imports/ReaderImportDrawer.UI";
 import { getReaderImportJobCounts } from "../features/reader/imports/ReaderImportJob.State";
 import { createDefaultReaderImportStatusFilters, filterReaderImportRows, getReaderImportStatusGroup, showAllReaderImportStatusFilters, toggleReaderImportStatusFilter } from "../features/reader/imports/ReaderImportStatusFilter.State";
 import type { ReaderImportJob, ReaderImportRow } from "../features/reader/imports/ReaderImport.Types";

@@ -7,7 +7,7 @@ import {
   findPunctuationTolerantRepairRange,
   normalizeImportRepairText,
   projectPunctuationLightText,
-} from "./EpubImportRangeRepair.Matcher";
+} from "./EpubImportRangeRepair.Policy";
 
 type RepairableSection = {
   document?: Document;

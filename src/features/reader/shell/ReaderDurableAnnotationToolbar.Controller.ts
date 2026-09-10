@@ -3,7 +3,7 @@ import type { HighlightMarkClick } from "../engine/EpubTsHighlightRenderer.Engin
 import type {
   DurableAnnotationToolbarItem,
   DurableAnnotationToolbarPosition,
-} from "./ReaderDurableAnnotationToolbar.Toolbar";
+} from "./ReaderDurableAnnotationToolbar.UI";
 
 type DurableToolbarState = {
   annotationId: string;

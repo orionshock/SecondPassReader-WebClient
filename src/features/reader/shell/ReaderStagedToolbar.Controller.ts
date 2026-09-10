@@ -6,7 +6,7 @@ import type {
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
 import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
-import type { SelectionHighlightToolbarProps } from "./ReaderSelectionHighlightToolbar.Toolbar";
+import type { SelectionHighlightToolbarProps } from "./ReaderSelectionHighlightToolbar.UI";
 import { isReaderFullyReady, type ReaderReadinessState } from "./ReaderReadiness.State";
 import { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
 import { useStagedSelectionToolbar } from "./ReaderStagedSelection.Controller";

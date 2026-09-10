@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { CompactBook } from "@secondpass/client";
-import { BookDescription } from "../features/library/BookDescription.Presenter";
+import { BookDescription } from "../features/library/BookDescription.UI";
 import { formatBookPublishedDate, formatBookSeries, getBookMetaItems } from "../features/library/display/BookDisplay.Presenter";
 import { findNextSeriesBook } from "../features/library/SeriesMetadata.Presenter";
 

@@ -4,9 +4,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { Author, Series, Shelf } from "@secondpass/client";
 import { ServerRichText } from "../components/ServerRichText.Renderer";
-import { SettingsLibraryServerPanel } from "../app/settings/SettingsLibraryServer.Panel";
-import { LibrarySelectedAxisHeader } from "../features/library/results/LibrarySelectedAxis.Header";
-import { ShelfEditInfoPanel } from "../features/shelves/ShelfEditInfo.Panel";
+import { SettingsLibraryServerPanel } from "../app/settings/SettingsLibraryServerPanel.UI";
+import { LibrarySelectedAxisHeader } from "../features/library/results/LibrarySelectedAxisHeader.UI";
+import { ShelfEditInfoPanel } from "../features/shelves/ShelfEditInfoPanel.UI";
 
 const noop = () => undefined;
 

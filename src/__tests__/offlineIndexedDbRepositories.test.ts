@@ -1,7 +1,7 @@
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it, vi } from "vitest";
 import type { OfflineReaderBookState } from "../app/offline/OfflineRepositories.Types";
-import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
+import { openIndexedDbOfflineRepositories } from "../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { ReplaceReaderProgressIntent } from "../app/offline/ReaderOutbox.Policy";
 import { subscribeToOfflinePublicationAssetChange } from "../app/offline/OfflinePublicationAssetChange.State";
 

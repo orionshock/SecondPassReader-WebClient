@@ -4,9 +4,9 @@ import { loadOfflineReaderBookMetadata } from "../../../app/offline/OfflineReade
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
-} from "../../../app/offline/OfflineRepositories.IndexedDb";
+} from "../../../app/offline/IndexedDbOfflineRepositories.Factory";
 import type { OfflineProjectionRecord } from "../../../app/offline/OfflineRepositories.Types";
-import { buildOfflineLibraryBooks } from "../../library/offline/OfflineLibrary.State";
+import { buildOfflineLibraryBooks } from "../../library/offline/OfflineLibrary.Presenter";
 import {
   OFFLINE_HOME_RECENT_PROJECTION_KEY,
   OFFLINE_HOME_SHELVES_PROJECTION_KEY,
@@ -16,7 +16,7 @@ import {
   presentOfflineHomeShelves,
   type OfflineHomeRecentItem,
   type OfflineHomeShelfItem,
-} from "./OfflineHome.State";
+} from "./OfflineHome.Presenter";
 import type { OfflineHomeRecentProjection, OfflineHomeShelvesProjection } from "./OfflineHome.Types";
 
 type Repositories = IndexedDbOfflineRepositories<Blob>;

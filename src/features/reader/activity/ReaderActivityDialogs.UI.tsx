@@ -1,0 +1,153 @@
+import { lazy, Suspense, useEffect, useState } from "react";
+import type { CompactBook } from "@secondpass/client";
+import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSessionDialog.UI";
+import { EndOfBookDialog } from "../ReaderEndOfBookDialog.UI";
+import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.Registry";
+import { BookSearchDrawer } from "../shell/bookSearch/ReaderBookSearchDrawer.UI";
+import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
+
+const ReaderImportModal = lazy(async () => {
+  const module = await import("../imports/ReaderImportModal.UI");
+  return { default: module.ReaderImportModal };
+});
+
+export function ReaderActivityDialogs({
+  bookId,
+  bookTitle,
+  searchOpen,
+  search,
+  initialSearchQuery,
+  onCloseSearch,
+  importModalOpen,
+  onCloseImportModal,
+  onStartImport,
+  onParseImportAction,
+  closeDialogOpen,
+  closeInitialName,
+  closeInitialNotes,
+  closeAfterOptions,
+  defaultAfterAction,
+  nextBook,
+  coverBase,
+  onCancelCloseSession,
+  onSaveAndCloseSession,
+  endBookDialogOpen,
+  nextBookStatus,
+  hasSeries,
+  onStartNextBook,
+  onFinishSession,
+  onKeepReading,
+  onGoToLibrary,
+  returnLabel,
+}: {
+  bookId: string | number;
+  bookTitle: string;
+  searchOpen: boolean;
+  search: ReaderActivityRenderState["search"];
+  initialSearchQuery?: string | null;
+  onCloseSearch: () => void;
+  importModalOpen: boolean;
+  onCloseImportModal: () => void;
+  onStartImport: (format: string, file: File) => Promise<{ warnings?: string[] }>;
+  onParseImportAction: (action: ReaderImportFailureAction) => void;
+  closeDialogOpen: boolean;
+  closeInitialName: string;
+  closeInitialNotes: string;
+  closeAfterOptions: CloseSessionAfterOption[];
+  defaultAfterAction: CloseSessionInput["afterAction"];
+  nextBook: CompactBook | null;
+  coverBase: { apiBaseUrl: string | null };
+  onCancelCloseSession: () => void;
+  onSaveAndCloseSession: (input: CloseSessionInput) => Promise<void>;
+  endBookDialogOpen: boolean;
+  nextBookStatus: "idle" | "loading" | "ready" | "error";
+  hasSeries: boolean;
+  onStartNextBook: (book: CompactBook) => void;
+  onFinishSession: () => void;
+  onKeepReading: () => void;
+  onGoToLibrary?: () => void;
+  returnLabel: string;
+}) {
+  const [importModalRequested, setImportModalRequested] = useState(importModalOpen);
+
+  useEffect(() => {
+    if (importModalOpen) setImportModalRequested(true);
+  }, [importModalOpen]);
+
+  return (
+    <>
+      <BookSearchDrawer
+        key={String(bookId)}
+        open={searchOpen}
+        ready={search.ready}
+        searchBook={search.searchBook}
+        bookTitle={bookTitle}
+        initialSearchQuery={initialSearchQuery}
+        onClose={onCloseSearch}
+        onJump={(result) => {
+          search.jumpToResult(result.cfi);
+        }}
+      />
+
+      {importModalOpen || importModalRequested ? (
+        <Suspense fallback={importModalOpen ? <ReaderImportModalFallback onClose={onCloseImportModal} /> : null}>
+          <ReaderImportModal
+            open={importModalOpen}
+            onClose={onCloseImportModal}
+            onStartImport={onStartImport}
+            onParseAction={onParseImportAction}
+          />
+        </Suspense>
+      ) : null}
+
+      {closeDialogOpen ? (
+        <CloseSessionDialog
+          initialName={closeInitialName}
+          initialNotes={closeInitialNotes}
+          afterOptions={closeAfterOptions}
+          defaultAfterAction={defaultAfterAction}
+          nextBook={nextBook}
+          coverBase={coverBase}
+          onCancel={onCancelCloseSession}
+          onSaveAndClose={onSaveAndCloseSession}
+        />
+      ) : null}
+
+      {endBookDialogOpen ? (
+        <EndOfBookDialog
+          nextBook={nextBook}
+          nextBookStatus={nextBookStatus}
+          coverBase={coverBase}
+          hasSeries={hasSeries}
+          onStartNextBook={onStartNextBook}
+          onFinishSession={onFinishSession}
+          onKeepReading={onKeepReading}
+          onGoToLibrary={onGoToLibrary}
+          returnLabel={returnLabel}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function ReaderImportModalFallback({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
+      <section
+        className="spReaderImportModal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sp-reader-import-loading-title"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <div className="spReaderImportModalHeader">
+          <h2 id="sp-reader-import-loading-title">Import marginalia</h2>
+          <button type="button" className="button buttonCompact" onClick={onClose}>Close</button>
+        </div>
+        <div className="spReaderImportModalBody">
+          <p className="muted">{`Loading import tools${"\u2026"}`}</p>
+        </div>
+      </section>
+    </div>
+  );
+}
