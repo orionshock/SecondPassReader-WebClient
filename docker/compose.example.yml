@@ -19,7 +19,7 @@ services:
     # Or use indexed URLs:
     # environment:
     #   SECONDPASS_SERVER_1_URL: https://library.example.com
-    #   SECONDPASS_SERVER_2_URL: http://localhost:8000
+    #   SECONDPASS_SERVER_2_URL: https://library-two.example.com
     expose:
       - "8000"
     restart: unless-stopped
