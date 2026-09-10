@@ -25,7 +25,8 @@ It does not select a complete storage or synchronization architecture.
 - Offer explicit offline-ready EPUB files from Book Detail and admit verified files to a local
   Reader bootstrap while the browser explicitly reports offline.
 - Support durable offline Reader progress and current-session annotation activity for those books.
-- Keep library search and paginated browsing online-dependent.
+- While explicitly offline, show only locally retained publication assets and provide local title
+  search over that downloaded subset. Full catalog search and pagination remain online-dependent.
 - Keep shelf mutations and library or administration mutations online-only.
 - Keep reading-session metadata edits online-only initially.
 
@@ -67,7 +68,7 @@ semantics where applicable:
 | --- | --- |
 | Connection profile and bearer token | Keep existing behavior unchanged in this phase; credential persistence policy remains an open question. |
 | Home and recent snapshots | Cache later as replaceable convenience data. |
-| Library search and pages | Do not promise offline availability. |
+| Library search and pages | Offline mode lists downloaded Books only and searches their retained titles locally; the full catalog remains online-only. |
 | Publication assets | Retain only through explicit offline availability. EPUB is the only currently supported Reader format. |
 | Progress | Store one durable latest local value, scoped to the correct book and session lifecycle. |
 | Annotations | Store current local desired state and coalesced delivery intents with stable client IDs. |
@@ -132,13 +133,34 @@ scope.
 
 Book Detail is the first explicit offline-stability surface. It can make one supported Book file
 available offline, update a changed file, or remove its publication asset. Removal does not clear cached projections,
-Reader continuity state, annotations, or pending Reader intents. Library-wide asset management in
-Settings remains a separate later phase.
+Reader continuity state, annotations, or pending Reader intents. Settings owns namespace-wide asset
+management separately.
 
 The shared asset policy, storage, checksum verification, and acquisition ownership are
 format-neutral. EPUB is the only currently supported Reader format. Future formats require their
 own engines and format-owned navigation, location, selection, and annotation semantics; EPUB CFI
 is not a generic publication location model.
+
+## Offline Library
+
+When browser connectivity is explicitly `offline`, Library mounts a local downloaded-only view
+instead of its server catalog query owners. `online` and `unknown` retain the existing
+server-authoritative Library. The local view requires a verified account namespace and lists its
+retained publication assets; cached Book metadata without an asset never admits a Book.
+
+Offline Library search is case-insensitive title search over that local subset, with deterministic
+local title ordering and a Book-ID fallback when retained metadata is missing. Groups, tags,
+Authors, Series, remote sorting, and pagination are not fabricated offline. Retained metadata has
+only remote cover URLs, not durable cover bytes, so the offline view uses a placeholder and makes
+no cover request.
+
+Reader admission remains stricter than storage listing: the current Web Reader opens only a
+complete EPUB Blob whose retained checksum and format match the cached Book file metadata. A
+retained asset that lacks usable metadata, is corrupt, or uses an unsupported format stays visible
+as unavailable rather than masquerading as readable. Offline Library opens eligible Books directly
+through the existing local Reader route because the current Book Detail owner is server-backed.
+Publication-asset changes refresh the current runtime, and focus refresh picks up later changes
+from another tab; there is no polling or cross-tab catalog channel.
 
 ## Offline Reader Admission
 

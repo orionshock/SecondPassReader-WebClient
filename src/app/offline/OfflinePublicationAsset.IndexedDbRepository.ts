@@ -8,6 +8,7 @@ import {
   requestResult,
   runTransaction,
 } from "./OfflineDatabase.IndexedDb";
+import { publishOfflinePublicationAssetChange } from "./OfflinePublicationAssetChange.State";
 
 export class IndexedDbOfflinePublicationAssetRepository<TPayload = Blob>
 implements OfflinePublicationAssetRepository<TPayload> {
@@ -28,6 +29,7 @@ implements OfflinePublicationAssetRepository<TPayload> {
     await runTransaction(transaction, () => (
       requestResult(transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets).put(record))
     ));
+    publishOfflinePublicationAssetChange(record.namespaceKey);
   }
 
   async list(namespaceKey: string): Promise<OfflinePublicationAssetCompleteRecord<TPayload>[]> {
@@ -44,9 +46,11 @@ implements OfflinePublicationAssetRepository<TPayload> {
     await runTransaction(transaction, () => (
       requestResult(transaction.objectStore(OFFLINE_STORE_NAMES.publicationAssets).delete([namespaceKey, bookId, format]))
     ));
+    publishOfflinePublicationAssetChange(namespaceKey);
   }
 
-  deleteNamespace(namespaceKey: string): Promise<void> {
-    return deleteNamespaceRecords(this.database, OFFLINE_STORE_NAMES.publicationAssets, namespaceKey);
+  async deleteNamespace(namespaceKey: string): Promise<void> {
+    await deleteNamespaceRecords(this.database, OFFLINE_STORE_NAMES.publicationAssets, namespaceKey);
+    publishOfflinePublicationAssetChange(namespaceKey);
   }
 }

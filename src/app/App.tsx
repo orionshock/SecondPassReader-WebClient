@@ -1,5 +1,5 @@
 import "./App.css";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ClientApiLinking } from "../features/connection/ClientApiLinking.Panel";
 import { ClientApiVerification } from "../features/connection/ClientApiVerification.Panel";
 import { ConnectServerScreen } from "../features/connection/ConnectServer.Page";
@@ -33,6 +33,10 @@ import { showOfflineReaderSyncOutcome } from "./offline/OfflineReaderSyncNotice.
 import { OfflineReaderSyncNoticePanel } from "./offline/OfflineReaderSyncNotice.Panel";
 import { clearOfflineReaderSyncNotice } from "./offline/OfflineReaderSyncNotice.State";
 import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
+import {
+  getBrowserConnectivitySnapshot,
+  subscribeToBrowserConnectivity,
+} from "./connectivity/BrowserConnectivity.State";
 
 const SettingsPanel = lazy(async () => {
   const module = await import("./Settings.Panel");
@@ -67,6 +71,11 @@ function AppShell() {
   }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.authenticationState, selectedProfile?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
+  const browserConnectivity = useSyncExternalStore(
+    subscribeToBrowserConnectivity,
+    getBrowserConnectivitySnapshot,
+    (): "unknown" => "unknown",
+  );
   const offlineNamespaceKey = useMemo(() => {
     if (workflowStep !== "library_home" || !selectedProfile?.verifiedAt) return null;
     return buildOfflineCacheNamespace({
@@ -377,6 +386,8 @@ function AppShell() {
                 route={route}
                 profile={selectedProfile}
                 spl={splClient}
+                connectivity={browserConnectivity}
+                offlineNamespaceKey={offlineNamespaceKey}
                 openedBook={openedBook}
                 readerRestoreError={readerRestoreError}
                 onCloseReader={closeReader}
@@ -387,7 +398,7 @@ function AppShell() {
         )}
       </main>
 
-      {workflowStep === "library_home" && route?.kind !== "reader" ? (
+      {workflowStep === "library_home" && route?.kind !== "reader" && browserConnectivity !== "offline" ? (
         <AppBookDetailModalController
           route={route}
           profile={selectedProfile}

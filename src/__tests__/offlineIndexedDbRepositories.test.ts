@@ -1,8 +1,9 @@
 import { IDBFactory } from "fake-indexeddb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { OfflineReaderBookState } from "../app/offline/OfflineRepositories.Types";
 import { openIndexedDbOfflineRepositories } from "../app/offline/OfflineRepositories.IndexedDb";
 import type { ReplaceReaderProgressIntent } from "../app/offline/ReaderOutbox.Policy";
+import { subscribeToOfflinePublicationAssetChange } from "../app/offline/OfflinePublicationAssetChange.State";
 
 describe("IndexedDB offline repository lifecycle", () => {
   it("creates every repository from an empty database", async () => {
@@ -63,6 +64,32 @@ describe("IndexedDB offline repository lifecycle", () => {
     expect(new Uint8Array(await asset!.payload.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
     expect(await reopened.readerState.getBookState("account-a", "book-1")).toEqual(readerState());
     reopened.close();
+  });
+
+  it("publishes committed publication asset changes for local views", async () => {
+    const repositories = await openIndexedDbOfflineRepositories<Uint8Array>({
+      indexedDb: new IDBFactory(),
+      databaseName: "offline-asset-change-publication",
+    });
+    const listener = vi.fn();
+    const unsubscribe = subscribeToOfflinePublicationAssetChange(listener);
+
+    await repositories.publicationAssets.putComplete({
+      status: "complete",
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      format: "epub",
+      checksum: "a".repeat(64),
+      byteLength: 1,
+      schemaVersion: 1,
+      payload: new Uint8Array([1]),
+    });
+    await repositories.publicationAssets.delete("account-a", "book-1", "epub");
+
+    expect(listener).toHaveBeenNthCalledWith(1, "account-a");
+    expect(listener).toHaveBeenNthCalledWith(2, "account-a");
+    unsubscribe();
+    repositories.close();
   });
 
   it("migrates version 1 EPUB records into format-aware publication assets", async () => {

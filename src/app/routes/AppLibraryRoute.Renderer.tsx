@@ -11,16 +11,25 @@ import { ShelfEditPage } from "../../features/shelves/ShelfEdit.Page";
 import { ShelvesPage } from "../../features/shelves/Shelves.Page";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, withBookModal } from "../AppNavigation.Router";
+import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
+import { saveReaderReturnTarget } from "../../features/reader/ReaderReturnTarget.Store";
 
 const ReadingActivity = lazy(async () => {
   const module = await import("../../features/reader/Reading.Activity");
   return { default: module.ReadingActivity };
 });
 
+const OfflineLibraryPage = lazy(async () => {
+  const module = await import("../../features/library/offline/OfflineLibrary.Page");
+  return { default: module.OfflineLibraryPage };
+});
+
 export function AppLibraryRouteRenderer({
   route,
   profile,
   spl,
+  connectivity,
+  offlineNamespaceKey,
   openedBook,
   readerRestoreError,
   onCloseReader,
@@ -29,6 +38,8 @@ export function AppLibraryRouteRenderer({
   route: AppRoute | null;
   profile: ConnectionProfile | null;
   spl: SecondPassClient | null;
+  connectivity: BrowserConnectivityStatus;
+  offlineNamespaceKey: string | null;
   openedBook: OpenedBook | null;
   readerRestoreError: string | null;
   onCloseReader: () => void;
@@ -154,6 +165,25 @@ export function AppLibraryRouteRenderer({
   }
 
   if (route?.kind === "library") {
+    if (connectivity === "offline") {
+      return (
+        <div className="libraryScreen">
+          <Suspense fallback={<p className="muted">{`Loading downloaded books${"\u2026"}`}</p>}>
+            <OfflineLibraryPage
+              namespaceKey={offlineNamespaceKey}
+              onOpenReader={(bookId) => {
+                saveReaderReturnTarget(bookId, {
+                  kind: "library",
+                  label: "Library",
+                  route: window.location.hash || "#/library",
+                });
+                navigateTo({ kind: "reader", bookId });
+              }}
+            />
+          </Suspense>
+        </div>
+      );
+    }
     return (
       <div className="libraryScreen">
         <LibraryBrowsePage
