@@ -1,8 +1,13 @@
 .git
 .gitignore
 
-node_modules
+# Install dependencies inside the build stage; never copy host installs or caches.
+**/node_modules
+**/.npm-cache
+
+# Rebuild outputs and incremental compiler state from source.
 **/dist
+**/*.tsbuildinfo
 coverage
 .nyc_output
 
@@ -20,6 +25,7 @@ public/secondpass-servers.json
 
 .vscode
 .idea
+*.code-workspace
 *.swp
 *.swo
 .DS_Store
