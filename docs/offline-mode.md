@@ -93,17 +93,6 @@ snapshot category; publication assets use Book, format, and file-checksum identi
 uses book and session identity; catalog results and contextual tag aggregates use the exact query
 context; scope-level tag endpoints remain separate tag universes.
 
-## Cache Result State
-
-Cached projections use a shared data-oriented state: `missing`, `fresh`, `stale`, `refreshing`, or
-`refreshFailed`. Every non-missing state carries the cached value and its `fetchedAt` time. A
-refresh failure retains that usable value but does not retain raw error details.
-
-This state describes cached projection usability only. Connectivity, authentication, and offline
-book-asset availability remain separate concerns. Initial loading and failure without a cached
-value remain page or query states; they must not be presented as stale cached data. Cache records
-must also retain enough query context to establish which projection was fetched.
-
 ## Publication Asset Availability
 
 Cached Book metadata and cover images do not admit a book to the offline Reader. A stored
