@@ -5,7 +5,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
 COPY packages/secondpass-client/package.json packages/secondpass-client/package.json
-RUN --mount=type=cache,target=/root/.npm npm ci
+COPY patches ./patches
+RUN --mount=type=cache,target=/root/.npm CI=true npm ci
 
 COPY . .
 
