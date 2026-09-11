@@ -25,30 +25,30 @@
     "verify": "npm run hygiene && npm test -- --run && npm run build"
   },
   "dependencies": {
-    "@likecoin/epub-ts": "^0.7.1",
+    "@likecoin/epub-ts": "0.7.1",
     "@noble/hashes": "^2.4.0",
     "@secondpass/client": "workspace:*",
     "@tiptap/extension-list": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
-    "@types/papaparse": "^5.5.2",
-    "dompurify": "^3.4.14",
+    "dompurify": "^3.4.15",
     "fflate": "^0.8.3",
     "material-symbols": "^0.46.0",
-    "papaparse": "^5.6.0",
+    "papaparse": "^5.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@types/papaparse": "5.5.2",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
-    "@vitejs/plugin-react": "6.0.5",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitejs/plugin-react": "6.1.1",
+    "@vitest/coverage-v8": "4.1.11",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
     "patch-package": "8.0.1",
     "typescript": "7.0.2",
-    "vite": "8.2.1",
-    "vitest": "4.1.10"
+    "vite": "8.3.0",
+    "vitest": "4.1.11"
   }
 }
