@@ -78,7 +78,7 @@ export function ReaderActivityHeader({
           {showOfflineStatus ? <div className="spReaderAutosaveLine muted" role="status">Offline - server changes are paused.</div> : null}
         </div>
 
-        <div className="spReaderContextActions" aria-label="Session completion actions">
+        <div className="spReaderContextActions" role="group" aria-label="Session completion actions">
           {showFinishControls ? (
             <button
               type="button"
@@ -91,7 +91,7 @@ export function ReaderActivityHeader({
           ) : null}
         </div>
 
-        <div className="spReaderActions">
+        <div className="spReaderActions" role="toolbar" aria-label="Reader actions">
           <button
             type="button"
             className="button buttonCompact spIconButton"

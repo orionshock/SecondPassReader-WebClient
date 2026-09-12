@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import type { ReaderFontFamily, ReaderLineHeight, ReaderSettings, ReaderTheme, ReaderWidth } from "../../../storage/ReaderSettings.Store";
 import {
@@ -8,6 +8,7 @@ import {
   READER_THEME_OPTIONS,
   READER_WIDTH_OPTIONS,
 } from "./ReaderDisplaySettings.Presenter";
+import { useModalDialogFocus } from "../../../components/ModalDialogFocus.Lifecycle";
 
 export function ReaderDisplaySettingsMenu(props: {
   open: boolean;
@@ -19,18 +20,8 @@ export function ReaderDisplaySettingsMenu(props: {
   onReset?: () => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!props.open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      props.onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [props.onClose, props.open]);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  useModalDialogFocus({ active: props.open, dialogRef: panelRef, initialFocusRef: closeButtonRef, onDismiss: props.onClose });
 
   return (
     <>
@@ -62,12 +53,14 @@ export function ReaderDisplaySettingsMenu(props: {
             className="spReaderSettingsPanel"
             role="dialog"
             aria-modal="true"
-            aria-label="Reader Settings"
+            aria-labelledby="reader-settings-title"
+            tabIndex={-1}
             onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="spReaderSettingsHeader">
-              <div className="spReaderSettingsTitle">Reader Settings</div>
+              <h2 id="reader-settings-title" className="spReaderSettingsTitle">Reader settings</h2>
               <button
+                ref={closeButtonRef}
                 type="button"
                 className="button buttonCompact spIconButton spReaderSettingsCloseButton"
                 onClick={props.onClose}

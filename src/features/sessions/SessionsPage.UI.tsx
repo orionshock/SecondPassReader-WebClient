@@ -131,6 +131,7 @@ export function SessionsPage({
 
   return (
     <section className="panel sessionsPage">
+      <h1 className="srOnly">Reading sessions</h1>
       {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
       {error ? (
         <SessionsLoadErrorNotice error={error} hasBookFilter={Boolean(bookFilter)} />
@@ -143,14 +144,14 @@ export function SessionsPage({
           commitSearch();
         }}
       >
-        <div className="sessionsFilters" role="tablist" aria-label="Session filter">
-          <button type="button" className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("all")}>
+        <div className="sessionsFilters" role="group" aria-label="Session filter">
+          <button type="button" aria-pressed={filter === "all"} className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("all")}>
             All
           </button>
-          <button type="button" className={`sessionsFilter ${filter === "active" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("active")}>
+          <button type="button" aria-pressed={filter === "active"} className={`sessionsFilter ${filter === "active" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("active")}>
             Active
           </button>
-          <button type="button" className={`sessionsFilter ${filter === "closed" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("closed")}>
+          <button type="button" aria-pressed={filter === "closed"} className={`sessionsFilter ${filter === "closed" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("closed")}>
             Closed
           </button>
         </div>

@@ -139,6 +139,14 @@ If no listed suffix accurately describes a genuinely new responsibility, establi
 
 After changing lifecycle-sensitive code, verify that ordinary UI interactions do not reset, blank, disconnect, duplicate network requests from, or recreate the underlying subsystem.
 
+## Accessibility
+
+- Prefer native HTML controls and landmarks. Do not wrap interactive descendants in a custom `role="button"` container.
+- Give icon-only controls an accessible name; decorative icon glyphs and duplicate cover images stay hidden from assistive technology.
+- True modal dialogs must label the dialog, move focus inside, contain Tab focus, support Escape when dismissal is allowed, and restore the opener. Reuse the shared modal-focus lifecycle.
+- Implement the keyboard contract for composite ARIA widgets such as tabs. If the contract is unnecessary, use simpler native list, group, or disclosure semantics.
+- Announce asynchronous errors and meaningful status changes deliberately. Keep routine loading and success updates quiet enough to avoid repeated live-region noise.
+
 ## Temporary-state handoffs
 
 - Each layer owns and cleans up the temporary state it creates.

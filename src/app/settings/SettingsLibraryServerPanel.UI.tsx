@@ -38,7 +38,7 @@ export function SettingsLibraryServerPanel({
   const status = getConnectionStatus(profile);
 
   return (
-    <div className="settingsTabPanel" role="tabpanel" aria-label="Library Server settings">
+    <div className="settingsTabPanel">
       <section className="panel settingsCard">
         <div className="settingsSectionHeader">
           <h2 className="panelTitle">Connected Library</h2>

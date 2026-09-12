@@ -110,7 +110,7 @@
 }
 
 .spReaderImportStatusFilters {
-  min-height: 22px;
+  min-height: 24px;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -120,7 +120,7 @@
 }
 
 .spReaderImportStatusFilter {
-  min-height: 22px;
+  min-height: 24px;
   padding: 1px 3px;
   display: inline-flex;
   align-items: center;
@@ -155,7 +155,7 @@
 }
 
 .spReaderImportStatusFilterShowAll {
-  min-height: 20px;
+  min-height: 24px;
   margin-left: 1px;
   padding-inline: 2px;
   border-color: transparent;

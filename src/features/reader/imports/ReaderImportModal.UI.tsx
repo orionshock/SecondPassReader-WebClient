@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import "./handlers/ReaderImportHandlers.Lifecycle";
 import { getReaderImportHandlers, ReaderImportParseError, type ReaderImportFailureAction } from "./ReaderImportFormats.Registry";
+import { useModalDialogFocus } from "../../../components/ModalDialogFocus.Lifecycle";
 
 export function ReaderImportModal({
   open,
@@ -20,6 +21,9 @@ export function ReaderImportModal({
   const [error, setError] = useState<string | null>(null);
   const [failureAction, setFailureAction] = useState<ReaderImportFailureAction | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  useModalDialogFocus({ active: open, dialogRef, initialFocusRef: closeButtonRef, onDismiss: onClose, dismissDisabled: busy });
 
   if (!open) return null;
 
@@ -27,10 +31,10 @@ export function ReaderImportModal({
   if (!selectedFormat) {
     return (
       <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
-        <section className="spReaderImportModal" role="dialog" aria-modal="true" aria-labelledby="sp-reader-import-title" onPointerDown={(e) => e.stopPropagation()}>
+        <section ref={dialogRef} className="spReaderImportModal" role="dialog" aria-modal="true" aria-labelledby="sp-reader-import-title" tabIndex={-1} onPointerDown={(e) => e.stopPropagation()}>
           <div className="spReaderImportModalHeader">
             <h2 id="sp-reader-import-title">Import marginalia</h2>
-            <button type="button" className="button buttonCompact" onClick={onClose}>Close</button>
+            <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose}>Close</button>
           </div>
           <div className="spReaderImportModalBody">
             <div className="errorText">No import formats are available.</div>
@@ -62,15 +66,17 @@ export function ReaderImportModal({
   return (
     <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
       <section
+        ref={dialogRef}
         className="spReaderImportModal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="sp-reader-import-title"
+        tabIndex={-1}
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="spReaderImportModalHeader">
           <h2 id="sp-reader-import-title">Import marginalia</h2>
-          <button type="button" className="button buttonCompact" onClick={onClose}>Close</button>
+          <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose} disabled={busy}>Close</button>
         </div>
 
         <div className="spReaderImportModalBody">
@@ -79,6 +85,7 @@ export function ReaderImportModal({
             <select
               className="input"
               value={format}
+              aria-describedby="reader-import-format-description"
               onChange={(e) => {
                 setFormat(e.currentTarget.value);
                 setError(null);
@@ -92,7 +99,7 @@ export function ReaderImportModal({
               ))}
             </select>
           </label>
-          <div className="muted spReaderImportWarnings">{selectedFormat.description}</div>
+          <div id="reader-import-format-description" className="muted spReaderImportWarnings">{selectedFormat.description}</div>
 
           <label className="fieldLabel">
             Import file
@@ -100,6 +107,8 @@ export function ReaderImportModal({
               className="input"
               type="file"
               accept={selectedFormat.accept}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "reader-import-error" : undefined}
               onChange={(e) => {
                 setError(null);
                 setFailureAction(null);
@@ -109,7 +118,7 @@ export function ReaderImportModal({
             />
           </label>
 
-          {error ? <div className="errorText">{error}</div> : null}
+          {error ? <div id="reader-import-error" className="errorText" role="alert">{error}</div> : null}
           {failureAction ? (
             <button type="button" className="button buttonCompact" onClick={() => onParseAction(failureAction)}>
               {failureAction.label}

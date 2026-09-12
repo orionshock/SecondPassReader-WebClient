@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import { InlineMeta } from "../../../components/Metadata.UI";
+import { useModalDialogFocus } from "../../../components/ModalDialogFocus.Lifecycle";
 
 export type MarginaliaLayerSummary = {
   sessionId: string;
@@ -29,22 +30,13 @@ export function MarginaliaMenu(props: {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [panelPos, setPanelPos] = useState<{ offsetX: number; placement: "above" | "below" }>({
     offsetX: 0,
     placement: "below",
   });
 
-  useEffect(() => {
-    if (!props.open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      props.onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [props.onClose, props.open]);
+  useModalDialogFocus({ active: props.open, dialogRef: panelRef, initialFocusRef: closeButtonRef, onDismiss: props.onClose });
 
   useLayoutEffect(() => {
     if (!props.open) return;
@@ -149,12 +141,14 @@ export function MarginaliaMenu(props: {
             style={panelPos.offsetX ? { transform: `translateX(${panelPos.offsetX}px)` } : undefined}
             role="dialog"
             aria-modal="true"
-            aria-label="Marginalia"
+            aria-labelledby="reader-marginalia-title"
+            tabIndex={-1}
             onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="spMarginaliaMenuHeader">
-              <div className="spMarginaliaMenuTitle">Marginalia</div>
+              <h2 id="reader-marginalia-title" className="spMarginaliaMenuTitle">Marginalia</h2>
               <button
+                ref={closeButtonRef}
                 type="button"
                 className="button buttonCompact spIconButton spMarginaliaMenuCloseButton"
                 onClick={props.onClose}

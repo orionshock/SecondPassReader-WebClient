@@ -92,7 +92,7 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
   if (!active) return null;
 
   return (
-    <div className="settingsTabPanel" role="tabpanel" aria-label="Tools settings">
+    <div className="settingsTabPanel">
       <section className="panel settingsCard settingsMaintenance">
         <div className="settingsSectionHeader">
           <h2 className="panelTitle">Marginalia export splitter</h2>

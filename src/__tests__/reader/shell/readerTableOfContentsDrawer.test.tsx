@@ -70,11 +70,12 @@ describe("TableOfContentsDrawer", () => {
     renderDrawer({ currentHref: "OPS/Text/chapter.xhtml#detail", onPickItem });
 
     const search = container.querySelector('[aria-label="Search table of contents"]');
-    const nestedList = container.querySelector('.spTocListNested[role="group"]');
+    const nestedList = container.querySelector(".spTocListNested");
     const current = container.querySelector<HTMLButtonElement>('[aria-current="location"]');
 
     expect(document.activeElement).toBe(search);
     expect(nestedList?.textContent).toContain("Chapter One");
+    expect(container.querySelector('[role="tree"]')).toBeNull();
     expect(current?.textContent).toBe("Chapter Detail");
     expect(current?.tagName).toBe("BUTTON");
 

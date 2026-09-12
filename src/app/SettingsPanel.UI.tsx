@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { ApiError } from "@secondpass/client";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
@@ -48,6 +48,28 @@ export function SettingsPanel({
 }: Props) {
   const [state, setState] = useState<SettingsLibraryServerActionState>({ phase: "idle" });
   const activeTab = route.tab ?? "appearance";
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const tabs: Array<{ value: SettingsTab; label: string }> = [
+    { value: "appearance", label: "Appearance" },
+    { value: "offline", label: "Offline" },
+    { value: "library-server", label: "Library Server" },
+    { value: "tools", label: "Tools" },
+  ];
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    const buttons = Array.from(tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? []);
+    const currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    const nextIndex = event.key === "Home" ? 0
+      : event.key === "End" ? buttons.length - 1
+        : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+    const nextTab = tabs[nextIndex];
+    if (!nextTab) return;
+    navigateTo({ kind: "settings", tab: nextTab.value });
+    buttons[nextIndex]?.focus();
+  }
 
   async function checkConnection() {
     if (!profile) return;
@@ -161,19 +183,17 @@ export function SettingsPanel({
         <h1 className="settingsTitle">Settings</h1>
       </section>
 
-      <div className="segmentedControl settingsTabs" role="tablist" aria-label="Settings sections">
-        {([
-          { value: "appearance", label: "Appearance" },
-          { value: "offline", label: "Offline" },
-          { value: "library-server", label: "Library Server" },
-          { value: "tools", label: "Tools" },
-        ] as Array<{ value: SettingsTab; label: string }>).map((tab) => (
+      <div ref={tabListRef} className="segmentedControl settingsTabs" role="tablist" aria-label="Settings sections" onKeyDown={handleTabKeyDown}>
+        {tabs.map((tab) => (
           <button
             key={tab.value}
             type="button"
             className={`segmentedButton${activeTab === tab.value ? " segmentedButtonActive" : ""}`}
             role="tab"
             aria-selected={activeTab === tab.value}
+            aria-controls="settings-active-panel"
+            id={`settings-${tab.value}-tab`}
+            tabIndex={activeTab === tab.value ? 0 : -1}
             onClick={() => navigateTo({ kind: "settings", tab: tab.value })}
           >
             {tab.label}
@@ -181,36 +201,35 @@ export function SettingsPanel({
         ))}
       </div>
 
-      {activeTab === "appearance" ? (
-        <SettingsAppearancePanel appTheme={appTheme} onAppThemeChange={onAppThemeChange} />
-      ) : null}
-
-      {activeTab === "library-server" ? (
-        <SettingsLibraryServerPanel
-          profile={profile}
-          state={state}
-          busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "forgetting"}
-          onConnect={() => navigateTo({ kind: "connect" })}
-          onCheckConnection={() => void checkConnection()}
-          onLogOut={() => void logOut()}
-          onSignOutLocally={onDisconnect}
-          onRepairConnection={onRepairConnection}
-          onForgetLocally={() => void forgetConnection()}
-          serverActionsAvailable={connectivity !== "offline"}
-        />
-      ) : null}
-
-      {activeTab === "offline" ? (
-        <OfflineSettingsPanel
-          namespaceKey={offlineNamespaceKey}
-          client={offlineSyncClient}
-          selectedBookId={route.bookId ?? null}
-          onSelectBook={(bookId) => navigateTo({ kind: "settings", tab: "offline", bookId })}
-          onOpenReader={(bookId) => navigateTo({ kind: "reader", bookId })}
-        />
-      ) : null}
-
-      <SettingsToolsPanel active={activeTab === "tools"} />
+      <div id="settings-active-panel" role="tabpanel" aria-labelledby={`settings-${activeTab}-tab`} tabIndex={0}>
+        {activeTab === "appearance" ? (
+          <SettingsAppearancePanel appTheme={appTheme} onAppThemeChange={onAppThemeChange} />
+        ) : null}
+        {activeTab === "library-server" ? (
+          <SettingsLibraryServerPanel
+            profile={profile}
+            state={state}
+            busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "forgetting"}
+            onConnect={() => navigateTo({ kind: "connect" })}
+            onCheckConnection={() => void checkConnection()}
+            onLogOut={() => void logOut()}
+            onSignOutLocally={onDisconnect}
+            onRepairConnection={onRepairConnection}
+            onForgetLocally={() => void forgetConnection()}
+            serverActionsAvailable={connectivity !== "offline"}
+          />
+        ) : null}
+        {activeTab === "offline" ? (
+          <OfflineSettingsPanel
+            namespaceKey={offlineNamespaceKey}
+            client={offlineSyncClient}
+            selectedBookId={route.bookId ?? null}
+            onSelectBook={(bookId) => navigateTo({ kind: "settings", tab: "offline", bookId })}
+            onOpenReader={(bookId) => navigateTo({ kind: "reader", bookId })}
+          />
+        ) : null}
+        <SettingsToolsPanel active={activeTab === "tools"} />
+      </div>
     </div>
   );
 }

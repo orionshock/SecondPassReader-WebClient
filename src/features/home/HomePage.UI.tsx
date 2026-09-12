@@ -21,7 +21,7 @@ export function HomePage({
 
   return (
     <section className="panel">
-      <h2 className="panelTitle">Home</h2>
+      <h1 className="panelTitle">Home</h1>
 
       {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
       {status === "configured" ? <p className="muted">Link this profile before loading the library.</p> : null}

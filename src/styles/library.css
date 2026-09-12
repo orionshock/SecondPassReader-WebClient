@@ -408,6 +408,11 @@
   text-align: left;
   cursor: pointer;
   font: inherit;
+  border: 0;
+  padding: 4px;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
 }
 
 .libraryEntityCardButton:hover {
@@ -608,6 +613,32 @@
   grid-template-columns: 44px 1fr auto;
   gap: 12px;
   align-items: start;
+}
+
+.bookListRowWithActions {
+  grid-template-columns: minmax(0, 1fr) auto;
+  cursor: default;
+}
+
+.bookListRowOpenButton {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  border: 0;
+  border-radius: 8px;
+  padding: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bookListRowOpenButton:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: 2px;
 }
 
 .bookGridCard {

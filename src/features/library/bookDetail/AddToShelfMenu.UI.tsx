@@ -92,8 +92,8 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
         if (event.currentTarget.open && targets === null && !busy) void load();
       }}
     >
-      <summary ref={triggerRef} className="button bookDetailShelfTrigger" aria-haspopup="menu" aria-expanded={open}>Add to shelf</summary>
-      <div className="bookDetailShelfPopover" role="menu" aria-label="Add to personal shelf">
+      <summary ref={triggerRef} className="button bookDetailShelfTrigger" aria-expanded={open}>Add to shelf</summary>
+      <div className="bookDetailShelfPopover" role="group" aria-label="Add to personal shelf">
         <div className="bookDetailShelfTitle" aria-hidden="true">Add to personal shelf</div>
         {busy && targets === null ? <div className="bookDetailShelfStatus muted">Loading...</div> : null}
         {targets?.length ? (
@@ -105,7 +105,6 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
                 <button
                   key={shelfId}
                   type="button"
-                  role="menuitem"
                   className="bookDetailShelfRow"
                   disabled={shelf.added || adding}
                   onClick={() => void addToShelf(shelfId)}
@@ -121,7 +120,7 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
         ) : null}
         {!busy && targets?.length === 0 ? <div className="bookDetailShelfStatus muted">No personal shelves available.</div> : null}
         {error ? <div className="bookDetailShelfStatus errorText">{error}</div> : null}
-        <button type="button" role="menuitem" className="bookDetailManageShelves" onClick={onManageShelves}>Manage shelves</button>
+        <button type="button" className="bookDetailManageShelves" onClick={onManageShelves}>Manage shelves</button>
       </div>
     </details>
   );

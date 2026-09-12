@@ -92,6 +92,17 @@ function AppShell() {
   );
 
   const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const pageFocusKey = view === "settings"
+    ? "settings"
+    : `${workflowStep}:${route?.kind ?? ""}:${route?.kind === "reader" ? route.bookId : route?.kind === "session" ? route.sessionId : route?.kind === "shelf" || route?.kind === "shelfEdit" ? route.shelfId : ""}`;
+  const previousPageFocusKeyRef = useRef(pageFocusKey);
+
+  useEffect(() => {
+    if (previousPageFocusKeyRef.current === pageFocusKey) return;
+    previousPageFocusKeyRef.current = pageFocusKey;
+    mainRef.current?.focus();
+  }, [pageFocusKey]);
 
   useEffect(() => {
     const nextIdentity = `${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`;
@@ -326,7 +337,7 @@ function AppShell() {
 
       {workflowStep === "library_home" ? <OfflineReaderSyncNoticePanel /> : null}
 
-      <main className="appMain">
+      <main ref={mainRef} className="appMain" tabIndex={-1}>
         {view === "settings" ? (
           <Suspense
             fallback={(
@@ -372,7 +383,7 @@ function AppShell() {
 
             {workflowStep === "verify_connection" ? (
               <section className="panel workflowPanel">
-                <h2 className="panelTitle">Verify connection</h2>
+                <h1 className="panelTitle">Verify connection</h1>
                 <ServerSummary profile={selectedProfile} />
                 <ClientApiVerification
                   selectedProfileId={selectedProfileId}

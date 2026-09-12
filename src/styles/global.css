@@ -147,3 +147,30 @@ body {
 .serverRichText li + li {
   margin-top: 0.25em;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+
+  .spAnnotationSwatch {
+    forced-color-adjust: none;
+    border-color: ButtonText;
+  }
+
+  .spAnnotationSwatchActive {
+    outline: 3px solid Highlight !important;
+  }
+}

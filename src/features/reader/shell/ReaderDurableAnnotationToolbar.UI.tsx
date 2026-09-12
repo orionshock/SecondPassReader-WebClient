@@ -120,6 +120,8 @@ export function DurableAnnotationToolbar({
                 className={`spAnnotationSwatch ${colorDraft === token ? "spAnnotationSwatchActive" : ""}`}
                 onClick={() => setColorDraft(token)}
                 aria-label={`Color ${token}`}
+                role="radio"
+                aria-checked={colorDraft === token}
                 title={token}
                 disabled={isBusy}
                 style={{ ["--swatch-color" as any]: toAnnotationCssVars(token).color }}

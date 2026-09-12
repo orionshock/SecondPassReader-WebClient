@@ -41,12 +41,12 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
 
   return (
     <details className="libraryScopeControl" ref={detailsRef} onKeyDown={handleKeyDown} onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary ref={triggerRef} className="libraryScopeTrigger" aria-label={`Library scope: ${selectedName}`} aria-haspopup="menu" aria-expanded={open} title="Library scope">
+      <summary ref={triggerRef} className="libraryScopeTrigger" aria-label={`Library scope: ${selectedName}`} aria-expanded={open} title="Library scope">
         <MaterialIcon name={selectedIcon} className={selectedGroup?.isPublicGroup === true ? "libraryScopePublicIcon" : undefined} />
         <span>{selectedName}</span>
         <MaterialIcon name="expand_more" className="libraryScopeChevron" />
       </summary>
-      <div className="libraryScopeMenu" role="menu" aria-label="Library scope">
+      <div className="libraryScopeMenu" role="group" aria-label="Library scope">
         <button type="button" role="menuitemradio" aria-checked={!groupId} className="libraryScopeOption" onClick={() => select(undefined)}>
           <MaterialIcon name="library_books" /><span>All Library</span>
         </button>

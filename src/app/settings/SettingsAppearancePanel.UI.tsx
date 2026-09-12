@@ -8,7 +8,7 @@ export function SettingsAppearancePanel({
   onAppThemeChange: (theme: AppTheme) => void;
 }) {
   return (
-    <section className="panel settingsCard" role="tabpanel" aria-label="Appearance settings">
+    <section className="panel settingsCard">
       <div className="settingsSectionHeader">
         <h2 className="panelTitle">Appearance</h2>
       </div>

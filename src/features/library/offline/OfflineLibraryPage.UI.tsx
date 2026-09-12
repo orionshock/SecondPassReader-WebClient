@@ -26,7 +26,7 @@ export function OfflineLibraryPage({
     <section className="panel offlineLibraryPanel" aria-labelledby="offline-library-title">
       <div className="offlineLibraryHeader">
         <div>
-          <h2 id="offline-library-title" className="panelTitle">Library</h2>
+          <h1 id="offline-library-title" className="panelTitle">Library</h1>
           <p className="muted">Showing books available on this device.</p>
         </div>
         <label className="offlineLibrarySearch">
@@ -43,7 +43,7 @@ export function OfflineLibraryPage({
 
       {state.books.length === 0 ? (
         <div className="emptyState">
-          <h3>No books are available offline.</h3>
+          <h2>No books are available offline.</h2>
           <p className="muted">When online, use Make available offline from a book to keep it on this device.</p>
         </div>
       ) : state.visibleBooks.length === 0 ? (

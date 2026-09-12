@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
@@ -10,6 +10,7 @@ import { createPersonalShelfInput, ShelfForm, type ShelfFormValues } from "./She
 import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
+import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
 
 type ShelfOrdering = "name" | "-item_count";
 
@@ -80,6 +81,18 @@ export function ShelvesPage({
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const loadRequestSeq = useRef(0);
+  const createDialogRef = useRef<HTMLElement | null>(null);
+  const createDialogCloseRef = useRef<HTMLButtonElement | null>(null);
+  useModalDialogFocus({
+    active: createOpen,
+    dialogRef: createDialogRef,
+    initialFocusRef: createDialogCloseRef,
+    onDismiss: () => {
+      setCreateOpen(false);
+      setMutationError(null);
+    },
+    dismissDisabled: mutationBusy,
+  });
 
   const load = useCallback(async () => {
     if (!spl) return;
@@ -149,12 +162,6 @@ export function ShelvesPage({
     }
   }, [load, spl]);
 
-  const handleCardKeyDown = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    action();
-  }, []);
-
   const renderShelf = useCallback((shelf: Shelf) => {
     const canEdit = canEditShelf(shelf);
     const menuOpen = menuShelfId === shelf.id;
@@ -162,20 +169,14 @@ export function ShelvesPage({
     return (
       <div
         key={shelf.id}
-        className="shelfCard shelfCardButton"
-        role="button"
-        tabIndex={0}
-        onClick={openShelf}
-        onKeyDown={(event) => handleCardKeyDown(event, openShelf)}
-        aria-label={`Open shelf ${shelf.name}`}
-        title={`Open shelf ${shelf.name}`}
+        className="shelfCard"
       >
-        <div className="shelfCardMain">
-          <div className="shelfCardTitle">{shelf.name}</div>
-          <div className="muted">
+        <button type="button" className="shelfCardMain shelfCardButton" onClick={openShelf} aria-label={`Open shelf ${shelf.name}`}>
+          <span className="shelfCardTitle">{shelf.name}</span>
+          <span className="muted">
             <ShelfMetaLine shelf={shelf} />
-          </div>
-        </div>
+          </span>
+        </button>
         <div className="shelfCardRight">
           <PreviewBookCoverStack
             previewBooks={normalizePreviewBooks(shelf.preview_books)}
@@ -201,7 +202,7 @@ export function ShelvesPage({
                   <MaterialIcon name="more_vert" />
                 </button>
                 {menuOpen ? (
-                  <div className="shelfOverflowMenu" role="menu">
+                  <div className="shelfOverflowMenu" role="group" aria-label={`Actions for ${shelf.name}`}>
                     <button
                       type="button"
                       className="shelfOverflowItem"
@@ -210,7 +211,6 @@ export function ShelvesPage({
                         navigateTo({ kind: "shelfEdit", shelfId: shelf.id });
                       }}
                       disabled={mutationBusy}
-                      role="menuitem"
                     >
                       <MaterialIcon name="edit" />
                       Edit
@@ -220,7 +220,6 @@ export function ShelvesPage({
                       className="shelfOverflowItem shelfOverflowItemDanger"
                       onClick={() => void handleDelete(shelf)}
                       disabled={mutationBusy}
-                      role="menuitem"
                     >
                       <MaterialIcon name="delete" />
                       Delete
@@ -233,14 +232,14 @@ export function ShelvesPage({
         </div>
       </div>
     );
-  }, [handleCardKeyDown, handleDelete, menuShelfId, mutationBusy, profile]);
+  }, [handleDelete, menuShelfId, mutationBusy, profile]);
 
   const formOpen = createOpen;
 
   return (
     <section className="panel shelvesSection">
       <div className="panelHeaderRow">
-        <h2 className="panelTitle">Shelves</h2>
+        <h1 className="panelTitle">Shelves</h1>
         <div className="shelfHeaderControls">
           {canLoad ? (
             <>
@@ -290,12 +289,13 @@ export function ShelvesPage({
             }
           }}
         >
-          <section className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-form-title">
+          <section ref={createDialogRef} className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-form-title" tabIndex={-1}>
             <div className="modalHeaderRow">
               <div className="modalTitle" id="shelf-form-title">
                 Create personal shelf
               </div>
               <button
+                ref={createDialogCloseRef}
                 type="button"
                 className="button buttonCompact shelfIconButton"
                 onClick={() => {
@@ -335,17 +335,17 @@ export function ShelvesPage({
       {data ? (
         <div className="shelfList">
           <div>
-            <h3 className="panelTitle" style={{ margin: "6px 0 8px" }}>
+            <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
               My shelves
-            </h3>
+            </h2>
             {data.personal.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
             {data.personal.map(renderShelf)}
           </div>
 
           <div>
-            <h3 className="panelTitle" style={{ margin: "6px 0 8px" }}>
+            <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
               Shared shelves
-            </h3>
+            </h2>
             {data.shared.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
             {data.shared.map(renderShelf)}
           </div>

@@ -106,8 +106,6 @@ function ReaderImportDrawerFallback({ onClose }: { onClose: () => void }) {
   return (
     <aside
       className="spReaderImportDrawer"
-      role="dialog"
-      aria-modal="false"
       aria-labelledby="sp-reader-import-drawer-loading-title"
     >
       <div className="spReaderImportDrawerHeader">

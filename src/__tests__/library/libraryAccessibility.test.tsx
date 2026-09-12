@@ -7,6 +7,8 @@ import { LibraryScopeSelect } from "../../features/library/libraryScope/LibraryS
 import { CatalogTagRail } from "../../features/library/catalogTags/CatalogTagRail.UI";
 import { BookDetailModal } from "../../features/library/BookDetailModal.UI";
 import { AddToShelfMenu } from "../../features/library/bookDetail/AddToShelfMenu.UI";
+import { LibraryAuthorRows } from "../../features/library/results/LibraryAuthorRows.UI";
+import { BookListRow } from "../../features/library/display/BookListRow.UI";
 
 vi.mock("../../features/library/catalogTags/CatalogTags.Controller", () => ({
   useCatalogTags: () => ({
@@ -90,12 +92,44 @@ describe("Library accessibility semantics", () => {
     expect(html).toContain('aria-label="Close book details"');
   });
 
-  it("exposes add-to-shelf menu state", () => {
+  it("exposes add-to-shelf disclosure state without claiming menu keyboard behavior", () => {
     const html = renderToStaticMarkup(
       <AddToShelfMenu spl={{} as SecondPassClient} bookId="7" onManageShelves={noop} />,
     );
-    expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('role="menu"');
+    expect(html).toContain('role="group"');
+    expect(html).not.toContain('role="menu"');
+  });
+
+  it("keeps entity and preview-book actions as separate native controls", () => {
+    const html = renderToStaticMarkup(
+      <LibraryAuthorRows
+        data={{ count: 1, next: null, previous: null, results: [{ id: "a1", name: "Octavia Butler", bookCount: 1, previewBooks: [{ id: "b1", title: "Kindred", coverUrl: null }] }] } as never}
+        busy={false}
+        error={null}
+        page={1}
+        profile={null}
+        onSelectAuthor={noop}
+        onViewBook={noop}
+        onPageChange={noop}
+      />,
+    );
+    expect(html).not.toContain('role="button"');
+    expect(html).toContain('<button type="button" class="libraryEntityMain libraryEntityCardButton"');
+    expect(html).toContain('aria-label="View details for Kindred"');
+  });
+
+  it("does not nest row actions inside a custom button", () => {
+    const html = renderToStaticMarkup(
+      <BookListRow
+        book={{ id: "b1", title: "Kindred" } as CompactBook}
+        selected={false}
+        onView={noop}
+        actions={<button type="button">Remove</button>}
+      />,
+    );
+    expect(html).not.toContain('role="button"');
+    expect(html).toContain('class="bookListRowOpenButton"');
+    expect(html).toContain(">Remove</button>");
   });
 });

@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { CloseSessionDialog, type CloseSessionAfterOption, type CloseSessionInput } from "../../sessions/CloseSessionDialog.UI";
 import { EndOfBookDialog } from "../ReaderEndOfBookDialog.UI";
 import type { ReaderImportFailureAction } from "../imports/ReaderImportFormats.Registry";
 import { BookSearchDrawer } from "../shell/bookSearch/ReaderBookSearchDrawer.UI";
 import type { ReaderActivityRenderState } from "./ReaderActivity.Types";
+import { useModalDialogFocus } from "../../../components/ModalDialogFocus.Lifecycle";
 
 const ReaderImportModal = lazy(async () => {
   const module = await import("../imports/ReaderImportModal.UI");
@@ -131,18 +132,24 @@ export function ReaderActivityDialogs({
 }
 
 function ReaderImportModalFallback({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  useModalDialogFocus({ active: true, dialogRef, initialFocusRef: closeButtonRef, onDismiss: onClose });
+
   return (
     <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
       <section
+        ref={dialogRef}
         className="spReaderImportModal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="sp-reader-import-loading-title"
+        tabIndex={-1}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <div className="spReaderImportModalHeader">
           <h2 id="sp-reader-import-loading-title">Import marginalia</h2>
-          <button type="button" className="button buttonCompact" onClick={onClose}>Close</button>
+          <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose}>Close</button>
         </div>
         <div className="spReaderImportModalBody">
           <p className="muted">{`Loading import tools${"\u2026"}`}</p>

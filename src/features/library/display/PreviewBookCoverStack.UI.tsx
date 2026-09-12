@@ -33,7 +33,7 @@ export function PreviewBookCoverStack({
           <img
             className="previewBookCoverImage"
             src={coverSrc}
-            alt={decorative ? "" : book.title}
+            alt={decorative || Boolean(onBookClick) ? "" : book.title}
             title={book.title}
             loading="lazy"
             onError={() => {
@@ -45,7 +45,7 @@ export function PreviewBookCoverStack({
             }}
           />
         ) : (
-          <span className="previewBookCoverPlaceholder" aria-label={decorative ? undefined : `${book.title} has no cover`}>
+          <span className="previewBookCoverPlaceholder" aria-hidden={decorative || Boolean(onBookClick) ? "true" : undefined} aria-label={decorative || onBookClick ? undefined : `${book.title} has no cover`}>
             No cover
           </span>
         );

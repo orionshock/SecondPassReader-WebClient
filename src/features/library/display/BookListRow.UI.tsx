@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { BookCover } from "./BookCover.UI";
 import { formatBookAuthors, formatBookSeries } from "./BookDisplay.Presenter";
@@ -44,23 +44,11 @@ export function BookListRow({
   );
 
   if (actions) {
-    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      onView();
-    };
-
     return (
-      <div
-        className={rowClassName}
-        role="button"
-        tabIndex={0}
-        onClick={onView}
-        onKeyDown={handleKeyDown}
-        aria-label={accessibleLabel}
-        title={accessibleLabel}
-      >
-        {mainContent}
+      <div className={`${rowClassName} bookListRowWithActions`}>
+        <button type="button" className="bookListRowOpenButton" onClick={onView} aria-label={accessibleLabel} title={accessibleLabel}>
+          {mainContent}
+        </button>
         <div className="bookDisplayActions">{actions}</div>
       </div>
     );

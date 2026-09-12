@@ -89,8 +89,6 @@ export function ReaderImportDrawer({
   return (
     <aside
       className="spReaderImportDrawer"
-      role="dialog"
-      aria-modal="false"
       aria-labelledby="sp-reader-import-drawer-title"
     >
       <div className="spReaderImportDrawerHeader">
@@ -99,7 +97,7 @@ export function ReaderImportDrawer({
           <ReaderImportDrawerHeaderActions onHide={onClose} onClear={onClear} />
         </div>
         <div className="spReaderImportFileName">{job.fileName}</div>
-        <div className="spReaderImportStatusFilters" aria-label="Filter import rows by status">
+        <div className="spReaderImportStatusFilters" role="group" aria-label="Filter import rows by status">
           {READER_IMPORT_STATUS_GROUPS.map((group) => (
             <button
               key={group}

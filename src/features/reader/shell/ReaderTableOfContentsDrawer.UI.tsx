@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ReaderTocItem } from "../domain/ReaderDomain.Types";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import {
@@ -7,6 +7,7 @@ import {
   getTocItemKey,
   type FilteredTocItem,
 } from "./ReaderTableOfContents.Presenter";
+import { useModalDialogFocus } from "../../../components/ModalDialogFocus.Lifecycle";
 
 function TocTree({
   items,
@@ -20,17 +21,13 @@ function TocTree({
   onPick: (item: ReaderTocItem) => void;
 }) {
   return (
-    <ul
-      className={depth === 0 ? "spTocList spTocListRoot" : "spTocList spTocListNested"}
-      role={depth === 0 ? "tree" : "group"}
-      aria-label={depth === 0 ? "Table of contents" : undefined}
-    >
+    <ul className={depth === 0 ? "spTocList spTocListRoot" : "spTocList spTocListNested"}>
       {items.map((item) => {
         const key = getTocItemKey(item);
         const hasChildren = Boolean(item.children && item.children.length > 0);
         const isCurrent = key === currentItemKey;
         return (
-          <li key={key} className="spTocItem" role="treeitem" aria-expanded={hasChildren ? true : undefined}>
+          <li key={key} className="spTocItem">
             <button
               type="button"
               className={`spTocItemButton${isCurrent ? " spTocItemButtonCurrent" : ""}`}
@@ -73,22 +70,7 @@ export function TableOfContentsDrawer({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    searchInputRef.current?.focus();
-  }, [open]);
+  useModalDialogFocus({ active: open, dialogRef: panelRef, initialFocusRef: searchInputRef, onDismiss: onClose });
 
   const filtered = useMemo(() => {
     if (!toc || toc.length === 0) return [];
@@ -121,7 +103,8 @@ export function TableOfContentsDrawer({
         className="spTocDrawer"
         role="dialog"
         aria-modal="true"
-        aria-label="Table of Contents"
+        aria-labelledby="sp-toc-drawer-title"
+        tabIndex={-1}
         onPointerDown={(e) => {
           // Prevent click-away handler from firing while keeping default behavior
           // for interactive controls within the drawer (focus, text selection).
@@ -129,7 +112,7 @@ export function TableOfContentsDrawer({
         }}
       >
         <div className="spTocDrawerHeader">
-          <div className="spTocDrawerTitle">Table of Contents</div>
+          <h2 id="sp-toc-drawer-title" className="spTocDrawerTitle">Table of contents</h2>
           <button
             type="button"
             className="button buttonCompact spTocDrawerCloseButton"

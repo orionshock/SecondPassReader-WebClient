@@ -24,7 +24,7 @@ export function OfflineHomePage({
     <section className="panel offlineHomePanel">
       <div className="panelHeaderRow">
         <div>
-          <h2 className="panelTitle">Home</h2>
+          <h1 className="panelTitle">Home</h1>
           <p className="muted offlineHomeContext">Showing saved recent activity from this device.</p>
         </div>
         <button type="button" className="button buttonCompact" onClick={onOpenLibrary}>Offline Library</button>
@@ -32,7 +32,7 @@ export function OfflineHomePage({
 
       {!hasContent ? (
         <div className="emptyState">
-          <h3>Home is not available offline yet.</h3>
+          <h2>Home is not available offline yet.</h2>
           <p className="muted">Books saved for offline reading are available in Library.</p>
           <button type="button" className="button buttonPrimary" onClick={onOpenLibrary}>Open Offline Library</button>
         </div>
@@ -41,7 +41,7 @@ export function OfflineHomePage({
       {state.recent.status === "available" ? (
         <section className="recentReadingSection" aria-labelledby="offline-home-recent-title">
           <div className="panelHeaderRow recentReadingHeader">
-            <h3 id="offline-home-recent-title" className="panelTitle offlineHomeSectionTitle">Recent History</h3>
+            <h2 id="offline-home-recent-title" className="panelTitle offlineHomeSectionTitle">Recent History</h2>
             <span className="muted">Saved preview</span>
           </div>
           {state.recent.items.length === 0 ? <p className="muted">No recent reading in the saved preview.</p> : (
@@ -74,7 +74,7 @@ export function OfflineHomePage({
       {state.shelves.status === "available" ? (
         <section className="shelfPreviewSection" aria-labelledby="offline-home-shelves-title">
           <div className="panelHeaderRow">
-            <h3 id="offline-home-shelves-title" className="panelTitle offlineHomeSectionTitle">Shelves</h3>
+            <h2 id="offline-home-shelves-title" className="panelTitle offlineHomeSectionTitle">Shelves</h2>
             <span className="muted">Saved preview {"\u00b7"} Read only</span>
           </div>
           {state.shelves.items.length === 0 ? <p className="muted">No shelves in the saved preview.</p> : (

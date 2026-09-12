@@ -68,6 +68,8 @@ export function CurrentAnnotationCardHighlightEditor({
               className={`spAnnotationSwatch ${draftColor === token ? "spAnnotationSwatchActive" : ""}`}
               onClick={() => onColorChange(token)}
               aria-label={`Color ${token}`}
+              role="radio"
+              aria-checked={draftColor === token}
               title={token}
               disabled={editStatus === "saving"}
               style={{ ["--swatch-color" as any]: toAnnotationCssVars(token).color }}

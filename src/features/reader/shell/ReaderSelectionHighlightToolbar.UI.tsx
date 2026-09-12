@@ -57,9 +57,9 @@ export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps)
   if (!props.open) return null;
 
   return (
-    <div ref={toolbarRef} className="spSelectionToolbar" style={style} role="dialog" aria-label="Highlight selection">
+    <div ref={toolbarRef} className="spSelectionToolbar" style={style} role="toolbar" aria-label="Highlight selection">
       <div className="spSelectionToolbarRow">
-        <div className="spSelectionToolbarChips" aria-label="Highlight color">
+        <div className="spSelectionToolbarChips" role="group" aria-label="Highlight color">
           {ANNOTATION_COLOR_TOKENS.map((token) => {
             const vars = toAnnotationCssVars(token);
             const active = props.color === token;
@@ -70,6 +70,7 @@ export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps)
                 className={`spAnnotationSwatch ${active ? "spAnnotationSwatchActive" : ""}`}
                 onClick={() => props.onPickColorAndCommit(token)}
                 aria-label={`Highlight ${token}`}
+                aria-pressed={active}
                 title={`Highlight ${token}`}
                 disabled={Boolean(props.busy)}
                 style={{ ["--swatch-color" as any]: vars.color }}

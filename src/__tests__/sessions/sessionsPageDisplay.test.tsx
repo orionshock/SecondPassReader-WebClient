@@ -46,5 +46,8 @@ describe("Sessions page display", () => {
     expect(container.textContent).toContain("Unnamed Session 5a7445");
     expect(container.innerHTML).not.toContain(rawSessionId);
     expect(container.querySelector('[aria-label="Manage Unnamed Session 5a7445"]')).not.toBeNull();
+    expect(container.querySelector('[role="group"][aria-label="Session filter"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-pressed="true"]')?.textContent).toBe("All");
+    expect(container.querySelector("h1")?.textContent).toBe("Reading sessions");
   });
 });

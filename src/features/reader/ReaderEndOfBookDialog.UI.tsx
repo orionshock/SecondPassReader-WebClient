@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useRef } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../library/BookCover.Mapper";
 import { formatSeriesIndex } from "../library/SeriesMetadata.Presenter";
+import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
 
 export function EndOfBookDialog({
   nextBook,
@@ -26,16 +27,9 @@ export function EndOfBookDialog({
 }) {
   const seriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.seriesIndex) : null;
   const coverSrc = getBookCoverUrl(nextBook, coverBase);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      onKeepReading();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onKeepReading]);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const keepReadingRef = useRef<HTMLButtonElement | null>(null);
+  useModalDialogFocus({ active: true, dialogRef, initialFocusRef: keepReadingRef, onDismiss: onKeepReading });
 
   return (
     <div
@@ -45,7 +39,7 @@ export function EndOfBookDialog({
         if (event.target === event.currentTarget) onKeepReading();
       }}
     >
-      <section className="endBookDialog" role="dialog" aria-modal="true" aria-labelledby="end-book-title">
+      <section ref={dialogRef} className="endBookDialog" role="dialog" aria-modal="true" aria-labelledby="end-book-title" tabIndex={-1}>
         <div className="endBookHeader">
           <h2 id="end-book-title" className="endBookTitle">You reached the end</h2>
         </div>
@@ -80,7 +74,7 @@ export function EndOfBookDialog({
         </div>
 
         <div className="endBookActions">
-          <button type="button" className="button" onClick={onKeepReading}>
+          <button ref={keepReadingRef} type="button" className="button" onClick={onKeepReading}>
             Keep reading
           </button>
           {onGoToLibrary ? (

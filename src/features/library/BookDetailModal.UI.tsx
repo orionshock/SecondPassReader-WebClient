@@ -4,6 +4,7 @@ import type { BookDetail, CompactBook, MarginaliaBookSummary, SecondPassClient }
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { BookDetailPanel } from "./BookDetailPanel.UI";
 import { useBookOfflineAvailabilityController } from "./bookDetail/BookOfflineAvailability.Controller";
+import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
 
 export function BookDetailModal({
   profile,
@@ -50,14 +51,9 @@ export function BookDetailModal({
   const fetchSeqRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
   const offlineAvailability = useBookOfflineAvailabilityController({ profile, book, spl });
 
-  useEffect(() => {
-    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeButtonRef.current?.focus();
-    return () => openerRef.current?.focus();
-  }, []);
+  useModalDialogFocus({ active: true, dialogRef, initialFocusRef: closeButtonRef, onDismiss: onClose });
 
   useEffect(() => {
     setBook(null);
@@ -65,36 +61,6 @@ export function BookDetailModal({
     setActivitySummaryFailed(false);
     setError(null);
   }, [bookId, initialBook]);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])',
-      ) ?? []).filter((element) => !element.hasAttribute("hidden"));
-      if (focusable.length === 0) {
-        e.preventDefault();
-        dialogRef.current?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
 
   const canFetch = Boolean(spl);
 
@@ -156,15 +122,12 @@ export function BookDetailModal({
   return (
     <div
       className="modalOverlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="book-detail-dialog-title"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div ref={dialogRef} className="modalPanel" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="modalPanel" role="dialog" aria-modal="true" aria-labelledby="book-detail-dialog-title" tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="modalHeaderRow">
           <div id="book-detail-dialog-title" className="modalTitle" title={headerTitle}>
             {headerTitle}

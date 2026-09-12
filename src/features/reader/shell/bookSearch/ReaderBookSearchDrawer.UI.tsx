@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { MaterialIcon } from "../../../../components/MaterialIcon.UI";
 import type { ReaderSearchResult } from "../../domain/ReaderDomain.Types";
 import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
 import { BookSearchInputBar } from "./ReaderBookSearchInputBar.UI";
 import { BookSearchResultList } from "./ReaderBookSearchResultList.UI";
 import { useBookSearchController } from "./ReaderBookSearch.Controller";
+import { useModalDialogFocus } from "../../../../components/ModalDialogFocus.Lifecycle";
 
 export function BookSearchDrawer({
   open,
@@ -26,16 +27,7 @@ export function BookSearchDrawer({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const search = useBookSearchController({ open, ready, searchBook, initialSearchQuery });
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  useModalDialogFocus({ active: open, dialogRef: panelRef, initialFocusRef: search.inputRef, onDismiss: onClose });
 
   if (!open) return null;
 
@@ -54,6 +46,7 @@ export function BookSearchDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sp-book-search-title"
+        tabIndex={-1}
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="spBookSearchHeader">

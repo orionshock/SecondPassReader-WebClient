@@ -1,4 +1,3 @@
-import type { KeyboardEvent } from "react";
 import type { Series, PaginatedResponse } from "@secondpass/client";
 import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Store";
 import { PreviewBookCoverStack } from "../display/PreviewBookCoverStack.UI";
@@ -8,14 +7,15 @@ import { LibraryResultsLoadErrorNotice } from "../LibraryResultsLoadErrorNotice.
 type Props = { data: PaginatedResponse<Series> | null; busy: boolean; error: unknown; page: number; profile: ConnectionProfile | null; onSelectSeries: (seriesId: string) => void; onViewBook?: (bookId: string) => void; onPageChange: (page: number) => void };
 
 export function LibrarySeriesRows({ data, busy, error, page, profile, onSelectSeries, onViewBook, onPageChange }: Props) {
-  const keyDown = (event: KeyboardEvent<HTMLElement>, action: () => void) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); action(); } };
   return <>
     {error ? <LibraryResultsLoadErrorNotice error={error} /> : null}
     {busy && !data ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
     {data?.results.length ? <div className="libraryEntityList">{data.results.map((series) => {
       const open = () => onSelectSeries(String(series.id));
-      return <div key={String(series.id)} className="libraryEntityCard libraryEntityCardButton" role="button" tabIndex={0} onClick={open} onKeyDown={(event) => keyDown(event, open)} aria-label={`View books in ${series.name}`} title={`View books in ${series.name}`}>
-        <div className="libraryEntityMain"><div className="libraryEntityTitle">{series.name}</div><div className="muted">{series.bookCount} books</div></div>
+      return <div key={String(series.id)} className="libraryEntityCard">
+        <button type="button" className="libraryEntityMain libraryEntityCardButton" onClick={open} aria-label={`View books in ${series.name}`}>
+          <span className="libraryEntityTitle">{series.name}</span><span className="muted">{series.bookCount} books</span>
+        </button>
         <PreviewBookCoverStack previewBooks={series.previewBooks} baseUrl={profile} onBookClick={onViewBook} />
       </div>;
     })}</div> : null}

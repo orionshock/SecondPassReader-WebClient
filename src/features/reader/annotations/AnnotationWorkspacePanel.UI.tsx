@@ -78,7 +78,7 @@ export function AnnotationWorkspace({
       </div>
 
       {tab === "current" ? (
-        <div role="tabpanel" className="spAnnotationTabPanel">
+        <div id="annotation-current-panel" role="tabpanel" aria-labelledby="annotation-current-tab" className="spAnnotationTabPanel" tabIndex={0}>
           {status === "loading" ? <div className="muted">Loading annotations...</div> : null}
           {status === "error" && error ? <div className="muted">Failed to load annotations: {error}</div> : null}
           {busy ? <div className="muted">Updating annotations...</div> : null}
@@ -115,7 +115,7 @@ export function AnnotationWorkspace({
           ) : null}
         </div>
       ) : (
-        <div role="tabpanel" className="spAnnotationTabPanel">
+        <div id="annotation-previous-panel" role="tabpanel" aria-labelledby="annotation-previous-tab" className="spAnnotationTabPanel" tabIndex={0}>
           <PreviousSessionAnnotationsPanel
             groups={previousSessionGroups ?? []}
             onEnableInMarginalia={(sessionId) => onEnablePreviousSession?.(sessionId)}

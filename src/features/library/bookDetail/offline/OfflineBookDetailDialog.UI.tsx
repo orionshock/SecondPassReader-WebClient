@@ -4,6 +4,7 @@ import { InlineMeta } from "../../../../components/Metadata.UI";
 import { BookDescription } from "../../BookDescription.UI";
 import { createOfflineBookDetailController } from "./OfflineBookDetail.Controller";
 import { formatOfflineBookAssetBytes, type OfflineBookDetail } from "./OfflineBookDetail.Presenter";
+import { useModalDialogFocus } from "../../../../components/ModalDialogFocus.Lifecycle";
 
 export function OfflineBookDetailDialog({
   namespaceKey,
@@ -25,56 +26,19 @@ export function OfflineBookDetailDialog({
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   useEffect(() => controller.start(), [controller]);
-  useEffect(() => {
-    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeButtonRef.current?.focus();
-    return () => openerRef.current?.focus();
-  }, []);
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])',
-      ) ?? []).filter((element) => !element.hasAttribute("hidden"));
-      if (focusable.length === 0) {
-        event.preventDefault();
-        dialogRef.current?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  useModalDialogFocus({ active: true, dialogRef, initialFocusRef: closeButtonRef, onDismiss: onClose });
 
   const detail = state.detail;
   const availabilityLabel = detail ? offlineAvailabilityLabel(detail.availability) : null;
   return (
     <div
       className="modalOverlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="offline-book-detail-dialog-title"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
-      <div ref={dialogRef} className="modalPanel" tabIndex={-1} onClick={(event) => event.stopPropagation()}>
+      <div ref={dialogRef} className="modalPanel" role="dialog" aria-modal="true" aria-labelledby="offline-book-detail-dialog-title" tabIndex={-1} onClick={(event) => event.stopPropagation()}>
         <div className="modalHeaderRow">
           <div id="offline-book-detail-dialog-title" className="modalTitle" title={detail?.title ?? `Book ${bookId}`}>
             {detail?.title ?? `Book ${bookId}`}

@@ -108,6 +108,17 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     minSpreadWidth: 900,
   });
 
+  const labelRenditionFrames = () => {
+    for (const frame of init.mountEl.querySelectorAll("iframe")) {
+      if (!frame.title) frame.title = "Book content";
+    }
+  };
+  const frameObserver = typeof MutationObserver === "undefined"
+    ? null
+    : new MutationObserver(labelRenditionFrames);
+  frameObserver?.observe(init.mountEl, { childList: true, subtree: true });
+  labelRenditionFrames();
+
   // Defensive: some environments may ignore initial options; re-assert after init.
   try {
     rendition.flow("paginated");
@@ -472,6 +483,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      frameObserver?.disconnect();
       try {
         rendition.off("relocated", onRelocated);
         rendition.off("displayerror", onDisplayError);

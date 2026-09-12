@@ -64,14 +64,14 @@ export function OfflineSettingsView({
   }, [state.assets.length]);
 
   if (state.status === "loading") {
-    return <section className="panel settingsCard" role="tabpanel"><p className="muted">Loading offline data...</p></section>;
+    return <section className="panel settingsCard"><p className="muted" role="status">Loading offline data...</p></section>;
   }
   if (state.status === "unavailable") {
-    return <section className="panel settingsCard" role="tabpanel"><p className="muted">{state.message}</p></section>;
+    return <section className="panel settingsCard"><p className="muted">{state.message}</p></section>;
   }
   if (state.status === "error") {
     return (
-      <section className="panel settingsCard" role="tabpanel">
+      <section className="panel settingsCard">
         <p className="errorText">{state.message}</p>
       </section>
     );
@@ -81,7 +81,7 @@ export function OfflineSettingsView({
   const retryDisabled = busy || !clientAvailable || state.pending.books === 0 || state.connectivity !== "online";
 
   return (
-    <div className="settingsTabPanel" role="tabpanel" aria-label="Offline settings">
+    <div className="settingsTabPanel">
       <section className="panel settingsCard">
         <div className="settingsSectionHeader">
           <div>

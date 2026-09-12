@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../library/BookCover.Mapper";
 import { formatSeriesIndex } from "../library/SeriesMetadata.Presenter";
 import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
+import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
 
 export type CloseSessionAfterAction = "nextBook" | "restartBook" | "home" | "detail" | "sessions";
 
@@ -51,6 +52,7 @@ export function CloseSessionDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
 
   const trimmedName = name.trim();
   const unnamed = trimmedName.length === 0;
@@ -58,19 +60,7 @@ export function CloseSessionDialog({
   const nextBookCoverSrc = getBookCoverUrl(nextBook, coverBase);
   const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.seriesIndex) : null;
 
-  useEffect(() => {
-    nameRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      if (!busy) onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [busy, onCancel]);
+  useModalDialogFocus({ active: true, dialogRef, initialFocusRef: nameRef, onDismiss: onCancel, dismissDisabled: busy });
 
   async function submit() {
     setBusy(true);
@@ -87,7 +77,7 @@ export function CloseSessionDialog({
     <div className="modalOverlay closeSessionOverlay" role="presentation" onMouseDown={(e) => {
       if (e.target === e.currentTarget && !busy) onCancel();
     }}>
-      <section className="closeSessionDialog" role="dialog" aria-modal="true" aria-labelledby="close-session-title">
+      <section ref={dialogRef} className="closeSessionDialog" role="dialog" aria-modal="true" aria-labelledby="close-session-title" tabIndex={-1}>
         <div className="closeSessionHeader">
           <h2 id="close-session-title" className="closeSessionTitle">Close session</h2>
         </div>
@@ -98,7 +88,7 @@ export function CloseSessionDialog({
             renamed or edited later.
           </p>
           {unnamed ? (
-            <p className="warningText closeSessionWarning">
+            <p id="close-session-name-warning" className="warningText closeSessionWarning">
               This session has no name. Closed sessions cannot be renamed later. Notes also become read-only.
             </p>
           ) : null}
@@ -112,6 +102,7 @@ export function CloseSessionDialog({
               onChange={(e) => setName(e.target.value)}
               maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
               disabled={busy}
+              aria-describedby={unnamed ? "close-session-name-warning" : undefined}
             />
           </label>
 
@@ -162,7 +153,7 @@ export function CloseSessionDialog({
             </div>
           ) : null}
 
-          {error ? <p className="errorText">{error}</p> : null}
+          {error ? <p className="errorText" role="alert">{error}</p> : null}
         </div>
 
         <div className="closeSessionActions">
