@@ -20,7 +20,8 @@ import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import { ReaderDisplaySettingsMenu } from "../settings/ReaderDisplaySettingsMenu.UI";
 import { SelectionHighlightToolbar } from "./ReaderSelectionHighlightToolbar.UI";
 import { TableOfContentsDrawer } from "./ReaderTableOfContentsDrawer.UI";
-import { DurableAnnotationToolbar, type DurableAnnotationToolbarItem } from "./ReaderDurableAnnotationToolbar.UI";
+import { DurableAnnotationToolbar } from "./ReaderDurableAnnotationToolbar.UI";
+import type { DurableAnnotationToolbarItem } from "./ReaderDurableAnnotationToolbar.Types";
 import { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import { observeReaderMountResize } from "./ReaderMountResize.Lifecycle";
 import {

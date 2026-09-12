@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { MutableRefObject } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
 import type { ReaderSelection } from "../../domain/ReaderDomain.Types";
-import { getAnnotationColor } from "../../display/ReaderAnnotation.Presenter";
+import { getAnnotationColor } from "../../annotations/ReaderAnnotationSelectors.Queries";
 import { buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "../ReadingSessionMarginalia.Actions";
 import type { CurrentSessionAnnotationController } from "./CurrentSessionAnnotation.Controller";
 import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";

@@ -1,16 +1,14 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import {
-  getAnnotationColor,
-  getAnnotationDescribingText,
-  getAnnotationNoteText,
-  getAnnotationTimestamp,
-} from "../../display/ReaderAnnotation.Presenter";
-import {
   toReaderAnnotation,
 } from "../../annotations/ReaderAnnotation.Mapper";
 import {
+  getAnnotationColor,
+  getAnnotationDescribingText,
   getAnnotationFragmentCfi,
+  getAnnotationNoteText,
+  getAnnotationTimestamp,
   isBookmarkAnnotation,
   isHighlightAnnotation,
 } from "../../annotations/ReaderAnnotationSelectors.Queries";

@@ -1,10 +1,8 @@
 import type { FormEventHandler } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import { InlineMeta } from "../../../components/Metadata.UI";
-import {
-  ANNOTATION_COLOR_TOKENS,
-  toAnnotationCssVars,
-} from "../display/ReaderAnnotation.Presenter";
+import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
+import { ANNOTATION_COLOR_TOKENS } from "./ReaderAnnotationColor.Constants";
 import { ANNOTATION_LIMITS } from "./ReaderAnnotationLimits.Policy";
 
 export function CurrentAnnotationCardHighlightEditor({

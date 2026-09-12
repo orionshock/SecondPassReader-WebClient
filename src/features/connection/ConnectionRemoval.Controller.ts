@@ -1,4 +1,5 @@
 import type { OfflineReaderSyncClient } from "../../app/offline/reader/sync/OfflineReaderSync.Actions";
+import { syncPendingOfflineReaderWork } from "../../app/offline/reader/sync/OfflineReaderPendingSync.Actions";
 import type { BrowserConnectivityStatus } from "../../app/connectivity/BrowserConnectivity.State";
 import {
   inspectOfflineNamespace,
@@ -31,7 +32,7 @@ export async function removeConnectionAndOfflineData(input: {
   removeRemoteConnection?(): Promise<void>;
   inspectNamespace?: typeof inspectOfflineNamespace;
   removeNamespace?: typeof removeOfflineNamespace;
-  syncPending?: typeof import("../../app/offline/reader/sync/OfflineReaderPendingSync.Actions")["syncPendingOfflineReaderWork"];
+  syncPending?: typeof syncPendingOfflineReaderWork;
 }): Promise<ConnectionRemovalResult> {
   const namespaceKey = input.namespaceKey?.trim() ?? "";
   if (!namespaceKey) {
@@ -59,8 +60,7 @@ export async function removeConnectionAndOfflineData(input: {
 
   if (summary.pendingIntents > 0 && input.connectivity === "online" && input.client) {
     try {
-      const syncPending = input.syncPending
-        ?? (await import("../../app/offline/reader/sync/OfflineReaderPendingSync.Actions")).syncPendingOfflineReaderWork;
+      const syncPending = input.syncPending ?? syncPendingOfflineReaderWork;
       await syncPending({ namespaceKey, client: input.client, mode: "wait" });
     } catch (error) {
       debugWarn("reader", "pending Reader sync before connection removal did not complete", { error });

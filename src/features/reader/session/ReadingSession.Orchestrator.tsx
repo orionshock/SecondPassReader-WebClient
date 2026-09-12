@@ -11,7 +11,7 @@ import { useReadingProgressAutosave } from "./progress/ReadingProgressAutosave.L
 import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./progress/ReadingProgressAutosave.Controller";
 import { buildReadingSessionAutosaveStatus } from "./progress/ReadingSessionProgress.Presenter";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ReaderBookmarkViewModel } from "../annotations/ReaderBookmark.Mapper";
+import type { ReaderBookmarkViewModel } from "../annotations/ReaderBookmark.Presenter";
 import type { HighlightViewModel } from "../annotations/ReaderAnnotationViewModels.Types";
 import { useSessionAnnotations } from "./annotations/SessionAnnotations.Controller";
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";

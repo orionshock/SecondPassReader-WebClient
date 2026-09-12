@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
-import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
+import { ANNOTATION_COLOR_TOKENS } from "../annotations/ReaderAnnotationColor.Constants";
+import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
 
 export type SelectionHighlightToolbarProps = {
   open: boolean;

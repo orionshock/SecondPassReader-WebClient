@@ -1,23 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
-import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
+import { ANNOTATION_COLOR_TOKENS } from "../annotations/ReaderAnnotationColor.Constants";
+import { toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
 import { ANNOTATION_LIMITS } from "../annotations/ReaderAnnotationLimits.Policy";
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
-
-export type DurableAnnotationToolbarItem = {
-  id: string;
-  mode: "editable" | "readonly";
-  quoteText?: string;
-  note?: string;
-  color?: string;
-};
-
-export type DurableAnnotationToolbarPosition = {
-  left: number;
-  top: number;
-  placement: "above" | "below" | "left" | "right";
-};
+import type {
+  DurableAnnotationToolbarItem,
+  DurableAnnotationToolbarPosition,
+} from "./ReaderDurableAnnotationToolbar.Types";
 
 export function DurableAnnotationToolbar({
   item,

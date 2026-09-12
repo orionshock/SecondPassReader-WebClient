@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveBookmarkLabel } from "../../../features/reader/annotations/ReaderBookmarkLabels.Presenter";
+import { deriveBookmarkLabel } from "../../../features/reader/annotations/ReaderBookmark.Presenter";
 
 describe("deriveBookmarkLabel", () => {
   it("uses chapter label and percent when both are present", () => {
@@ -19,4 +19,3 @@ describe("deriveBookmarkLabel", () => {
     expect(deriveBookmarkLabel({ chapterLabel: "", bookProgress: undefined })).toBe("Saved location");
   });
 });
-

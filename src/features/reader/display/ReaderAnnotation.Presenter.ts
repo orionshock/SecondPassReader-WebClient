@@ -1,4 +1,8 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
+import {
+  getAnnotationDescribingText,
+  getAnnotationNoteText,
+} from "../annotations/ReaderAnnotationSelectors.Queries";
 
 const NAMED_COLORS: Record<string, string> = {
   yellow: "#facc15",
@@ -10,37 +14,17 @@ const NAMED_COLORS: Record<string, string> = {
   red: "#ef4444",
 };
 
-export const ANNOTATION_COLOR_TOKENS = ["yellow", "green", "blue", "pink", "purple", "orange"] as const;
-export type AnnotationColorToken = (typeof ANNOTATION_COLOR_TOKENS)[number];
-
-export type AnnotationDisplay = {
-  iconName: "bookmark" | "chat_bubble" | "border_color" | "edit_note";
-  label: "Bookmark" | "Commented highlight" | "Highlight" | "Annotation";
+type AnnotationDisplay = {
+  iconName: "bookmark" | "chat_bubble" | "border_color";
+  label: "Bookmark" | "Commented highlight" | "Highlight";
 };
 
 export const BOOKMARK_DISPLAY: AnnotationDisplay = { iconName: "bookmark", label: "Bookmark" };
-export const HIGHLIGHT_DISPLAY: AnnotationDisplay = { iconName: "border_color", label: "Highlight" };
-export const COMMENTED_HIGHLIGHT_DISPLAY: AnnotationDisplay = {
+const HIGHLIGHT_DISPLAY: AnnotationDisplay = { iconName: "border_color", label: "Highlight" };
+const COMMENTED_HIGHLIGHT_DISPLAY: AnnotationDisplay = {
   iconName: "chat_bubble",
   label: "Commented highlight",
 };
-export const FALLBACK_ANNOTATION_DISPLAY: AnnotationDisplay = { iconName: "edit_note", label: "Annotation" };
-
-export function getAnnotationDescribingText(annotation: MarginaliaAnnotation): string | null {
-  return annotation.kind === "highlight" ? annotation.body.text : null;
-}
-
-export function getAnnotationNoteText(annotation: MarginaliaAnnotation): string | null {
-  return annotation.kind === "highlight" ? annotation.body.note || null : null;
-}
-
-export function getAnnotationColor(annotation: MarginaliaAnnotation): string | null {
-  return annotation.kind === "highlight" ? annotation.body.color : null;
-}
-
-export function getAnnotationTimestamp(annotation: MarginaliaAnnotation): string | null {
-  return annotation.updatedAt || annotation.createdAt || null;
-}
 
 export function getAnnotationDisplayTexts(annotation: MarginaliaAnnotation): {
   quote: string | null;
@@ -52,7 +36,7 @@ export function getAnnotationDisplayTexts(annotation: MarginaliaAnnotation): {
   };
 }
 
-export function hasAnnotationComment(note: string | null | undefined): boolean {
+function hasAnnotationComment(note: string | null | undefined): boolean {
   return typeof note === "string" && note.trim().length > 0;
 }
 

@@ -1,7 +1,7 @@
 import {
   ANNOTATION_COLOR_TOKENS,
   type AnnotationColorToken,
-} from "../display/ReaderAnnotation.Presenter";
+} from "../annotations/ReaderAnnotationColor.Constants";
 
 const ANNOTATION_COLOR_TOKEN_SET = new Set<string>(ANNOTATION_COLOR_TOKENS);
 

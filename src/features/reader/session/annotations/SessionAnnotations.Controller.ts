@@ -3,13 +3,14 @@ import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client"
 import type { OpenedBook } from "../../Reader.Types";
 import type { ReaderHighlightMark, ReaderLocation, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import type { HighlightViewModel } from "../../annotations/ReaderAnnotationViewModels.Types";
-import type { ReaderBookmark, ReaderBookmarkViewModel } from "../../annotations/ReaderBookmark.Mapper";
+import type { ReaderBookmark } from "../../annotations/ReaderBookmark.Mapper";
+import type { ReaderBookmarkViewModel } from "../../annotations/ReaderBookmark.Presenter";
+import { findReaderBookmarkAtCfi } from "../../annotations/ReaderAnnotationSelectors.Queries";
 import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
 import {
   buildSessionBookmarkViewModels,
   buildSessionHighlightMarks,
   buildSessionHighlightViewModels,
-  findCurrentSessionBookmark,
   sortSessionAnnotationItems,
   sortSessionAnnotations,
   toSessionAnnotationBookmarks,
@@ -168,7 +169,7 @@ export function useSessionAnnotations(args: {
   );
 
   const currentBookmark = useMemo(
-    () => findCurrentSessionBookmark(bookmarks, args.location?.cfi),
+    () => findReaderBookmarkAtCfi(bookmarks, args.location?.cfi),
     [args.location?.cfi, bookmarks],
   );
 

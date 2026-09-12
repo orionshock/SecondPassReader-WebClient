@@ -2,16 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
 import { toReaderAnnotation } from "../../../features/reader/annotations/ReaderAnnotation.Mapper";
 import {
+  findReaderBookmarkAtCfi,
+  getAnnotationColor,
+  getAnnotationDescribingText,
   getAnnotationFragmentCfi,
+  getAnnotationNoteText,
   isBookmarkAnnotation,
   isCommentAnnotation,
   isHighlightAnnotation,
 } from "../../../features/reader/annotations/ReaderAnnotationSelectors.Queries";
-import {
-  getAnnotationColor,
-  getAnnotationDescribingText,
-  getAnnotationNoteText,
-} from "../../../features/reader/display/ReaderAnnotation.Presenter";
 
 const bookmark = {
   id: "bookmark-1",
@@ -79,5 +78,16 @@ describe("reader annotation boundary", () => {
   it("rejects annotations without a CFI", () => {
     expect(toReaderAnnotation({ ...bookmark, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
     expect(toReaderAnnotation({ ...highlight, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
+  });
+
+  it("finds the current bookmark by exact CFI after normalizing the current location", () => {
+    const bookmarks = [
+      { id: "bookmark-1", cfi: "epubcfi(/6/2)" },
+      { id: "bookmark-2", cfi: "epubcfi(/6/4)" },
+    ];
+
+    expect(findReaderBookmarkAtCfi(bookmarks, " epubcfi(/6/4) ")).toBe(bookmarks[1]);
+    expect(findReaderBookmarkAtCfi(bookmarks, "")).toBeNull();
+    expect(findReaderBookmarkAtCfi(bookmarks, "epubcfi(/6/6)")).toBeNull();
   });
 });

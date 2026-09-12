@@ -1,19 +1,21 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import type { HighlightViewModel } from "../../annotations/ReaderAnnotationViewModels.Types";
+import { toReaderAnnotation } from "../../annotations/ReaderAnnotation.Mapper";
 import {
   getAnnotationColor,
   getAnnotationNoteText,
   getAnnotationTimestamp,
-} from "../../display/ReaderAnnotation.Presenter";
-import { toReaderAnnotation } from "../../annotations/ReaderAnnotation.Mapper";
-import { isHighlightAnnotation } from "../../annotations/ReaderAnnotationSelectors.Queries";
+  isHighlightAnnotation,
+} from "../../annotations/ReaderAnnotationSelectors.Queries";
 import {
-  toBookmarkViewModel,
   toReaderBookmark,
   type ReaderBookmark,
-  type ReaderBookmarkViewModel,
 } from "../../annotations/ReaderBookmark.Mapper";
+import {
+  toBookmarkViewModel,
+  type ReaderBookmarkViewModel,
+} from "../../annotations/ReaderBookmark.Presenter";
 import { toReaderCfiLocationDisplay } from "../ReadingSessionCfiDescriptions.Queries";
 
 export type SessionAnnotationDescriptionEntry = {
@@ -50,15 +52,6 @@ export function toSessionAnnotationBookmarks(sortedRaw: MarginaliaAnnotation[]):
     if (bookmark) out.push(bookmark);
   }
   return out;
-}
-
-export function findCurrentSessionBookmark(
-  bookmarks: ReaderBookmark[],
-  currentCfi: string | null | undefined,
-): ReaderBookmark | null {
-  const cfi = currentCfi?.trim() ?? "";
-  if (!cfi) return null;
-  return bookmarks.find((bookmark) => bookmark.cfi === cfi) ?? null;
 }
 
 export function toSessionAnnotationHighlights(sortedRaw: MarginaliaAnnotation[]): SessionAnnotationHighlight[] {

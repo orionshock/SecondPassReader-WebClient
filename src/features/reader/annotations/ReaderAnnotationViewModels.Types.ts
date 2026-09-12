@@ -1,4 +1,4 @@
-import type { ReaderBookmarkViewModel } from "./ReaderBookmark.Mapper";
+import type { ReaderBookmarkViewModel } from "./ReaderBookmark.Presenter";
 
 export type HighlightViewModel = {
   kind: "highlight";

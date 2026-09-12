@@ -2,11 +2,11 @@ import type { MarginaliaAnnotation } from "@secondpass/client";
 import { InlineMeta } from "../../components/Metadata.UI";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import {
-  getAnnotationColor,
   getAnnotationDisplayTexts,
   getRawAnnotationDisplay,
   toAnnotationCssVars,
 } from "../reader/display/ReaderAnnotation.Presenter";
+import { getAnnotationColor } from "../reader/annotations/ReaderAnnotationSelectors.Queries";
 import { formatIso } from "./SessionDetail.Presenter";
 
 export function SessionDetailAnnotationsList({
