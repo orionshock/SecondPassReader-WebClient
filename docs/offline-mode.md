@@ -50,8 +50,8 @@ semantics where applicable:
 
 ## Web-Specific Choices
 
-- Durable publication-asset retention requires an explicit **Available offline** action. Opening a
-  book does not silently make its file durable.
+- Durable publication and cover retention requires an explicit **Available offline** action.
+  Opening or browsing a book does not silently make either resource durable.
 - Large assets and durable Reader data belong in the app-owned IndexedDB database, not
   `localStorage`.
 - A service worker is not required for the first phase. Add one only when a defined runtime behavior
@@ -140,8 +140,9 @@ retained publication assets; cached Book metadata without an asset never admits 
 Offline Library search is case-insensitive title search over that local subset, with deterministic
 local title ordering and a Book-ID fallback when retained metadata is missing. Groups, tags,
 Authors, Series, remote sorting, and pagination are not fabricated offline. Retained metadata has
-only remote cover URLs, not durable cover bytes, so the offline view uses a placeholder and makes
-no cover request.
+remote cover URLs for ordinary catalog display. For Books explicitly retained offline, it may also
+use the Book-scoped durable cover Blob. Otherwise the offline view uses a placeholder and makes no
+cover request. Online Library rendering remains URL-driven and retains normal browser-cache behavior.
 
 Reader admission remains stricter than storage listing: the current Web Reader opens only a
 complete EPUB Blob whose retained checksum and format match the cached Book file metadata. A
@@ -168,8 +169,9 @@ Recent membership is not appended.
 
 Cached Shelves preserve the server preview membership and order but are read-only offline. There
 is no Shelf navigation, editing, pagination, or locally reconstructed organization. Home preview
-covers are remote URLs rather than durable image bytes, so the offline page uses placeholders and
-makes no image request. Recent Books open the local cached Book Detail. Reader opening from there
+covers normally remain remote URLs. A Recent Book may use its durable local cover only when that
+Book is explicitly retained offline; otherwise the offline page uses a placeholder and makes no
+image request. Online Home remains URL-driven. Recent Books open the local cached Book Detail. Reader opening from there
 remains available only when the existing verified EPUB asset admission policy succeeds; cached
 activity without publication bytes remains visible and manageable but cannot open the Reader.
 
@@ -183,13 +185,15 @@ snapshot; online Home remains server-authoritative.
 When connectivity is explicitly `offline`, Book Detail branches before mounting its server Book,
 marginalia, Session, or Shelf owners. It renders the retained `reader-book:<bookId>` projection,
 with a stable Book-ID fallback when descriptive metadata is missing. `online` and `unknown` retain
-the existing server-authoritative Book Detail path. Retained cover references are remote URLs, so
-the offline detail deliberately uses a placeholder rather than requesting cover bytes.
+the existing server-authoritative Book Detail path and normal cover URL. The offline detail uses a
+durable local cover only for an explicitly retained Book and otherwise shows a placeholder without
+requesting remote cover bytes.
 
 The local detail exposes only locally valid operations. `Open reader` uses the existing strict EPUB
 asset policy and remains disabled for missing, corrupt, mismatched, or unsupported assets. `Manage
-offline` opens the selected Book in Settings, and `Remove offline copy` removes only the publication
-asset; Reader progress, annotations, continuity, projections, and pending sync work remain intact.
+offline` opens the selected Book in Settings, and `Remove offline copy` removes the publication
+asset and its durable cover; Reader progress, annotations, continuity, projections, and pending
+sync work remain intact. A missing or failed cover never changes publication readability.
 There is no offline acquisition, Shelf mutation, Session history, marginalia fetch, or other
 fabricated server authority. Offline Home and Library now use this local detail as their normal Book
 navigation step.
@@ -322,8 +326,9 @@ remain non-waiting. Settings also lists locally retained publication assets usin
 metadata when available, with an ID-based fallback when it is not, and reports Blob-backed file
 sizes without contacting the server.
 
-Removing one offline copy deletes only its namespace, Book, and format asset. Removing all offline
-copies uses the publication-asset namespace deletion and requires confirmation. Neither operation
+Removing one offline copy deletes only its namespace, Book, format asset, and Book-scoped durable
+cover once no retained format remains. Removing all offline copies deletes publication assets and
+durable covers in that namespace and requires confirmation. Neither operation
 deletes projections, Reader continuity, progress, annotations, outbox intent, or account data; an
 already-open Reader retains its in-memory Blob URL until its existing lifecycle closes. There is no
 periodic retry, service-worker delivery, background sync, or repair console.

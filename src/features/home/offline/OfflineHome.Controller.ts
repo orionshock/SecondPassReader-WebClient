@@ -1,5 +1,6 @@
 import type { BookDetail } from "@secondpass/client";
 import { subscribeToOfflineReaderOutboxChange } from "../../../app/offline/reader/outbox/OfflineReaderOutboxChange.State";
+import { subscribeToOfflinePublicationAssetChange } from "../../../app/offline/publication/OfflinePublicationAssetChange.State";
 import { loadOfflineReaderBookMetadata } from "../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
 import {
   openIndexedDbOfflineRepositories,
@@ -31,6 +32,7 @@ export type OfflineHomeState = {
 export type OfflineHomeDependencies = {
   openRepositories(): Promise<Repositories>;
   subscribeReaderChanges(listener: (namespaceKey: string) => void): () => void;
+  subscribeAssetChanges(listener: (namespaceKey: string) => void): () => void;
   subscribeFocus(listener: () => void): () => void;
 };
 
@@ -48,6 +50,7 @@ export function createOfflineHomeController(
   const dependencies: OfflineHomeDependencies = {
     openRepositories: () => openIndexedDbOfflineRepositories<Blob>(),
     subscribeReaderChanges: subscribeToOfflineReaderOutboxChange,
+    subscribeAssetChanges: subscribeToOfflinePublicationAssetChange,
     subscribeFocus: subscribeWindowFocus,
     ...dependencyOverrides,
   };
@@ -83,7 +86,8 @@ export function createOfflineHomeController(
       const shelfRecord = shelfRead.status === "loaded" ? shelfRead.record : null;
       const recentItems = validRecentItems(recentRecord?.value);
       const bookIds = [...new Set([...assets.map((asset) => asset.bookId), ...recentItems.map((item) => String(item.book.id))])];
-      const [metadataEntries, readerStateEntries] = await Promise.all([
+      const assetBookIds = [...new Set(assets.map((asset) => asset.bookId))];
+      const [metadataEntries, readerStateEntries, coverEntries] = await Promise.all([
         Promise.all(bookIds.map(async (bookId) => [
           bookId,
           await loadOfflineReaderBookMetadata({
@@ -96,6 +100,13 @@ export function createOfflineHomeController(
           const bookId = String(item.book.id);
           return [bookId, await currentRepositories.readerState.getBookState(normalizedNamespaceKey, bookId).catch(() => null)] as const;
         })),
+        Promise.all(assetBookIds.map(async (bookId) => [
+          bookId,
+          await currentRepositories.publicationCovers.get(normalizedNamespaceKey, bookId).catch((error) => {
+            debugWarn("reader", "saved Home cover could not be loaded", { bookId, error });
+            return null;
+          }),
+        ] as const)),
       ]);
       if (!isCurrent(expectedGeneration, expectedLoad)) return;
       const metadata = new Map<string, BookDetail | null>(metadataEntries);
@@ -112,6 +123,7 @@ export function createOfflineHomeController(
                 cachedItems: recentItems,
                 readerStates: new Map(readerStateEntries),
                 readableBookIds,
+                covers: new Map(coverEntries),
               }),
               cachedAt: recentRecord.fetchedAt,
             }
@@ -144,6 +156,9 @@ export function createOfflineHomeController(
       const unsubscribeReader = dependencies.subscribeReaderChanges((changedNamespaceKey) => {
         if (changedNamespaceKey === normalizedNamespaceKey) void load();
       });
+      const unsubscribeAssets = dependencies.subscribeAssetChanges((changedNamespaceKey) => {
+        if (changedNamespaceKey === normalizedNamespaceKey) void load();
+      });
       const unsubscribeFocus = dependencies.subscribeFocus(() => { void load(); });
       void (async () => {
         try {
@@ -165,6 +180,7 @@ export function createOfflineHomeController(
         generation += 1;
         loadRevision += 1;
         unsubscribeReader();
+        unsubscribeAssets();
         unsubscribeFocus();
         repositories?.close();
         repositories = null;

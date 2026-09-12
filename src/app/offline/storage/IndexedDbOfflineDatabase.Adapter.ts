@@ -1,9 +1,10 @@
 export const OFFLINE_DATABASE_NAME = "secondpass-reader-offline";
-export const OFFLINE_DATABASE_VERSION = 2;
+export const OFFLINE_DATABASE_VERSION = 3;
 
 export const OFFLINE_STORE_NAMES = {
   projections: "projections",
   publicationAssets: "publicationAssets",
+  publicationCovers: "publicationCovers",
   readerState: "readerState",
   readerOutbox: "readerOutbox",
 } as const;
@@ -33,6 +34,7 @@ export function openOfflineDatabase(options: OfflineDatabaseOptions = {}): Promi
       const database = request.result;
       createNamespaceStore(database, OFFLINE_STORE_NAMES.projections, ["namespaceKey", "projectionKey"]);
       createNamespaceStore(database, OFFLINE_STORE_NAMES.publicationAssets, ["namespaceKey", "bookId", "format"]);
+      createNamespaceStore(database, OFFLINE_STORE_NAMES.publicationCovers, ["namespaceKey", "bookId"]);
       createNamespaceStore(database, OFFLINE_STORE_NAMES.readerState, ["namespaceKey", "bookId"]);
       createNamespaceStore(database, OFFLINE_STORE_NAMES.readerOutbox, ["namespaceKey", "resourceKey"]);
       migrateLegacyAssets(database, request.transaction);

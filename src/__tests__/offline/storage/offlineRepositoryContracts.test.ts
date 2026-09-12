@@ -3,6 +3,7 @@ import { IDBFactory } from "fake-indexeddb";
 import type {
   OfflinePublicationAssetCompleteRecord,
   OfflineProjectionRecord,
+  OfflinePublicationCoverRecord,
   OfflineReaderBookState,
 } from "../../../app/offline/storage/OfflineRepositories.Types";
 import {
@@ -31,6 +32,9 @@ defineOfflineRepositoryContractTests("IndexedDB offline repositories", {
   createPublicationAssetRepository: async () => (
     await createIndexedDbRepositories()
   ).publicationAssets,
+  createPublicationCoverRepository: async () => (
+    await createIndexedDbRepositories()
+  ).publicationCovers,
   createReaderStateRepository: async () => (
     await createIndexedDbRepositories()
   ).readerState,
@@ -177,6 +181,34 @@ function defineOfflineRepositoryContractTests(
       await repository.deleteNamespace("account-a");
       expect(await repository.get("account-a", "book-2", "epub")).toBeNull();
       expect(await repository.get("account-b", "book-1", "epub")).toEqual(retainedAccount);
+    });
+  });
+
+  describe(`${implementationName}: publication cover repository`, () => {
+    it("round-trips and replaces one Book cover within its namespace", async () => {
+      const repository = await factories.createPublicationCoverRepository();
+      await repository.put(coverRecord("account-a", "book-1", "one", new Uint8Array([1])));
+      const replacement = coverRecord("account-a", "book-1", "two", new Uint8Array([2]));
+
+      await repository.put(replacement);
+
+      expect(await repository.get("account-a", "book-1")).toEqual(replacement);
+    });
+
+    it("isolates targeted and namespace cover deletion", async () => {
+      const repository = await factories.createPublicationCoverRepository();
+      const retainedBook = coverRecord("account-a", "book-2", "two", new Uint8Array([2]));
+      const retainedAccount = coverRecord("account-b", "book-1", "three", new Uint8Array([3]));
+      await repository.put(coverRecord("account-a", "book-1", "one", new Uint8Array([1])));
+      await repository.put(retainedBook);
+      await repository.put(retainedAccount);
+
+      await repository.delete("account-a", "book-1");
+      expect(await repository.get("account-a", "book-1")).toBeNull();
+      expect(await repository.get("account-a", "book-2")).toEqual(retainedBook);
+      await repository.deleteNamespace("account-a");
+      expect(await repository.get("account-a", "book-2")).toBeNull();
+      expect(await repository.get("account-b", "book-1")).toEqual(retainedAccount);
     });
   });
 
@@ -373,6 +405,23 @@ function assetRecord(
     bookId,
     format,
     checksum: checksumCharacter.repeat(64),
+    byteLength: payload.byteLength,
+    schemaVersion: 1,
+    payload,
+  };
+}
+
+function coverRecord(
+  namespaceKey: string,
+  bookId: string,
+  source: string,
+  payload: Uint8Array,
+): OfflinePublicationCoverRecord<Uint8Array> {
+  return {
+    namespaceKey,
+    bookId,
+    sourceUrl: `https://library.example/covers/${source}.jpg`,
+    contentType: "image/jpeg",
     byteLength: payload.byteLength,
     schemaVersion: 1,
     payload,

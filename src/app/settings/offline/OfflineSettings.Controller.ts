@@ -23,6 +23,10 @@ import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePe
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 import { discardPendingReaderProgress } from "../../offline/reader/outbox/OfflineReaderPendingRepair.Actions";
 import { offlineReaderRetryEligibility } from "../../offline/reader/retry/OfflineReaderRetryEligibility.Policy";
+import {
+  removeAllOfflinePublicationAssets,
+  removeOfflinePublicationAsset,
+} from "../../offline/publication/OfflinePublicationRemoval.Actions";
 
 export type OfflineSettingsAsset = {
   key: string;
@@ -291,13 +295,23 @@ export function createOfflineSettingsController(
     },
     async removeAsset(asset) {
       await runAction("removing", async (currentRepositories, expected) => {
-        await currentRepositories.publicationAssets.delete(namespaceKey, asset.bookId, asset.format);
+        await removeOfflinePublicationAsset({
+          namespaceKey,
+          bookId: asset.bookId,
+          format: asset.format,
+          assetRepository: currentRepositories.publicationAssets,
+          coverRepository: currentRepositories.publicationCovers,
+        });
         await load(expected);
       }, "Couldn't remove the offline copy. Try again.", asset.key);
     },
     async removeAllAssets() {
       await runAction("removing-all", async (currentRepositories, expected) => {
-        await currentRepositories.publicationAssets.deleteNamespace(namespaceKey);
+        await removeAllOfflinePublicationAssets({
+          namespaceKey,
+          assetRepository: currentRepositories.publicationAssets,
+          coverRepository: currentRepositories.publicationCovers,
+        });
         await load(expected);
       }, "Couldn't remove the offline copies. Try again.");
     },

@@ -11,6 +11,8 @@ import {
   acquireOfflinePublicationAsset,
   type OfflinePublicationAcquisitionResult,
 } from "../../../app/offline/publication/OfflinePublicationAcquisition.Actions";
+import { acquireOfflinePublicationCover } from "../../../app/offline/publication/OfflinePublicationCover.Actions";
+import { removeOfflinePublicationAsset } from "../../../app/offline/publication/OfflinePublicationRemoval.Actions";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
@@ -164,6 +166,12 @@ export function useBookOfflineAvailabilityController({
       if (generation !== generationRef.current) return;
 
       if (result.status === "stored" || result.status === "already-available") {
+        await acquireOfflinePublicationCover({
+          namespace,
+          book,
+          spl,
+          repository: repositories.publicationCovers,
+        });
         await refresh(repositories, generation);
         return;
       }
@@ -186,11 +194,13 @@ export function useBookOfflineAvailabilityController({
     const previousState = stateRef.current;
     updateState({ status: "working", operation: "remove" });
     try {
-      await repositories.publicationAssets.delete(
-        namespace.key,
-        String(book.id),
-        normalizePublicationFormat(book.file?.format)!,
-      );
+      await removeOfflinePublicationAsset({
+        namespaceKey: namespace.key,
+        bookId: String(book.id),
+        format: normalizePublicationFormat(book.file?.format)!,
+        assetRepository: repositories.publicationAssets,
+        coverRepository: repositories.publicationCovers,
+      });
       if (generation === generationRef.current) {
         updateState({ status: "not-available", message: null });
       }

@@ -3,7 +3,11 @@ import {
   classifyOfflinePublicationAssetAvailability,
   normalizePublicationFormat,
 } from "../../../../app/offline/publication/OfflinePublicationAsset.Policy";
-import type { OfflinePublicationAssetCompleteRecord } from "../../../../app/offline/storage/OfflineRepositories.Types";
+import type {
+  OfflinePublicationAssetCompleteRecord,
+  OfflinePublicationCoverRecord,
+} from "../../../../app/offline/storage/OfflineRepositories.Types";
+import { isUsableOfflinePublicationCover } from "../../../../app/offline/publication/OfflinePublicationCover.Policy";
 
 const CURRENT_READER_FORMAT = "epub";
 
@@ -21,6 +25,7 @@ export type OfflineBookDetail = {
   format: string | null;
   assetBytes: number | null;
   asset: OfflinePublicationAssetCompleteRecord<Blob> | null;
+  coverBlob: Blob | null;
   availability: "available" | "needs-attention" | "unsupported-format" | "not-available" | "unknown";
   canOpenReader: boolean;
 };
@@ -29,6 +34,7 @@ export function presentOfflineBookDetail(input: {
   bookId: string;
   book: BookDetail | null;
   assets: OfflinePublicationAssetCompleteRecord<Blob>[];
+  cover?: OfflinePublicationCoverRecord<Blob> | null;
   assetReadFailed?: boolean;
 }): OfflineBookDetail {
   const bookId = input.bookId.trim();
@@ -65,6 +71,9 @@ export function presentOfflineBookDetail(input: {
     format,
     assetBytes: asset?.payload.size ?? null,
     asset,
+    coverBlob: asset && isUsableOfflinePublicationCover(input.cover)
+      ? input.cover.payload
+      : null,
     availability,
     canOpenReader: availability === "available" && Boolean(input.book),
   };

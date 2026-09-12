@@ -5,6 +5,7 @@ import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
 } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
+import type { OfflinePublicationCoverRecord } from "../../../app/offline/storage/OfflineRepositories.Types";
 import {
   buildOfflineLibraryBooks,
   searchOfflineLibraryBooks,
@@ -75,15 +76,24 @@ export function createOfflineLibraryController(
     try {
       const assets = await currentRepositories.publicationAssets.list(normalizedNamespaceKey);
       const metadata = new Map<string, BookDetail | null>();
+      const covers = new Map<string, OfflinePublicationCoverRecord<Blob> | null>();
       await Promise.all([...new Set(assets.map((asset) => asset.bookId))].map(async (bookId) => {
-        metadata.set(bookId, await loadOfflineReaderBookMetadata({
-          namespaceKey: normalizedNamespaceKey,
-          bookId,
-          repository: currentRepositories.projections,
-        }));
+        const [book, cover] = await Promise.all([
+          loadOfflineReaderBookMetadata({
+            namespaceKey: normalizedNamespaceKey,
+            bookId,
+            repository: currentRepositories.projections,
+          }),
+          currentRepositories.publicationCovers.get(normalizedNamespaceKey, bookId).catch((error) => {
+            debugWarn("reader", "offline Book cover could not be loaded", { bookId, error });
+            return null;
+          }),
+        ]);
+        metadata.set(bookId, book);
+        covers.set(bookId, cover);
       }));
       if (!isCurrent(expectedGeneration, expectedLoad)) return;
-      allBooks = buildOfflineLibraryBooks({ assets, metadata });
+      allBooks = buildOfflineLibraryBooks({ assets, metadata, covers });
       publish({
         status: "ready",
         query: state.query,

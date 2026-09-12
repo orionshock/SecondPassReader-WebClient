@@ -5,6 +5,7 @@ import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getBrowserOfflinePersistenceCapability } from "../../app/offline/browser/BrowserOfflineCapability.Queries";
 import { acquireOfflinePublicationAsset } from "../../app/offline/publication/OfflinePublicationAcquisition.Actions";
+import { acquireOfflinePublicationCover } from "../../app/offline/publication/OfflinePublicationCover.Actions";
 import { openIndexedDbOfflineRepositories } from "../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import type {
   OfflinePublicationAssetCompleteRecord,
@@ -24,6 +25,9 @@ vi.mock("../../app/offline/browser/BrowserOfflineCapability.Queries", () => ({
 vi.mock("../../app/offline/publication/OfflinePublicationAcquisition.Actions", () => ({
   acquireOfflinePublicationAsset: vi.fn(),
 }));
+vi.mock("../../app/offline/publication/OfflinePublicationCover.Actions", () => ({
+  acquireOfflinePublicationCover: vi.fn(),
+}));
 vi.mock("../../app/offline/storage/IndexedDbOfflineRepositories.Factory", () => ({
   openIndexedDbOfflineRepositories: vi.fn(),
 }));
@@ -33,6 +37,7 @@ const CHECKSUM_B = "b".repeat(64);
 const TEST_SPL = {} as SecondPassClient;
 const capabilityMock = vi.mocked(getBrowserOfflinePersistenceCapability);
 const acquisitionMock = vi.mocked(acquireOfflinePublicationAsset);
+const coverAcquisitionMock = vi.mocked(acquireOfflinePublicationCover);
 const repositoriesMock = vi.mocked(openIndexedDbOfflineRepositories);
 
 let root: Root;
@@ -53,6 +58,7 @@ describe("Book Detail offline availability", () => {
       reason: null,
     });
     acquisitionMock.mockResolvedValue(storedResult());
+    coverAcquisitionMock.mockResolvedValue({ status: "unavailable" });
   });
 
   afterEach(() => {
@@ -120,6 +126,24 @@ describe("Book Detail offline availability", () => {
       supportedFormat: "epub",
       requestPersistentStorage: true,
     }));
+    expect(coverAcquisitionMock).toHaveBeenCalledWith(expect.objectContaining({
+      repository: repositories.publicationCovers,
+    }));
+    expect(button("Remove offline copy")).toBeTruthy();
+  });
+
+  it("keeps a verified publication available when cover acquisition fails", async () => {
+    const repositories = repositorySet();
+    repositoriesMock.mockResolvedValue(repositories.value);
+    acquisitionMock.mockImplementation(async () => {
+      repositories.setAsset(completeAsset(CHECKSUM_B));
+      return storedResult();
+    });
+    coverAcquisitionMock.mockResolvedValue({ status: "failed" });
+
+    await renderController(book(CHECKSUM_B));
+    await act(async () => button("Make available offline")?.click());
+
     expect(button("Remove offline copy")).toBeTruthy();
   });
 
@@ -155,6 +179,10 @@ describe("Book Detail offline availability", () => {
       "server:https%3A%2F%2Flibrary.example|profile:reader-1",
       "book-1",
       "epub",
+    );
+    expect(repositories.publicationCovers.delete).toHaveBeenCalledWith(
+      "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+      "book-1",
     );
     expect(repositories.projections.deleteNamespace).not.toHaveBeenCalled();
     expect(repositories.projections.delete).not.toHaveBeenCalled();
@@ -315,6 +343,12 @@ function repositorySet(initialAsset: OfflinePublicationAssetCompleteRecord<Blob>
     delete: vi.fn(async () => { asset = null; }),
     deleteNamespace: vi.fn(async () => undefined),
   };
+  const publicationCovers = {
+    get: vi.fn(async () => null),
+    put: vi.fn(async () => undefined),
+    delete: vi.fn(async () => undefined),
+    deleteNamespace: vi.fn(async () => undefined),
+  };
   const projections = {
     get: vi.fn(), put: vi.fn(), delete: vi.fn(), deleteNamespace: vi.fn(),
   };
@@ -329,7 +363,8 @@ function repositorySet(initialAsset: OfflinePublicationAssetCompleteRecord<Blob>
     projections,
     readerState,
     readerOutbox,
-    value: { publicationAssets, projections, readerState, readerOutbox, close: vi.fn() } as never,
+    publicationCovers,
+    value: { publicationAssets, publicationCovers, projections, readerState, readerOutbox, close: vi.fn() } as never,
     asset: () => asset,
     setAsset: (next: OfflinePublicationAssetCompleteRecord<Blob>) => { asset = next; },
   };

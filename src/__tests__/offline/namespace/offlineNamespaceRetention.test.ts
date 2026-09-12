@@ -43,6 +43,7 @@ describe("offline namespace retention", () => {
 
     await expect(removeOfflineNamespace("account-a", async () => repositories)).resolves.toEqual({ status: "removed" });
     expect(repositories.projections.deleteNamespace).toHaveBeenCalledWith("account-a");
+    expect(repositories.publicationCovers.deleteNamespace).toHaveBeenCalledWith("account-a");
     expect(repositories.publicationAssets.deleteNamespace).toHaveBeenCalledWith("account-a");
     expect(repositories.readerState.deleteNamespace).toHaveBeenCalledWith("account-a");
     expect(repositories.readerOutbox.deleteNamespace).toHaveBeenCalledWith("account-a");
@@ -83,6 +84,9 @@ function repositoryBundle(): IndexedDbOfflineRepositories<Blob> {
     },
     publicationAssets: {
       get: vi.fn(), list: vi.fn(async () => []), putComplete: vi.fn(), delete: vi.fn(), deleteNamespace: vi.fn(async () => undefined),
+    },
+    publicationCovers: {
+      get: vi.fn(), put: vi.fn(), delete: vi.fn(), deleteNamespace: vi.fn(async () => undefined),
     },
     readerState: {
       getBookState: vi.fn(), putBookState: vi.fn(), deleteBookState: vi.fn(), deleteNamespace: vi.fn(async () => undefined),

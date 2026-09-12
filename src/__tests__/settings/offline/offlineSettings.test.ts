@@ -171,6 +171,7 @@ describe("Offline Settings controller", () => {
     await harness.controller.removeAsset(selected);
 
     expect(harness.repositories.publicationAssets.delete).toHaveBeenCalledWith("account-a", "book-1", "epub");
+    expect(harness.repositories.publicationCovers.delete).toHaveBeenCalledWith("account-a", "book-1");
     expect(harness.controller.getSnapshot().assets.map((item) => item.bookId)).toEqual(["book-2"]);
     expect(harness.repositories.readerState.deleteNamespace).not.toHaveBeenCalled();
     expect(harness.repositories.readerOutbox.deleteNamespace).not.toHaveBeenCalled();
@@ -188,6 +189,7 @@ describe("Offline Settings controller", () => {
     await harness.controller.removeAllAssets();
 
     expect(harness.repositories.publicationAssets.deleteNamespace).toHaveBeenCalledWith("account-a");
+    expect(harness.repositories.publicationCovers.deleteNamespace).toHaveBeenCalledWith("account-a");
     expect(harness.controller.getSnapshot().assets).toEqual([]);
     expect(harness.allAssets()).toEqual([expect.objectContaining({ namespaceKey: "account-b", bookId: "book-3" })]);
     expect(harness.repositories.readerState.deleteNamespace).not.toHaveBeenCalled();
@@ -296,6 +298,12 @@ function createHarness(options: {
       assets = assets.filter((item) => item.namespaceKey !== namespaceKey);
     }),
   };
+  const publicationCovers = {
+    get: vi.fn(async () => null),
+    put: vi.fn(async () => undefined),
+    delete: vi.fn(async () => undefined),
+    deleteNamespace: vi.fn(async () => undefined),
+  };
   const projections = {
     get: vi.fn(async (namespaceKey: string, projectionKey: string) => {
       const bookId = projectionKey.replace("reader-book:", "");
@@ -324,6 +332,7 @@ function createHarness(options: {
   };
   const repositories = {
     publicationAssets,
+    publicationCovers,
     projections,
     readerState,
     readerOutbox,
@@ -351,6 +360,7 @@ function createHarness(options: {
     dependencies,
     repositories: repositories as unknown as {
       publicationAssets: typeof publicationAssets;
+      publicationCovers: typeof publicationCovers;
       projections: typeof projections;
       readerState: typeof readerState;
       readerOutbox: typeof readerOutbox;

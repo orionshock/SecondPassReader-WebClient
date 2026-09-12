@@ -1,6 +1,8 @@
 import type {
   OfflinePublicationAssetCompleteRecord,
   OfflinePublicationAssetRepository,
+  OfflinePublicationCoverRecord,
+  OfflinePublicationCoverRepository,
   OfflineProjectionRecord,
   OfflineProjectionRepository,
   OfflineReaderBookState,
@@ -18,6 +20,7 @@ import {
 export type OfflineRepositoryTestFactories = {
   createProjectionRepository(): OfflineProjectionRepository | Promise<OfflineProjectionRepository>;
   createPublicationAssetRepository(): OfflinePublicationAssetRepository<Uint8Array> | Promise<OfflinePublicationAssetRepository<Uint8Array>>;
+  createPublicationCoverRepository(): OfflinePublicationCoverRepository<Uint8Array> | Promise<OfflinePublicationCoverRepository<Uint8Array>>;
   createReaderStateRepository(): OfflineReaderStateRepository | Promise<OfflineReaderStateRepository>;
   createReaderOutboxRepository(): ReaderOutboxRepository | Promise<ReaderOutboxRepository>;
 };
@@ -26,9 +29,33 @@ export function createInMemoryOfflineRepositoryFactories(): OfflineRepositoryTes
   return {
     createProjectionRepository: () => new InMemoryOfflineProjectionRepository(),
     createPublicationAssetRepository: () => new InMemoryOfflinePublicationAssetRepository(),
+    createPublicationCoverRepository: () => new InMemoryOfflinePublicationCoverRepository(),
     createReaderStateRepository: () => new InMemoryOfflineReaderStateRepository(),
     createReaderOutboxRepository: () => new InMemoryReaderOutboxRepository(),
   };
+}
+
+class InMemoryOfflinePublicationCoverRepository implements OfflinePublicationCoverRepository<Uint8Array> {
+  private readonly records = new Map<string, OfflinePublicationCoverRecord<Uint8Array>>();
+
+  async get(namespaceKey: string, bookId: string): Promise<OfflinePublicationCoverRecord<Uint8Array> | null> {
+    const record = this.records.get(scopedKey(namespaceKey, bookId));
+    return record ? clone(record) : null;
+  }
+
+  async put(record: OfflinePublicationCoverRecord<Uint8Array>): Promise<void> {
+    this.records.set(scopedKey(record.namespaceKey, record.bookId), clone(record));
+  }
+
+  async delete(namespaceKey: string, bookId: string): Promise<void> {
+    this.records.delete(scopedKey(namespaceKey, bookId));
+  }
+
+  async deleteNamespace(namespaceKey: string): Promise<void> {
+    for (const [key, record] of this.records) {
+      if (record.namespaceKey === namespaceKey) this.records.delete(key);
+    }
+  }
 }
 
 class InMemoryOfflineProjectionRepository implements OfflineProjectionRepository {

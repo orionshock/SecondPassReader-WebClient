@@ -1,5 +1,5 @@
 import type {
-  BookDetail, BookFileDownloadResult, CatalogResultPage, CatalogTag, CompactBook, Author,
+  BookCoverDownloadResult, BookDetail, BookFileDownloadResult, CatalogResultPage, CatalogTag, CompactBook, Author,
   LibraryGroup, Series, PaginatedResponse, PreviewBook,
 } from "./schemas/Library.Types";
 import type { AuthenticatedClientContext } from "./ClientContext.Policy";
@@ -174,4 +174,27 @@ export async function downloadBookFile(ctx: AuthenticatedClientContext, bookId: 
   const contentLengthRaw = response.headers.get("content-length");
   const contentLength = contentLengthRaw ? Number(contentLengthRaw) : undefined;
   return { blob, contentType, contentLength: Number.isFinite(contentLength) ? contentLength : undefined, contentDisposition, filename: contentDisposition ? tryParseFilename(contentDisposition) : undefined };
+}
+
+export async function downloadBookCover(
+  ctx: AuthenticatedClientContext,
+  coverUrl: string,
+): Promise<BookCoverDownloadResult> {
+  const url = new URL(coverUrl, ctx.apiBaseUrl);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Book cover URL must use HTTP or HTTPS.");
+  }
+  const apiOrigin = new URL(ctx.apiBaseUrl).origin;
+  const sameApiOrigin = url.origin === apiOrigin;
+  const { blob, response } = await requestBlob({
+    apiBaseUrl: ctx.apiBaseUrl,
+    accessToken: sameApiOrigin ? ctx.accessToken : undefined,
+    tokenType: sameApiOrigin ? ctx.tokenType : undefined,
+    endpointOrUrl: url.toString(),
+    options: { accept: "image/avif, image/webp, image/png, image/jpeg, image/gif, image/*" },
+  });
+  return {
+    blob,
+    contentType: (response.headers.get("content-type") ?? blob.type) || undefined,
+  };
 }

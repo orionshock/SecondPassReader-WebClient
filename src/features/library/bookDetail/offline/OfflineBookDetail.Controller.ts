@@ -7,6 +7,7 @@ import {
 } from "../../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import { presentOfflineBookDetail, type OfflineBookDetail } from "./OfflineBookDetail.Presenter";
 import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
+import { removeOfflinePublicationAsset } from "../../../../app/offline/publication/OfflinePublicationRemoval.Actions";
 
 type Repositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -64,9 +65,10 @@ export function createOfflineBookDetailController(
     if (!started || !currentRepositories) return;
     const expectedGeneration = generation;
     const expectedLoad = ++loadRevision;
-    const [bookRead, assetRead] = await Promise.all([
+    const [bookRead, assetRead, coverRead] = await Promise.all([
       readBook(currentRepositories, namespaceKey, bookId),
       readAssets(currentRepositories, namespaceKey, bookId),
+      readCover(currentRepositories, namespaceKey, bookId),
     ]);
     if (!isCurrent(expectedGeneration, expectedLoad)) return;
     if (bookRead.status === "error" && assetRead.status === "error") {
@@ -84,6 +86,7 @@ export function createOfflineBookDetailController(
         bookId,
         book: bookRead.status === "loaded" ? bookRead.book : null,
         assets: assetRead.status === "loaded" ? assetRead.assets : [],
+        cover: coverRead.status === "loaded" ? coverRead.cover : null,
         assetReadFailed: assetRead.status === "error",
       }),
       action: "idle",
@@ -152,7 +155,13 @@ export function createOfflineBookDetailController(
       const expectedGeneration = generation;
       publish({ ...state, action: "removing", message: null });
       try {
-        await currentRepositories.publicationAssets.delete(namespaceKey, bookId, asset.format);
+        await removeOfflinePublicationAsset({
+          namespaceKey,
+          bookId,
+          format: asset.format,
+          assetRepository: currentRepositories.publicationAssets,
+          coverRepository: currentRepositories.publicationCovers,
+        });
         if (isCurrent(expectedGeneration)) await load();
       } catch (error) {
         debugWarn("reader", "offline copy removal did not complete", { bookId, error });
@@ -164,6 +173,22 @@ export function createOfflineBookDetailController(
       }
     },
   };
+}
+
+async function readCover(
+  repositories: Repositories,
+  namespaceKey: string,
+  bookId: string,
+): Promise<
+  | { status: "loaded"; cover: Awaited<ReturnType<Repositories["publicationCovers"]["get"]>> }
+  | { status: "error" }
+> {
+  try {
+    return { status: "loaded", cover: await repositories.publicationCovers.get(namespaceKey, bookId) };
+  } catch (error) {
+    debugWarn("reader", "saved Book cover could not be read", { bookId, error });
+    return { status: "error" };
+  }
 }
 
 async function readBook(

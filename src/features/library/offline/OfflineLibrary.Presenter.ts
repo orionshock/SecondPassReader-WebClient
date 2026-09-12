@@ -3,7 +3,11 @@ import {
   classifyOfflinePublicationAssetAvailability,
   normalizePublicationFormat,
 } from "../../../app/offline/publication/OfflinePublicationAsset.Policy";
-import type { OfflinePublicationAssetCompleteRecord } from "../../../app/offline/storage/OfflineRepositories.Types";
+import type {
+  OfflinePublicationAssetCompleteRecord,
+  OfflinePublicationCoverRecord,
+} from "../../../app/offline/storage/OfflineRepositories.Types";
+import { isUsableOfflinePublicationCover } from "../../../app/offline/publication/OfflinePublicationCover.Policy";
 
 const CURRENT_READER_FORMAT = "epub";
 
@@ -14,15 +18,21 @@ export type OfflineLibraryBook = {
   titleAvailable: boolean;
   format: string;
   assetBytes: number;
+  coverBlob: Blob | null;
   admission: "available" | "unsupported-format" | "unavailable";
 };
 
 export function buildOfflineLibraryBooks(input: {
   assets: OfflinePublicationAssetCompleteRecord<Blob>[];
   metadata: ReadonlyMap<string, BookDetail | null>;
+  covers?: ReadonlyMap<string, OfflinePublicationCoverRecord<Blob> | null>;
 }): OfflineLibraryBook[] {
   return input.assets
-    .map((asset) => presentAsset(asset, input.metadata.get(asset.bookId) ?? null))
+    .map((asset) => presentAsset(
+      asset,
+      input.metadata.get(asset.bookId) ?? null,
+      input.covers?.get(asset.bookId) ?? null,
+    ))
     .sort(compareOfflineLibraryBooks);
 }
 
@@ -38,6 +48,7 @@ export function searchOfflineLibraryBooks(
 function presentAsset(
   asset: OfflinePublicationAssetCompleteRecord<Blob>,
   book: BookDetail | null,
+  cover: OfflinePublicationCoverRecord<Blob> | null,
 ): OfflineLibraryBook {
   const format = normalizePublicationFormat(asset.format) ?? "unknown";
   const availability = book
@@ -58,8 +69,13 @@ function presentAsset(
     titleAvailable: Boolean(title),
     format,
     assetBytes: asset.byteLength,
+    coverBlob: validCoverBlob(cover),
     admission,
   };
+}
+
+function validCoverBlob(cover: OfflinePublicationCoverRecord<Blob> | null): Blob | null {
+  return isUsableOfflinePublicationCover(cover) ? cover.payload : null;
 }
 
 function compareOfflineLibraryBooks(left: OfflineLibraryBook, right: OfflineLibraryBook): number {

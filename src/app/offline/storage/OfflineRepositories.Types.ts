@@ -46,6 +46,23 @@ export interface OfflinePublicationAssetRepository<TPayload> {
   deleteNamespace(namespaceKey: string): Promise<void>;
 }
 
+export type OfflinePublicationCoverRecord<TPayload> = {
+  namespaceKey: string;
+  bookId: string;
+  sourceUrl: string;
+  contentType: string;
+  byteLength: number;
+  schemaVersion: number;
+  payload: TPayload;
+};
+
+export interface OfflinePublicationCoverRepository<TPayload> {
+  get(namespaceKey: string, bookId: string): Promise<OfflinePublicationCoverRecord<TPayload> | null>;
+  put(record: OfflinePublicationCoverRecord<TPayload>): Promise<void>;
+  delete(namespaceKey: string, bookId: string): Promise<void>;
+  deleteNamespace(namespaceKey: string): Promise<void>;
+}
+
 export type OfflineReaderAnnotationProjection =
   | {
       status: "present";

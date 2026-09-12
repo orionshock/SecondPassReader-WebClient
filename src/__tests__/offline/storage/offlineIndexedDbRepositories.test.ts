@@ -55,13 +55,25 @@ describe("IndexedDB offline repository lifecycle", () => {
       schemaVersion: 1,
       payload,
     });
+    const coverPayload = new Blob([new Uint8Array([4, 5])], { type: "image/jpeg" });
+    await first.publicationCovers.put({
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      sourceUrl: "https://library.example/covers/book-1.jpg",
+      contentType: "image/jpeg",
+      byteLength: coverPayload.size,
+      schemaVersion: 1,
+      payload: coverPayload,
+    });
     await first.readerState.putBookState(readerState());
     first.close();
 
     const reopened = await openIndexedDbOfflineRepositories(options);
     const asset = await reopened.publicationAssets.get("account-a", "book-1", "epub");
+    const cover = await reopened.publicationCovers.get("account-a", "book-1");
 
     expect(new Uint8Array(await asset!.payload.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
+    expect(new Uint8Array(await cover!.payload.arrayBuffer())).toEqual(new Uint8Array([4, 5]));
     expect(await reopened.readerState.getBookState("account-a", "book-1")).toEqual(readerState());
     reopened.close();
   });
@@ -85,9 +97,22 @@ describe("IndexedDB offline repository lifecycle", () => {
       payload: new Uint8Array([1]),
     });
     await repositories.publicationAssets.delete("account-a", "book-1", "epub");
+    const coverPayload = new Uint8Array([2]);
+    await repositories.publicationCovers.put({
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      sourceUrl: "https://library.example/cover.jpg",
+      contentType: "image/jpeg",
+      byteLength: coverPayload.byteLength,
+      schemaVersion: 1,
+      payload: coverPayload,
+    });
+    await repositories.publicationCovers.delete("account-a", "book-1");
 
     expect(listener).toHaveBeenNthCalledWith(1, "account-a");
     expect(listener).toHaveBeenNthCalledWith(2, "account-a");
+    expect(listener).toHaveBeenNthCalledWith(3, "account-a");
+    expect(listener).toHaveBeenNthCalledWith(4, "account-a");
     unsubscribe();
     repositories.close();
   });
@@ -110,6 +135,22 @@ describe("IndexedDB offline repository lifecycle", () => {
       schemaVersion: 1,
       payload: new Uint8Array([1]),
     });
+    repositories.close();
+  });
+
+  it("adds cover storage without changing current version 2 publication records", async () => {
+    const indexedDb = new IDBFactory();
+    const databaseName = "offline-version-2-cover-migration";
+    await putVersionTwoAsset(indexedDb, databaseName);
+
+    const repositories = await openIndexedDbOfflineRepositories<Uint8Array>({ indexedDb, databaseName });
+
+    expect(await repositories.publicationAssets.get("account-a", "book-1", "epub")).toMatchObject({
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      checksum: "b".repeat(64),
+    });
+    expect(await repositories.publicationCovers.get("account-a", "book-1")).toBeNull();
     repositories.close();
   });
 
@@ -184,6 +225,38 @@ function putVersionOneAsset(indexedDb: IDBFactory, databaseName: string): Promis
         namespaceKey: "account-a",
         bookId: "book-1",
         checksum: "a".repeat(64),
+        byteLength: 1,
+        schemaVersion: 1,
+        payload: new Uint8Array([1]),
+      });
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    };
+  });
+}
+
+function putVersionTwoAsset(indexedDb: IDBFactory, databaseName: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDb.open(databaseName, 2);
+    request.onupgradeneeded = () => {
+      const store = request.result.createObjectStore("publicationAssets", {
+        keyPath: ["namespaceKey", "bookId", "format"],
+      });
+      store.createIndex("namespaceKey", "namespaceKey", { unique: false });
+    };
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction("publicationAssets", "readwrite");
+      transaction.objectStore("publicationAssets").put({
+        status: "complete",
+        namespaceKey: "account-a",
+        bookId: "book-1",
+        format: "epub",
+        checksum: "b".repeat(64),
         byteLength: 1,
         schemaVersion: 1,
         payload: new Uint8Array([1]),

@@ -9,6 +9,7 @@ import type { ServerInfo } from "./schemas/Server.Types";
 import type {
   Author,
   BookDetail,
+  BookCoverDownloadResult,
   CatalogResultPage,
   CatalogTag,
   CompactBook,
@@ -139,6 +140,8 @@ export type SecondPassClient = {
        * Server convention: 1 book === 1 file.
        */
       download(book: CompactBook | BookDetail | string | number): Promise<Blob>;
+      /** Downloads bytes from a server-provided cover URL. */
+      downloadCover(coverUrl: string): Promise<BookCoverDownloadResult>;
     };
     series: {
       list(params?: LibraryEntityListParams): Promise<CatalogResultPage<Series>>;

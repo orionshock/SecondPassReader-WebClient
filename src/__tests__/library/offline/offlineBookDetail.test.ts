@@ -17,6 +17,7 @@ describe("offline Book Detail state", () => {
       bookId: "book-1",
       book: book(),
       assets: [asset()],
+      cover: coverRecord(),
     });
 
     expect(detail).toMatchObject({
@@ -29,6 +30,7 @@ describe("offline Book Detail state", () => {
       assetBytes: 4,
       availability: "available",
       canOpenReader: true,
+      coverBlob: expect.any(Blob),
     });
   });
 
@@ -66,6 +68,19 @@ describe("offline Book Detail state", () => {
   });
 });
 
+function coverRecord() {
+  const payload = new Blob(["cover"], { type: "image/jpeg" });
+  return {
+    namespaceKey: "account-a",
+    bookId: "book-1",
+    sourceUrl: "https://library.example/cover.jpg",
+    contentType: "image/jpeg",
+    byteLength: payload.size,
+    schemaVersion: 1,
+    payload,
+  };
+}
+
 describe("offline Book Detail controller", () => {
   it("loads exact namespace data and removes only the selected publication asset", async () => {
     const harness = createHarness();
@@ -76,6 +91,7 @@ describe("offline Book Detail controller", () => {
 
     expect(harness.repositories.publicationAssets.list).toHaveBeenCalledWith("account-a");
     expect(harness.repositories.publicationAssets.delete).toHaveBeenCalledWith("account-a", "book-1", "epub");
+    expect(harness.repositories.publicationCovers.delete).toHaveBeenCalledWith("account-a", "book-1");
     expect(harness.repositories.readerState.deleteBookState).not.toHaveBeenCalled();
     expect(harness.repositories.readerState.deleteNamespace).not.toHaveBeenCalled();
     expect(harness.repositories.readerOutbox.remove).not.toHaveBeenCalled();
@@ -152,6 +168,10 @@ function createHarness(options: { projectionFailure?: boolean; assetFailure?: bo
         return [...currentAssets];
       }),
       delete: vi.fn(async () => { currentAssets = []; }),
+    },
+    publicationCovers: {
+      get: vi.fn(async () => null),
+      delete: vi.fn(async () => undefined),
     },
     readerState: { deleteBookState: vi.fn(), deleteNamespace: vi.fn() },
     readerOutbox: { remove: vi.fn(), deleteNamespace: vi.fn() },

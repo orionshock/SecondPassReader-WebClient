@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { OfflinePublicationCoverImage } from "../../../app/offline/publication/OfflinePublicationCoverImage.UI";
 import { getSessionDisplayName } from "../../sessions/SessionDisplayName.Presenter";
 import { createOfflineHomeController } from "./OfflineHome.Controller";
 
@@ -48,7 +49,14 @@ export function OfflineHomePage({
             <div className="offlineHomeRecentList">
               {state.recent.items.map((item) => (
                 <article key={item.sessionId} className="offlineHomeRecentItem">
-                  <div className="bookCover bookCoverSmall" aria-hidden="true"><span className="bookCoverPlaceholderText">No cover</span></div>
+                  <div className="bookCover bookCoverSmall">
+                    <OfflinePublicationCoverImage
+                      blob={item.coverBlob}
+                      alt=""
+                      imageClassName="bookCoverImg"
+                      placeholderClassName="bookCoverPlaceholderText"
+                    />
+                  </div>
                   <div className="offlineHomeRecentMain">
                     <strong>{item.bookTitle}</strong>
                     <span className="muted">

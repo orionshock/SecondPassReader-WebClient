@@ -71,7 +71,7 @@ describe("offline Home controller", () => {
     const state = harness.controller.getSnapshot();
     expect(state.recent).toMatchObject({
       status: "available",
-      items: [expect.objectContaining({ bookId: "book-1", offlineReadable: true })],
+      items: [expect.objectContaining({ bookId: "book-1", offlineReadable: true, coverBlob: expect.any(Blob) })],
     });
     expect(state.shelves).toMatchObject({ status: "available", items: [expect.objectContaining({ shelfId: "shelf-1" })] });
     expect(harness.repositories.publicationAssets.list).toHaveBeenCalledWith("account-a");
@@ -184,6 +184,20 @@ function createHarness(options: { shelvesMissing?: boolean; projectionFailure?: 
         payload: new Blob(["book"]),
       }]),
     },
+    publicationCovers: {
+      get: vi.fn(async () => {
+        const payload = new Blob(["cover"], { type: "image/jpeg" });
+        return {
+          namespaceKey: "account-a",
+          bookId: "book-1",
+          sourceUrl: "https://library.example/cover.jpg",
+          contentType: "image/jpeg",
+          byteLength: payload.size,
+          schemaVersion: 1,
+          payload,
+        };
+      }),
+    },
     readerState: {
       getBookState: vi.fn(async () => {
         if (options.readerFailure) throw new Error("reader state unavailable");
@@ -198,6 +212,7 @@ function createHarness(options: { shelvesMissing?: boolean; projectionFailure?: 
       readerListener = listener;
       return () => { readerListener = null; };
     }),
+    subscribeAssetChanges: vi.fn(() => () => undefined),
     subscribeFocus: vi.fn(() => () => undefined),
   };
   const controller = createOfflineHomeController("account-a", dependencies);

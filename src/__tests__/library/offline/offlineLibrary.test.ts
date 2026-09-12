@@ -66,6 +66,7 @@ describe("offline Library controller", () => {
 
     expect(harness.repositories.publicationAssets.list).toHaveBeenCalledWith("account-a");
     expect(harness.controller.getSnapshot().books).toHaveLength(1);
+    expect(harness.controller.getSnapshot().books[0].coverBlob?.size).toBe(5);
 
     harness.assets.length = 0;
     harness.assetListener?.("account-b");
@@ -117,6 +118,7 @@ function createHarness() {
       })),
     },
     publicationAssets: { list: vi.fn(async () => [...assets]) },
+    publicationCovers: { get: vi.fn(async () => coverRecord()) },
     close: vi.fn(),
   } as unknown as IndexedDbOfflineRepositories<Blob>;
   const dependencies: Partial<OfflineLibraryDependencies> = {
@@ -136,6 +138,19 @@ function createHarness() {
     ready: (bookCount = 1) => waitFor(() => (
       controller.getSnapshot().status === "ready" && controller.getSnapshot().books.length === bookCount
     )),
+  };
+}
+
+function coverRecord() {
+  const payload = new Blob(["cover"], { type: "image/jpeg" });
+  return {
+    namespaceKey: "account-a",
+    bookId: "book-1",
+    sourceUrl: "https://library.example/cover.jpg",
+    contentType: "image/jpeg",
+    byteLength: payload.size,
+    schemaVersion: 1,
+    payload,
   };
 }
 

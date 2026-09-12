@@ -5,6 +5,7 @@ import { getCurrentUser } from "./Account.Api";
 import { getServerInfo } from "./Server.Api";
 import {
   downloadBookFile,
+  downloadBookCover,
   getAuthor,
   getBook,
   getGroup,
@@ -116,6 +117,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         },
         download: async (book) => {
           return downloadBookBlob(book);
+        },
+        downloadCover: async (coverUrl) => {
+          return downloadBookCover(requireAuth(ctx), coverUrl);
         },
       },
 

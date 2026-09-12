@@ -120,3 +120,8 @@ export type BookFileDownloadResult = {
   contentDisposition?: string;
   filename?: string;
 };
+
+export type BookCoverDownloadResult = {
+  blob: Blob;
+  contentType?: string;
+};

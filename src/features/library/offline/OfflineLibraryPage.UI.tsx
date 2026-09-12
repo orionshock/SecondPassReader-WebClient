@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { OfflinePublicationCoverImage } from "../../../app/offline/publication/OfflinePublicationCoverImage.UI";
 import { createOfflineLibraryController } from "./OfflineLibrary.Controller";
 import type { OfflineLibraryBook } from "./OfflineLibrary.Presenter";
 
@@ -75,8 +76,13 @@ function OfflineLibraryRow({
 
   return (
     <article className="bookDisplayButton bookListRow offlineLibraryBookRow">
-      <div className="bookCover bookCoverSmall" aria-hidden="true">
-        <div className="bookCoverPlaceholderText">No cover</div>
+      <div className="bookCover bookCoverSmall">
+        <OfflinePublicationCoverImage
+          blob={book.coverBlob}
+          alt=""
+          imageClassName="bookCoverImg"
+          placeholderClassName="bookCoverPlaceholderText"
+        />
       </div>
       <div className="bookListRowMain">
         <div className="bookTitle">{book.title}</div>

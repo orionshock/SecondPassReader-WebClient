@@ -1,5 +1,9 @@
 import type { MarginaliaRecentSession, Shelf } from "@secondpass/client";
-import type { OfflineReaderBookState } from "../../../app/offline/storage/OfflineRepositories.Types";
+import type {
+  OfflinePublicationCoverRecord,
+  OfflineReaderBookState,
+} from "../../../app/offline/storage/OfflineRepositories.Types";
+import { isUsableOfflinePublicationCover } from "../../../app/offline/publication/OfflinePublicationCover.Policy";
 
 export type OfflineHomeRecentItem = {
   sessionId: string;
@@ -15,6 +19,7 @@ export type OfflineHomeRecentItem = {
     source: "cached-server" | "local";
   } | null;
   offlineReadable: boolean;
+  coverBlob: Blob | null;
 };
 
 export type OfflineHomeShelfItem = {
@@ -28,6 +33,7 @@ export function presentOfflineHomeRecent(input: {
   cachedItems: readonly MarginaliaRecentSession[];
   readerStates: ReadonlyMap<string, OfflineReaderBookState | null>;
   readableBookIds: ReadonlySet<string>;
+  covers?: ReadonlyMap<string, OfflinePublicationCoverRecord<Blob> | null>;
 }): OfflineHomeRecentItem[] {
   return input.cachedItems.map((item) => {
     const bookId = String(item.book.id);
@@ -56,8 +62,13 @@ export function presentOfflineHomeRecent(input: {
       bookTitle: item.book.title,
       progress,
       offlineReadable: input.readableBookIds.has(bookId),
+      coverBlob: validCoverBlob(input.covers?.get(bookId) ?? null),
     };
   });
+}
+
+function validCoverBlob(cover: OfflinePublicationCoverRecord<Blob> | null): Blob | null {
+  return isUsableOfflinePublicationCover(cover) ? cover.payload : null;
 }
 
 export function presentOfflineHomeShelves(items: readonly Shelf[]): OfflineHomeShelfItem[] {

@@ -5,6 +5,7 @@ import { BookDescription } from "../../BookDescription.UI";
 import { createOfflineBookDetailController } from "./OfflineBookDetail.Controller";
 import { formatOfflineBookAssetBytes, type OfflineBookDetail } from "./OfflineBookDetail.Presenter";
 import { useModalDialogFocus } from "../../../../components/ModalDialogFocus.Lifecycle";
+import { OfflinePublicationCoverImage } from "../../../../app/offline/publication/OfflinePublicationCoverImage.UI";
 
 export function OfflineBookDetailDialog({
   namespaceKey,
@@ -54,7 +55,14 @@ export function OfflineBookDetailDialog({
           {state.status === "ready" && detail ? (
             <div className="bookDetailPanel offlineBookDetailPanel">
               <div className="bookDetailHero">
-                <div className="bookDetailCover"><div className="bookDetailCoverPlaceholder" aria-hidden="true">No cover</div></div>
+                <div className="bookDetailCover">
+                  <OfflinePublicationCoverImage
+                    blob={detail.coverBlob}
+                    alt={`${detail.title} cover`}
+                    imageClassName="bookDetailCoverImg"
+                    placeholderClassName="bookDetailCoverPlaceholder"
+                  />
+                </div>
                 <div className="bookDetailHeroContent">
                   <div className="muted offlineBookDetailContext">Saved details</div>
                   <h2 className="bookDetailTitle">{detail.title}</h2>

@@ -33,6 +33,9 @@ export function BookOfflineAvailabilityPanel({
       ) : null}
       {state.status === "available" ? (
         <>
+          <button type="button" className="button" onClick={() => void controller.acquire()}>
+            Update offline copy
+          </button>
           <button type="button" className="button" onClick={onManageOffline}>Manage offline</button>
           <button type="button" className="button" onClick={() => void controller.remove()}>
             Remove offline copy

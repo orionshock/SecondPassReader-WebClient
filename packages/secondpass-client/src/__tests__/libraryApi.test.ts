@@ -260,4 +260,20 @@ describe("SDK Library API", () => {
     expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/library/books/1/download/");
   });
 
+  it("downloads same-origin covers with auth and cross-origin covers without leaking auth", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(blobResponse(new Blob(["one"], { type: "image/jpeg" })))
+      .mockResolvedValueOnce(blobResponse(new Blob(["two"], { type: "image/png" })));
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "secret" });
+
+    const sameOrigin = await spl.library.books.downloadCover("/media/cover.jpg");
+    const external = await spl.library.books.downloadCover("https://cdn.example/cover.png");
+
+    expect(sameOrigin.contentType).toBe("image/jpeg");
+    expect(external.contentType).toBe("image/png");
+    expect((fetchMock.mock.calls[0]![1]?.headers as Record<string, string>).Authorization).toBe("Bearer secret");
+    expect((fetchMock.mock.calls[1]![1]?.headers as Record<string, string>).Authorization).toBeUndefined();
+  });
+
 });

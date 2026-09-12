@@ -38,6 +38,7 @@ export async function removeOfflineNamespace(
   try {
     repositories = await openRepositories();
     await repositories.projections.deleteNamespace(namespaceKey);
+    await repositories.publicationCovers.deleteNamespace(namespaceKey);
     await repositories.publicationAssets.deleteNamespace(namespaceKey);
     await repositories.readerState.deleteNamespace(namespaceKey);
     await repositories.readerOutbox.deleteNamespace(namespaceKey);
