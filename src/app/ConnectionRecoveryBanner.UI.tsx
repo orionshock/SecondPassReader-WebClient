@@ -23,7 +23,7 @@ export function ConnectionRecoveryBanner({ repairRequired = false }: { repairReq
         </h2>
         <p className="connectionRecoveryDescription">
           {repairRequired
-            ? "Sign in again to restore access. Offline reading data remains saved."
+            ? "Sign in again to restore access. Offline data is kept only if the connection verifies the same account."
             : "Check the connection or try again after access is restored."}
         </p>
       </div>

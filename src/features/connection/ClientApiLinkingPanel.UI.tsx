@@ -12,13 +12,14 @@ type Props = {
   selectedProfileId?: string | null;
   onProfilesChanged?: () => void;
   profilesVersion?: number;
-  onCancel?: () => void;
+  onCancel?: () => "completed" | "cancelled" | "failed" | Promise<"completed" | "cancelled" | "failed">;
 };
 
 type LinkingState =
   | { phase: "idle" }
   | { phase: "starting" }
   | { phase: "waiting"; loginRequest: ClientApiLoginRequestResponse }
+  | { phase: "cancelling" }
   | { phase: "success" }
   | { phase: "error"; message: string };
 
@@ -131,6 +132,21 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     setState({ phase: "idle" });
   }
 
+  async function cancel() {
+    abortRef.current?.abort();
+    if (!onCancel) return;
+    setState({ phase: "cancelling" });
+    const result = await onCancel();
+    if (result === "cancelled") {
+      setState({ phase: "idle" });
+    } else if (result === "failed") {
+      setState({
+        phase: "error",
+        message: "Offline data couldn't be removed. Try signing out again.",
+      });
+    }
+  }
+
   const secondsUntilNextPoll =
     nextPollAt === null ? null : Math.max(0, Math.ceil((nextPollAt - countdownNow) / 1000));
 
@@ -195,8 +211,13 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         </p>
 
         <div className="formActions pairActions">
-          <button type="button" className="button" onClick={onCancel}>
-            {repairing ? "Sign out locally" : "Cancel"}
+          <button
+            type="button"
+            className="button"
+            onClick={() => void cancel()}
+            disabled={state.phase === "cancelling"}
+          >
+            {state.phase === "cancelling" ? `Removing${"\u2026"}` : repairing ? "Sign out locally" : "Cancel"}
           </button>
           <button
             type="button"

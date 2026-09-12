@@ -33,6 +33,7 @@ import { showOfflineReaderSyncOutcome } from "./offline/reader/sync/notice/Offli
 import { OfflineReaderSyncNoticePanel } from "./offline/reader/sync/notice/OfflineReaderSyncNoticePanel.UI";
 import { clearOfflineReaderSyncNotice } from "./offline/reader/sync/notice/OfflineReaderSyncNotice.State";
 import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
+import { removeConnectionAndOfflineData } from "../features/connection/ConnectionRemoval.Controller";
 import {
   getBrowserConnectivitySnapshot,
   subscribeToBrowserConnectivity,
@@ -76,13 +77,14 @@ function AppShell() {
     getBrowserConnectivitySnapshot,
     (): "unknown" => "unknown",
   );
-  const offlineNamespaceKey = useMemo(() => {
-    if (workflowStep !== "library_home" || !selectedProfile?.verifiedAt) return null;
+  const verifiedOfflineNamespaceKey = useMemo(() => {
+    if (!selectedProfile?.verifiedAt) return null;
     return buildOfflineCacheNamespace({
       serverBaseUrl: selectedProfile.serverBaseUrl,
       accountProfileId: selectedProfile.verifiedUser?.profileId,
     })?.key ?? null;
-  }, [selectedProfile?.serverBaseUrl, selectedProfile?.verifiedAt, selectedProfile?.verifiedUser?.profileId, workflowStep]);
+  }, [selectedProfile?.serverBaseUrl, selectedProfile?.verifiedAt, selectedProfile?.verifiedUser?.profileId]);
+  const offlineNamespaceKey = workflowStep === "library_home" ? verifiedOfflineNamespaceKey : null;
   const automaticSyncGenerationKey = offlineNamespaceKey && selectedProfile
     ? JSON.stringify([offlineNamespaceKey, selectedProfile.id, selectedProfile.verifiedAt])
     : null;
@@ -292,8 +294,21 @@ function AppShell() {
     navigateTo({ kind: "pair" });
   }
 
-  function handleCancelPairing() {
-    returnToConnect({ replace: true });
+  async function handleCancelPairing(): Promise<"completed" | "cancelled" | "failed"> {
+    if (selectedProfile?.authenticationState !== "repair-required") {
+      returnToConnect({ replace: true });
+      return "completed";
+    }
+
+    const result = await removeConnectionAndOfflineData({
+      intent: "sign-out",
+      namespaceKey: verifiedOfflineNamespaceKey,
+      client: null,
+      connectivity: browserConnectivity,
+      confirm: (message) => window.confirm(message),
+      onRemoved: () => returnToConnect({ replace: true }),
+    });
+    return result.status === "removed" ? "completed" : result.status;
   }
 
   return (

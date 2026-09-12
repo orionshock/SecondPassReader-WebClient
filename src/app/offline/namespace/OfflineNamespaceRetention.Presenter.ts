@@ -20,15 +20,24 @@ export function summarizeOfflineNamespaceRetention(
   };
 }
 
-export function offlineNamespaceRemovalConfirmation(summary: OfflineNamespaceRetentionSummary): string {
+export type OfflineNamespaceRemovalIntent = "sign-out" | "forget";
+
+export function offlineNamespaceRemovalConfirmation(
+  summary: OfflineNamespaceRetentionSummary,
+  intent: OfflineNamespaceRemovalIntent,
+): string {
+  const action = intent === "sign-out" ? "Signing out" : "Forgetting this connection";
   const consequences = [
     summary.pendingIntents > 0
-      ? "Unsynced reading changes will be permanently discarded."
+      ? `Some reading changes haven't synced. ${action} now will discard them.`
       : null,
     summary.offlineAssetCount > 0
       ? "Offline copies will be removed."
       : null,
     "Reading progress and annotations saved only in this browser will be removed.",
   ].filter(Boolean);
-  return `Forget this connection and remove its local data? ${consequences.join(" ")}`;
+  const question = intent === "sign-out"
+    ? "Sign out and remove this connection's offline data from this browser?"
+    : "Forget this connection and remove its offline data from this browser?";
+  return `${question} ${consequences.join(" ")}`;
 }

@@ -3,6 +3,7 @@ import type { CurrentUser } from "@secondpass/client";
 import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { createSplClientFromProfile } from "../../app/AppSplClient.Factory";
 import { applyAuthenticatedContextToProfile } from "./ConnectionAccountProfile.Mapper";
+import { finalizeConnectionRepair } from "./ConnectionRepair.Controller";
 import { loadAuthenticatedContext } from "./AuthenticatedContext.Queries";
 import { isAuthenticationRepairError, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
@@ -61,7 +62,26 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
       const now = new Date().toISOString();
       const updated: ConnectionProfile = applyAuthenticatedContextToProfile(profile, currentUser, serverInfo, now);
 
-      saveConnectionProfile(updated);
+      if (profile.authenticationState === "verifying-repair") {
+        const result = await finalizeConnectionRepair({
+          previous: profile,
+          verified: updated,
+          save: saveConnectionProfile,
+        });
+        if (result.status === "failed") {
+          debugWarn("offline", "previous account data could not be removed after connection repair", {
+            previousProfileId: profile.verifiedUser?.profileId,
+            verifiedProfileId: updated.verifiedUser?.profileId,
+          });
+          setState({
+            phase: "error",
+            message: "The connection was verified, but the previous account's offline data couldn't be removed. Try again.",
+          });
+          return;
+        }
+      } else {
+        saveConnectionProfile(updated);
+      }
       onProfilesChanged?.();
       setState({ phase: "success", me: currentUser });
     } catch (e) {

@@ -8,6 +8,7 @@ export type SettingsLibraryServerActionState =
   | { phase: "idle" }
   | { phase: "checking" }
   | { phase: "logging_out" }
+  | { phase: "signing_out_locally" }
   | { phase: "forgetting" }
   | { phase: "success"; message: string }
   | { phase: "error"; message: string; action: "check" | "logout" | "forget"; technicalDetail?: string | null };
@@ -87,8 +88,7 @@ export function SettingsLibraryServerPanel({
           <h2 className="panelTitle">This browser</h2>
         </div>
         <p className="muted">
-          Signing out revokes this browser's session and removes its saved credentials. Downloaded books and reading
-          changes remain available to the same verified account.
+          Signing out revokes this browser's session and removes this connection and its offline data from this browser.
         </p>
         <div className="settingsGrid">
           <SettingsDetailRow label="Web client version" value={APP_BUILD_INFO.version} mono />
@@ -102,8 +102,8 @@ export function SettingsLibraryServerPanel({
         {profile ? (
           <div className="settingsLocalFallback">
             <span className="muted">
-              If Second Pass Library can't be reached, you can sign out locally. Downloaded books and reading changes
-              remain available to the same verified account.
+              If Second Pass Library can't be reached, sign out locally. This removes the connection and its offline
+              data from this browser.
             </span>
             <button
               type="button"
@@ -111,9 +111,9 @@ export function SettingsLibraryServerPanel({
               onClick={onSignOutLocally}
               disabled={busy}
             >
-              Sign out locally
+              {state.phase === "signing_out_locally" ? `Removing${"\u2026"}` : "Sign out locally"}
             </button>
-            <span className="muted">Forgetting this connection also removes its downloaded books and local reading data.</span>
+            <span className="muted">Forget this connection without contacting Second Pass Library. Its offline data will be removed.</span>
             <button
               type="button"
               className="settingsLinkButton"

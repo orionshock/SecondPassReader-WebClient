@@ -17,9 +17,11 @@ import {
 import { SettingsToolsPanel } from "./settings/SettingsToolsPanel.UI";
 import type { OfflineReaderSyncClient } from "./offline/reader/sync/OfflineReaderSync.Actions";
 import { OfflineSettingsPanel } from "./settings/offline/OfflineSettingsPanel.UI";
-import { getBrowserConnectivitySnapshot } from "./connectivity/BrowserConnectivity.State";
 import type { BrowserConnectivityStatus } from "./connectivity/BrowserConnectivity.State";
-import { forgetConnectionAndOfflineData } from "../features/connection/ConnectionRemoval.Controller";
+import {
+  removeConnectionAndOfflineData,
+  type ConnectionRemovalResult,
+} from "../features/connection/ConnectionRemoval.Controller";
 
 type Props = {
   profile: ConnectionProfile | null;
@@ -122,8 +124,7 @@ export function SettingsPanel({
       return;
     }
 
-    setState({ phase: "logging_out" });
-    try {
+    await removeConnection("sign-out", "logging_out", async () => {
       const endpoint = new URL(
         `/api/v1/accounts/me/client-sessions/${encodeURIComponent(profile.clientSessionId)}/`,
         profile.apiBaseUrl,
@@ -143,38 +144,61 @@ export function SettingsPanel({
           message: `Logout failed with HTTP ${response.status}.`,
         });
       }
-      onDisconnect();
-    } catch (e) {
-      setState({
-        phase: "error",
-        action: "logout",
-        message: isAuthorizationError(e)
-          ? "Second Pass Library no longer recognizes this browser. Sign out locally instead."
-          : "Couldn't sign out.",
-        technicalDetail: getTechnicalErrorDetail(e),
-      });
-    }
+    });
+  }
+
+  async function signOutLocally() {
+    await removeConnection("sign-out", "signing_out_locally");
   }
 
   async function forgetConnection() {
-    if (!profile || state.phase === "forgetting") return;
-    setState({ phase: "forgetting" });
-    const result = await forgetConnectionAndOfflineData({
+    await removeConnection("forget", "forgetting");
+  }
+
+  async function removeConnection(
+    intent: "sign-out" | "forget",
+    phase: "logging_out" | "signing_out_locally" | "forgetting",
+    removeRemoteConnection?: () => Promise<void>,
+  ) {
+    if (!profile || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting") return;
+    setState({ phase });
+    const result = await removeConnectionAndOfflineData({
+      intent,
       namespaceKey: offlineNamespaceKey,
       client: offlineSyncClient,
-      connectivity: getBrowserConnectivitySnapshot(),
+      connectivity,
       confirm: (message) => window.confirm(message),
       onRemoved: onDisconnect,
+      removeRemoteConnection,
     });
     if (result.status === "cancelled") {
       setState({ phase: "idle" });
     } else if (result.status === "failed") {
+      setRemovalFailure(result, intent);
+    }
+  }
+
+  function setRemovalFailure(result: Extract<ConnectionRemovalResult, { status: "failed" }>, intent: "sign-out" | "forget") {
+    const action = intent === "sign-out" ? "logout" : "forget";
+    if (result.stage === "remote") {
       setState({
         phase: "error",
-        action: "forget",
-        message: "Couldn't forget the connection or remove its local data.",
+        action,
+        message: isAuthorizationError(result.error)
+          ? "Second Pass Library no longer recognizes this browser. Sign out locally instead."
+          : "Couldn't sign out of Second Pass Library. Try again or sign out locally.",
+        technicalDetail: getTechnicalErrorDetail(result.error),
       });
+      return;
     }
+    setState({
+      phase: "error",
+      action,
+      message: result.remoteCompleted
+        ? "Signed out of Second Pass Library, but offline data couldn't be removed. Sign out locally to try again."
+        : "Offline data couldn't be removed. Check browser storage settings and try again.",
+      technicalDetail: getTechnicalErrorDetail(result.error),
+    });
   }
 
   return (
@@ -209,11 +233,11 @@ export function SettingsPanel({
           <SettingsLibraryServerPanel
             profile={profile}
             state={state}
-            busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "forgetting"}
+            busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting"}
             onConnect={() => navigateTo({ kind: "connect" })}
             onCheckConnection={() => void checkConnection()}
             onLogOut={() => void logOut()}
-            onSignOutLocally={onDisconnect}
+            onSignOutLocally={() => void signOutLocally()}
             onRepairConnection={onRepairConnection}
             onForgetLocally={() => void forgetConnection()}
             serverActionsAvailable={connectivity !== "offline"}
