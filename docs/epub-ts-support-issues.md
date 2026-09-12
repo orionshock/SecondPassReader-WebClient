@@ -7,8 +7,8 @@ preparing upstream reports or evaluating a dependency upgrade. Replacing epub-ts
 Audit baseline:
 
 - Package: `@likecoin/epub-ts`
-- Installed version: `0.7.1`
-- Audit date: 2026-08-09
+- Installed version: `0.7.2`
+- Audit date: 2026-09-12
 - Canonical package integration: `src/features/reader/engine/EpubTsBook.Engine.ts`
 - Upstream source references below use the TypeScript paths and line numbers embedded in
   `node_modules/@likecoin/epub-ts/dist/epub.js.map`. Line numbers are version-specific.
@@ -44,7 +44,7 @@ Audit baseline:
 **Classification:** Confirmed defect
 
 **Current status:** Locally patched for the browser ESM entry point in
-`patches/@likecoin+epub-ts+0.7.1.patch`. The patch is reapplied by the root `postinstall` script and
+`patches/@likecoin+epub-ts+0.7.2.patch`. The patch is reapplied by the root `postinstall` script and
 is guarded by `src/__tests__/reader/engine/epubTsSectionSearchPatch.test.ts`.
 
 **Impact:** Built-in search can miss exact visible prose near the end of a chapter. This affects
@@ -58,9 +58,9 @@ query generation, result ordering, CFI construction, or import ranking.
 Exact text visible and selectable at the end of a chapter was not found by `Section.search()`.
 Manually selecting the text produced a valid range CFI, proving the content was present in the
 rendered section. A minimal package-level reproduction using three text nodes, a three-node window,
-and a query beginning in the final node returned an empty result on unpatched 0.7.1.
+and a query beginning in the final node returned an empty result on unpatched 0.7.1 and 0.7.2.
 
-Upstream source: `src/section.ts`, `Section.search()`, approximately lines 180-235 in 0.7.1.
+Upstream source: `src/section.ts`, `Section.search()`, approximately lines 180-235 in 0.7.2.
 
 The method maintains a sliding list of at most `maxSeqEle` text nodes. Full windows are searched and
 then shifted by one node. At end-of-section it performs only one final search:
@@ -119,7 +119,7 @@ Upstream regression tests should cover:
 
 **Classification:** Confirmed lifecycle limitation
 
-**Current status:** Active limitation in 0.7.1.
+**Current status:** Active limitation in 0.7.2.
 
 **Impact:** A caller can successfully await `rendition.display(cfi)` and still be unable to resolve
 that visible CFI to a DOM `Range`. Toolbars and other geometry-dependent UI fall back or appear in
@@ -171,7 +171,7 @@ settled API completes.
 
 **Classification:** Confirmed lifecycle limitation
 
-**Current status:** Active limitation in 0.7.1.
+**Current status:** Active limitation in 0.7.2.
 
 **Impact:** Consumers cannot reliably distinguish user navigation from delayed relocation events
 caused by display, resize, content reflow, or internal re-anchoring.
@@ -191,7 +191,7 @@ Upstream source paths involved:
 - `src/rendition.ts`, `_display()`, `reportLocation()`, `onContentReflow()`, and `onResized()`
 - `src/managers/default/index.ts`, display and resize reporting
 
-Version 0.7.1 includes internal CFI re-anchoring with a 2.5 second window and a 50 ms reflow debounce.
+Version 0.7.2 retains internal CFI re-anchoring with a 2.5 second window and a 50 ms reflow debounce.
 This improves deep-CFI restoration but can produce additional location reports. The
 events do not identify the display/reflow operation that caused them.
 
@@ -223,7 +223,7 @@ navigation. Mark the final event for an operation as settled.
 
 **Classification:** Observed; upstream reproduction needed
 
-**Current status:** Version 0.7.1 still requires client protection.
+**Current status:** Version 0.7.2 still requires client protection.
 
 **Impact:** A saved CFI can display correctly, then initial mount resize/content reflow can move the
 viewport to an earlier page-start CFI. If consumers persist every relocation, correct progress can
@@ -238,7 +238,7 @@ Network traces showed the server returning the correct saved CFI. Shortly after 
 reported an older `location.start.cfi`. Initial resize code that derived its redisplay target from
 `currentLocation().start.cfi` could then make the visual rollback persistent.
 
-Version 0.7.1 contains `_armReanchor()` and `onContentReflow()` in `src/rendition.ts`, which appear to
+Version 0.7.2 contains `_armReanchor()` and `onContentReflow()` in `src/rendition.ts`, which appear to
 target this class of deep-CFI clamp. Client protection is still necessary because initial location
 reports can still be intermediate and viewport resize has a separate path.
 
@@ -266,7 +266,7 @@ boundary.
 
 **Classification:** Confirmed API limitation
 
-**Current status:** Active limitation in 0.7.1.
+**Current status:** Active limitation in 0.7.2.
 
 **Impact:** `Rendition.getRange(cfi)` cannot be used as a general CFI existence probe and may return
 `undefined` immediately after a nominally successful display.
@@ -301,7 +301,7 @@ would also address display timing without forcing callers to inspect private vie
 
 **Classification:** Confirmed design limitation
 
-**Current status:** Active limitation in 0.7.1; no local library patch.
+**Current status:** Active limitation in 0.7.2; no local library patch.
 
 **Impact:** Search flashes, staged previews, and durable annotations at the same CFI can overwrite or
 detach each other. Two app annotations at an identical CFI cannot have independent renderer identity.
@@ -333,7 +333,7 @@ two library layers:
 - The iframe view stores highlights as `this.highlights[cfiRange]`.
 
 Upstream source: `src/managers/views/iframe.ts`, `IframeView.highlight()` and
-`IframeView.unhighlight()`, approximately lines 748-785 and 913-925 in 0.7.1. Adding a second
+`IframeView.unhighlight()`, approximately lines 748-785 and 913-925 in 0.7.2. Adding a second
 highlight at the same CFI replaces the view registry entry regardless of its caller-supplied data.
 
 Removal and detachment also address the mark by CFI and type rather than caller ID:
@@ -444,7 +444,7 @@ Pointer events may simplify this code, but are not required for the small fix.
 
 **Classification:** Confirmed API limitation
 
-**Current status:** Active limitation in 0.7.1.
+**Current status:** Active limitation in 0.7.2.
 
 **Impact:** Visible prose can fail to match when punctuation, whitespace, or DOM boundaries differ.
 Search cannot cross spine sections and can span only the configured number of sequential text nodes.
@@ -538,7 +538,7 @@ and screenshot comparison before filing as a definite defect.
 
 **Classification:** Observed contract mismatch
 
-**Current status:** Client mitigation active with 0.7.1.
+**Current status:** Client mitigation active with 0.7.2.
 
 **Impact:** Percentage width/height settings have produced invalid or unstable pagination
 measurements, making next/previous behave more like section jumps in affected layouts.
