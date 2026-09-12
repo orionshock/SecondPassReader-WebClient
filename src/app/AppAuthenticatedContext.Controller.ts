@@ -53,7 +53,7 @@ export function useAppAuthenticatedContextController({
       onProfileChanged();
     } catch (error) {
       reportAuthorizationFailure(error);
-      // ignore: keep existing verified identity if refresh fails
+      // Auth failure enters repair without destroying the last verified namespace.
     }
   }, [clearAuthorizationFailure, onProfileChanged, profile, reportAuthorizationFailure, spl, workflowStep]);
 

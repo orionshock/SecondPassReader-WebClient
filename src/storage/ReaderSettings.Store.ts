@@ -78,7 +78,7 @@ export function saveReaderSettings(settings: ReaderSettings): void {
     const normalized = normalizeReaderSettings(settings);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
   } catch {
-    // ignore storage errors
+    // The in-memory setting remains usable when browser preference storage is unavailable.
   }
 }
 
@@ -87,7 +87,7 @@ export function resetReaderSettings(): ReaderSettings {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
   } catch {
-    // ignore storage errors
+    // Reset still returns usable defaults when browser preference storage is unavailable.
   }
   return defaults;
 }

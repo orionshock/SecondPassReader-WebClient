@@ -87,7 +87,7 @@ function writeStore(storage: Storage, store: MarginaliaLayerPreferenceStore): vo
     }
     storage.setItem(STORAGE_KEY, JSON.stringify(store));
   } catch {
-    // Ignore localStorage write failures.
+    // In-memory layer selection remains usable when preference storage is unavailable.
   }
 }
 

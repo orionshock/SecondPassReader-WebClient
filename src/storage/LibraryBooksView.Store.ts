@@ -18,6 +18,6 @@ export function saveLibraryBooksView(view: LibraryBooksView): void {
   try {
     localStorage.setItem(STORAGE_KEY, view);
   } catch {
-    // Ignore localStorage write failures.
+    // The active view remains usable when preference storage is unavailable.
   }
 }

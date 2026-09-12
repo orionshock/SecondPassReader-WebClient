@@ -98,6 +98,7 @@ export async function runTransaction<T>(
   transaction: IDBTransaction,
   operation: () => Promise<T>,
 ): Promise<T> {
+  // An IDB request can succeed before its transaction commits; repository writes resolve only after commit.
   const completion = transactionCompletion(transaction);
   try {
     const result = await operation();

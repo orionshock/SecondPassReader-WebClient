@@ -32,6 +32,7 @@ export async function withBrowserOfflineSyncLock<T>(
   if (!lockManager) return { status: "coordination-unavailable" };
 
   try {
+    // Automatic sweeps skip contention; explicit/manual work waits for the same namespace+Book lock.
     return await lockManager.request(
       lockName,
       input.mode === "if-available"

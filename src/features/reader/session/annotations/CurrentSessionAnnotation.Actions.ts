@@ -29,6 +29,7 @@ export function useCurrentSessionAnnotationActions(args: {
 
   useEffect(() => {
     if (args.canMutate === false) {
+      // Detach immediately when authority changes so queued server mutations cannot finish into local-first state.
       controller.detach(args.identity);
       setAnnotationBusy(false);
       return;

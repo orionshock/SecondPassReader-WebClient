@@ -84,6 +84,7 @@ export class ReadingProgressAutosaveController {
     if (sessionChanged) this.resetForSession(next.sessionId);
 
     if (!sessionChanged && previousEnabled && !next.enabled) {
+      // Authority was withdrawn. Ignore any late server completion before local-first persistence takes over.
       this.generation += 1;
       this.clearTimer();
       this.inFlightGeneration = null;

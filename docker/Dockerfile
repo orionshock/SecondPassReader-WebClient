@@ -5,6 +5,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
 COPY packages/secondpass-client/package.json packages/secondpass-client/package.json
+# patch-package runs during npm ci; patches must exist before the postinstall hook.
 COPY patches ./patches
 RUN --mount=type=cache,target=/app/.npm-cache CI=true npm ci
 

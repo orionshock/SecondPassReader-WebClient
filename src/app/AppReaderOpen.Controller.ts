@@ -71,7 +71,7 @@ export function useAppReaderOpenController({
     navigateTo({ kind: "reader", bookId: String(book.id) });
   }, []);
 
-  // Bump a sequence number on any route change so async opens can be cancelled logically.
+  // Route sequence invalidates late opens without aborting SDK work that has no cancellation contract.
   useEffect(() => {
     navigationSequenceRef.current += 1;
   }, [route]);
@@ -84,7 +84,6 @@ export function useAppReaderOpenController({
   }, [closeReader, openedBook, route?.kind]);
 
   useEffect(() => {
-    // Reader route restore/open: on reload (or direct navigation) open the requested book.
     if (workflowStep !== "library_home") return;
     if (!route || route.kind !== "reader") return;
     if (!profile) return;
@@ -97,8 +96,7 @@ export function useAppReaderOpenController({
     setReaderRestoreError(null);
     openingBookRef.current = requestedBookId;
 
-    // React dev StrictMode intentionally mounts/unmounts components twice to detect unsafe effects.
-    // Guard async work so the first mount's async does not "win" or interfere with the second mount.
+    // StrictMode may restart this effect; only the current route generation may own the resulting object URL.
     let cancelled = false;
 
     void (async () => {
@@ -117,6 +115,7 @@ export function useAppReaderOpenController({
         };
 
         let opened: OpenedBook;
+        // Only centralized explicit-offline state admits retained bytes; request failure never changes authority.
         if (connectivity === "offline") {
           try {
             const namespace = buildOfflineCacheNamespace({
@@ -172,7 +171,7 @@ export function useAppReaderOpenController({
         );
         if (!currentOpened) return;
 
-        // If the user navigated away from the reader route while this book was opening, do not re-open it.
+        // This attempt already owns an object URL, so release it if route ownership changed.
         if (route?.kind !== "reader") {
           releaseOpenedBook(currentOpened);
           return;
@@ -204,8 +203,7 @@ export function useAppReaderOpenController({
 
     return () => {
       cancelled = true;
-      // In React StrictMode (dev), effects are mounted/unmounted twice. If we leave the guard set
-      // during the simulated unmount, the second mount run will be incorrectly blocked.
+      // Let a StrictMode replacement effect retry while the sequence guard rejects this completion.
       if (openingBookRef.current === requestedBookId) {
         openingBookRef.current = null;
       }

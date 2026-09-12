@@ -10,9 +10,7 @@ import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./Re
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 function normalizeQuoteTextForDisplay(text: string): string {
-  // Selections and describing bodies can contain hard line separators and trailing whitespace.
-  // For card display, normalize to a single-line flow so we don't render what looks like a
-  // "blank line" at the end of the quote block.
+  // Preserve stored text; normalize whitespace only for the single-line card preview.
   return text.replace(/\s+/g, " ").trim();
 }
 

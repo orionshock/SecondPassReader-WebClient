@@ -115,7 +115,6 @@ export function useSessionAnnotations(args: {
 
   const sortedRaw = useMemo(() => sortSessionAnnotations(raw), [raw]);
 
-  // Seed from the open bootstrap response immediately when available.
   const lastSeedKeyRef = useRef<string>("");
   useEffect(() => {
     if (lastSeedKeyRef.current === activeKey) return;
@@ -127,7 +126,6 @@ export function useSessionAnnotations(args: {
     setRaw(seeded);
   }, [activeKey, args.openedBook.bootstrap, setRaw]);
 
-  // Load annotations for the session (non-blocking).
   useEffect(() => {
     if (!args.spl) return;
     const sessionId = args.sessionId;
@@ -178,8 +176,7 @@ export function useSessionAnnotations(args: {
     [sortedRaw],
   );
 
-  // Best-effort: describe bookmarks/highlights at runtime (no rendition jumps).
-  // Important: avoid cancelling in-flight descriptions due to state updates.
+  // Descriptions enrich display only and must not move the rendition. Generation guards reject stale Book results.
   useEffect(() => {
     if (!describeCfi) return;
     if (bookmarks.length === 0 && highlights.length === 0) return;

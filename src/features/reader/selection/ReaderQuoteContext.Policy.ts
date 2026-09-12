@@ -17,15 +17,8 @@ function clampToMax(s: string, max: number): string {
   return s.slice(0, max);
 }
 
-/**
- * Build a TextQuoteSelector-style context, keeping:
- * - `exact` unchanged (never truncated)
- * - `prefix`/`suffix` capped to server limits
- *
- * Heuristic:
- * - For short selections (<= limit): target ~limit total across prefix+exact+suffix.
- * - For long selections (> limit): keep a smaller halo ~10% of exact length.
- */
+// Keep exact quote text intact. Only prefix/suffix context is capped to the server contract;
+// long selections use a smaller halo so context does not dwarf the selected quote.
 export function buildQuoteContext(input: QuoteContext): QuoteContextResult {
   const exact = input.exact;
   if (!exact) return { exact };
@@ -59,4 +52,3 @@ export function buildQuoteContext(input: QuoteContext): QuoteContextResult {
     suffix: suffix.trim() ? suffix : undefined,
   };
 }
-

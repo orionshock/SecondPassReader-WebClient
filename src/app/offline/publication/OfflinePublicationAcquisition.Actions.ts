@@ -180,6 +180,7 @@ export async function acquireOfflinePublicationAsset(input: {
   }
 
   try {
+    // Publish only a fully verified Blob; an interrupted or mismatched download must not replace a readable asset.
     await input.repository.putComplete({
       status: "complete",
       namespaceKey: metadata.namespaceKey,

@@ -61,6 +61,7 @@ export function syncPendingOfflineReaderWork(
   const mode = input.mode ?? "if-available";
   const active = activePendingSyncs.get(namespaceKey);
   if (active) {
+    // A manual waiter must run after a non-blocking sweep; sharing it could report contention as completion.
     if (mode === "wait" && active.mode === "if-available") {
       return active.operation.then(() => {
         if (activePendingSyncs.get(namespaceKey) === active) activePendingSyncs.delete(namespaceKey);
@@ -154,6 +155,7 @@ async function runPendingSync(input: {
         }
       }
     };
+    // Bound parallel Books while per-Book Web Locks still serialize competing tabs.
     const workerCount = Math.min(PENDING_SYNC_BOOK_CONCURRENCY, bookIds.length);
     await Promise.all(Array.from({ length: workerCount }, () => worker()));
     const result = { status: "completed", discoveredBooks: bookIds.length, attemptedBooks, outcome } as const;

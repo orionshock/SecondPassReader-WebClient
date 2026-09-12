@@ -14,6 +14,7 @@ export async function removeOfflinePublicationAsset(input: {
   const hasAnotherFormat = assets.some((asset) => (
     asset.bookId === input.bookId && asset.format !== input.format
   ));
+  // Covers are Book-scoped, so retain one while any publication format remains available offline.
   if (!hasAnotherFormat) {
     await input.coverRepository.delete(input.namespaceKey, input.bookId);
   }

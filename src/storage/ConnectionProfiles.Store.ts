@@ -91,7 +91,7 @@ export function saveActiveConnection(connection: ActiveConnection): void {
     localStorage.removeItem(OLD_PROFILES_KEY);
     localStorage.removeItem(OLD_SELECTED_PROFILE_KEY);
   } catch {
-    // ignore cleanup errors
+    // Legacy-key cleanup must not block the active single-connection record.
   }
 }
 
@@ -101,7 +101,7 @@ export function clearActiveConnection(): void {
     localStorage.removeItem(OLD_PROFILES_KEY);
     localStorage.removeItem(OLD_SELECTED_PROFILE_KEY);
   } catch {
-    // ignore cleanup errors
+    // The active connection is already gone; legacy residue is inert.
   }
 }
 

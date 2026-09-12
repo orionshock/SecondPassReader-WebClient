@@ -69,6 +69,8 @@ export type ReadingShellProps = {
   onSettingsReset?: () => void;
 };
 
+// Owns one mounted renderer generation and its transient interaction state.
+// Session authority and connectivity changes stay above this boundary.
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
   const runtimeControllerRef = useRef<ReaderRuntimeController | null>(null);

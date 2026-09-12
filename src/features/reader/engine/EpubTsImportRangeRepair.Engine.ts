@@ -1,3 +1,5 @@
+// Repairs an imported highlight inside one loaded spine section. Staying section-local keeps
+// epub-ts CFI generation anchored to that section's document and cfiBase.
 import { EpubCFI } from "@likecoin/epub-ts";
 import type {
   ReaderRangeRepairDiagnostic,
@@ -88,8 +90,6 @@ export function repairImportedHighlightRangeInSection({
     ],
   });
 
-  // The fragment match is an anchor inside this section. Repair stays same-section
-  // because epub-ts CFI generation here is based on one Section document + cfiBase.
   const fragmentAt = findAnchoredFragmentOffset({
     flatText: flat.text,
     map: flat.map,

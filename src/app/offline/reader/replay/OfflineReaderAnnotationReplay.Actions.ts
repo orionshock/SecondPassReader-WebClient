@@ -33,6 +33,9 @@ import { sortReaderIntentsForReplay } from "./ReaderReplay.Policy";
 
 const ANNOTATION_BATCH_LIMIT = 100;
 
+// Replays annotation desired state against one authoritative Reading Session. SESSION_CLOSED
+// rebases transferable work before any exact intent revision is acknowledged.
+
 export type ReaderAnnotationReplayClient = {
   marginalia: {
     books: ReaderSessionAuthority;
@@ -227,6 +230,7 @@ async function deliver(
   let acknowledged = 0;
   try {
     for (const intent of intents) {
+      // Acknowledge only the delivered revision; a newer local edit with the same resource key must survive.
       if (await input.outboxRepository.remove(
         input.namespaceKey,
         readerIntentResourceKey(intent),

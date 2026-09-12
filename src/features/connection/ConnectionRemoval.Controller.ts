@@ -22,6 +22,8 @@ export type ConnectionRemovalResult =
       error?: unknown;
     };
 
+// Keeps the verified connection available until destructive local cleanup succeeds,
+// so a failed cleanup can be retried instead of leaving inaccessible personal data.
 export async function removeConnectionAndOfflineData(input: {
   intent: OfflineNamespaceRemovalIntent;
   namespaceKey: string | null;
@@ -59,6 +61,7 @@ export async function removeConnectionAndOfflineData(input: {
   if (!summary) return { status: "failed", stage: "inspect", remoteCompleted: false };
 
   if (summary.pendingIntents > 0 && input.connectivity === "online" && input.client) {
+    // Sign-out gets one foreground delivery attempt; remaining work is still covered by the destructive confirmation.
     try {
       const syncPending = input.syncPending ?? syncPendingOfflineReaderWork;
       await syncPending({ namespaceKey, client: input.client, mode: "wait" });

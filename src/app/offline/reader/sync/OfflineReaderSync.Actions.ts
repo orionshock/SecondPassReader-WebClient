@@ -67,6 +67,8 @@ export type OfflineReaderSyncInput = {
 
 const activeSyncs = new Map<string, Promise<OfflineReaderSyncResult>>();
 
+// Reconciles authority before annotations, then progress. Progress must target the session
+// selected by annotation continuation when SESSION_CLOSED moves work to a new Reading Session.
 export function syncOfflineReader(input: OfflineReaderSyncInput): Promise<OfflineReaderSyncResult> {
   const namespaceKey = input.namespaceKey.trim();
   const bookId = input.bookId.trim();

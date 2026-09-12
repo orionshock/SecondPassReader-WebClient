@@ -44,6 +44,8 @@ const SettingsPanel = lazy(async () => {
   return { default: module.SettingsPanel };
 });
 
+// Root composition for connection workflow, route gating, and global sync lifecycles.
+// Feature owners remain below this boundary.
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [view, setView] = useState<"main" | "settings">("main");
@@ -187,7 +189,6 @@ function AppShell() {
   }, [route?.kind]);
 
   useEffect(() => {
-    // Default route selection when hash is empty.
     if (route) return;
     if (workflowStep === "library_home") navigateTo({ kind: "home" }, { replace: true });
     else navigateTo({ kind: "connect" }, { replace: true });
@@ -208,7 +209,6 @@ function AppShell() {
       return;
     }
 
-    // Verified: allow main app routes. Unknown routes fall back to home.
     if (workflowStep === "library_home") {
       if (!route || route.kind === "unknown") {
         navigateTo({ kind: "home" }, { replace: true });

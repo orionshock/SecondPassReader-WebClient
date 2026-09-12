@@ -92,6 +92,7 @@ export type OfflineSettingsController = {
   removeAllAssets(): Promise<void>;
 };
 
+// Presents one namespace's local storage and sync controls without making online Settings depend on IndexedDB.
 export function createOfflineSettingsController(
   input: { namespaceKey: string | null; client: OfflineReaderSyncClient | null },
   dependencyOverrides: Partial<OfflineSettingsDependencies> = {},

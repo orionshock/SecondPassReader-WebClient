@@ -75,8 +75,7 @@ export async function searchEpubTsBook(
         if (out.length % 25 === 0) options?.onProgress?.([...out]);
         if (out.length >= maxResults) return out;
       }
-      // TODO: future search can flatten section text and map offsets back to CFI
-      // for more robust phrase matching across wider DOM boundaries.
+      // Section search preserves epub-ts CFIs. Cross-node phrase matching would require a separate offset-to-CFI map.
     } finally {
       if (!wasLoaded) section.unload();
     }

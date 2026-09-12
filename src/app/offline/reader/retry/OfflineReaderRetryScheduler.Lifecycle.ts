@@ -52,6 +52,8 @@ type RetrySchedulerInput = {
   onSweepCompleted?: (result: Extract<OfflineReaderPendingSyncResult, { status: "completed" }>) => void;
 };
 
+// Owns one foreground retry timer for the active namespace. Outbox/connectivity changes reschedule it;
+// no service worker or hidden background loop participates.
 export function startOfflineReaderRetrySchedulerLifecycle(
   input: RetrySchedulerInput,
   dependencyOverrides: Partial<OfflineReaderRetrySchedulerDependencies> = {},
@@ -117,6 +119,7 @@ export function startOfflineReaderRetrySchedulerLifecycle(
       dependencies.reportFailure("retry-sweep");
     } finally {
       sweeping = false;
+      // Lock contention must not produce a hot rescan loop across tabs.
       if (current()) requestScan(dependencies.clock.now() + RETRY_CONTENTION_DEFER_MS);
     }
   };

@@ -6,12 +6,7 @@ export type RequestUrlOptions = {
   headers?: Record<string, string>;
   credentials?: RequestCredentials;
   url: string;
-  /**
-   * Optional override messages for specific status codes.
-   *
-   * Useful when you want a clearer product-facing error while keeping the
-   * underlying wire contract unchanged.
-   */
+  /** Status-specific user messages that do not change response classification. */
   errorMessages?: Partial<Record<number, string>>;
 };
 
@@ -46,12 +41,7 @@ function createApiError(res: Response, responseBody: string, overrideMessage?: s
   return new ApiError({ kind, status: res.status, statusText: res.statusText, message });
 }
 
-/**
- * Common auth-related messages.
- *
- * Most authenticated endpoints use the same semantics for 401/403.
- * Callers can override 403/404 when a more specific message is valuable.
- */
+/** Shared authentication messages; endpoint owners may refine 403/404 wording. */
 export const INVALID_OR_REVOKED_TOKEN_401 = "Token is invalid or revoked (401).";
 
 export function authErrorMessages(input?: {

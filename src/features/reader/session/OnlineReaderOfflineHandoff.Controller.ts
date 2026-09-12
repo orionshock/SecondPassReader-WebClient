@@ -25,6 +25,7 @@ type HandoffEntry = OnlineReaderOfflineHandoffState & { identity: string };
 
 const openProductionRepositories = () => openIndexedDbOfflineRepositories<Blob>();
 
+// Connectivity may change mutation ownership for one mounted Reader, but never its engine or publication lifetime.
 export function useOnlineReaderOfflineHandoff(input: {
   source: "online" | "offline";
   connectivity: BrowserConnectivityStatus;
@@ -45,6 +46,7 @@ export function useOnlineReaderOfflineHandoff(input: {
   const openRepositories = input.openRepositories ?? openProductionRepositories;
 
   useEffect(() => {
+    // A successful handoff stays local-first for this mounted Book; reconnect is handled by normal replay.
     if (!identity || activatedIdentityRef.current === identity) return;
     const namespaceKey = input.namespaceKey?.trim() ?? "";
     const bookId = input.bookId.trim();

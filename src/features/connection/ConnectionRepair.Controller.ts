@@ -18,6 +18,7 @@ export async function finalizeConnectionRepair(input: {
 
   const identity = previousNamespace === verifiedNamespace ? "same" : "different";
   if (previousNamespace && identity === "different") {
+    // Remove the old identity before activating the new one; this client retains no dormant user namespace.
     const removed = await (input.removeNamespace ?? removeOfflineNamespace)(previousNamespace);
     if (removed.status !== "removed") return { status: "failed" };
   }

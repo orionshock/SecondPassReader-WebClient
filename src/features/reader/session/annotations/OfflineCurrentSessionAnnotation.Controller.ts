@@ -196,6 +196,7 @@ export class OfflineCurrentSessionAnnotationController {
   private async drain(): Promise<void> {
     if (!this.canMutate()) return;
     try {
+      // State precedes intent so a persisted mutation is always recoverable even if outbox storage fails.
       const savedState = await updateOfflineReaderBookState({
         namespaceKey: this.input.initialState.namespaceKey,
         bookId: this.input.initialState.bookId,

@@ -23,6 +23,8 @@ import type { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
 
 type MutableRef<T> = { current: T };
 
+// Owns engine construction and teardown for a Blob+mount generation. Session authority,
+// drawers, connectivity, and ordinary settings changes stay outside this lifecycle.
 export function useReaderEngineBootstrapLifecycle(input: {
   blob: Blob;
   mountEl: HTMLDivElement | null;

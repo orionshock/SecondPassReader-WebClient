@@ -184,6 +184,7 @@ export async function downloadBookCover(
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Book cover URL must use HTTP or HTTPS.");
   }
+  // Covers are public even when hosted by the configured Library; never pass bearer credentials here.
   const { blob, response } = await requestBlob({
     apiBaseUrl,
     endpointOrUrl: url.toString(),

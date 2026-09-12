@@ -7,6 +7,8 @@ type StateUpdate = (current: OfflineReaderBookState) => OfflineReaderBookState;
 
 const activeWrites = new Map<string, Promise<OfflineReaderBookState>>();
 
+// Progress and annotation owners update one shared Book record. Serialize by namespace+Book
+// so each update reads the latest durable state instead of overwriting a sibling write.
 export function updateOfflineReaderBookState(input: {
   namespaceKey: string;
   bookId: string;

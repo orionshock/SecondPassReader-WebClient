@@ -1,5 +1,7 @@
 import type { ReadingShellCommandValue } from "./ReaderShell.Types";
 
+// Blocks bootstrap relocations from replacing the saved CFI until that CFI is reached
+// or the user explicitly navigates elsewhere.
 export class ReaderBootstrapProgressGuard {
   private generation: number | null = null;
   private initialCfi: string | null = null;

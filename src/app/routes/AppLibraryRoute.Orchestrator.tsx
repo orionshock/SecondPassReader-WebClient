@@ -29,6 +29,8 @@ const OfflineHomePage = lazy(async () => {
   return { default: module.OfflineHomePage };
 });
 
+// Branches on explicit offline state before server-backed route owners mount.
+// Unknown connectivity keeps the normal server-authoritative route.
 export function AppLibraryRouteRenderer({
   route,
   profile,

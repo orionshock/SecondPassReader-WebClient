@@ -2,6 +2,7 @@
 set -eu
 
 output_file="/usr/share/nginx/html/secondpass-servers.json"
+# Build beside the served file, then replace it atomically so nginx never exposes partial JSON.
 temporary_file="${output_file}.tmp"
 
 json_presets="${SECONDPASS_SERVER_PRESETS_JSON:-}"

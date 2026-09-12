@@ -114,6 +114,7 @@ export class OfflineReadingProgressController {
       this.publish({ status: "saving", dirty: true });
 
       try {
+        // State precedes intent: an outbox write must never refer to progress that was not made durable.
         const nextState = await updateOfflineReaderBookState({
           namespaceKey: this.input.initialState.namespaceKey,
           bookId: this.input.initialState.bookId,

@@ -94,7 +94,8 @@ export type ReadingSessionOrchestratorProps = {
   }) => ReactNode;
 };
 
-// Composition owner: wires session behavior owners to the reader shell and activity render state.
+// Selects server or durable-local mutation owners for one mounted Reading Session.
+// Authority changes do not change the Reader shell's Blob or engine identity.
 export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProps) {
   const activeBookKey = `${props.openedBook.book.id}|${props.openedBook.objectUrl}`;
   const {
@@ -163,6 +164,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     progress: handoffProgress,
   });
   const localBootstrap = openedLocalBootstrap ?? handoff.bootstrap;
+  // After handoff this mount remains local-first; reconnect delivers through replay instead of reviving parallel server owners.
   const serverSpl = serverBootstrap && !localBootstrap ? props.spl : null;
   const canMutateSession = canMutateReaderServerSession({
     bootstrapCanMutateSession,

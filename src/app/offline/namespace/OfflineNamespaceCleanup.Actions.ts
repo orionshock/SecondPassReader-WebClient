@@ -37,6 +37,7 @@ export async function removeOfflineNamespace(
   let repositories: NamespaceRepositories | null = null;
   try {
     repositories = await openRepositories();
+    // This is complete account cleanup, unlike publication removal, which preserves Reader-authored state.
     await repositories.projections.deleteNamespace(namespaceKey);
     await repositories.publicationCovers.deleteNamespace(namespaceKey);
     await repositories.publicationAssets.deleteNamespace(namespaceKey);

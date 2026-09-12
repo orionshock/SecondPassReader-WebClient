@@ -19,6 +19,8 @@ export type OnlineReaderOfflineHandoffResult = {
   suppressInitialProgressWrite: boolean;
 };
 
+// Establishes durable mutation state for an already-open Reader. Publication bytes stay owned
+// by the mounted Reader and are not promoted to an Available offline asset.
 export async function establishOnlineReaderOfflineHandoff(input: {
   namespaceKey: string;
   bookId: string;
@@ -111,6 +113,7 @@ function mergeHandoffState(input: {
   const serverSessionId = input.session?.id.trim() || null;
   const incoming = mapServerAnnotations(input.annotations, serverSessionId);
   const annotations = new Map(incoming.map((projection) => [projectionClientId(projection), projection]));
+  // Existing local projections win so pending edits and tombstones survive a server bootstrap snapshot.
   for (const projection of input.current.annotations) {
     annotations.set(projectionClientId(projection), structuredClone(projection));
   }

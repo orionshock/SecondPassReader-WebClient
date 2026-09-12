@@ -58,6 +58,7 @@ export async function acquireOfflinePublicationCover(input: {
   }
 
   try {
+    // Cover URLs are public by contract. Failed replacement leaves the previous durable cover intact.
     const downloaded = await input.spl.library.books.downloadCover(sourceUrl);
     const contentType = normalizeOfflinePublicationCoverContentType(downloaded.contentType ?? downloaded.blob.type);
     if (!contentType || downloaded.blob.size <= 0) {

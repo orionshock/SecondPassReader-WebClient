@@ -140,7 +140,7 @@ export type SecondPassClient = {
        * Server convention: 1 book === 1 file.
        */
       download(book: CompactBook | BookDetail | string | number): Promise<Blob>;
-      /** Downloads bytes from a server-provided cover URL. */
+      /** Downloads a public cover without bearer credentials. */
       downloadCover(coverUrl: string): Promise<BookCoverDownloadResult>;
     };
     series: {

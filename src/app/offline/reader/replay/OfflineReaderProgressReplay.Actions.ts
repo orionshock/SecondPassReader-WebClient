@@ -68,6 +68,8 @@ type ReplayInput = {
 
 const activeReplays = new Map<string, Promise<OfflineReaderProgressReplayResult>>();
 
+// Delivers only the progress snapshot that still matches durable desired state, then acknowledges
+// its exact revision so movement recorded during the request remains pending.
 export function replayOfflineReaderProgress(input: ReplayInput): Promise<OfflineReaderProgressReplayResult> {
   const namespaceKey = input.namespaceKey.trim();
   const bookId = input.bookId.trim();

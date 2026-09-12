@@ -31,6 +31,7 @@ export function OfflinePublicationCoverImage({
       return;
     }
     setCoverSource({ blob, url: objectUrl });
+    // The component owns only this derived URL; the durable Blob remains repository-owned.
     return () => URL.revokeObjectURL(objectUrl);
   }, [blob]);
 

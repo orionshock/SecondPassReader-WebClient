@@ -12,6 +12,7 @@ export function offlineReaderRetryEligibility(input: {
 }): OfflineReaderRetryEligibility {
   const attempt = input.intent.attempt;
   if (!attempt || attempt.revision !== readerIntentRevision(input.intent)) return "eligible";
+  // A newer desired-state revision is a new delivery attempt; only matching-revision failures can defer it.
   if (input.mode === "manual") return "eligible";
   switch (attempt.classification) {
     case "retry-later":

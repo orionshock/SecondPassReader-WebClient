@@ -24,13 +24,11 @@ type PresetIdentity =
 
 function newProfileId() {
   try {
-    // Browser secure contexts should have this.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyCrypto = crypto as any;
     if (typeof anyCrypto?.randomUUID === "function") return `cp_${anyCrypto.randomUUID()}`;
-  } catch {
-    // ignore
-  }
+  } catch {}
+  // This ID is a local routing key, not an authentication or offline namespace identity.
   return `cp_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
 }
 

@@ -55,10 +55,11 @@ export type EpubTsBookEngine = {
   destroy(): void;
 };
 
+// Keeps epub-ts objects and compatibility workarounds behind the renderer-neutral Reader contract.
 export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promise<EpubTsBookEngine> {
   const book: Book = ePub(init.source as any, { replacements: "blobUrl" });
 
-  // Ensure parsing/opening completes before rendering.
+  // Replacements must settle before rendition creation or resource URLs can change underneath the first display.
   await book.opened;
   if (book.replacementsReady) await book.replacementsReady;
 
@@ -97,8 +98,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   const { width, height } = await waitForMountSize();
 
-  // Reader UX: treat next/prev as rendered page/spread navigation.
-  // Configure paginated flow up-front so the manager/layout are created in paginated mode.
+  // Flow must be set before manager construction; changing it later makes next/previous jump by section.
   const rendition: Rendition = book.renderTo(init.mountEl, {
     width,
     height,
@@ -119,12 +119,12 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   frameObserver?.observe(init.mountEl, { childList: true, subtree: true });
   labelRenditionFrames();
 
-  // Defensive: some environments may ignore initial options; re-assert after init.
+  // Some epub-ts builds ignore constructor flow options; reassert when their compatibility methods exist.
   try {
     rendition.flow("paginated");
     rendition.spread("auto", 900);
   } catch {
-    // continue
+    // Constructor options remain authoritative if these compatibility calls are unavailable.
   }
 
   let destroyed = false;
@@ -138,7 +138,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       const cfi = current?.start?.cfi;
       if (typeof cfi === "string" && cfi.trim()) return cfi.trim();
     } catch {
-      // ignore
+      // Fall back to the last relocation reported by epub-ts.
     }
     const relocatedCfi = lastRelocatedLoc?.start?.cfi;
     return typeof relocatedCfi === "string" && relocatedCfi.trim() ? relocatedCfi.trim() : null;
@@ -204,7 +204,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
           const idx = typeof contents?.sectionIndex === "number" ? contents.sectionIndex : undefined;
           if (typeof idx === "number") return book.spine.get(idx)?.href ?? undefined;
         } catch {
-          // ignore
+          // Section metadata is optional selection context.
         }
         return undefined;
       })();
@@ -226,9 +226,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
 
   let locationsGeneratePromise: Promise<unknown> | null = null;
 
-  // Start locations generation in the background. This enables approximate whole-book
-  // percentage lookups (Location.percentage / percentageFromCfi) without needing to
-  // jump the rendition to a given CFI.
+  // Generated locations provide approximate percentages without moving the rendition.
   const startLocationsGeneration = () => {
     if (locationsGeneratePromise) return;
     try {
@@ -244,7 +242,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
              try {
                if (lastRelocatedLoc && !destroyed) onRelocated(lastRelocatedLoc);
              } catch {
-               // ignore
+               // Location refresh is optional display metadata.
              }
            }
         } catch (err: unknown) {
@@ -254,7 +252,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         }
       })();
     } catch (err) {
-      // ignore
+      // Some builds throw before returning a promise; percentage metadata remains optional.
     }
   };
 
@@ -278,22 +276,17 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
     },
     clearSelection() {
       if (destroyed) return;
+      // Selection cleanup must not make navigation or teardown fail.
       try {
         for (const c of rendition.getContents()) {
           try {
             c.window?.getSelection?.()?.removeAllRanges?.();
-          } catch {
-            // ignore
-          }
+          } catch {}
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
       try {
         init.onSelectionChanged?.(null);
-      } catch {
-        // ignore
-      }
+      } catch {}
     },
     async applyDisplaySettings(settings: ReaderSettings, options?: ReaderReflowTargetOptions) {
       if (destroyed) return;
@@ -355,7 +348,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
           }
         }
       } catch {
-        // ignore parse/lookup errors; fall back to minimal description
+        // Invalid or unresolved CFIs still receive a minimal display description.
       }
 
       let bookProgress: number | null = null;
@@ -367,7 +360,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
           if (typeof p === "number" && Number.isFinite(p)) bookProgress = p;
         }
       } catch {
-        // ignore
+        // Missing generated locations only removes approximate display metadata.
       }
 
       return { cfi: trimmed, href, spineIndex, bookProgress };
@@ -484,25 +477,20 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       if (destroyed) return;
       destroyed = true;
       frameObserver?.disconnect();
+      // epub-ts cleanup is best-effort after ownership has already been invalidated.
       try {
         rendition.off("relocated", onRelocated);
         rendition.off("displayerror", onDisplayError);
         rendition.off("selected", onSelected);
-      } catch {
-        // ignore
-      }
+      } catch {}
       try {
         rendition.destroy();
-      } catch {
-        // ignore
-      }
+      } catch {}
       highlightRenderer.clear();
       try {
         // epubjs-style API (Book#destroy exists in upstream; keep defensive).
         (book as any).destroy?.();
-      } catch {
-        // ignore
-      }
+      } catch {}
     },
   };
 }

@@ -52,6 +52,8 @@ export class ReaderRuntimeStaleGenerationError extends Error {
   }
 }
 
+// Serializes engine operations for one generation. Reflows coalesce at the queue tail,
+// while detach rejects work that belongs to a destroyed engine.
 export class ReaderRuntimeController {
   private active: ActiveRuntime | null = null;
   private queue: QueuedOperation[] = [];

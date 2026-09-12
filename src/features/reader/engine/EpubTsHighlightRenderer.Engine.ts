@@ -28,12 +28,7 @@ export type HighlightMarkBounds = {
 
 const STAGED_SELECTION_MARK_ID = "__staged_selection__";
 
-/**
- * epub-ts identifies highlights by CFI and renderer type, not by application id.
- * A staged preview at an existing durable CFI must therefore replace that CFI's
- * renderer mark temporarily. The durable marks remain in application state and
- * are restored when the staged preview is cleared.
- */
+// epub-ts keys marks by CFI+type, so a staged mark temporarily replaces a durable mark at the same CFI.
 export function reconcileHighlightMarksForRenderer(marks: ReaderHighlightMark[]): ReaderHighlightMark[] {
   const stagedCfiRanges = new Set<string>();
   for (const mark of marks) {
@@ -66,12 +61,7 @@ export function createEpubTsHighlightRenderer(args: {
     const c = typeof color === "string" ? color.trim() : "";
     if (!c) return undefined;
     const paintColor = resolveAnnotationColor(c) ?? c;
-    // epub-ts will default to yellow; support simple named tokens / hex / css colors by passing them through.
-    // Avoid trying to parse arbitrary strings here.
-    //
-    // Note: epub-ts highlight implementations vary by view; some apply styles to SVG overlays (fill),
-    // others apply styles to DOM elements (background-color). Provide both so color changes reliably
-    // reflect in the viewport without depending on a specific internal representation.
+    // epub-ts paints either SVG overlays or DOM nodes depending on the view; provide both style forms.
     return {
       fill: paintColor,
       "fill-opacity": "0.42",
@@ -86,9 +76,7 @@ export function createEpubTsHighlightRenderer(args: {
   const removeRendererHighlight = (cfiRange: string) => {
     try {
       rendition.annotations.remove(cfiRange, "highlight");
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const hasPaintedMarkAtCfi = (cfiRange: string) => {

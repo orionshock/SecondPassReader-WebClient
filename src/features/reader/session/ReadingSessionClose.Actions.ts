@@ -15,6 +15,7 @@ export async function closeReadingSession(input: {
   if (!input.sessionId) throw new Error("Missing session id.");
 
   try {
+    // Drain and pause autosave before closing so no position write races the terminal session transition.
     await input.prepareProgressForClose?.();
     const savedName = input.savedName?.trim() ?? "";
     const savedNotes = input.savedNotes ?? "";

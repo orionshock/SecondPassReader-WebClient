@@ -1,7 +1,4 @@
-// Shared, engine-agnostic reader domain types.
-//
-// These are allowed to flow between orchestrator <-> shell and UI components.
-// Engine-specific types from @likecoin/epub-ts should not appear above the engine layer.
+// Engine-neutral Reader contracts. epub-ts types must not escape the engine boundary.
 
 import type { ReaderRangeRepairDiagnosticHandler } from "./ReaderRangeRepair.Diagnostics";
 
