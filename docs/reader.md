@@ -15,9 +15,14 @@ Reader engine boundary. EPUB CFI is the canonical machine anchor. Renderer state
   then restores local Reader continuity without mounting server request owners.
 
 An arbitrary server failure never falls back to retained bytes. Both paths use the same Reader route
-and object URL cleanup. A Reader opened online remains mounted if connectivity drops, but
-server-owned mutations pause until connectivity returns. Connectivity changes do not recreate the
-EPUB engine.
+and object URL cleanup. If an online-open Reader later observes explicit offline connectivity, it
+keeps the mounted EPUB engine and hands progress and current-Reading-Session Marginalia to durable
+local ownership. Reconnect uses the normal authority and outbox replay pipeline; that Reader remains
+local-first until it closes.
+
+The handoff retains authored state, not publication bytes. A Book that was not explicitly made
+Available offline cannot be reopened offline after the mounted Reader closes. Unknown connectivity,
+request failure, authentication repair, and namespace loss do not trigger the handoff.
 
 See [offline-mode.md](./offline-mode.md) for local authoring, outbox, sync, and cleanup behavior.
 

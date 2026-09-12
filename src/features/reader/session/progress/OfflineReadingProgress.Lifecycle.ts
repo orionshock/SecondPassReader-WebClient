@@ -31,6 +31,10 @@ export function useOfflineReadingProgress(input: {
   const [state, setState] = useState<OfflineReadingProgressState>({ status: "idle", dirty: false });
   const controllerRef = useRef<OfflineReadingProgressController | null>(null);
   const latestProgressRef = useRef<OfflineReadingProgress | null>(null);
+  const suppressedInitialProgressRef = useRef<{
+    bootstrap: OfflineReaderBootstrap;
+    progressKey: string | null;
+  } | null>(null);
   const progress = useMemo(() => buildOfflineReadingProgress({
     location: input.location,
     toc: input.toc,
@@ -72,7 +76,14 @@ export function useOfflineReadingProgress(input: {
           },
         });
         controllerRef.current = controller;
-        controller.update(latestProgressRef.current);
+        if (bootstrap.suppressInitialProgressWrite) {
+          suppressedInitialProgressRef.current = {
+            bootstrap,
+            progressKey: offlineProgressKey(latestProgressRef.current),
+          };
+        } else {
+          controller.update(latestProgressRef.current);
+        }
         window.addEventListener("pagehide", flushForPageExit);
         document.addEventListener("visibilitychange", flushWhenHidden);
       } catch {
@@ -85,6 +96,9 @@ export function useOfflineReadingProgress(input: {
       window.removeEventListener("pagehide", flushForPageExit);
       document.removeEventListener("visibilitychange", flushWhenHidden);
       if (controllerRef.current === controller) controllerRef.current = null;
+      if (suppressedInitialProgressRef.current?.bootstrap === bootstrap) {
+        suppressedInitialProgressRef.current = null;
+      }
       if (!controller || !repositories) return;
       queueMicrotask(() => {
         void settleOfflineProgressExit(controller!).finally(() => {
@@ -96,10 +110,21 @@ export function useOfflineReadingProgress(input: {
   }, [bookId, input.bootstrap, namespaceKey, openRepositories]);
 
   useEffect(() => {
+    const suppressed = suppressedInitialProgressRef.current;
+    if (suppressed?.bootstrap === input.bootstrap) {
+      if (suppressed.progressKey === offlineProgressKey(progress)) return;
+      suppressedInitialProgressRef.current = null;
+    }
     controllerRef.current?.update(progress);
-  }, [progress]);
+  }, [input.bootstrap, progress]);
 
   return state;
+}
+
+function offlineProgressKey(progress: OfflineReadingProgress | null): string | null {
+  return progress
+    ? JSON.stringify([progress.cfi, progress.percentage, progress.locationLabel])
+    : null;
 }
 
 export async function settleOfflineProgressExit(

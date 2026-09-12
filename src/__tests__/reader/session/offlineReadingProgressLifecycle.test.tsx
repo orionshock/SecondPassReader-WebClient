@@ -54,6 +54,29 @@ describe("offline reading progress lifecycle", () => {
     ]);
     expect(close).toHaveBeenCalledOnce();
   });
+
+  it("preserves pending durable progress until the Reader moves after handoff", async () => {
+    const factories = createInMemoryOfflineRepositoryFactories();
+    const readerState = await factories.createReaderStateRepository();
+    const readerOutbox = await factories.createReaderOutboxRepository();
+    const preserved = bootstrap();
+    preserved.suppressInitialProgressWrite = true;
+    preserved.continuity.progress = {
+      cfi: "epubcfi(/6/20)",
+      percentage: 90,
+      locationLabel: "090% - Later",
+    };
+    await readerState.putBookState(preserved.continuity);
+    const openRepositories = vi.fn(async () => ({ readerState, readerOutbox, close: vi.fn() }));
+
+    await act(async () => root.render(
+      <Harness bootstrap={preserved} openRepositories={openRepositories} />,
+    ));
+    await act(async () => Promise.resolve());
+
+    expect((await readerState.getBookState("account-a", "book-1"))?.progress?.cfi).toBe("epubcfi(/6/20)");
+    expect(await readerOutbox.list("account-a")).toEqual([]);
+  });
 });
 
 function Harness({

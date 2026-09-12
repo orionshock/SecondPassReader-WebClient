@@ -32,7 +32,7 @@ export function ReaderActivityHeader({
   onReturn,
   showHomeAction,
   onHome,
-  showOfflineStatus,
+  offlineStatus,
 }: {
   title: string;
   statusLine: string[];
@@ -62,7 +62,7 @@ export function ReaderActivityHeader({
   onReturn: () => void;
   showHomeAction: boolean;
   onHome: () => void;
-  showOfflineStatus: boolean;
+  offlineStatus: string | null;
 }) {
   return (
     <div className="spReaderChrome">
@@ -75,7 +75,7 @@ export function ReaderActivityHeader({
               {autosaveStatus.text}
             </div>
           ) : null}
-          {showOfflineStatus ? <div className="spReaderAutosaveLine muted" role="status">Offline. Changes will sync when connected.</div> : null}
+          {offlineStatus ? <div className="spReaderAutosaveLine muted" role="status">{offlineStatus}</div> : null}
         </div>
 
         <div className="spReaderContextActions" role="group" aria-label="Reading Session actions">

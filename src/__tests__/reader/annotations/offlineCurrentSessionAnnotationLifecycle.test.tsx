@@ -61,6 +61,33 @@ describe("offline current-session annotation lifecycle", () => {
       expect.objectContaining({ type: "upsert-annotation", serverSessionId: null }),
     ]);
   });
+
+  it("publishes the durable annotation snapshot when local ownership becomes ready", async () => {
+    const factories = createInMemoryOfflineRepositoryFactories();
+    const readerState = await factories.createReaderStateRepository();
+    const readerOutbox = await factories.createReaderOutboxRepository();
+    const value = bootstrap();
+    value.continuity.annotations = [{
+      status: "present",
+      origin: { kind: "server-confirmed", serverSessionId: "session-1" },
+      annotation: {
+        clientId: "bookmark-1",
+        kind: "bookmark",
+        location: { cfi: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
+      },
+    }];
+
+    await act(async () => root.render(
+      <Harness
+        bootstrap={value}
+        openRepositories={async () => ({ readerState, readerOutbox, close: vi.fn() })}
+        onActions={() => undefined}
+      />,
+    ));
+    await act(async () => Promise.resolve());
+
+    expect(container.textContent).toBe("1");
+  });
 });
 
 function Harness({

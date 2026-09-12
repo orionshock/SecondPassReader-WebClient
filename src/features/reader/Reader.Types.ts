@@ -31,6 +31,7 @@ export type OfflineReaderBootstrap = {
   kind: "local";
   continuity: OfflineReaderBookState;
   serverWritesAllowed: false;
+  suppressInitialProgressWrite?: boolean;
 };
 
 export type OfflineOpenedBook = OpenedBookBase & {

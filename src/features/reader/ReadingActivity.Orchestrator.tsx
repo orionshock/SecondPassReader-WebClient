@@ -23,6 +23,7 @@ export function ReadingActivity({
   settings,
   initialSearchQuery,
   connectivity = "unknown",
+  offlineNamespaceKey = null,
 }: {
   openedBook: OpenedBook | null;
   onBackToLibrary: () => void;
@@ -30,6 +31,7 @@ export function ReadingActivity({
   settings?: ReaderSettings;
   initialSearchQuery?: string | null;
   connectivity?: BrowserConnectivityStatus;
+  offlineNamespaceKey?: string | null;
 }) {
   if (!openedBook) return <p className="muted">No book open.</p>;
 
@@ -50,6 +52,8 @@ export function ReadingActivity({
       <ReadingSessionOrchestrator
         openedBook={openedBook}
         spl={serverSpl}
+        connectivity={connectivity}
+        offlineNamespaceKey={offlineNamespaceKey}
         settings={displaySettings}
         onSettingsChange={readerDisplaySettings.updateSettings}
         onSettingsReset={readerDisplaySettings.resetSettings}
@@ -178,7 +182,11 @@ function ReaderActivityContent({
         onReturn={completion.returnToTarget}
         showHomeAction={completion.showHomeAction}
         onHome={onBackToLibrary}
-        showOfflineStatus={connectivity === "offline" && openedBook.source === "online"}
+        offlineStatus={connectivity === "offline"
+          ? readerState.canMutateAnnotations
+            ? "Offline. Changes will sync when connected."
+            : "Offline. Changes aren't available."
+          : null}
       />
 
       <ReaderActivitySidePanels

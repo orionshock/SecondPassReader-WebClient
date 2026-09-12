@@ -137,7 +137,7 @@ removes Reader state, progress, annotations, outbox work, or cached projections.
 | Home | Read-only saved Recent History and Shelf previews, with a local Reader progress overlay |
 | Library | Downloaded Books only, with local title search |
 | Book Detail | Saved metadata, publication status, Open Reader, Manage offline, and removal |
-| Reader | Retained EPUB reading and local Reading Session/Marginalia continuity |
+| Reader | Retained EPUB reading, or continued reading in an already-mounted online-open Reader, with local Reading Session/Marginalia continuity |
 | Settings | Offline assets, pending Reader work, retry, and local cleanup |
 | Shelves and standalone Reading Sessions | Unavailable; server query and mutation owners do not mount |
 
@@ -205,6 +205,28 @@ remain available. Reading Session metadata changes and close operations remain s
 
 The Reader lifecycle owns and revokes publication object URLs. Removing durable storage does not
 force-close an already-open Reader.
+
+### Online-open Reader handoff
+
+An online-open Reader remains mounted when centralized connectivity becomes explicitly `offline`.
+With the same verified namespace and working local persistence, it hands progress and current
+Reading Session Marginalia to the existing durable local continuity owners. The EPUB engine, Blob,
+object URL, visible location, search state, and staged annotation interaction remain in place.
+
+The handoff retains confirmed server Reading Session authority when available and merges existing
+local desired state without ordering CFIs or dropping pending annotations and tombstones. A known
+closed Reading Session remains read-only. Server mutation owners stop before local mutation becomes
+available, preventing simultaneous server and local writes.
+
+After a successful handoff, that mounted Reader remains local-first. When connectivity returns, the
+normal authority reconciliation and outbox replay pipeline delivers pending work. Exact revisions
+protect concurrent newer local changes.
+
+This does not retain the publication Blob or mark the Book Available offline. The current engine may
+continue using bytes it already owns, but offline reopen after closing still requires normal retained
+publication admission. Unknown connectivity, request failures, repair-required authentication,
+namespace mismatch, and local-storage failure do not activate durable authoring. If persistence
+cannot be established, the Reader remains readable but mutation stays unavailable.
 
 ## Local Reader continuity
 

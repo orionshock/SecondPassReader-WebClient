@@ -79,6 +79,7 @@ export function useOfflineCurrentSessionAnnotations(input: {
           },
         });
         controllerRef.current = controller;
+        setAnnotationsRawRef.current(controller.getAnnotations());
         setReady(controller.canMutate());
       } catch {
         if (!cancelled) {

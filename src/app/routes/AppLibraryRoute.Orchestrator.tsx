@@ -90,6 +90,7 @@ export function AppLibraryRouteRenderer({
             }}
             spl={spl}
             connectivity={connectivity}
+            offlineNamespaceKey={offlineNamespaceKey}
             initialSearchQuery={route.search ?? null}
           />
         </Suspense>

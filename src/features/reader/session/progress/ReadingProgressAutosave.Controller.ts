@@ -83,6 +83,13 @@ export class ReadingProgressAutosaveController {
 
     if (sessionChanged) this.resetForSession(next.sessionId);
 
+    if (!sessionChanged && previousEnabled && !next.enabled) {
+      this.generation += 1;
+      this.clearTimer();
+      this.inFlightGeneration = null;
+      this.activeDrain = null;
+    }
+
     const closedSession = next.sessionId !== null && next.sessionId === this.closedSessionId;
     this.input = closedSession ? { ...next, enabled: false } : next;
     const nextPayloadKey = payloadKey(next.progress);

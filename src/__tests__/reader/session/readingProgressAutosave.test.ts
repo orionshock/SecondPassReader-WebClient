@@ -199,6 +199,29 @@ describe("ReadingProgressAutosaveController", () => {
     expect(controller.getState()).toMatchObject({ status: "saved", lastSavedCfi: "epubcfi(/6/4)" });
   });
 
+  it("ignores an in-flight server completion after mutation authority is withdrawn", async () => {
+    const pending = deferred<MarginaliaProgress>();
+    const states: string[] = [];
+    const save = vi.fn(() => pending.promise);
+    const controller = new ReadingProgressAutosaveController((state) => states.push(state.status));
+    const enabled = {
+      enabled: true,
+      autosaveDelayMs: 10,
+      sessionId: "session-1",
+      progress: { cfi: "epubcfi(/6/8)", locationLabel: "Chapter" },
+      saveProgress: save,
+    };
+
+    controller.update(enabled);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(save).toHaveBeenCalledOnce();
+    controller.update({ ...enabled, enabled: false, saveProgress: null });
+    pending.resolve(savedProgress("epubcfi(/6/8)", "Chapter"));
+    await Promise.resolve();
+
+    expect(states.at(-1)).not.toBe("saved");
+  });
+
   it("drains the newest complete progress payload after an in-flight save", async () => {
     const firstSave = deferred<MarginaliaProgress>();
     const save = vi.fn((_sessionId: string, progress: { cfi: string; locationLabel: string }) =>

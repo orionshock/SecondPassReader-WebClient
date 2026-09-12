@@ -28,6 +28,11 @@ export function useCurrentSessionAnnotationActions(args: {
   const controller = controllerRef.current;
 
   useEffect(() => {
+    if (args.canMutate === false) {
+      controller.detach(args.identity);
+      setAnnotationBusy(false);
+      return;
+    }
     controller.activate(args.identity, {
       setAnnotations: (annotations) => {
         annotationsRawRef.current = annotations;
@@ -37,7 +42,7 @@ export function useCurrentSessionAnnotationActions(args: {
       setError: args.setAnnotationError,
     });
     return () => controller.detach(args.identity);
-  }, [args.identity, args.setAnnotationError, args.setAnnotationsRaw, controller]);
+  }, [args.canMutate, args.identity, args.setAnnotationError, args.setAnnotationsRaw, controller]);
 
   const removeById = useCallback(
     async (annotationId: string) => {

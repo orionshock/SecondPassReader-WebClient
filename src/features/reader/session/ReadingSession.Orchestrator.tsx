@@ -1,5 +1,5 @@
 import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell.Orchestrator";
 import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
@@ -28,12 +28,17 @@ import {
 } from "./ReadingSessionRender.Presenter";
 import { getReaderBootstrapState } from "./ReaderBootstrap.State";
 import { useOfflineReadingProgress } from "./progress/OfflineReadingProgress.Lifecycle";
+import { buildOfflineReadingProgress } from "./progress/OfflineReadingProgress.Controller";
 import { useOfflineCurrentSessionAnnotations } from "./annotations/OfflineCurrentSessionAnnotation.Lifecycle";
 import { canMutateReaderServerSession } from "./ReaderConnectivity.Policy";
+import type { BrowserConnectivityStatus } from "../../../app/connectivity/BrowserConnectivity.State";
+import { useOnlineReaderOfflineHandoff } from "./OnlineReaderOfflineHandoff.Controller";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
   spl?: SecondPassClient | null;
+  connectivity: BrowserConnectivityStatus;
+  offlineNamespaceKey: string | null;
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
   onSettingsReset?: () => void;
@@ -137,11 +142,28 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   );
   const {
     serverBootstrap,
-    localBootstrap,
+    localBootstrap: openedLocalBootstrap,
     sessionId,
     canMutateSession: bootstrapCanMutateSession,
   } = getReaderBootstrapState(props.openedBook);
-  const serverSpl = serverBootstrap ? props.spl : null;
+  const handoffAnnotationsRef = useRef(serverBootstrap?.annotations ?? []);
+  const readHandoffAnnotations = useCallback(() => handoffAnnotationsRef.current, []);
+  const handoffProgress = useMemo(() => buildOfflineReadingProgress({
+    location: progressLocation,
+    toc,
+    bookTitle: props.openedBook.book.title,
+  }), [progressLocation, props.openedBook.book.title, toc]);
+  const handoff = useOnlineReaderOfflineHandoff({
+    source: props.openedBook.source,
+    connectivity: props.connectivity,
+    namespaceKey: props.offlineNamespaceKey,
+    bookId: String(props.openedBook.book.id),
+    serverBootstrap,
+    readAnnotations: readHandoffAnnotations,
+    progress: handoffProgress,
+  });
+  const localBootstrap = openedLocalBootstrap ?? handoff.bootstrap;
+  const serverSpl = serverBootstrap && !localBootstrap ? props.spl : null;
   const canMutateSession = canMutateReaderServerSession({
     bootstrapCanMutateSession,
     serverClientAvailable: Boolean(serverSpl),
@@ -173,6 +195,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     onLocationsReady,
     currentBookmark,
   } = sessionAnnotations;
+  handoffAnnotationsRef.current = annotationsRaw;
 
   const handleDescribeCfiReadyForReader = useCallback(
     (handle: ReaderDescribeCfiHandle | null) => {
@@ -257,8 +280,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
 
   const statusLine = useMemo(() => {
     const lines = buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });
-    return localBootstrap ? ["Offline", ...lines] : lines;
-  }, [localBootstrap, props.openedBook.book.title, state.location, state.toc]);
+    return lines;
+  }, [props.openedBook.book.title, state.location, state.toc]);
 
   const visibleHighlightMarks = useMemo(
     () => composeReadingSessionDurableMarks(highlightMarks, previousLayers.selectedHighlightMarks),
