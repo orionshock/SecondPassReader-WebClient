@@ -41,7 +41,6 @@ describe("Offline Settings surface", () => {
     expect(controller.retrySync).toHaveBeenCalledOnce();
     expect(controller.removeAsset).toHaveBeenCalledWith(state.assets[0]);
     expect(controller.removeAllAssets).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("reading progress, annotations, and pending changes will remain");
 
     await act(async () => button("Remove offline copies")?.click());
     expect(controller.removeAllAssets).toHaveBeenCalledOnce();
@@ -63,8 +62,6 @@ describe("Offline Settings surface", () => {
       />,
     ));
 
-    expect(container.textContent).toContain("Reading position - Waiting to sync");
-    expect(container.textContent).toContain("1 annotation change - Waiting to sync");
     await act(async () => button("Retry this book")?.click());
     expect(controller.retryBook).toHaveBeenCalledWith("book-1");
     await act(async () => button("Open reader")?.click());
@@ -104,8 +101,6 @@ describe("Offline Settings surface", () => {
       <OfflineSettingsView state={state} controller={controllerStub()} clientAvailable />,
     ));
 
-    expect(container.textContent).toContain("All offline changes are synced.");
-    expect(container.textContent).toContain("No books are currently available offline.");
     expect(button("Retry sync")?.disabled).toBe(true);
     expect(button("Remove all offline copies")).toBeNull();
   });

@@ -1,4 +1,5 @@
 import type { Shelf, SecondPassClient } from "@secondpass/client";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 const SHELF_PAGE_SIZE = 100;
 
@@ -30,9 +31,14 @@ export async function addBookToPersonalShelf(input: {
     } catch {
       // Preserve the original add error when membership reconciliation also fails.
     }
+    debugWarn("reader", "Book was not added to personal shelf", {
+      bookId: input.bookId,
+      shelfId: input.shelfId,
+      error: reason,
+    });
     return {
       added: false,
-      message: reason instanceof Error ? reason.message : "Could not add this book to the shelf.",
+      message: "Couldn't add the Book to the shelf. Try again.",
     };
   }
 }

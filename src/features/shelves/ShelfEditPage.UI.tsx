@@ -9,6 +9,7 @@ import { ShelfEditInfoModal } from "./ShelfEditInfoModal.UI";
 import { ShelfEditInfoPanel } from "./ShelfEditInfoPanel.UI";
 import { ShelfEditItemsList } from "./ShelfEditItemsList.UI";
 import { canEditShelf } from "./ShelfMetadata.Presenter";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
@@ -64,14 +65,13 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
         setNextUrl(null);
       }
     } catch (e) {
+      debugWarn("reader", "shelf edit data could not be loaded", { shelfId, error: e });
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-          ? "Could not load shelf. Your device token may be revoked or not allowed to access shelves."
+          ? "This account can't access this shelf. Check the connection and try again."
           : e instanceof ApiError && e.status === 404
-            ? "Shelf not found or not accessible."
-            : e instanceof Error
-              ? e.message
-              : "Failed to load shelf.";
+            ? "Shelf not found or unavailable to this account."
+            : "Couldn't load the shelf. Reload the page to try again.";
       setError(message);
       setShelf(null);
       setItems([]);
@@ -110,7 +110,8 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
       });
       setNextUrl(page.next ?? null);
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to load more items.");
+      debugWarn("reader", "more shelf books could not be loaded", { shelfId, error: e });
+      setMutationError("Couldn't load more books. Try again.");
     } finally {
       setLoadMoreBusy(false);
     }
@@ -129,7 +130,8 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
       setInfoDraft(shelfToFormValues(updatedShelf));
       setInfoOpen(false);
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to update shelf.");
+      debugWarn("reader", "shelf details were not saved", { shelfId, error: e });
+      setMutationError("Couldn't save the shelf. Try again.");
     } finally {
       setInfoBusy(false);
     }
@@ -144,7 +146,8 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
       await spl.shelves.updateItem(shelfId, item.id, { position });
       await loadFirst();
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to move shelf item.");
+      debugWarn("reader", "Book shelf position was not saved", { shelfId, bookId: item.book.id, error: e });
+      setMutationError("Couldn't move the Book. Try again.");
     } finally {
       setMutationBusyId(null);
     }
@@ -159,7 +162,8 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
       await spl.shelves.updateItem(shelfId, item.id, { move });
       await loadFirst();
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to move shelf item.");
+      debugWarn("reader", "Book shelf order was not saved", { shelfId, bookId: item.book.id, move, error: e });
+      setMutationError("Couldn't move the Book. Try again.");
     } finally {
       setMutationBusyId(null);
     }
@@ -168,14 +172,15 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
   const handleRemoveItem = useCallback(async (item: ShelfItem) => {
     if (!spl) return;
     if (!canEditShelf(shelf)) return;
-    if (!window.confirm("Remove this book from the shelf? The book itself will not be deleted.")) return;
+    if (!window.confirm("Remove this book from the shelf? The book will remain in Library.")) return;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
       await spl.shelves.removeItem(shelfId, item.id);
       await loadFirst();
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to remove shelf item.");
+      debugWarn("reader", "Book was not removed from shelf", { shelfId, bookId: item.book.id, error: e });
+      setMutationError("Couldn't remove the Book from the shelf. Try again.");
     } finally {
       setMutationBusyId(null);
     }
@@ -188,7 +193,7 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
     <section className="panel shelfDetail shelfEditPage">
       <div className="panelHeaderRow">
         <h2 className="panelTitle" style={{ margin: 0 }}>
-          {shelf?.name ? `Editing ${shelf.name}` : "Editing shelf"}
+          {shelf?.name ? `Edit ${shelf.name}` : "Edit shelf"}
         </h2>
         <div className="shelfDetailHeaderActions">
           <button type="button" className="button buttonPrimary buttonCompact" onClick={() => navigateTo({ kind: "shelf", shelfId })}>
@@ -201,8 +206,8 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
         </div>
       </div>
 
-      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
+      {!canLoad ? <p className="muted">Verify the connection to view this shelf.</p> : null}
+      {busy ? <p className="muted">Loading shelf...</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
       {mutationError && !infoOpen ? <div className="errorText">{mutationError}</div> : null}
 
@@ -210,7 +215,7 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
         <>
           {!canEdit ? (
             <div className="shelfReadOnlyNotice">
-              You can view this shelf, but this device token does not have permission to edit it.
+              This shelf is read-only for this account.
             </div>
           ) : null}
 

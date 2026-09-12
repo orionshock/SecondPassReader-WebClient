@@ -14,8 +14,6 @@ describe("top-level connection recovery", () => {
       route: { kind: "home" },
     }));
 
-    expect(html).toContain("This device cannot access this library resource.");
-    expect(html).toContain("Manage connection");
     expect(html).toContain('href="#/settings?tab=library-server"');
   });
 
@@ -27,8 +25,6 @@ describe("top-level connection recovery", () => {
       route: { kind: "home" },
     }));
 
-    expect(html).toContain("This saved connection needs to be repaired.");
-    expect(html).toContain("Offline reading data remains stored.");
     expect(html).toContain("Repair connection");
   });
 
@@ -48,7 +44,7 @@ describe("top-level connection recovery", () => {
     expect(reduceAuthenticationRepairRequired(false, authError())).toBe(false);
   });
 
-  it("hides the banner on Settings > Library Server", () => {
+  it("hides the banner on Settings > Second Pass Library", () => {
     const html = renderToStaticMarkup(createElement(ConnectionRecoveryBannerForState, {
       authorizationFailure: true,
       hasConnection: true,

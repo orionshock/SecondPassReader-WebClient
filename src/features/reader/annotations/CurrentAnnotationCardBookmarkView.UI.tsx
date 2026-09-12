@@ -53,8 +53,8 @@ export function CurrentAnnotationCardBookmarkView({
           type="button"
           className="button buttonCompact spIconButton"
           onClick={onJump}
-          aria-label="Jump to bookmark"
-          title="Jump to location"
+          aria-label="Go to bookmark"
+          title="Go to bookmark"
         >
           <MaterialIcon name="my_location" />
         </button>

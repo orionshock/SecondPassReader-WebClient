@@ -109,7 +109,7 @@ export function SelectionHighlightToolbar(props: SelectionHighlightToolbarProps)
             rows={2}
             value={props.noteDraft}
             onChange={(e) => props.onChangeNoteDraft(e.currentTarget.value)}
-            placeholder="Highlight Note"
+            placeholder="Add a note"
             disabled={Boolean(props.busy)}
           />
         </div>

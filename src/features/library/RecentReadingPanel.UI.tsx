@@ -8,7 +8,7 @@ import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
 import { loadRecentReading } from "../reader/ReaderMarginalia.Queries";
 import { RecentReadingCarousel } from "./RecentReadingCarousel.UI";
 
-const RECENT_READING_ERROR = "Could not load recent reading.";
+const RECENT_READING_ERROR = "Couldn't load Recent History.";
 
 export function RecentReadingLoadFailure({
   error,
@@ -22,7 +22,7 @@ export function RecentReadingLoadFailure({
   const message = getPageLoadErrorMessage(
     error,
     RECENT_READING_ERROR,
-    getAuthRecoveryMessage("load recent reading"),
+    getAuthRecoveryMessage("load Recent History"),
   );
   return (
     <PageLoadErrorNotice
@@ -84,7 +84,7 @@ export function RecentReadingSection({
       saveReaderReturnTarget(bookKey, { kind: "home", label: "Home", route: "#/home" });
       navigateTo({ kind: "reader", bookId: bookKey });
     } catch (e) {
-      setError(e instanceof Error ? e : new Error("Failed to resume book."));
+      setError(e instanceof Error ? e : new Error("Couldn't resume reading."));
     }
   }
 
@@ -96,7 +96,7 @@ export function RecentReadingSection({
         </div>
         <div className="recentReadingHeaderActions">
           <span className="muted">
-            {busy ? `Loading${"\u2026"}` : data && data.results.length > 1 ? `${data.results.length} recent` : null}
+            {busy ? "Loading..." : data && data.results.length > 1 ? `${data.results.length} Reading Sessions` : null}
           </span>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function RecentReadingSection({
             disabled={busy}
             onClick={() => setShowClosed((current) => !current)}
           >
-            Show closed
+            Include closed
           </button>
           <a className="button buttonCompact recentReadingViewAll" href={routeToHash({ kind: "sessions" })}>
             View all
@@ -117,7 +117,7 @@ export function RecentReadingSection({
         <RecentReadingLoadFailure error={error} onRetry={() => void loadRecent()} disabled={!canLoad || busy} />
       ) : null}
 
-      {!busy && !error && (!data?.results || data.results.length === 0) ? <div className="muted">No recent reading yet.</div> : null}
+      {!busy && !error && (!data?.results || data.results.length === 0) ? <div className="muted">No Recent History yet.</div> : null}
 
       {data?.results?.length ? (
         <RecentReadingCarousel

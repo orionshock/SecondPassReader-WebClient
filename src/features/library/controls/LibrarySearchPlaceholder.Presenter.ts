@@ -7,7 +7,7 @@ type Input = {
 };
 
 export function getLibrarySearchPlaceholder({ axis, scopeName, searchMode }: Input): string {
-  if (searchMode === "global") return "Search books, authors, series, publishers...";
+  if (searchMode === "global") return "Search books, authors, series, and publishers...";
 
   const target = axis === "authors" ? "authors" : axis === "series" ? "series" : "books";
   return scopeName ? `Search ${target} in ${scopeName}...` : `Search ${target}...`;

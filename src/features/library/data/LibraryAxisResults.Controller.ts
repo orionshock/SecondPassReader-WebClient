@@ -4,6 +4,7 @@ import { buildLibraryBooksQuery, buildLibraryEntityQuery } from "./LibraryAxis.Q
 import { loadLibraryBooks } from "./LibraryBooks.Queries";
 import { loadLibraryAuthors, loadLibrarySeries } from "./LibraryEntities.Queries";
 import type { DerivedLibraryRouteState } from "../route/LibraryRoute.State";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 type Input = {
   spl: SecondPassClient | null;
@@ -43,6 +44,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
       setBooksPage(params.page ?? 1);
     } catch (error) {
       if (requestSeq !== booksRequestSeq.current) return;
+      debugWarn("reader", "Library Book results could not be loaded", { error });
       setBooksData((current) => current ?? null);
       setBooksError(error instanceof Error ? error : new Error("Could not load library results."));
     } finally {
@@ -62,6 +64,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
       setAuthorsPage(params.page ?? 1);
     } catch (error) {
       if (requestSeq !== authorsRequestSeq.current) return;
+      debugWarn("reader", "Library Author results could not be loaded", { error });
       setAuthorsError(error instanceof Error ? error : new Error("Could not load library results."));
     } finally {
       if (requestSeq === authorsRequestSeq.current) setAuthorsBusy(false);
@@ -80,6 +83,7 @@ export function useLibraryAxisResults({ spl, state, canLoad }: Input) {
       setSeriesPage(params.page ?? 1);
     } catch (error) {
       if (requestSeq !== seriesRequestSeq.current) return;
+      debugWarn("reader", "Library Series results could not be loaded", { error });
       setSeriesError(error instanceof Error ? error : new Error("Could not load library results."));
     } finally {
       if (requestSeq === seriesRequestSeq.current) setSeriesBusy(false);

@@ -51,8 +51,8 @@ function ReadOnlyItemRow({
             type="button"
             className="button buttonCompact spIconButton"
             onClick={() => onJumpToCfi(item.cfi)}
-            aria-label="Jump to bookmark"
-            title="Jump to location"
+            aria-label="Go to bookmark"
+            title="Go to bookmark"
           >
             <MaterialIcon name="my_location" />
           </button>
@@ -95,8 +95,8 @@ function ReadOnlyItemRow({
           type="button"
           className="button buttonCompact spIconButton"
           onClick={() => onJumpToCfiRange(item.cfiRange)}
-          aria-label="Jump to highlight"
-          title="Jump to location"
+          aria-label="Go to highlight"
+          title="Go to highlight"
         >
           <MaterialIcon name="my_location" />
         </button>
@@ -120,10 +120,10 @@ export function PreviousSessionAnnotationsPanel(props: {
     return g;
   }, [props.groups]);
 
-  if (groups.length === 0) return <div className="muted">No previous sessions.</div>;
+  if (groups.length === 0) return <div className="muted">No previous Reading Sessions.</div>;
 
   return (
-    <div className="spPreviousSessionsPanel" aria-label="Previous session annotations">
+    <div className="spPreviousSessionsPanel" aria-label="Previous Reading Session annotations">
       {groups.map((g) => (
         <section key={g.sessionId} className="spPreviousSessionGroup">
           <div className="spPreviousSessionHeader">
@@ -132,10 +132,10 @@ export function PreviousSessionAnnotationsPanel(props: {
                 type="button"
                 className="button buttonCompact"
                 onClick={() => props.onEnableInMarginalia(g.sessionId)}
-                title={g.selected ? "Disable layer" : "Enable layer"}
+                title={g.selected ? "Hide from Marginalia" : "Show in Marginalia"}
                 disabled={g.status === "loading"}
               >
-                {g.selected ? "Disable" : "Enable"}
+                {g.selected ? "Hide" : "Show"}
               </button>
             </div>
             <div className="spPreviousSessionTitle" title={g.label}>
@@ -147,12 +147,12 @@ export function PreviousSessionAnnotationsPanel(props: {
           {g.selected ? (
             <>
               {g.status === "loading" ? <div className="muted">Loading annotations...</div> : null}
-              {g.status === "error" ? <div className="muted">Failed to load annotations{g.error ? `: ${g.error}` : "."}</div> : null}
-              {g.status === "idle" ? <div className="muted">Enable in Marginalia to load highlights.</div> : null}
-              {g.status === "ready" && (!g.items || g.items.length === 0) ? <div className="muted">No annotations in this session.</div> : null}
+              {g.status === "error" ? <div className="muted">{g.error ?? "Couldn't load annotations. Hide and show this Reading Session to try again."}</div> : null}
+              {g.status === "idle" ? <div className="muted">Show in Marginalia to load highlights.</div> : null}
+              {g.status === "ready" && (!g.items || g.items.length === 0) ? <div className="muted">No annotations in this Reading Session.</div> : null}
 
               {g.status === "ready" && g.items && g.items.length > 0 ? (
-                <div className="spAnnotationList" aria-label="Previous session annotations list">
+                <div className="spAnnotationList" aria-label="Previous Reading Session annotations">
                   {g.items.map((item) => (
                     <ReadOnlyItemRow
                       key={`${item.kind}:${item.id}`}

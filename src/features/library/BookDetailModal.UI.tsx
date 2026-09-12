@@ -5,6 +5,7 @@ import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { BookDetailPanel } from "./BookDetailPanel.UI";
 import { useBookOfflineAvailabilityController } from "./bookDetail/BookOfflineAvailability.Controller";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export function BookDetailModal({
   profile,
@@ -79,12 +80,11 @@ export function BookDetailModal({
         setBook(full);
       } catch (e) {
         if (seq !== fetchSeqRef.current) return;
+        debugWarn("reader", "Book details could not be loaded", { bookId, error: e });
         const message =
           e instanceof ApiError && e.status === 404
-            ? "That book could not be found or you do not have access to it."
-            : e instanceof Error
-              ? e.message
-              : "Failed to load book.";
+            ? "Book not found or unavailable to this account."
+            : "Couldn't load Book details. Close and reopen the Book to try again.";
         setError(message);
       } finally {
         if (seq !== fetchSeqRef.current) return;
@@ -138,8 +138,8 @@ export function BookDetailModal({
         </div>
 
         <div className="modalBody">
-          {!canFetch ? <div className="muted">Select a verified profile to view details.</div> : null}
-          {busy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
+          {!canFetch ? <div className="muted">Verify the connection to view book details.</div> : null}
+          {busy ? <div className="muted">Loading book details...</div> : null}
           {error ? <div className="errorText">{error}</div> : null}
 
           {book ? (

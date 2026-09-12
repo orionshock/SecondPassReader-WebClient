@@ -26,9 +26,9 @@ export function offlineNamespaceRemovalConfirmation(summary: OfflineNamespaceRet
       ? "Unsynced reading changes will be permanently discarded."
       : null,
     summary.offlineAssetCount > 0
-      ? "Downloaded offline books will be removed."
+      ? "Offline copies will be removed."
       : null,
-    "Saved reading progress and annotations stored only on this device will be removed.",
+    "Reading progress and annotations saved only in this browser will be removed.",
   ].filter(Boolean);
   return `Forget this connection and remove its local data? ${consequences.join(" ")}`;
 }

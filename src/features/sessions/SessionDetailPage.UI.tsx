@@ -12,6 +12,7 @@ import { SessionDetailMetadataEditor } from "./SessionDetailMetadataEditor.UI";
 import { SessionDetailTitleEditor } from "./SessionDetailTitleEditor.UI";
 import { formatAnnotationCount, formatIso } from "./SessionDetail.Presenter";
 import { getSessionDisplayName } from "./SessionDisplayName.Presenter";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
   const canLoad = Boolean(spl);
@@ -48,14 +49,16 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
       setEditingName(false);
       setEditingNotes(false);
     } catch (e) {
+      debugWarn("reader", "Reading Session detail could not be loaded", {
+        sessionId,
+        error: e,
+      });
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-          ? "Could not load session. Your device token may be revoked or not allowed to access reading data."
+          ? "This connection cannot access the Reading Session. Open Settings to repair or review the connection."
           : e instanceof ApiError && e.status === 404
-            ? "Session not found or not accessible."
-            : e instanceof Error
-              ? e.message
-              : "Failed to load session.";
+            ? "This Reading Session is unavailable. It may have been removed, or you may not have access."
+            : "Couldn't load the Reading Session. Reload the page to try again.";
       setError(message);
       setDetail(null);
     } finally {
@@ -72,8 +75,11 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
         const response = await spl.marginalia.sessions.getAnnotations(sessionId);
         setAnnotations(response.annotations);
       } catch (e) {
-        const message = e instanceof Error ? e.message : "Failed to load annotations.";
-        setAnnoError(message);
+        debugWarn("reader", "Reading Session annotations could not be loaded", {
+          sessionId,
+          error: e,
+        });
+        setAnnoError("Couldn't load annotations. Reload the page to try again.");
         setAnnotations(null);
       } finally {
         setAnnoBusy(false);
@@ -115,7 +121,11 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
       setDetail(refreshed);
       setEditingName(false);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Failed to save session.");
+      debugWarn("reader", "Reading Session name was not saved", {
+        sessionId,
+        error: e,
+      });
+      setSaveError("Couldn't save the Reading Session details. Try again.");
     } finally {
       setSaveBusy(false);
     }
@@ -132,7 +142,11 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
       setDetail(refreshed);
       setEditingNotes(false);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Failed to save session.");
+      debugWarn("reader", "Reading Session notes were not saved", {
+        sessionId,
+        error: e,
+      });
+      setSaveError("Couldn't save the Reading Session details. Try again.");
     } finally {
       setSaveBusy(false);
     }
@@ -186,7 +200,7 @@ export function SessionDetailPage({ profile, spl, sessionId }: { profile: Connec
         />
       ) : null}
 
-      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
+      {!canLoad ? <p className="muted">Connect to Second Pass Library to view this Reading Session.</p> : null}
       {busy ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 

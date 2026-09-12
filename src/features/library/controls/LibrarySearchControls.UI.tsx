@@ -27,7 +27,7 @@ export function LibrarySearchControls({ draft, pageSize, placeholder, onDraftCha
           />
         </label>
         <label className="toolbarField">
-          <span className="srOnly">Page size</span>
+          <span className="srOnly">Results per page</span>
           <select className="input inputCompact" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
             <option value={20}>20</option>
             <option value={50}>50</option>

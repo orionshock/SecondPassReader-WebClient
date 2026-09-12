@@ -5,6 +5,7 @@ import { createSplClientFromProfile } from "../../app/AppSplClient.Factory";
 import { applyAuthenticatedContextToProfile } from "./ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "./AuthenticatedContext.Queries";
 import { isAuthenticationRepairError, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -44,11 +45,11 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
   async function verify() {
     if (!profile) return;
     if (!profile.apiBaseUrl) {
-      setState({ phase: "error", message: "Missing apiBaseUrl. Run discovery first." });
+      setState({ phase: "error", message: "Library details are incomplete. Connect again." });
       return;
     }
     if (!profile.accessToken) {
-      setState({ phase: "error", message: "Library is not linked yet (no access token)." });
+      setState({ phase: "error", message: "This connection isn't authorized yet." });
       return;
     }
 
@@ -73,12 +74,13 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
         setState({
           phase: "error",
           message: authenticationRejected
-            ? "These credentials were rejected. Repair the connection and verify again."
-            : "The library server did not allow verification for this account.",
+            ? "Second Pass Library rejected this connection. Repair it and try again."
+            : "Second Pass Library did not allow this account to connect.",
         });
         return;
       }
-      setState({ phase: "error", message: e instanceof Error ? e.message : "Verification failed." });
+      debugWarn("reader", "connection verification did not complete", { error: e });
+      setState({ phase: "error", message: "Couldn't verify the connection. Try again." });
     }
   }
 
@@ -86,7 +88,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     return (
       <section className="panel">
         <h2 className="panelTitle">Verify connection</h2>
-        <p className="muted">Connect a library to verify.</p>
+        <p className="muted">Connect to Second Pass Library first.</p>
       </section>
     );
   }
@@ -95,7 +97,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     return (
       <section className="panel">
         <h2 className="panelTitle">Verify connection</h2>
-        <p className="muted">Connected library not found.</p>
+        <p className="muted">This connection no longer exists. Connect again.</p>
       </section>
     );
   }
@@ -136,7 +138,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
 
       {profile.mustChangePassword ? (
         <p className="warningText">
-          This account requires a password change. Update it in the server web UI, then verify again.
+          Change this account's password in Second Pass Library, then verify again.
         </p>
       ) : null}
 

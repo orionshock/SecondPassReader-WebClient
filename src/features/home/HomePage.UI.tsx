@@ -23,9 +23,9 @@ export function HomePage({
     <section className="panel">
       <h1 className="panelTitle">Home</h1>
 
-      {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
-      {status === "configured" ? <p className="muted">Link this profile before loading the library.</p> : null}
-      {status === "linked" ? <p className="muted">Verify this profile before loading the library.</p> : null}
+      {status === "not_configured" ? <p className="muted">Connect to Second Pass Library to use Home.</p> : null}
+      {status === "configured" ? <p className="muted">Approve this browser before loading Home.</p> : null}
+      {status === "linked" ? <p className="muted">Verify the connection before loading Home.</p> : null}
 
       {status === "verified" ? (
         <>

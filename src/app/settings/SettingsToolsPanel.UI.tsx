@@ -11,6 +11,7 @@ import {
 import { createMarginaliaZipBlob } from "../../features/settings/MarginaliaZipExport.Actions";
 import { DebugLoggingSettingsPanel } from "../../features/devtools/DebugLoggingSettingsPanel.UI";
 import { SettingsDetailRow } from "./SettingsDetailRow.UI";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type MarginaliaToolState =
   | { phase: "idle" }
@@ -40,9 +41,13 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
       const result = parseAndSplitMarginaliaExport(text);
       setMarginaliaState({ phase: "loaded", fileName: file.name, result });
     } catch (error) {
+      debugWarn("imports", "Marginalia export could not be read", {
+        fileName: file.name,
+        error,
+      });
       setMarginaliaState({
         phase: "error",
-        message: error instanceof Error ? error.message : "Failed to parse marginalia export.",
+        message: error instanceof Error ? error.message : "Couldn't read this export. Check the file and try again.",
       });
     }
   }
@@ -95,19 +100,19 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
     <div className="settingsTabPanel">
       <section className="panel settingsCard settingsMaintenance">
         <div className="settingsSectionHeader">
-          <h2 className="panelTitle">Marginalia export splitter</h2>
+          <h2 className="panelTitle">Split Marginalia export</h2>
         </div>
         <div className="settingsCopyBlock">
-          <p>Split a SecondPassMarginaliaExport JSON file into one file per reading session.</p>
+          <p>Split a Second Pass Marginalia export into one file per Reading Session.</p>
           <p className="muted">
-            This only repackages the export. It does not repair selectors, match quotes, import annotations, or contact
-            the library server.
+            This tool only repackages the export. It does not repair locations, match text, import annotations, or
+            contact Second Pass Library.
           </p>
         </div>
         <div className="settingsControlBlock">
           <div className="settingsFileRow">
             <label className="button" htmlFor="marginaliaExportFile">
-              Upload export JSON
+              Choose export file
             </label>
             <input
               id="marginaliaExportFile"
@@ -122,7 +127,7 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
               </button>
             ) : null}
           </div>
-          <p className="muted">Creates session JSON files, book ZIPs, and one all-sessions ZIP.</p>
+          <p className="muted">Creates individual Reading Session files and grouped ZIP downloads.</p>
         </div>
 
         {marginaliaState.phase === "error" ? <p className="errorText">{marginaliaState.message}</p> : null}
@@ -132,7 +137,7 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
               <SettingsDetailRow label="File" value={marginaliaState.fileName} />
               <div className="settingsStatRow" aria-label="Export summary">
                 <span className="settingsStatChip">Books: {visibleMarginaliaSummary.bookCount}</span>
-                <span className="settingsStatChip">Sessions: {visibleMarginaliaSummary.sessionCount}</span>
+                <span className="settingsStatChip">Reading Sessions: {visibleMarginaliaSummary.sessionCount}</span>
                 <span className="settingsStatChip">Annotations: {visibleMarginaliaSummary.annotationCount}</span>
                 <label className="settingsCheckboxRow settingsStatFilter">
                   <input
@@ -140,26 +145,26 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
                     checked={hideEmptyMarginaliaSessions}
                     onChange={(event) => setHideEmptyMarginaliaSessions(event.currentTarget.checked)}
                   />
-                  <span>Hide empty sessions</span>
+                  <span>Hide empty Reading Sessions</span>
                 </label>
                 {hiddenEmptySessionCount > 0 ? (
                   <span className="muted">
-                    {hiddenEmptySessionCount} empty session{hiddenEmptySessionCount === 1 ? "" : "s"} hidden.
+                    {hiddenEmptySessionCount} empty Reading Session{hiddenEmptySessionCount === 1 ? "" : "s"} hidden.
                   </span>
                 ) : null}
               </div>
             </div>
             {marginaliaState.result.items.length === 0 ? (
-              <p className="muted">No sessions were found to split.</p>
+              <p className="muted">No Reading Sessions found in this export.</p>
             ) : visibleMarginaliaGroups.length === 0 ? (
-              <p className="muted">No sessions with annotations are visible.</p>
+              <p className="muted">No Reading Sessions with annotations match this filter.</p>
             ) : (
               <>
                 <div className="settingsActions">
                   <button type="button" className="button" onClick={() => downloadAllMarginaliaZip(visibleMarginaliaGroups)}>
-                    Download all ZIP
+                    Download all
                   </button>
-                  <span className="muted">Includes one folder per book and one JSON file per visible session.</span>
+                  <span className="muted">Includes one folder per Book and one JSON file per visible Reading Session.</span>
                 </div>
                 <div className="marginaliaSplitList">
                   {visibleMarginaliaGroups.map((group) => (
@@ -167,7 +172,7 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
                       <div className="marginaliaSplitGroupHeader">
                         <div className="settingsLabel">{group.bookLabel}</div>
                         <button type="button" className="button" onClick={() => downloadMarginaliaBookZip(group)}>
-                          Download book ZIP
+                          Download Book ZIP
                         </button>
                       </div>
                       <div className="marginaliaSplitGroupItems">
@@ -180,7 +185,7 @@ export function SettingsToolsPanel({ active }: { active: boolean }) {
                               </div>
                             </div>
                             <button type="button" className="button" onClick={() => downloadMarginaliaSplit(item)}>
-                              Download session JSON
+                              Download Reading Session JSON
                             </button>
                           </div>
                         ))}

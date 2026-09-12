@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CatalogTag, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 const TAG_PAGE_SIZE = 50;
 
@@ -30,8 +31,9 @@ export function useCatalogTags(spl: SecondPassClient, groupId?: string, enabled 
       if (request === requestSeq.current) setData(result);
     }).catch((reason: unknown) => {
       if (request !== requestSeq.current) return;
+      debugWarn("reader", "catalog tags could not be loaded", { groupId, page, error: reason });
       setData(null);
-      setError(reason instanceof Error ? reason : new Error("Could not load catalog tags."));
+      setError(reason instanceof Error ? reason : new Error("Couldn't load catalog tags."));
     }).finally(() => {
       if (request === requestSeq.current) setBusy(false);
     });

@@ -10,6 +10,7 @@ import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError }
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
 import { loadSessionsPage } from "../reader/ReaderMarginalia.Queries";
 import { getSessionDisplayName } from "./SessionDisplayName.Presenter";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -30,7 +31,7 @@ function formatAnnotationCount(n?: number | null): string | null {
 type Filter = "all" | "active" | "closed";
 
 export function getSessionsLoadErrorMessage(error: unknown, hasBookFilter: boolean): string {
-  const authMessage = getAuthRecoveryMessage("access reading sessions");
+  const authMessage = getAuthRecoveryMessage("access Reading Sessions");
   if (isAuthorizationError(error)) return authMessage;
   if (error instanceof ApiError && error.status === 400 && hasBookFilter) {
     return "That book filter is not valid.";
@@ -38,7 +39,7 @@ export function getSessionsLoadErrorMessage(error: unknown, hasBookFilter: boole
   if (error instanceof ApiError && error.status === 404 && hasBookFilter) {
     return "That book could not be found or is not accessible.";
   }
-  return getPageLoadErrorMessage(error, "Could not load reading sessions.", authMessage);
+  return getPageLoadErrorMessage(error, "Couldn't load Reading Sessions. Reload the page to try again.", authMessage);
 }
 
 export function SessionsLoadErrorNotice({ error, hasBookFilter }: { error: unknown; hasBookFilter: boolean }) {
@@ -54,7 +55,7 @@ export function SessionsNoDataState({ busy, hasError }: { busy: boolean; hasErro
   if (hasError) return null;
   return (
     <div className="muted" style={{ marginTop: 10 }}>
-      {busy ? `Loading${"\u2026"}` : "No sessions yet."}
+      {busy ? "Loading Reading Sessions..." : "No Reading Sessions yet."}
     </div>
   );
 }
@@ -99,7 +100,12 @@ export function SessionsPage({
         setData(r);
         setPage(targetPage);
       } catch (e) {
-        setError(e instanceof Error ? e : new Error("Could not load reading sessions."));
+        debugWarn("reader", "Reading Sessions could not be loaded", {
+          bookId: bookFilter,
+          page: targetPage,
+          error: e,
+        });
+        setError(e instanceof Error ? e : new Error("Could not load Reading Sessions."));
         setData(null);
       } finally {
         setBusy(false);
@@ -131,8 +137,8 @@ export function SessionsPage({
 
   return (
     <section className="panel sessionsPage">
-      <h1 className="srOnly">Reading sessions</h1>
-      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
+      <h1 className="srOnly">Reading Sessions</h1>
+      {!canLoad ? <p className="muted">Connect to Second Pass Library to view Reading Sessions.</p> : null}
       {error ? (
         <SessionsLoadErrorNotice error={error} hasBookFilter={Boolean(bookFilter)} />
       ) : null}
@@ -144,7 +150,7 @@ export function SessionsPage({
           commitSearch();
         }}
       >
-        <div className="sessionsFilters" role="group" aria-label="Session filter">
+        <div className="sessionsFilters" role="group" aria-label="Reading Session status">
           <button type="button" aria-pressed={filter === "all"} className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("all")}>
             All
           </button>
@@ -157,12 +163,12 @@ export function SessionsPage({
         </div>
 
         <label className="sessionsSearchField">
-          <span className="srOnly">Search reading sessions and book metadata</span>
+          <span className="srOnly">Search Reading Sessions and books</span>
           <input
             className="input sessionsSearchInput"
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
-            placeholder="Search sessions, books, authors, series..."
+            placeholder="Search Reading Sessions and books..."
             disabled={!canLoad}
           />
         </label>
@@ -182,12 +188,12 @@ export function SessionsPage({
       </form>
 
       <div className="sessionsSearchHint muted">
-        Searches session names and notes, plus visible book titles, authors, and series. Annotation text is not searched.
+        Searches Reading Session names and notes, plus book titles, authors, and series. Annotations are not searched.
       </div>
 
       {bookFilter && contextBook ? (
         <div className="sessionsScope">
-          <div className="sessionsScopeTitle">Reading sessions for {contextBook.title}</div>
+          <div className="sessionsScopeTitle">Reading Sessions for {contextBook.title}</div>
         </div>
       ) : null}
 
@@ -195,7 +201,7 @@ export function SessionsPage({
         <>
           <div className="libraryMetaRow">
             <div className="muted">
-              <InlineMeta items={[`Page ${page}`, `${data.count} sessions`]} />
+              <InlineMeta items={[`Page ${page}`, `${data.count} Reading Sessions`]} />
             </div>
             <div className="pagerButtons">
               <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
@@ -212,11 +218,11 @@ export function SessionsPage({
               <p className="muted">
                 {effectiveSearchQuery
                   ? bookFilter
-                    ? "No sessions for this book match this search."
-                    : "No sessions match this search."
+                    ? "No Reading Sessions for this Book match this search."
+                    : "No Reading Sessions match this search."
                   : bookFilter && contextBook
-                    ? `No reading sessions for ${contextBook.title} yet.`
-                    : "No sessions yet."}
+                    ? `No Reading Sessions for ${contextBook.title} yet.`
+                    : "No Reading Sessions yet."}
               </p>
               {bookFilter && contextBook && !effectiveSearchQuery ? (
                 <button
@@ -225,7 +231,7 @@ export function SessionsPage({
                   onClick={() => {
                     saveReaderReturnTarget(contextBook.id, {
                       kind: "sessions",
-                      label: "Reading sessions",
+                      label: "Reading Sessions",
                       route: routeToHash({ kind: "sessions", bookId: bookFilter ?? undefined }),
                       bookId: String(contextBook.id),
                     });
@@ -252,7 +258,7 @@ export function SessionsPage({
                     type="button"
                     className="sessionsRow"
                     onClick={() => navigateTo({ kind: "session", sessionId: s.id })}
-                    aria-label={`Manage ${sessionName}`}
+                    aria-label={`Open ${sessionName}`}
                     title={sessionName}
                   >
                     <div className="sessionsCover">
@@ -286,7 +292,7 @@ export function SessionsPage({
 
           <div className="libraryMetaRow libraryMetaRowBottom">
             <div className="muted">
-              <InlineMeta items={[`Page ${page}`, `${data.count} sessions`]} />
+              <InlineMeta items={[`Page ${page}`, `${data.count} Reading Sessions`]} />
             </div>
             <div className="pagerButtons">
               <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>

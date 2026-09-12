@@ -13,8 +13,8 @@ class SplMarginaliaSessionCountError extends Error {
   constructor(sessionCount: number) {
     super(
       sessionCount === 0
-        ? "This export does not contain any sessions to import."
-        : `This export contains ${sessionCount} sessions. Reader import works with one session at a time.`,
+        ? "This export contains no Reading Sessions to import."
+        : `This export contains ${sessionCount} Reading Sessions. Split it first, then import one Reading Session file.`,
     );
     this.name = "SplMarginaliaSessionCountError";
     this.sessionCount = sessionCount;
@@ -23,8 +23,8 @@ class SplMarginaliaSessionCountError extends Error {
 
 export const splMarginaliaImportHandler = {
   kind: "spl-session-json" as const,
-  displayName: "SPL Marginalia",
-  description: "Import a One Session File in SPL Marginalia Format",
+  displayName: "Second Pass Marginalia",
+  description: "Import one Reading Session from a Second Pass Marginalia JSON file.",
   accept: "application/json,.json",
   importFile: async (file: File) => {
     try {
@@ -37,7 +37,7 @@ export const splMarginaliaImportHandler = {
           action:
             error.sessionCount > 1
               ? {
-                  label: "Open export splitter",
+                  label: "Split export",
                   href: SPL_EXPORT_SPLITTER_ROUTE,
                 }
               : undefined,

@@ -28,24 +28,29 @@ describe("personal shelf operations", () => {
     expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ scope: "personal", book: "book-1" }));
   });
 
-  it("preserves the add error when refreshed membership is still missing", async () => {
+  it("returns safe recovery guidance when refreshed membership is still missing", async () => {
     const api = shelfApi({
       addItem: vi.fn().mockRejectedValue(new Error("Permission denied")),
       pages: [page([shelf("another-shelf")])],
     });
 
-    await expect(addBookToPersonalShelf({ spl: api.spl, shelfId: "shelf-1", bookId: "book-1" }))
-      .resolves.toEqual({ added: false, message: "Permission denied" });
+    const result = await addBookToPersonalShelf({ spl: api.spl, shelfId: "shelf-1", bookId: "book-1" });
+    expect(result).toMatchObject({ added: false });
+    if (result.added) throw new Error("Expected failed shelf addition.");
+    expect(result.message).not.toContain("Permission denied");
   });
 
-  it("preserves the original add error when membership refresh also fails", async () => {
+  it("returns safe recovery guidance when membership refresh also fails", async () => {
     const api = shelfApi({
       addItem: vi.fn().mockRejectedValue(new Error("Original add failure")),
       list: vi.fn().mockRejectedValue(new Error("Refresh failure")),
     });
 
-    await expect(addBookToPersonalShelf({ spl: api.spl, shelfId: "shelf-1", bookId: "book-1" }))
-      .resolves.toEqual({ added: false, message: "Original add failure" });
+    const result = await addBookToPersonalShelf({ spl: api.spl, shelfId: "shelf-1", bookId: "book-1" });
+    expect(result).toMatchObject({ added: false });
+    if (result.added) throw new Error("Expected failed shelf addition.");
+    expect(result.message).not.toContain("Original add failure");
+    expect(result.message).not.toContain("Refresh failure");
   });
 
   it("loads every personal shelf page before returning targets", async () => {

@@ -52,7 +52,7 @@ export function SettingsPanel({
   const tabs: Array<{ value: SettingsTab; label: string }> = [
     { value: "appearance", label: "Appearance" },
     { value: "offline", label: "Offline" },
-    { value: "library-server", label: "Library Server" },
+    { value: "library-server", label: "Second Pass Library" },
     { value: "tools", label: "Tools" },
   ];
 
@@ -74,7 +74,7 @@ export function SettingsPanel({
   async function checkConnection() {
     if (!profile) return;
     if (!profile.accessToken) {
-      setState({ phase: "error", action: "check", message: "This library is not linked yet." });
+      setState({ phase: "error", action: "check", message: "This connection isn't authorized yet." });
       return;
     }
 
@@ -96,17 +96,17 @@ export function SettingsPanel({
       const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromProfile(discoveredProfile));
       saveConnectionProfile(applyAuthenticatedContextToProfile(discoveredProfile, currentUser, serverInfo, now));
       onProfilesChanged();
-      setState({ phase: "success", message: "Connection checked successfully." });
+      setState({ phase: "success", message: "Connection checked." });
     } catch (e) {
       if (isAuthenticationRepairError(e)) onRepairConnection();
       setState({
         phase: "error",
         action: "check",
         message: isAuthenticationRepairError(e)
-          ? "This saved connection needs to be repaired."
+          ? "This connection needs repair."
           : isAuthorizationError(e)
-            ? "The library server did not allow this connection check."
-            : "Connection check failed.",
+            ? "Second Pass Library denied the connection check."
+            : "Couldn't check the connection.",
         technicalDetail: getTechnicalErrorDetail(e),
       });
     }
@@ -117,7 +117,7 @@ export function SettingsPanel({
       setState({
         phase: "error",
         action: "logout",
-        message: "This library is missing the session details needed to revoke the server session.",
+        message: "Second Pass Library can't sign out this browser. Sign out locally instead.",
       });
       return;
     }
@@ -149,8 +149,8 @@ export function SettingsPanel({
         phase: "error",
         action: "logout",
         message: isAuthorizationError(e)
-          ? "This device is no longer authorized. Sign out locally if server logout is unavailable."
-          : "Logout failed.",
+          ? "Second Pass Library no longer recognizes this browser. Sign out locally instead."
+          : "Couldn't sign out.",
         technicalDetail: getTechnicalErrorDetail(e),
       });
     }
@@ -172,7 +172,7 @@ export function SettingsPanel({
       setState({
         phase: "error",
         action: "forget",
-        message: "The connection and its local data could not be removed.",
+        message: "Couldn't forget the connection or remove its local data.",
       });
     }
   }

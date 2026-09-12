@@ -39,8 +39,8 @@ export function SessionDetailTitleEditor({
               clearSaveError();
               setEditingName(true);
             }}
-            aria-label="Edit session name"
-            title="Edit session name"
+            aria-label="Edit Reading Session name"
+            title="Edit Reading Session name"
           >
             <MaterialIcon name="edit" />
           </button>
@@ -53,8 +53,8 @@ export function SessionDetailTitleEditor({
             className="input inputCompact sessionInlineEditInput"
             value={draftName}
             onChange={(event) => setDraftName(event.target.value)}
-            placeholder="Session name"
-            aria-label="Session name"
+            placeholder="Reading Session name"
+            aria-label="Reading Session name"
             maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
           />
           <button type="button" className="button buttonPrimary buttonCompact" onClick={onSaveName} disabled={saveBusy}>

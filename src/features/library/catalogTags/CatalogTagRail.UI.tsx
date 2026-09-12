@@ -17,7 +17,7 @@ export function CatalogTagLoadErrorNotice({ error }: { error: unknown }) {
       error={error}
       message={getPageLoadErrorMessage(
         error,
-        "Could not load catalog tags.",
+        "Couldn't load catalog tags. Reload the page to try again.",
         getAuthRecoveryMessage("load catalog tags"),
       )}
       className="catalogTagStatus errorText"
@@ -33,7 +33,7 @@ export function CatalogTagRail({ spl, groupId, catalogResult, selectedSlug, onSe
 
   return (
     <nav className="catalogTagRail" aria-label="Catalog tags">
-      <h2 className="catalogTagRailTitle">Catalog Tags</h2>
+      <h2 className="catalogTagRailTitle">Catalog tags</h2>
       <button type="button" className={`catalogTagRow catalogTagRowAll ${!selectedSlug ? "catalogTagRowActive" : ""}`} onClick={() => onSelect(undefined)} aria-current={!selectedSlug ? "true" : undefined}>
         <span>All tags</span>
       </button>

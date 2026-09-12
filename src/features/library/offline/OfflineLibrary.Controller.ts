@@ -10,6 +10,7 @@ import {
   searchOfflineLibraryBooks,
   type OfflineLibraryBook,
 } from "./OfflineLibrary.Presenter";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 type Repositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -89,8 +90,9 @@ export function createOfflineLibraryController(
         books: allBooks,
         visibleBooks: searchOfflineLibraryBooks(allBooks, state.query),
       });
-    } catch {
+    } catch (error) {
       if (!isCurrent(expectedGeneration, expectedLoad)) return;
+      debugWarn("reader", "books available offline could not be loaded", { error });
       publish({ ...state, status: "error", books: [], visibleBooks: [] });
     }
   };
@@ -126,7 +128,8 @@ export function createOfflineLibraryController(
           }
           repositories = opened;
           await load();
-        } catch {
+        } catch (error) {
+          debugWarn("reader", "offline Library storage could not be opened", { error });
           if (started && generation === expectedGeneration) {
             publish({ ...state, status: "error" });
           }

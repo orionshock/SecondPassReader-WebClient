@@ -7,8 +7,9 @@ import {
   touchConnectionProfileLastUsed,
   type ConnectionProfile,
 } from "../../storage/ConnectionProfiles.Store";
-import { verifySecondPassServer } from "./ConnectionServer.Queries";
+import { ConnectionSetupError, verifySecondPassServer } from "./ConnectionServer.Queries";
 import { loadServerPresets, type ServerPreset } from "./ServerPresets.Queries";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type Props = {
   selectedProfileId: string | null;
@@ -122,7 +123,12 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
       onProfilesChanged();
       onSelectedProfileIdChange(updated.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not connect to the server.");
+      if (!(e instanceof ConnectionSetupError)) {
+        debugWarn("reader", "Second Pass Library connection was not saved", { error: e });
+      }
+      setError(e instanceof ConnectionSetupError
+        ? e.message
+        : "Couldn't connect to Second Pass Library. Check the address and try again.");
     } finally {
       setBusy(false);
     }
@@ -130,7 +136,7 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
 
   return (
     <section className="panel connectScreen">
-      <h2 className="panelTitle">Connect to a Second Pass server</h2>
+      <h2 className="panelTitle">Connect to Second Pass Library</h2>
 
       <form
         className="form"
@@ -151,7 +157,7 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
                   <button
                     className="serverPresetCardAction"
                     type="button"
-                    aria-label={`Use server ${identity.status === "loaded" ? identity.serverName : preset.url}`}
+                    aria-label={`Select ${identity.status === "loaded" ? identity.serverName : preset.url}`}
                     aria-pressed={selectedPresetUrl === preset.url}
                     onClick={() => {
                       setSelectedPresetUrl(preset.url);
@@ -165,16 +171,16 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
                     {identity.status === "loaded" ? <span className="muted mono">{preset.url}</span> : null}
                   </div>
                   <div className="serverPresetDescription" aria-live="polite">
-                    {identity.status === "loading" ? <span className="muted">Loading server details...</span> : null}
+                    {identity.status === "loading" ? <span className="muted">Loading library details...</span> : null}
                     {identity.status === "loaded" ? (
                       <ServerRichText
                         value={identity.serverDescription}
                         className="muted"
-                        emptyFallback={<span>No server description provided.</span>}
+                        emptyFallback={<span>No description provided.</span>}
                       />
                     ) : null}
                     {identity.status === "unavailable" ? (
-                      <span className="muted">Server Unreachable</span>
+                      <span className="muted">Library unavailable</span>
                     ) : null}
                   </div>
                 </div>
@@ -183,7 +189,7 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
           </div>
         ) : null}
         <label className="field">
-          <span className="fieldLabel">Server URL</span>
+          <span className="fieldLabel">Library URL</span>
           <input
             className="input"
             value={serverUrlInput}
@@ -196,7 +202,7 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
             spellCheck={false}
             autoFocus
           />
-          <div className="fieldHelp muted">Examples: localhost:8000, http://localhost:8000/ibrary</div>
+          <div className="fieldHelp muted">Examples: localhost:8000, https://library.example.com</div>
         </label>
 
         <div className="formActions">

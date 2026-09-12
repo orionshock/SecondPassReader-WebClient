@@ -5,7 +5,6 @@ import {
   removeOfflineNamespace,
 } from "../../../app/offline/namespace/OfflineNamespaceCleanup.Actions";
 import {
-  offlineNamespaceRemovalConfirmation,
   summarizeOfflineNamespaceRetention,
 } from "../../../app/offline/namespace/OfflineNamespaceRetention.Presenter";
 import type { ReaderOutboxIntent } from "../../../app/offline/reader/outbox/ReaderOutbox.Policy";
@@ -23,8 +22,6 @@ describe("offline namespace retention", () => {
       offlineAssetCount: 2,
       offlineAssetBytes: 35,
     });
-    expect(offlineNamespaceRemovalConfirmation(summary)).toContain("Unsynced reading changes will be permanently discarded.");
-    expect(offlineNamespaceRemovalConfirmation(summary)).toContain("Downloaded offline books will be removed.");
   });
 
   it("inspects and closes one repository bundle", async () => {

@@ -3,6 +3,7 @@ import type { ReaderSearchResult } from "../../domain/ReaderDomain.Types";
 import type { ReaderSearchBookHandle } from "../../domain/ReaderBridge.Types";
 import { SEARCH_RESULT_BATCH_SIZE, SEARCH_RESULT_SAFETY_LIMIT, type BookSearchStatus } from "./ReaderBookSearch.Constants";
 import { useInitialBookSearch } from "./ReaderBookSearchInitial.Lifecycle";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 export function useBookSearchController({
   open,
@@ -81,7 +82,8 @@ export function useBookSearchController({
         setStatus("ready");
       } catch (err) {
         if (requestIdRef.current !== requestId || controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Search failed.");
+        debugWarn("reader", "Book search did not complete", { query: submittedQuery, error: err });
+        setError("Couldn't search this Book. Try again.");
         setStatus("error");
       }
     })();

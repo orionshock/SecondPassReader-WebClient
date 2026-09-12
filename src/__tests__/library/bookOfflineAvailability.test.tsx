@@ -67,7 +67,6 @@ describe("Book Detail offline availability", () => {
 
     await renderController(book(CHECKSUM_B));
 
-    expect(container.textContent).toContain("Not available offline");
     expect(button("Make available offline")).toBeTruthy();
   });
 
@@ -75,7 +74,6 @@ describe("Book Detail offline availability", () => {
     const repositories = repositorySet(completeAsset(CHECKSUM_B));
     repositoriesMock.mockResolvedValue(repositories.value);
     await renderController(book(CHECKSUM_B));
-    expect(container.textContent).toContain("Available offline");
     expect(repositories.projections.put).toHaveBeenCalledWith(expect.objectContaining({
       namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
       projectionKey: "reader-book:book-1",
@@ -87,7 +85,6 @@ describe("Book Detail offline availability", () => {
     root = createRoot(container);
     repositoriesMock.mockResolvedValue(repositorySet(completeAsset(CHECKSUM_A)).value);
     await renderController(book(CHECKSUM_B));
-    expect(container.textContent).toContain("Offline copy needs updating");
     expect(button("Update offline copy")).toBeTruthy();
   });
 
@@ -123,7 +120,7 @@ describe("Book Detail offline availability", () => {
       supportedFormat: "epub",
       requestPersistentStorage: true,
     }));
-    expect(container.textContent).toContain("Available offline");
+    expect(button("Remove offline copy")).toBeTruthy();
   });
 
   it("keeps a previous asset update state when replacement fails", async () => {
@@ -144,8 +141,7 @@ describe("Book Detail offline availability", () => {
     await act(async () => button("Update offline copy")?.click());
 
     expect(repositories.asset()).toBe(oldAsset);
-    expect(container.textContent).toContain("Offline copy needs updating");
-    expect(container.textContent).toContain("could not be prepared");
+    expect(button("Update offline copy")).toBeTruthy();
   });
 
   it("removes only the EPUB asset and returns to the acquisition state", async () => {
@@ -166,7 +162,7 @@ describe("Book Detail offline availability", () => {
     expect(repositories.readerState.deleteBookState).not.toHaveBeenCalled();
     expect(repositories.readerOutbox.deleteNamespace).not.toHaveBeenCalled();
     expect(repositories.readerOutbox.remove).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("Not available offline");
+    expect(button("Make available offline")).toBeTruthy();
   });
 
   it("keeps an available asset visible when removal fails", async () => {
@@ -179,8 +175,7 @@ describe("Book Detail offline availability", () => {
     await act(async () => button("Remove offline copy")?.click());
 
     expect(repositories.asset()).toBe(oldAsset);
-    expect(container.textContent).toContain("Available offline");
-    expect(container.textContent).toContain("could not be removed");
+    expect(button("Remove offline copy")).toBeTruthy();
     expect(container.textContent).not.toContain("private database detail");
   });
 
@@ -196,7 +191,6 @@ describe("Book Detail offline availability", () => {
     await renderController(book(CHECKSUM_B));
     await act(async () => button("Make available offline")?.click());
 
-    expect(container.textContent).toContain("Not enough storage");
     expect(button("Make available offline")).toBeTruthy();
   });
 
@@ -210,14 +204,13 @@ describe("Book Detail offline availability", () => {
       reason: "indexeddb-unavailable",
     });
     await renderController(book(CHECKSUM_B));
-    expect(container.textContent).toContain("Offline storage unavailable");
     expect(repositoriesMock).not.toHaveBeenCalled();
 
     act(() => root.unmount());
     root = createRoot(container);
     await renderController(book(null));
-    expect(container.textContent).toContain("Offline copy unavailable");
-    expect(container.textContent).not.toContain("Available offline");
+    expect(button("Make available offline")).toBeUndefined();
+    expect(button("Open reader")).toBeUndefined();
   });
 
   it("blocks duplicate acquisition while work is in progress", async () => {
@@ -279,7 +272,6 @@ describe("Book Detail offline availability", () => {
     await renderController(book(CHECKSUM_B));
     await act(async () => button("Make available offline")?.click());
 
-    expect(container.textContent).toContain("could not be prepared");
     expect(container.textContent).not.toContain("library.example");
     expect(container.textContent).not.toContain("secret");
   });

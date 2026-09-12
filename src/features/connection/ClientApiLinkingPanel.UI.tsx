@@ -78,7 +78,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   async function startLinking() {
     if (!profile) return;
     if (!discovery) {
-      setState({ phase: "error", message: "Connect a library first so the API base URL is known." });
+      setState({ phase: "error", message: "Library details are incomplete. Connect again." });
       return;
     }
 
@@ -137,8 +137,8 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   if (!selectedProfileId) {
     return (
       <section className="panel pairScreen">
-        <h1 className="pairTitle">Connect to SecondPass Library</h1>
-        <p className="muted">Connect a library to start linking.</p>
+        <h1 className="pairTitle">Connect to Second Pass Library</h1>
+        <p className="muted">Connect to Second Pass Library first.</p>
       </section>
     );
   }
@@ -146,8 +146,8 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   if (!profile) {
     return (
       <section className="panel pairScreen">
-        <h1 className="pairTitle">Connect to SecondPass Library</h1>
-        <p className="muted">Connected library not found. Connect the library again.</p>
+        <h1 className="pairTitle">Connect to Second Pass Library</h1>
+        <p className="muted">This connection was not found. Connect again.</p>
       </section>
     );
   }
@@ -155,7 +155,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   return (
     <section className="panel pairScreen">
       <div className="pairHeader">
-        <h1 className="pairTitle">{repairing ? "Repair library connection" : "Connect to SecondPass Library"}</h1>
+        <h1 className="pairTitle">{repairing ? "Repair connection" : "Connect to Second Pass Library"}</h1>
         <div className="pairLibraryName">{profile.serverName ?? profile.label}</div>
         <ServerRichText value={profile.serverDescription} className="pairLibraryDescription" />
         <div className="pairLibraryAddress">
@@ -164,7 +164,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       </div>
 
       {!discovery ? (
-        <p className="muted">The API base URL is unknown for this library. Connect the library again.</p>
+        <p className="muted">Library details are incomplete. Connect again.</p>
       ) : null}
 
       <div className="pairDivider" />
@@ -176,22 +176,22 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
             className="input"
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
-            placeholder={"SecondPass Reader \u00b7 Browser"}
+            placeholder={"Second Pass Reader \u00b7 Browser"}
             disabled={state.phase === "starting" || state.phase === "waiting"}
           />
-          <span className="fieldHelp muted">This is how this browser will appear in your library profile.</span>
+          <span className="fieldHelp muted">This name identifies the browser in your Second Pass Library account.</span>
         </label>
 
         <p className="pairStatus muted" aria-live="polite">
           {isProfileLinked(profile)
             ? "Linked."
             : state.phase === "starting"
-              ? "Starting the linking request..."
+              ? "Requesting approval..."
               : state.phase === "waiting"
-                ? "Waiting for approval in your library..."
+                ? "Waiting for approval..."
                 : state.phase === "success"
                   ? "Linked."
-                  : "Not linked yet."}
+                  : "Ready to connect."}
         </p>
 
         <div className="formActions pairActions">
@@ -206,10 +206,10 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           >
             <MaterialIcon name="link" />
             {state.phase === "starting"
-              ? `Starting${"\u2026"}`
+              ? "Requesting..."
               : state.phase === "waiting"
-                ? `Linking${"\u2026"}`
-                : repairing ? "Repair connection" : "Start linking"}
+                ? "Waiting..."
+                : repairing ? "Repair connection" : "Request approval"}
           </button>
         </div>
       </div>
@@ -218,7 +218,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         <section className="linkingBox pairPendingPanel" aria-labelledby="pair-pending-title">
           <div>
             <h2 className="pairPendingTitle" id="pair-pending-title">Waiting for approval</h2>
-            <p className="pairPendingInstruction">Use this code to approve this browser in your library:</p>
+            <p className="pairPendingInstruction">Use this code to approve this browser in Second Pass Library:</p>
           </div>
 
           <div className="pairApprovalCode mono">{state.loginRequest.code}</div>
@@ -230,7 +230,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
               target="_blank"
               rel="noreferrer"
             >
-              Open authorization page
+              Open approval page
               <MaterialIcon name="open_in_new" />
             </a>
           </div>
@@ -238,10 +238,10 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
           <div className="pairWaitingStatus muted" aria-live="polite">
             <span className="pairWaitingDot" aria-hidden="true" />
             <span>
-              {`Waiting for your library to approve this browser${"\u2026"}`}
+              {"Waiting for approval..."}
               {secondsUntilNextPoll === null
                 ? " Checking now."
-                : ` Next check in ${secondsUntilNextPoll}s.`}
+                : ` Next check in ${secondsUntilNextPoll} seconds.`}
             </span>
           </div>
         </section>
@@ -249,7 +249,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
 
       {state.phase === "success" ? (
         <p>
-          <span className="pill pillOk">Client linked</span>
+          <span className="pill pillOk">Browser linked</span>
         </p>
       ) : null}
 

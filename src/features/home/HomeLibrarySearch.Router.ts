@@ -1,7 +1,7 @@
 import type { AppRoute } from "../../app/AppNavigation.Router";
 
-export const HOME_LIBRARY_SEARCH_LABEL = "Search the library";
-export const HOME_LIBRARY_SEARCH_PLACEHOLDER = "Search books, authors, series, publishers...";
+export const HOME_LIBRARY_SEARCH_LABEL = "Search Library";
+export const HOME_LIBRARY_SEARCH_PLACEHOLDER = "Search books, authors, series, and publishers...";
 
 export function getHomeLibrarySearchRoute(value: string): AppRoute | null {
   const q = value.trim();

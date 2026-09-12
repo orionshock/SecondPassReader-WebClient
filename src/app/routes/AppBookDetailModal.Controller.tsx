@@ -143,7 +143,7 @@ function getReaderReturnTargetForRoute(route: AppRoute | null): ReaderReturnTarg
   if (route.kind === "sessions") {
     return {
       kind: "sessions",
-      label: "Reading sessions",
+      label: "Reading Sessions",
       route: routeToHash(route),
     };
   }

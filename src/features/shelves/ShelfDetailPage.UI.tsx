@@ -9,6 +9,7 @@ import { OrderingControl, type OrderingOption } from "../../components/OrderingC
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import { getLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/LibraryBooksView.Store";
 import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type ShelfItemOrdering = "position" | "title" | "author";
 
@@ -67,14 +68,13 @@ export function ShelfDetailPage({
       setNextUrl(page.next ?? null);
     } catch (e) {
       if (requestSeq !== loadFirstRequestSeq.current) return;
+      debugWarn("reader", "shelf detail could not be loaded", { shelfId, error: e });
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
-          ? "Could not load shelf. Your device token may be revoked or not allowed to access shelves."
+          ? "This account can't access this shelf. Check the connection and try again."
           : e instanceof ApiError && e.status === 404
-            ? "Shelf not found or not accessible."
-            : e instanceof Error
-              ? e.message
-              : "Failed to load shelf.";
+            ? "Shelf not found or unavailable to this account."
+            : "Couldn't load the shelf. Reload the page to try again.";
       setError(message);
     } finally {
       if (requestSeq === loadFirstRequestSeq.current) setBusy(false);
@@ -121,7 +121,8 @@ export function ShelfDetailPage({
       setNextUrl(pageResult.next ?? null);
     } catch (e) {
       if (requestSeq !== loadMoreRequestSeq.current) return;
-      setError(e instanceof Error ? e.message : "Failed to load more items.");
+      debugWarn("reader", "more shelf books could not be loaded", { shelfId, error: e });
+      setError("Couldn't load more books. Try again.");
     } finally {
       if (requestSeq === loadMoreRequestSeq.current) setLoadMoreBusy(false);
     }
@@ -183,8 +184,8 @@ export function ShelfDetailPage({
         </div>
       </div>
 
-      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy && !shelf && items.length === 0 ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
+      {!canLoad ? <p className="muted">Verify the connection to view this shelf.</p> : null}
+      {busy && !shelf && items.length === 0 ? <p className="muted">Loading shelf...</p> : null}
       {error ? <div className="errorText">{error}</div> : null}
 
       <ServerRichText value={shelf?.description} className="muted" />

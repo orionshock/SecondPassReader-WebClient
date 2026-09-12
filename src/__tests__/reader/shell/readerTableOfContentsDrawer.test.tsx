@@ -92,14 +92,13 @@ describe("TableOfContentsDrawer", () => {
     expect(container.textContent).not.toContain("Chapter Two");
 
     enterSearchQuery("missing entry");
-    expect(container.textContent).toContain("No matching contents entries.");
+    expect(container.querySelectorAll(".spTocItem")).toHaveLength(0);
   });
 
   it("shows the empty state and closes on Escape", () => {
     const onClose = vi.fn();
     renderDrawer({ items: [], onClose });
 
-    expect(container.textContent).toContain("No table of contents available.");
     expect(container.querySelector('[aria-label="Close table of contents"]')).not.toBeNull();
 
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));

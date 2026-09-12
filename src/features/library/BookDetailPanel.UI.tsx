@@ -134,7 +134,7 @@ export function BookDetailPanel({
 
           {book.groups.length ? (
             <div className="bookDetailRelationLine muted">
-              <span>Groups</span>
+              <span>Library Groups</span>
               <span>{book.groups.map((group) => group.name).join(", ")}</span>
             </div>
           ) : null}
@@ -144,7 +144,7 @@ export function BookDetailPanel({
               <InlineMeta items={[book.file.format, formatFileSize(book.file.fileSize)]} />
             </div>
           ) : (
-            <div className="bookDetailMetaLine muted">EPUB file unavailable</div>
+            <div className="bookDetailMetaLine muted">No EPUB available.</div>
           )}
 
           {hasDescription ? (
@@ -167,7 +167,7 @@ export function BookDetailPanel({
           ) : (
             <div className="bookDetailSummaryBlock">
               <div className="bookDetailSummary">
-                <span className="muted"><em>No Summary Provided</em></span>
+                <span className="muted"><em>No summary provided</em></span>
               </div>
             </div>
           )}
@@ -183,10 +183,10 @@ export function BookDetailPanel({
             className="button"
             onClick={() => onViewSessions(book)}
             disabled={sessionsUnavailable}
-            title={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
-            aria-label={sessionsUnavailable ? "No reading sessions for this book yet" : "View reading sessions for this book"}
+            title={sessionsUnavailable ? "No Reading Sessions for this book yet" : "View Reading Sessions for this book"}
+            aria-label={sessionsUnavailable ? "No Reading Sessions for this book yet" : "View Reading Sessions for this book"}
           >
-            Reading sessions
+            Reading Sessions
           </button>
           {spl ? <AddToShelfMenu spl={spl} bookId={String(book.id)} onManageShelves={onManageShelves} /> : null}
         </div>
@@ -195,19 +195,12 @@ export function BookDetailPanel({
       <BookOfflineAvailabilityPanel controller={offlineAvailability} onManageOffline={onManageOffline} />
 
       {launchMessage ? <div className="warningText">{launchMessage}</div> : null}
-      {downloadState.phase === "opening_session" ? <div className="muted">Opening reading session...</div> : null}
-      {downloadState.phase === "fetching" ? <div className="muted">Fetching EPUB...</div> : null}
+      {downloadState.phase === "opening_session" ? <div className="muted">Opening Reading Session...</div> : null}
+      {downloadState.phase === "fetching" ? <div className="muted">Downloading EPUB...</div> : null}
       {downloadState.phase === "opening_reader" ? <div className="muted">Opening reader...</div> : null}
       {downloadState.phase === "error" ? <div className="errorText">{downloadState.message}</div> : null}
       {downloadState.phase === "success" ? (
-        <div className="downloadResultBox">
-          <div>
-            <span className="pill pillOk">EPUB fetch succeeded</span>
-          </div>
-          <div className="muted">size: {formatFileSize(downloadState.result.blob.size) ?? `${downloadState.result.blob.size} bytes`}</div>
-          {downloadState.result.contentType ? <div className="muted">type: {downloadState.result.contentType}</div> : null}
-          {downloadState.result.filename ? <div className="muted">filename: {downloadState.result.filename}</div> : null}
-        </div>
+        <div className="downloadResultBox"><span className="pill pillOk">EPUB ready</span></div>
       ) : null}
     </div>
   );

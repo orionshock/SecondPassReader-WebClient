@@ -238,13 +238,13 @@ function AppShell() {
         document.title = `${base} - Shelves`;
         return;
       case "shelfEdit":
-        document.title = `${base} - Edit Shelf`;
+        document.title = `${base} - Edit shelf`;
         return;
       case "sessions":
-        document.title = `${base} - Session Management`;
+        document.title = `${base} - Reading Sessions`;
         return;
       case "session":
-        document.title = `${base} - Session Management`;
+        document.title = `${base} - Reading Sessions`;
         return;
       case "settings":
         document.title = `${base} - Settings`;

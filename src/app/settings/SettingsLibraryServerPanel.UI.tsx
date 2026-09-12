@@ -41,7 +41,7 @@ export function SettingsLibraryServerPanel({
     <div className="settingsTabPanel">
       <section className="panel settingsCard">
         <div className="settingsSectionHeader">
-          <h2 className="panelTitle">Connected Library</h2>
+          <h2 className="panelTitle">Connection</h2>
           <span className={`pill ${status === "verified" ? "pillOk" : status === "not_configured" ? "pillIdle" : "pillWarn"}`}>
             {getConnectionStatusLabel(status)}
           </span>
@@ -49,9 +49,9 @@ export function SettingsLibraryServerPanel({
 
         {!profile ? (
           <div className="settingsEmpty">
-            <p className="muted">No library is connected in this browser.</p>
+            <p className="muted">This browser isn't connected to Second Pass Library.</p>
             <button type="button" className="button buttonPrimary" onClick={onConnect} disabled={!serverActionsAvailable}>
-              Connect library
+              Connect
             </button>
           </div>
         ) : (
@@ -64,9 +64,9 @@ export function SettingsLibraryServerPanel({
                   <ServerRichText value={profile.serverDescription} />
                 </div>
               ) : null}
-              <SettingsDetailRow label="Server URL" value={profile.serverBaseUrl} mono />
-              <SettingsDetailRow label="Signed-in user" value={formatUser(profile)} />
-              <SettingsDetailRow label="This device" value={profile.clientSessionName ?? "Unknown"} />
+              <SettingsDetailRow label="Library URL" value={profile.serverBaseUrl} mono />
+              <SettingsDetailRow label="Account" value={formatUser(profile)} />
+              <SettingsDetailRow label="Browser name" value={profile.clientSessionName ?? "Unknown"} />
               <SettingsDetailRow label="Last checked" value={formatTimestamp(profile.lastCheckedAt ?? profile.verifiedAt)} />
             </div>
             <div className="settingsActions">
@@ -77,18 +77,18 @@ export function SettingsLibraryServerPanel({
                 Repair connection
               </button>
             </div>
-            {!serverActionsAvailable ? <p className="muted">Library server actions are unavailable while offline.</p> : null}
+            {!serverActionsAvailable ? <p className="muted">Connection actions are unavailable while offline.</p> : null}
           </>
         )}
       </section>
 
       <section className="panel settingsCard">
         <div className="settingsSectionHeader">
-          <h2 className="panelTitle">This Device</h2>
+          <h2 className="panelTitle">This browser</h2>
         </div>
         <p className="muted">
-          Log out revokes this device session and removes its saved credentials. Downloaded books and reading changes
-          remain on this device for the same verified account.
+          Signing out revokes this browser's session and removes its saved credentials. Downloaded books and reading
+          changes remain available to the same verified account.
         </p>
         <div className="settingsGrid">
           <SettingsDetailRow label="Web client version" value={APP_BUILD_INFO.version} mono />
@@ -96,12 +96,15 @@ export function SettingsLibraryServerPanel({
         </div>
         <div className="settingsActions">
           <button type="button" className="button buttonDanger" onClick={onLogOut} disabled={!profile || busy || !serverActionsAvailable}>
-            {state.phase === "logging_out" ? `Logging out${"\u2026"}` : "Log out"}
+            {state.phase === "logging_out" ? "Signing out..." : "Sign out"}
           </button>
         </div>
         {profile ? (
           <div className="settingsLocalFallback">
-            <span className="muted">Local sign-out keeps downloaded books and reading changes for a later verified sign-in.</span>
+            <span className="muted">
+              If Second Pass Library can't be reached, you can sign out locally. Downloaded books and reading changes
+              remain available to the same verified account.
+            </span>
             <button
               type="button"
               className="settingsLinkButton"
@@ -110,7 +113,7 @@ export function SettingsLibraryServerPanel({
             >
               Sign out locally
             </button>
-            <span className="muted">To erase this account's downloaded books and local reading data, forget it explicitly.</span>
+            <span className="muted">Forgetting this connection also removes its downloaded books and local reading data.</span>
             <button
               type="button"
               className="settingsLinkButton"

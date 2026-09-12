@@ -29,8 +29,8 @@ export function BookSearchInputBar({
         type="search"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="Search text"
-        aria-label="Search text"
+        placeholder="Search this book"
+        aria-label="Search this book"
         disabled={!ready}
       />
       <button type="submit" className="button buttonPrimary spBookSearchButton" disabled={!canSubmitSearch}>

@@ -14,7 +14,7 @@ export function BookOfflineAvailabilityPanel({
   return (
     <div className="bookOfflineAvailability" aria-live="polite">
       <div className="bookOfflineAvailabilityStatus">
-        <strong>Offline</strong>
+        <strong>Offline copy</strong>
         <span className={state.status === "error" ? "errorText" : "muted"}>{label}</span>
         {state.status !== "loading" && state.status !== "working" && state.message ? (
           <span className="errorText">{state.message}</span>
@@ -53,13 +53,13 @@ export function BookOfflineAvailabilityPanel({
 
 function getStatusLabel(state: BookOfflineAvailabilityController["state"]): string {
   switch (state.status) {
-    case "loading": return "Checking offline availability...";
+    case "loading": return "Checking availability...";
     case "working": return state.operation === "remove" ? "Removing offline copy..." : "Preparing offline copy...";
     case "available": return "Available offline";
-    case "needs-update": return "Offline copy needs updating";
+    case "needs-update": return "Offline copy needs an update";
     case "not-available": return "Not available offline";
-    case "unverifiable": return "Offline copy unavailable";
-    case "unsupported": return "Offline storage unavailable";
-    case "error": return "Offline status unavailable";
+    case "unverifiable": return "Offline copy can't be verified.";
+    case "unsupported": return "Offline storage isn't available.";
+    case "error": return "Couldn't check offline status.";
   }
 }

@@ -47,7 +47,7 @@ export function CurrentAnnotationCardHighlightEditor({
           rows={3}
           value={draftNote}
           onChange={(event) => onNoteChange(event.currentTarget.value)}
-          placeholder="Highlight Note"
+          placeholder="Add a note"
           maxLength={ANNOTATION_LIMITS.bodyValueMaxChars}
           disabled={editStatus === "saving"}
         />
@@ -67,7 +67,7 @@ export function CurrentAnnotationCardHighlightEditor({
               type="button"
               className={`spAnnotationSwatch ${draftColor === token ? "spAnnotationSwatchActive" : ""}`}
               onClick={() => onColorChange(token)}
-              aria-label={`Color ${token}`}
+              aria-label={`${token.charAt(0).toUpperCase()}${token.slice(1)}`}
               role="radio"
               aria-checked={draftColor === token}
               title={token}

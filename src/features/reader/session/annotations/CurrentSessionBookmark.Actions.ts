@@ -7,6 +7,7 @@ import {
   CurrentSessionAnnotationController,
   CurrentSessionAnnotationStaleGenerationError,
 } from "./CurrentSessionAnnotation.Controller";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 export type ReaderBookmarkMutationResult =
   | { ok: true; action: "created" | "deleted" }
@@ -83,19 +84,31 @@ export function useCurrentSessionBookmarkActions(args: {
           const execution = await executeReaderBookmarkMutation(args);
           const result = execution.result;
           const errorMessage = !result.ok && result.reason === "mutation-failed"
-            ? result.error instanceof Error
-              ? result.error.message
-              : args.currentBookmark
-                ? "Failed to remove bookmark."
-                : "Failed to create bookmark."
+            ? args.currentBookmark
+              ? "Couldn't remove the bookmark. Try again."
+              : "Couldn't save the bookmark. Try again."
             : undefined;
+          if (!result.ok && result.reason === "mutation-failed") {
+            debugWarn("reader", "bookmark mutation did not complete", {
+              action: args.currentBookmark ? "remove" : "save",
+              error: result.error,
+            });
+          }
           return {
             value: result,
             annotations: result.ok ? execution.annotations : undefined,
             errorMessage,
           };
         },
-        getErrorMessage: (error) => error instanceof Error ? error.message : "Bookmark mutation failed.",
+        getErrorMessage: (error) => {
+          debugWarn("reader", "bookmark mutation did not complete", {
+            action: args.currentBookmark ? "remove" : "save",
+            error,
+          });
+          return args.currentBookmark
+            ? "Couldn't remove the bookmark. Try again."
+            : "Couldn't save the bookmark. Try again.";
+        },
       });
     } catch (error) {
       if (error instanceof CurrentSessionAnnotationStaleGenerationError) {

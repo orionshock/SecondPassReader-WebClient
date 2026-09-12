@@ -35,21 +35,23 @@ export function parseAndSplitMarginaliaExport(text: string): MarginaliaSplitResu
   try {
     parsed = JSON.parse(text);
   } catch (error) {
-    throw new Error(error instanceof Error ? `Invalid JSON: ${error.message}` : "Invalid JSON.");
+    throw new Error("This file is not valid JSON. Check the file and try again.", { cause: error });
   }
   return splitMarginaliaExport(parsed);
 }
 
 export function splitMarginaliaExport(input: unknown): MarginaliaSplitResult {
-  if (!isRecord(input)) throw new Error("Marginalia export must be a JSON object.");
+  if (!isRecord(input)) throw new Error("This file is not a Second Pass Marginalia export. Choose another file.");
 
   const schemaVersion = getString(input.schema_version) ?? getString(input.schemaVersion);
   if (schemaVersion !== "0.1.0") {
-    throw new Error(`Unsupported marginalia export schema version: ${schemaVersion ?? "missing"}.`);
+    throw new Error("This export version cannot be split with this version of Second Pass Reader.", {
+      cause: new Error(`Unsupported Marginalia export schema version: ${schemaVersion ?? "missing"}.`),
+    });
   }
 
   const books = readBooks(input);
-  if (books.length === 0) throw new Error("Marginalia export does not contain any books.");
+  if (books.length === 0) throw new Error("This export contains no Books to split.");
 
   const items: MarginaliaSplitItem[] = [];
   let annotationCount = 0;
@@ -193,7 +195,7 @@ export function formatMarginaliaSessionLabel(session: Record<string, unknown>): 
     getString(session.startedAt) ??
     getString(session.id) ??
     getString(session.session_id) ??
-    "Untitled session"
+    "Untitled Reading Session"
   );
 }
 

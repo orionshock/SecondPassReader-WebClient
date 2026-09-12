@@ -20,8 +20,8 @@ export function ReaderImportRowList({
 }) {
   return (
     <div className="spReaderImportRows">
-      {job.rows.length === 0 ? <div className="muted spReaderImportEmpty">No importable highlights found.</div> : null}
-      {job.rows.length > 0 && rows.length === 0 ? <div className="muted spReaderImportEmpty">No rows match the selected filters.</div> : null}
+      {job.rows.length === 0 ? <div className="muted spReaderImportEmpty">No importable Marginalia found.</div> : null}
+      {job.rows.length > 0 && rows.length === 0 ? <div className="muted spReaderImportEmpty">No items match these filters.</div> : null}
       {rows.map((row) => (
         <ReaderImportRowItem
           key={row.id}

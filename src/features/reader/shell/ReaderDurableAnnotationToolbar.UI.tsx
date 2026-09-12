@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import { ANNOTATION_COLOR_TOKENS, toAnnotationCssVars } from "../display/ReaderAnnotation.Presenter";
 import { ANNOTATION_LIMITS } from "../annotations/ReaderAnnotationLimits.Policy";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 export type DurableAnnotationToolbarItem = {
   id: string;
@@ -72,7 +73,7 @@ export function DurableAnnotationToolbar({
       data-reader-theme={theme}
       style={{ ...style, ["--annotation-color" as any]: vars.color, ["--annotation-bg" as any]: vars.bg }}
       role="dialog"
-      aria-label={item.mode === "editable" ? "Edit highlight" : "Annotation details"}
+      aria-label={item.mode === "editable" ? "Edit highlight" : "Highlight details"}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <div className="spDurableAnnotationQuote" title={quote}>{quote}</div>
@@ -94,7 +95,11 @@ export function DurableAnnotationToolbar({
                 await onSave({ note: noteDraft, color: colorDraft });
                 onClose();
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to update highlight.");
+                debugWarn("reader", "highlight update did not complete", {
+                  annotationId: item.id,
+                  error: err,
+                });
+                setError("Couldn't update the highlight. Try again.");
               } finally {
                 setSaving(false);
               }
@@ -107,7 +112,7 @@ export function DurableAnnotationToolbar({
             rows={3}
             value={noteDraft}
             onChange={(event) => setNoteDraft(event.currentTarget.value)}
-            placeholder="Highlight Note"
+            placeholder="Add a note"
             maxLength={ANNOTATION_LIMITS.bodyValueMaxChars}
             disabled={isBusy}
           />
@@ -119,7 +124,7 @@ export function DurableAnnotationToolbar({
                 type="button"
                 className={`spAnnotationSwatch ${colorDraft === token ? "spAnnotationSwatchActive" : ""}`}
                 onClick={() => setColorDraft(token)}
-                aria-label={`Color ${token}`}
+                aria-label={`${token.charAt(0).toUpperCase()}${token.slice(1)}`}
                 role="radio"
                 aria-checked={colorDraft === token}
                 title={token}
@@ -150,20 +155,20 @@ export function DurableAnnotationToolbar({
             >
               <MaterialIcon name="close" />
             </button>
-            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in annotation workspace" aria-label="Open in annotation workspace" onClick={onOpenWorkspace} disabled={isBusy}>
+            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in Annotations" aria-label="Open in Annotations" onClick={onOpenWorkspace} disabled={isBusy}>
               <MaterialIcon name="open_in_new" />
             </button>
             <button
               type="button"
               className="button buttonDanger buttonCompact spIconButton spIconButtonTight spDurableAnnotationDeleteButton"
-              title="Delete annotation"
-              aria-label="Delete annotation"
+              title="Delete highlight"
+              aria-label="Delete highlight"
               onClick={onDelete}
               disabled={isBusy}
             >
               <MaterialIcon name="delete" />
             </button>
-            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close annotation toolbar" aria-label="Close annotation toolbar" onClick={onClose} disabled={isBusy}>
+            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close highlight details" aria-label="Close highlight details" onClick={onClose} disabled={isBusy}>
               <MaterialIcon name="close" />
             </button>
           </div>
@@ -177,26 +182,26 @@ export function DurableAnnotationToolbar({
       {!editing ? (
         <div className="spDurableAnnotationActions">
           {item.mode === "editable" ? (
-            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Edit note and color" aria-label="Edit note and color" onClick={() => setEditing(true)} disabled={isBusy}>
+            <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Edit highlight" aria-label="Edit highlight" onClick={() => setEditing(true)} disabled={isBusy}>
               <MaterialIcon name="edit_note" />
             </button>
           ) : null}
-          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in annotation workspace" aria-label="Open in annotation workspace" onClick={onOpenWorkspace} disabled={isBusy}>
+          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Open in Annotations" aria-label="Open in Annotations" onClick={onOpenWorkspace} disabled={isBusy}>
             <MaterialIcon name="open_in_new" />
           </button>
           {item.mode === "editable" ? (
             <button
               type="button"
               className="button buttonDanger buttonCompact spIconButton spIconButtonTight spDurableAnnotationDeleteButton"
-              title="Delete annotation"
-              aria-label="Delete annotation"
+              title="Delete highlight"
+              aria-label="Delete highlight"
               onClick={onDelete}
               disabled={isBusy}
             >
               <MaterialIcon name="delete" />
             </button>
           ) : null}
-          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close annotation toolbar" aria-label="Close annotation toolbar" onClick={onClose} disabled={isBusy}>
+          <button type="button" className="button buttonCompact spIconButton spIconButtonTight" title="Close highlight details" aria-label="Close highlight details" onClick={onClose} disabled={isBusy}>
             <MaterialIcon name="close" />
           </button>
         </div>

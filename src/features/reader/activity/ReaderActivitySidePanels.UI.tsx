@@ -111,7 +111,7 @@ function ReaderImportDrawerFallback({ onClose }: { onClose: () => void }) {
       <div className="spReaderImportDrawerHeader">
         <div className="spReaderImportDrawerTitleRow">
           <h2 id="sp-reader-import-drawer-loading-title" className="spReaderImportDrawerTitle">
-            Marginalia Import
+            Import Marginalia
           </h2>
           <button type="button" className="button buttonCompact" onClick={onClose}>Hide</button>
         </div>

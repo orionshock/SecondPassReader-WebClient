@@ -47,8 +47,8 @@ export function ReaderImportRowItem({
               type="button"
               className="button buttonCompact spReaderImportRowActionButton"
               onClick={onUndoManualCompletion}
-              aria-label="Undo manual completion"
-              title="Undo manual completion"
+              aria-label="Mark as incomplete"
+              title="Mark as incomplete"
             >
               <MaterialIcon name="undo" className="spReaderImportRowActionIcon" />
               <span>Undo</span>
@@ -57,18 +57,18 @@ export function ReaderImportRowItem({
             <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onUnskip}>Unskip</button>
           ) : (
             <>
-              {row.status === "searching" ? <span className="muted spReaderImportRowActionText">Searching...</span> : null}
+              {row.status === "searching" ? <span className="muted spReaderImportRowActionText">Finding location...</span> : null}
               {showManualCompletion ? (
                 <button
                   type="button"
                   className="button buttonCompact spReaderImportRowActionButton"
                   onClick={onMarkManuallyCompleted}
-                  aria-label="Mark manually completed"
-                  title="Mark manually completed"
+                  aria-label="Mark as completed manually"
+                  title="Mark as completed manually"
                   disabled={row.status === "searching"}
                 >
                   <MaterialIcon name="task_alt" className="spReaderImportRowActionIcon" />
-                  <span>Manual</span>
+                  <span>Mark complete</span>
                 </button>
               ) : null}
               <button type="button" className="button buttonCompact spReaderImportRowActionButton" onClick={onSkip}>

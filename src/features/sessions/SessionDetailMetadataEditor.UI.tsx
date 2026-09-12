@@ -31,11 +31,11 @@ export function SessionDetailMetadataEditor({
     return (
       <div className="sessionReadOnly">
         <div className="sessionClosedNotice muted">
-          This session is closed. Name, notes, and annotations are read-only.
+          This Reading Session is closed. Its name, notes, and annotations are read-only.
         </div>
         <div className="sessionNoteDisplay">
           <div className={`sessionNoteHeading${noteText ? "" : " muted"}`}>
-            {noteText ? "Session Note:" : "No Session Note"}
+            {noteText ? "Reading Session note" : "No Reading Session note"}
           </div>
           {noteText ? <div className="sessionNoteText">{session.notes}</div> : null}
         </div>
@@ -49,7 +49,7 @@ export function SessionDetailMetadataEditor({
         <div className="sessionNoteDisplay">
           <div className="sessionNoteHeadingRow">
             <div className={`sessionNoteHeading${noteText ? "" : " muted"}`}>
-              {noteText ? "Session Note:" : "No Session Note"}
+              {noteText ? "Reading Session note" : "No Reading Session note"}
             </div>
             <button
               type="button"
@@ -58,7 +58,7 @@ export function SessionDetailMetadataEditor({
                 setDraftNotes(typeof session.notes === "string" ? session.notes : "");
                 setEditingNotes(true);
               }}
-              aria-label="Edit session notes"
+              aria-label="Edit Reading Session notes"
               title="Edit"
             >
               <MaterialIcon name="edit" />
@@ -68,7 +68,7 @@ export function SessionDetailMetadataEditor({
         </div>
       ) : (
         <div className="sessionNoteEditBody">
-          <div className="sessionNoteHeading">Session Note</div>
+          <div className="sessionNoteHeading">Reading Session note</div>
           <div className="sessionInlineEditNotesWrap">
             <textarea
               className="input sessionInlineEditTextarea"
@@ -76,7 +76,7 @@ export function SessionDetailMetadataEditor({
               rows={8}
               value={draftNotes}
               onChange={(e) => setDraftNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
-              aria-label="Session note"
+              aria-label="Reading Session note"
               maxLength={SESSION_METADATA_LIMITS.notesMaxChars}
             />
           </div>

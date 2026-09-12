@@ -23,7 +23,7 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
   }, []);
 
   const selectedGroup = groups.find((group) => String(group.id) === groupId);
-  const selectedName = selectedGroup?.name ?? (groupId ? "Selected Library Group" : "All Library");
+  const selectedName = selectedGroup?.name ?? (groupId ? "Selected group" : "Entire Library");
   const selectedIcon = selectedGroup?.isPublicGroup === true ? "public" : groupId ? "groups" : "library_books";
   const select = (nextGroupId?: string) => {
     if (detailsRef.current) detailsRef.current.open = false;
@@ -48,7 +48,7 @@ export function LibraryScopeSelect({ groups, busy, error, groupId, onChange }: P
       </summary>
       <div className="libraryScopeMenu" role="group" aria-label="Library scope">
         <button type="button" role="menuitemradio" aria-checked={!groupId} className="libraryScopeOption" onClick={() => select(undefined)}>
-          <MaterialIcon name="library_books" /><span>All Library</span>
+          <MaterialIcon name="library_books" /><span>Entire Library</span>
         </button>
         {groups.map((group) => {
           const isPublic = group.isPublicGroup === true;

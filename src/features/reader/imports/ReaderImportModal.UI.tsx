@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import "./handlers/ReaderImportHandlers.Lifecycle";
 import { getReaderImportHandlers, ReaderImportParseError, type ReaderImportFailureAction } from "./ReaderImportFormats.Registry";
 import { useModalDialogFocus } from "../../../components/ModalDialogFocus.Lifecycle";
+import { debugReaderImport } from "./ReaderImportDebug.Diagnostics";
 
 export function ReaderImportModal({
   open,
@@ -33,11 +34,11 @@ export function ReaderImportModal({
       <div className="spReaderModalBackdrop" role="presentation" onPointerDown={onClose}>
         <section ref={dialogRef} className="spReaderImportModal" role="dialog" aria-modal="true" aria-labelledby="sp-reader-import-title" tabIndex={-1} onPointerDown={(e) => e.stopPropagation()}>
           <div className="spReaderImportModalHeader">
-            <h2 id="sp-reader-import-title">Import marginalia</h2>
+            <h2 id="sp-reader-import-title">Import Marginalia</h2>
             <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose}>Close</button>
           </div>
           <div className="spReaderImportModalBody">
-            <div className="errorText">No import formats are available.</div>
+            <div className="errorText">No import formats are available. Close this dialog and reload the app.</div>
           </div>
         </section>
       </div>
@@ -56,8 +57,19 @@ export function ReaderImportModal({
       setFile(null);
       onClose();
     } catch (err) {
-      if (err instanceof ReaderImportParseError) setFailureAction(err.action ?? null);
-      setError(err instanceof Error ? err.message : "Failed to parse import file.");
+      debugReaderImport("import file could not be read", {
+        fileName: file.name,
+        format,
+        error: err,
+        parseCode: err instanceof ReaderImportParseError ? err.code : undefined,
+        parseDetail: err instanceof ReaderImportParseError ? err.detail : undefined,
+      });
+      if (err instanceof ReaderImportParseError) {
+        setFailureAction(err.action ?? null);
+        setError(err.message);
+      } else {
+        setError("Couldn't read this file. Check the file and try again.");
+      }
     } finally {
       setBusy(false);
     }
@@ -75,13 +87,13 @@ export function ReaderImportModal({
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="spReaderImportModalHeader">
-          <h2 id="sp-reader-import-title">Import marginalia</h2>
+          <h2 id="sp-reader-import-title">Import Marginalia</h2>
           <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose} disabled={busy}>Close</button>
         </div>
 
         <div className="spReaderImportModalBody">
           <label className="fieldLabel">
-            Format
+            Source format
             <select
               className="input"
               value={format}
@@ -102,7 +114,7 @@ export function ReaderImportModal({
           <div id="reader-import-format-description" className="muted spReaderImportWarnings">{selectedFormat.description}</div>
 
           <label className="fieldLabel">
-            Import file
+            File
             <input
               className="input"
               type="file"
@@ -132,7 +144,7 @@ export function ReaderImportModal({
         <div className="spReaderImportModalActions">
           <button type="button" className="button buttonCompact" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="button buttonPrimary" onClick={startImport} disabled={!file || busy}>
-            {busy ? "Parsing..." : "Start import"}
+            {busy ? "Reading file..." : "Start review"}
           </button>
         </div>
       </section>

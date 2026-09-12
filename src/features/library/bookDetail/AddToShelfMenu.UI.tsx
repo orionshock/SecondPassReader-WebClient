@@ -3,6 +3,7 @@ import type { SecondPassClient } from "@secondpass/client";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
 import { getPersonalShelfTargets, type PersonalShelfTarget } from "./AddToShelfTargets.Mapper";
 import { addBookToPersonalShelf, loadPersonalShelves } from "./PersonalShelf.Actions";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 type Props = {
   spl: SecondPassClient;
@@ -34,8 +35,9 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
       setTargets(getPersonalShelfTargets(personalShelves, addedIds));
     } catch (reason) {
       if (seq !== requestSeq.current) return;
+      debugWarn("reader", "personal shelves could not be loaded for Book detail", { bookId, error: reason });
       setTargets(null);
-      setError(reason instanceof Error ? reason.message : "Failed to load personal shelves.");
+      setError("Couldn't load shelves. Reopen this menu to try again.");
     } finally {
       if (seq === requestSeq.current) setBusy(false);
     }
@@ -66,7 +68,8 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
         setError(result.message);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not add this book to the shelf.");
+      debugWarn("reader", "Book was not added to shelf", { bookId, shelfId, error: reason });
+      setError("Couldn't add the Book to the shelf. Try again.");
     } finally {
       setAddingShelfId(null);
     }
@@ -95,7 +98,7 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
       <summary ref={triggerRef} className="button bookDetailShelfTrigger" aria-expanded={open}>Add to shelf</summary>
       <div className="bookDetailShelfPopover" role="group" aria-label="Add to personal shelf">
         <div className="bookDetailShelfTitle" aria-hidden="true">Add to personal shelf</div>
-        {busy && targets === null ? <div className="bookDetailShelfStatus muted">Loading...</div> : null}
+        {busy && targets === null ? <div className="bookDetailShelfStatus muted">Loading shelves...</div> : null}
         {targets?.length ? (
           <div className="bookDetailShelfRows">
             {targets.map((shelf) => {
@@ -118,9 +121,9 @@ export function AddToShelfMenu({ spl, bookId, onManageShelves }: Props) {
             })}
           </div>
         ) : null}
-        {!busy && targets?.length === 0 ? <div className="bookDetailShelfStatus muted">No personal shelves available.</div> : null}
+        {!busy && targets?.length === 0 ? <div className="bookDetailShelfStatus muted">No personal shelves.</div> : null}
         {error ? <div className="bookDetailShelfStatus errorText">{error}</div> : null}
-        <button type="button" className="bookDetailManageShelves" onClick={onManageShelves}>Manage shelves</button>
+        <button type="button" className="bookDetailManageShelves" onClick={onManageShelves}>Open Shelves</button>
       </div>
     </details>
   );

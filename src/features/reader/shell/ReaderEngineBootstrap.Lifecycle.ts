@@ -157,7 +157,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
           });
           initialDisplaySucceeded = true;
         } catch (error) {
-          reportOperationError(error, "Display failed.", generation, "display");
+          reportOperationError(error, "Reader couldn't open this Book. The file may be damaged or unsupported.", generation, "display");
         }
 
         if (initialDisplaySucceeded || hasReadableViewportRef.current) {
@@ -173,7 +173,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
         await flushDeferredCommand(generation);
       } catch (error) {
         if (cancelled) return;
-        reportOperationError(error, "Failed to initialize epub-ts engine.", generation, "initialization");
+        reportOperationError(error, "Reader couldn't open this Book. The file may be damaged or unsupported.", generation, "initialization");
       }
     })();
 

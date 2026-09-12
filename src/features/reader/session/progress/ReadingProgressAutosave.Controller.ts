@@ -1,5 +1,6 @@
 import { ApiError } from "@secondpass/client";
 import type { MarginaliaProgress } from "@secondpass/client";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 export const READING_PROGRESS_AUTOSAVE_DELAY_MS = 3000;
 
@@ -41,13 +42,12 @@ function payloadKey(payload: ReadingProgressSavePayload | null): string | null {
 
 function progressErrorMessage(error: unknown): string {
   if (error instanceof ApiError && (error.kind === "unauthorized" || error.kind === "forbidden")) {
-    return "Could not save progress. Your device token may be revoked or not allowed to access reading data.";
+    return "Reading position couldn't sync because the connection needs repair. Repair the connection in Settings.";
   }
   if (error instanceof ApiError && error.status === 404) {
-    return "Could not save progress. The reading session was not found or is no longer accessible.";
+    return "Reading position couldn't sync because this Reading Session is unavailable. This change needs attention.";
   }
-  if (error instanceof Error) return error.message;
-  return "Failed to save progress.";
+  return "Reading position couldn't sync. Try again from Settings > Offline.";
 }
 
 function isSessionClosedError(error: unknown): boolean {
@@ -247,6 +247,7 @@ export class ReadingProgressAutosaveController {
         });
       } catch (error) {
         if (generation !== this.generation) return;
+        debugWarn("reader", "Reading position autosave did not complete", { sessionId, error });
         if (isSessionClosedError(error)) {
           this.closedSessionId = sessionId;
           this.input = { ...this.input, enabled: false };
@@ -254,7 +255,7 @@ export class ReadingProgressAutosaveController {
           this.publish({
             ...this.state,
             status: "closed",
-            error: "Autosave stopped because the reading session is closed.",
+            error: "Reading position couldn't sync because this Reading Session is closed. Close Reader and reopen the Book to continue.",
             dirty: false,
             nextSaveAt: undefined,
           });

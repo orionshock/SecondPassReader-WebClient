@@ -53,11 +53,11 @@ export function AppLibraryRouteRenderer({
   if (route?.kind === "reader" && !openedBook) {
     return (
       <section className="panel workflowPanel">
-        <h2 className="panelTitle">Opening book</h2>
+        <h2 className="panelTitle">Opening reader</h2>
         {readerRestoreError ? (
           <div className="errorText">{readerRestoreError}</div>
         ) : (
-          <p className="muted">{`Restoring reader${"\u2026"}`}</p>
+          <p className="muted">Loading book...</p>
         )}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
@@ -81,7 +81,7 @@ export function AppLibraryRouteRenderer({
   if (openedBook && route?.kind === "reader") {
     return (
       <section className="readerScreen">
-        <Suspense fallback={<p className="muted">{`Loading reader${"\u2026"}`}</p>}>
+        <Suspense fallback={<p className="muted">Loading reader...</p>}>
           <ReadingActivity
             openedBook={openedBook}
             onBackToLibrary={() => {
@@ -101,7 +101,7 @@ export function AppLibraryRouteRenderer({
     return (
       <div className="libraryScreen">
         <OfflineRouteUnavailableNotice
-          area={route.kind === "sessions" || route.kind === "session" ? "Reading sessions" : "Shelves"}
+          area={route.kind === "sessions" || route.kind === "session" ? "Reading Sessions" : "Shelves"}
           onOpenHome={() => navigateTo({ kind: "home" })}
           onOpenLibrary={() => navigateTo({ kind: "library" })}
           onOpenOfflineSettings={() => navigateTo({ kind: "settings", tab: "offline" })}

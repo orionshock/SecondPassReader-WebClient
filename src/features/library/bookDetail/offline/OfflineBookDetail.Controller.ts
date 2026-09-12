@@ -6,6 +6,7 @@ import {
   type IndexedDbOfflineRepositories,
 } from "../../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import { presentOfflineBookDetail, type OfflineBookDetail } from "./OfflineBookDetail.Presenter";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 type Repositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -69,7 +70,12 @@ export function createOfflineBookDetailController(
     ]);
     if (!isCurrent(expectedGeneration, expectedLoad)) return;
     if (bookRead.status === "error" && assetRead.status === "error") {
-      publish({ status: "error", detail: null, action: "idle", message: "Saved book details could not be loaded." });
+      publish({
+        status: "error",
+        detail: null,
+        action: "idle",
+        message: "Saved Book details couldn't be loaded. Check browser storage settings and reopen the Book.",
+      });
       return;
     }
     publish({
@@ -113,9 +119,15 @@ export function createOfflineBookDetailController(
           }
           repositories = opened;
           await load();
-        } catch {
+        } catch (error) {
+          debugWarn("reader", "saved Book detail storage could not be opened", { bookId, error });
           if (isCurrent(expectedGeneration)) {
-            publish({ status: "error", detail: null, action: "idle", message: "Offline storage is unavailable." });
+            publish({
+              status: "error",
+              detail: null,
+              action: "idle",
+              message: "Saved Book details couldn't be loaded. Check browser storage settings and reopen the Book.",
+            });
           }
         }
       })();
@@ -142,9 +154,10 @@ export function createOfflineBookDetailController(
       try {
         await currentRepositories.publicationAssets.delete(namespaceKey, bookId, asset.format);
         if (isCurrent(expectedGeneration)) await load();
-      } catch {
+      } catch (error) {
+        debugWarn("reader", "offline copy removal did not complete", { bookId, error });
         if (isCurrent(expectedGeneration)) {
-          publish({ ...state, action: "idle", message: "The offline copy could not be removed." });
+          publish({ ...state, action: "idle", message: "Couldn't remove the offline copy. Try again." });
         }
       } finally {
         if (isCurrent(expectedGeneration)) actionRunning = false;
@@ -163,7 +176,8 @@ async function readBook(
       status: "loaded",
       book: await loadOfflineReaderBookMetadata({ namespaceKey, bookId, repository: repositories.projections }),
     };
-  } catch {
+  } catch (error) {
+    debugWarn("reader", "saved Book projection could not be read", { bookId, error });
     return { status: "error" };
   }
 }
@@ -179,7 +193,8 @@ async function readAssets(
   try {
     const assets = await repositories.publicationAssets.list(namespaceKey);
     return { status: "loaded", assets: assets.filter((asset) => asset.bookId === bookId) };
-  } catch {
+  } catch (error) {
+    debugWarn("reader", "offline Book assets could not be read", { bookId, error });
     return { status: "error" };
   }
 }

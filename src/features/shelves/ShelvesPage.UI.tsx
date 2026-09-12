@@ -11,6 +11,7 @@ import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type ShelfOrdering = "name" | "-item_count";
 
@@ -46,7 +47,7 @@ export function ShelvesLoadErrorNotice({
       error={error}
       message={getPageLoadErrorMessage(
         error,
-        "Could not load shelves.",
+        "Couldn't load shelves.",
         getAuthRecoveryMessage("access shelves"),
       )}
       onRetry={onRetry}
@@ -111,7 +112,8 @@ export function ShelvesPage({
       });
     } catch (e) {
       if (requestSeq !== loadRequestSeq.current) return;
-      setError(e instanceof Error ? e : new Error("Could not load shelves."));
+      debugWarn("reader", "shelves could not be loaded", { error: e });
+      setError(e instanceof Error ? e : new Error("Couldn't load shelves."));
     } finally {
       if (requestSeq === loadRequestSeq.current) setBusy(false);
     }
@@ -140,7 +142,8 @@ export function ShelvesPage({
       setMenuShelfId(null);
       await load();
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to create shelf.");
+      debugWarn("reader", "shelf creation did not complete", { error: e });
+      setMutationError("Couldn't create the shelf. Try again.");
     } finally {
       setMutationBusy(false);
     }
@@ -148,7 +151,7 @@ export function ShelvesPage({
 
   const handleDelete = useCallback(async (shelf: Shelf) => {
     if (!spl || !canEditShelf(shelf)) return;
-    if (!window.confirm("Delete this shelf? Books and files will not be deleted.")) return;
+    if (!window.confirm("Delete this shelf? The books on it will remain in Library.")) return;
     setMutationBusy(true);
     setMutationError(null);
     try {
@@ -156,7 +159,8 @@ export function ShelvesPage({
       setMenuShelfId(null);
       await load();
     } catch (e) {
-      setMutationError(e instanceof Error ? e.message : "Failed to delete shelf.");
+      debugWarn("reader", "shelf deletion did not complete", { shelfId: shelf.id, error: e });
+      setMutationError("Couldn't delete the shelf. Try again.");
     } finally {
       setMutationBusy(false);
     }
@@ -267,8 +271,8 @@ export function ShelvesPage({
         </div>
       </div>
 
-      {!canLoad ? <p className="muted">Select a verified profile first.</p> : null}
-      {busy && !data ? <p className="muted">{`Loading${"\u2026"}`}</p> : null}
+      {!canLoad ? <p className="muted">Verify the connection to view shelves.</p> : null}
+      {busy && !data ? <p className="muted">Loading shelves...</p> : null}
       {error ? (
         <ShelvesLoadErrorNotice
           error={error}
@@ -310,7 +314,7 @@ export function ShelvesPage({
               </button>
             </div>
             <div className="modalBody">
-              <p className="muted shelfModalHint">Group shelves cannot be edited here.</p>
+              <p className="muted shelfModalHint">Library Group shelves are read-only here.</p>
               <ShelfForm
                 values={createDraft}
                 onChange={setCreateDraft}
@@ -338,7 +342,7 @@ export function ShelvesPage({
             <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
               My shelves
             </h2>
-            {data.personal.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
+            {data.personal.length === 0 ? <div className="muted">No personal shelves.</div> : null}
             {data.personal.map(renderShelf)}
           </div>
 
@@ -346,7 +350,7 @@ export function ShelvesPage({
             <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
               Shared shelves
             </h2>
-            {data.shared.length === 0 ? <div className="muted">No shelves in this section.</div> : null}
+            {data.shared.length === 0 ? <div className="muted">No shared shelves.</div> : null}
             {data.shared.map(renderShelf)}
           </div>
         </div>

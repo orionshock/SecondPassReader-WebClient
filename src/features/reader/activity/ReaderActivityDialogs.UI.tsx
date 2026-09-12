@@ -148,11 +148,11 @@ function ReaderImportModalFallback({ onClose }: { onClose: () => void }) {
         onPointerDown={(event) => event.stopPropagation()}
       >
         <div className="spReaderImportModalHeader">
-          <h2 id="sp-reader-import-loading-title">Import marginalia</h2>
+          <h2 id="sp-reader-import-loading-title">Import Marginalia</h2>
           <button ref={closeButtonRef} type="button" className="button buttonCompact" onClick={onClose}>Close</button>
         </div>
         <div className="spReaderImportModalBody">
-          <p className="muted">{`Loading import tools${"\u2026"}`}</p>
+          <p className="muted">{`Loading import options${"\u2026"}`}</p>
         </div>
       </section>
     </div>

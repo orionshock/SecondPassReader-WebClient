@@ -67,9 +67,9 @@ export function EndOfBookDialog({
               </div>
             </div>
           ) : nextBookStatus === "loading" ? (
-            <p className="muted endBookMessage">Looking for the next book in this series.</p>
+            <p className="muted endBookMessage">Finding the next book...</p>
           ) : hasSeries ? (
-            <p className="muted endBookMessage">No next book was found for this series.</p>
+            <p className="muted endBookMessage">No next book found in this series.</p>
           ) : null}
         </div>
 
@@ -83,7 +83,7 @@ export function EndOfBookDialog({
             </button>
           ) : null}
           <button type="button" className="button endBookFinishButton" onClick={onFinishSession}>
-            Finish this session...
+            Finish Reading Session...
           </button>
         </div>
       </section>

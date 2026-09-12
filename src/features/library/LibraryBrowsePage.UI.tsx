@@ -179,9 +179,9 @@ export function LibraryBrowsePage({
   return (
     <section className="panel">
       <h1 className="srOnly">Library</h1>
-      {status === "not_configured" ? <p className="muted">Select a server profile first.</p> : null}
-      {status === "configured" ? <p className="muted">Link this profile before loading the library.</p> : null}
-      {status === "linked" ? <p className="muted">Verify this profile before loading the library.</p> : null}
+      {status === "not_configured" ? <p className="muted">Connect to Second Pass Library to use Library.</p> : null}
+      {status === "configured" ? <p className="muted">Approve this browser before loading Library.</p> : null}
+      {status === "linked" ? <p className="muted">Verify the connection before loading Library.</p> : null}
 
       {status === "verified" ? (
         <>

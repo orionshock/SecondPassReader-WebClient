@@ -10,7 +10,7 @@ const statusFilterLabels: Record<ReaderImportStatusGroup, string> = {
   accepted: "Accepted",
   skipped: "Skipped",
   "not-found": "Not found",
-  "manually-completed": "Manual",
+  "manually-completed": "Completed manually",
 };
 
 export function ReaderImportDrawer({
@@ -93,11 +93,11 @@ export function ReaderImportDrawer({
     >
       <div className="spReaderImportDrawerHeader">
         <div className="spReaderImportDrawerTitleRow">
-          <h2 id="sp-reader-import-drawer-title" className="spReaderImportDrawerTitle">Marginalia Import</h2>
+          <h2 id="sp-reader-import-drawer-title" className="spReaderImportDrawerTitle">Import Marginalia</h2>
           <ReaderImportDrawerHeaderActions onHide={onClose} onClear={onClear} />
         </div>
         <div className="spReaderImportFileName">{job.fileName}</div>
-        <div className="spReaderImportStatusFilters" role="group" aria-label="Filter import rows by status">
+        <div className="spReaderImportStatusFilters" role="group" aria-label="Filter imported items by status">
           {READER_IMPORT_STATUS_GROUPS.map((group) => (
             <button
               key={group}
@@ -159,12 +159,12 @@ export function ReaderImportDrawerHeaderActions({
         type="button"
         className="button buttonCompact spReaderImportIconButton spReaderImportClearButton"
         onClick={() => {
-          if (window.confirm("Clear this import review? The current import rows and review progress will be removed.")) {
+          if (window.confirm("Clear this import review? Imported annotations will remain, but this review and its progress will be removed.")) {
             onClear();
           }
         }}
-        aria-label="Clear import"
-        title="Clear import"
+        aria-label="Clear import review"
+        title="Clear import review"
       >
         <MaterialIcon name="delete_sweep" />
       </button>

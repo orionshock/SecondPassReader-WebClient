@@ -1,10 +1,13 @@
 import type { SecondPassDiscovery } from "@secondpass/client";
 import { createSecondPassClient } from "@secondpass/client";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
+
+export class ConnectionSetupError extends Error {}
 
 export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string } {
   const trimmed = input.trim();
   if (!trimmed) {
-    throw new Error("Please enter a server URL.");
+    throw new ConnectionSetupError("Enter a server URL.");
   }
 
   const withProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
@@ -13,11 +16,11 @@ export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string }
   try {
     url = new URL(withProtocol);
   } catch {
-    throw new Error("That server URL doesn't look valid. Example: http://localhost:8000");
+    throw new ConnectionSetupError("That server URL doesn't look valid. Example: http://localhost:8000");
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Server URL must start with http:// or https://");
+    throw new ConnectionSetupError("Server URL must start with http:// or https://");
   }
 
   const serverBaseUrl = `${url.origin}`.replace(/\/+$/, "");
@@ -28,8 +31,8 @@ export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondP
   try {
     return await createSecondPassClient({ apiBaseUrl: serverBaseUrl }).server.discover(serverBaseUrl);
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Discovery failed.";
-    throw new Error(message);
+    debugWarn("reader", "Second Pass Library discovery did not complete", { serverBaseUrl, error: e });
+    throw new ConnectionSetupError("Couldn't reach Second Pass Library. Check the address and try again.", { cause: e });
   }
 }
 

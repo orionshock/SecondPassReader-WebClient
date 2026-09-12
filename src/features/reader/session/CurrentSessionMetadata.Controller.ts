@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MarginaliaProgressInput, SecondPassClient } from "@secondpass/client";
 import { closeReadingSession } from "./ReadingSessionClose.Actions";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 export type CurrentSessionMeta = {
   name: string | null;
@@ -38,10 +39,14 @@ export function useCurrentSessionMeta(args: {
         setCurrentSessionMeta({ name, notes, status: "ready", error: null });
       } catch (e) {
         if (cancelled) return;
+        debugWarn("reader", "Reading Session details could not be loaded", {
+          sessionId: args.sessionId,
+          error: e,
+        });
         setCurrentSessionMeta((prev) => ({
           ...prev,
           status: "error",
-          error: e instanceof Error ? e.message : "Failed to load session details.",
+          error: "Couldn't load Reading Session details. Reopen the reader to try again.",
         }));
       }
     })();

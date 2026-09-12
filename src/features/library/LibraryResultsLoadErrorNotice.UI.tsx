@@ -7,7 +7,7 @@ export function LibraryResultsLoadErrorNotice({ error }: { error: unknown }) {
       error={error}
       message={getPageLoadErrorMessage(
         error,
-        "Could not load library results.",
+        "Couldn't load Library. Reload the page to try again.",
         getAuthRecoveryMessage("access the library"),
       )}
     />

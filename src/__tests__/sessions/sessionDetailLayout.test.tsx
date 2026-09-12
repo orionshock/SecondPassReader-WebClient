@@ -84,7 +84,7 @@ describe("session detail layout", () => {
     expect(html).toContain("<h2");
     expect(html).toContain("Initial Kindle Import 49d47f</h2>");
     expect(html).not.toContain(rawSessionId);
-    expect(html).toContain('aria-label="Edit session name"');
+    expect(html).toContain('aria-label="Edit Reading Session name"');
     expect(html).toContain("Brief Cases");
     expect(html).toContain(">Active</span>");
     expect(html).toContain("Chapter 4");
@@ -92,10 +92,9 @@ describe("session detail layout", () => {
     expect(html).toContain("Started date");
     expect(html).toContain("Updated date");
     expect(html).toContain("Keep this note in the metadata area.");
-    expect(html).toContain("Session Note:");
-    expect(html).toContain('aria-label="Edit session notes"');
-    expect(html).toContain("Open reader");
-    expect(html).toContain("Close session");
+    expect(html).toContain('aria-label="Edit Reading Session notes"');
+    expect(html).toContain("buttonPrimary");
+    expect(html).toContain("buttonDanger");
     expect(html).toContain("0 total");
     expect(html.indexOf("Brief Cases")).toBeLessThan(html.indexOf("Annotations"));
   });
@@ -105,14 +104,13 @@ describe("session detail layout", () => {
 
     expect(html).toContain("Initial Kindle Import 49d47f</h2>");
     expect(html).not.toContain(rawSessionId);
-    expect(html).not.toContain('aria-label="Edit session name"');
-    expect(html).not.toContain('aria-label="Edit session notes"');
-    expect(html).toContain("Name, notes, and annotations are read-only.");
+    expect(html).not.toContain('aria-label="Edit Reading Session name"');
+    expect(html).not.toContain('aria-label="Edit Reading Session notes"');
     expect(html).toContain(">Closed</span>");
     expect(html).toContain("Closed date");
     expect(html).toContain("Keep this note in the metadata area.");
-    expect(html).toContain("Open reader");
-    expect(html).not.toContain("Close session");
+    expect(html).toContain("buttonPrimary");
+    expect(html).not.toContain("buttonDanger");
     expect(html).toContain("0 total");
   });
 
@@ -120,10 +118,8 @@ describe("session detail layout", () => {
     const activeHtml = renderDetailChrome("active", "");
     const closedHtml = renderDetailChrome("closed", "");
 
-    expect(activeHtml).toContain("No Session Note");
-    expect(activeHtml).toContain('aria-label="Edit session notes"');
-    expect(closedHtml).toContain("No Session Note");
-    expect(closedHtml).not.toContain('aria-label="Edit session notes"');
+    expect(activeHtml).toContain('aria-label="Edit Reading Session notes"');
+    expect(closedHtml).not.toContain('aria-label="Edit Reading Session notes"');
   });
 
   it("keeps the bounded note editor and its save controls", () => {
@@ -142,7 +138,6 @@ describe("session detail layout", () => {
       onSaveNotes: noop,
     }));
 
-    expect(html).toContain("Session Note");
     expect(html).toContain(`${value.notes.length}/65536`);
     expect(html).toContain('maxLength="65536"');
     expect(html).not.toContain("placeholder=");

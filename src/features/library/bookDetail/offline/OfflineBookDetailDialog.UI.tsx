@@ -48,15 +48,15 @@ export function OfflineBookDetailDialog({
           </button>
         </div>
         <div className="modalBody">
-          {state.status === "loading" ? <p className="muted">{`Loading saved book details${"\u2026"}`}</p> : null}
-          {state.status === "unavailable" ? <p className="muted">Saved book details are unavailable until this connection is verified.</p> : null}
-          {state.status === "error" ? <div className="errorText">{state.message ?? "Saved book details could not be loaded."}</div> : null}
+          {state.status === "loading" ? <p className="muted">Loading saved book details...</p> : null}
+          {state.status === "unavailable" ? <p className="muted">Verify the connection to view saved book details.</p> : null}
+          {state.status === "error" ? <div className="errorText">{state.message ?? "Saved Book details couldn't be loaded. Check browser storage settings and reopen the Book."}</div> : null}
           {state.status === "ready" && detail ? (
             <div className="bookDetailPanel offlineBookDetailPanel">
               <div className="bookDetailHero">
                 <div className="bookDetailCover"><div className="bookDetailCoverPlaceholder" aria-hidden="true">No cover</div></div>
                 <div className="bookDetailHeroContent">
-                  <div className="muted offlineBookDetailContext">Saved book details</div>
+                  <div className="muted offlineBookDetailContext">Saved details</div>
                   <h2 className="bookDetailTitle">{detail.title}</h2>
                   {detail.subtitle ? <div className="bookDetailSubtitle">{detail.subtitle}</div> : null}
                   {detail.series ? <div className="bookDetailRelationLine muted"><span>Series</span><span>{detail.series}</span></div> : null}
@@ -95,11 +95,11 @@ export function OfflineBookDetailDialog({
               </div>
               <div className="bookOfflineAvailability" aria-live="polite">
                 <div className="bookOfflineAvailabilityStatus">
-                  <strong>Offline</strong>
+                  <strong>Offline copy</strong>
                   <span className="muted">{availabilityLabel}</span>
                   {state.message ? <span className="errorText">{state.message}</span> : null}
                   {detail.availability === "not-available" ? (
-                    <span className="muted">Make this Book available next time you are online.</span>
+                    <span className="muted">When you're online, you can make this book available offline.</span>
                   ) : null}
                 </div>
                 {detail.asset ? <button type="button" className="button" onClick={onManageOffline}>Manage offline</button> : null}
@@ -126,8 +126,8 @@ function offlineAvailabilityLabel(availability: OfflineBookDetail["availability"
   switch (availability) {
     case "available": return "Available offline";
     case "needs-attention": return "Offline copy needs attention";
-    case "unsupported-format": return "This format is not supported by the current Reader";
+    case "unsupported-format": return "This format isn't supported by Reader.";
     case "not-available": return "Not available offline";
-    case "unknown": return "Offline availability could not be checked";
+    case "unknown": return "Couldn't check offline availability.";
   }
 }

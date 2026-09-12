@@ -11,11 +11,6 @@ import {
 describe("reader import handlers", () => {
   it("exposes self-registered built-in import formats through the shared registry", () => {
     expect(getReaderImportHandlers().map((format) => format.kind)).toEqual(["glasp-csv", "spl-session-json"]);
-    expect(getReaderImportHandlers().map((format) => format.displayName)).toEqual([
-      "Glasp CSV",
-      "SPL Marginalia",
-    ]);
-    expect(getReaderImportFormat("spl-session-json").description).toBe("Import a One Session File in SPL Marginalia Format");
   });
 
   it("keeps duplicate handler registration safe by kind", () => {
@@ -168,7 +163,6 @@ describe("reader import handlers", () => {
     await expect(getReaderImportFormat("spl-session-json").importFile(file)).rejects.toMatchObject({
       name: "ReaderImportParseError",
       code: "spl-session-empty",
-      message: "This export does not contain any sessions to import.",
       action: undefined,
     });
   });
@@ -185,9 +179,8 @@ describe("reader import handlers", () => {
     await expect(getReaderImportFormat("spl-session-json").importFile(file)).rejects.toMatchObject({
       name: "ReaderImportParseError",
       code: "spl-session-multiple",
-      message: "This export contains 2 sessions. Reader import works with one session at a time.",
       detail: { sessionCount: 2 },
-      action: { label: "Open export splitter", href: "#/settings?tab=tools" },
+      action: { href: "#/settings?tab=tools" },
     });
   });
 

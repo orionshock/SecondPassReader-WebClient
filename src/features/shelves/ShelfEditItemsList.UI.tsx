@@ -29,7 +29,7 @@ export function ShelfEditItemsList({
 }) {
   return (
     <>
-      <div className="shelfEditHint">Use the arrow buttons to nudge books, or choose an index to move directly.</div>
+      <div className="shelfEditHint">Use the arrows or choose a position to reorder books.</div>
       <div className="shelfBookList">
         {items.map((it, index) => {
           const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
@@ -81,7 +81,7 @@ export function ShelfEditItemsList({
                   <MaterialIcon name="keyboard_arrow_down" />
                 </button>
                 <label className="shelfMoveSelectLabel">
-                  <span className="fieldLabel">Index</span>
+                  <span className="fieldLabel">Position</span>
                   <select
                     className="input inputCompact shelfMoveSelect"
                     value={String(currentPosition)}
@@ -95,7 +95,7 @@ export function ShelfEditItemsList({
                   >
                     {positionOptions.map((position) => (
                       <option key={position} value={position}>
-                        {position}
+                        {position + 1}
                       </option>
                     ))}
                   </select>

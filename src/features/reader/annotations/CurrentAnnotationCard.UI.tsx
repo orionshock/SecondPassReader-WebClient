@@ -7,6 +7,7 @@ import { CurrentAnnotationCardBookmarkView } from "./CurrentAnnotationCardBookma
 import { CurrentAnnotationCardHighlightEditor } from "./CurrentAnnotationCardHighlightEditor.UI";
 import { CurrentAnnotationCardHighlightView } from "./CurrentAnnotationCardHighlightView.UI";
 import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./ReaderAnnotationViewModels.Types";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 function normalizeQuoteTextForDisplay(text: string): string {
   // Selections and describing bodies can contain hard line separators and trailing whitespace.
@@ -144,8 +145,12 @@ export function CurrentAnnotationCard({
                   setEditStatus("idle");
                   setEditingId(null);
                 } catch (err) {
+                  debugWarn("reader", "highlight update did not complete", {
+                    annotationId: h.id,
+                    error: err,
+                  });
                   setEditStatus("error");
-                  setEditError(err instanceof Error ? err.message : "Failed to update highlight.");
+                  setEditError("Couldn't update the highlight. Try again.");
                 }
               })();
             }}
@@ -172,8 +177,8 @@ export function CurrentAnnotationCard({
               setEditStatus("idle");
               setEditError(null);
             }}
-            aria-label="Edit note and color"
-            title="Edit note and color"
+            aria-label="Edit highlight"
+            title="Edit highlight"
             disabled={editStatus === "saving"}
           >
             <MaterialIcon name="edit_note" />
@@ -183,8 +188,8 @@ export function CurrentAnnotationCard({
           type="button"
           className="button buttonCompact spIconButton"
           onClick={() => onJumpToCfiRange(h.cfiRange)}
-          aria-label="Jump to highlight"
-          title="Jump to location"
+          aria-label="Go to highlight"
+          title="Go to highlight"
           disabled={editStatus === "saving"}
         >
           <MaterialIcon name="my_location" />

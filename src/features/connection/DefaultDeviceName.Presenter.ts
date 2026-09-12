@@ -1,4 +1,4 @@
-const APP_LABEL = "SecondPass Reader";
+const APP_LABEL = "Second Pass Reader";
 const SEPARATOR = "\u00b7";
 const FALLBACK_NAME = `${APP_LABEL} ${SEPARATOR} Browser`;
 

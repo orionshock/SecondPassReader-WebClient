@@ -23,14 +23,14 @@ export function getConnectionStatus(profile: ConnectionProfile | null | undefine
 export function getConnectionStatusLabel(status: ConnectionStatus): string {
   switch (status) {
     case "not_configured":
-      return "not configured";
+      return "Not connected";
     case "configured":
-      return "configured, not linked";
+      return "Approval required";
     case "linked":
-      return "linked, not verified";
+      return "Verification required";
     case "verified":
-      return "verified";
+      return "Connected";
     case "repair_required":
-      return "repair required";
+      return "Repair required";
   }
 }

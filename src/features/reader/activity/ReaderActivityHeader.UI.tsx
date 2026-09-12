@@ -75,10 +75,10 @@ export function ReaderActivityHeader({
               {autosaveStatus.text}
             </div>
           ) : null}
-          {showOfflineStatus ? <div className="spReaderAutosaveLine muted" role="status">Offline - server changes are paused.</div> : null}
+          {showOfflineStatus ? <div className="spReaderAutosaveLine muted" role="status">Offline. Changes will sync when connected.</div> : null}
         </div>
 
-        <div className="spReaderContextActions" role="group" aria-label="Session completion actions">
+        <div className="spReaderContextActions" role="group" aria-label="Reading Session actions">
           {showFinishControls ? (
             <button
               type="button"
@@ -97,8 +97,8 @@ export function ReaderActivityHeader({
             className="button buttonCompact spIconButton"
             onClick={onToggleSearch}
             disabled={!searchReady}
-            aria-label={searchOpen ? "Close book search" : "Search in book"}
-            title={searchReady ? "Search in book" : "Search is unavailable until the reader is ready."}
+            aria-label={searchOpen ? "Close search" : "Search in book"}
+            title={searchReady ? "Search in book" : "Search is unavailable while the reader loads."}
             aria-pressed={searchOpen}
           >
             <MaterialIcon name="search" />
@@ -110,7 +110,7 @@ export function ReaderActivityHeader({
             className={`button buttonCompact spIconButton${bookmarkSuggested ? " spReaderBookmarkSuggested" : ""}`}
             onClick={onToggleBookmark}
             disabled={!canBookmark || annotationBusy}
-            title={!canBookmark ? "Bookmark is unavailable until a reading location is known." : bookmarkSuggested ? "Save imported bookmark" : "Bookmark"}
+            title={!canBookmark ? "Bookmark is unavailable until a location is available." : bookmarkSuggested ? "Save imported bookmark" : "Bookmark"}
             aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
           >
             <MaterialIcon name={isBookmarked ? "bookmark_added" : "bookmark_add"} />

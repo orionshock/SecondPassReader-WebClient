@@ -9,7 +9,8 @@ type Props = { data: PaginatedResponse<Author> | null; busy: boolean; error: unk
 export function LibraryAuthorRows({ data, busy, error, page, profile, onSelectAuthor, onViewBook, onPageChange }: Props) {
   return <>
     {error ? <LibraryResultsLoadErrorNotice error={error} /> : null}
-    {busy && !data ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
+    {busy && !data ? <div className="muted" style={{ marginTop: 10 }}>Loading...</div> : null}
+    {data && data.results.length === 0 ? <div className="muted" style={{ marginTop: 10 }}>No authors found.</div> : null}
     {data?.results.length ? <div className="libraryEntityList">{data.results.map((author) => {
       const open = () => onSelectAuthor(String(author.id));
       return <div key={String(author.id)} className="libraryEntityCard">
@@ -19,6 +20,6 @@ export function LibraryAuthorRows({ data, busy, error, page, profile, onSelectAu
         <PreviewBookCoverStack previewBooks={author.previewBooks} baseUrl={profile} onBookClick={onViewBook} />
       </div>;
     })}</div> : null}
-    {data ? <LibraryPaginationControls metaItems={[`Page ${page}`, `${data.count} authors`]} busy={busy} hasPrevious={Boolean(data.previous)} hasNext={Boolean(data.next)} onPrevious={() => onPageChange(Math.max(1, page - 1))} onNext={() => onPageChange(page + 1)} /> : null}
+    {data ? <LibraryPaginationControls metaItems={[`Page ${page}`, `${data.count} ${data.count === 1 ? "author" : "authors"}`]} busy={busy} hasPrevious={Boolean(data.previous)} hasNext={Boolean(data.next)} onPrevious={() => onPageChange(Math.max(1, page - 1))} onNext={() => onPageChange(page + 1)} /> : null}
   </>;
 }

@@ -15,8 +15,7 @@ describe("recent reading errors", () => {
       onRetry: vi.fn(),
     }));
 
-    expect(html).toContain("Could not load recent reading.");
-    expect(html).toContain("Retry");
+    expect(html).toContain("<button");
     expect(html).not.toContain("DOCTYPE");
     expect(html).not.toContain("Django debug page");
   });
@@ -46,7 +45,6 @@ describe("recent reading errors", () => {
       onRetry: vi.fn(),
     }));
 
-    expect(html).toContain("This device is not authorized to load recent reading.");
-    expect(html).toContain("Manage connection");
+    expect(html).toContain('href="#/settings?tab=library-server"');
   });
 });

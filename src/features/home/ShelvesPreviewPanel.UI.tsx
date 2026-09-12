@@ -4,6 +4,7 @@ import type { SecondPassClient, Shelf } from "@secondpass/client";
 import { HomeShelfCard } from "./HomeShelfCard.UI";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export function ShelvesPreviewLoadFailure({
   error,
@@ -19,7 +20,7 @@ export function ShelvesPreviewLoadFailure({
       error={error}
       message={getPageLoadErrorMessage(
         error,
-        "Could not load shelves.",
+        "Couldn't load shelves.",
         getAuthRecoveryMessage("load shelves"),
       )}
       onRetry={onRetry}
@@ -57,7 +58,8 @@ export function ShelvesPreviewSection({
           .catch(() => undefined);
       }
     } catch (e) {
-      setError(e instanceof Error ? e : new Error("Could not load shelves."));
+      debugWarn("reader", "Home shelf preview could not be loaded", { error: e });
+      setError(e instanceof Error ? e : new Error("Couldn't load shelves."));
       setShelves(null);
     } finally {
       setBusy(false);
@@ -79,12 +81,12 @@ export function ShelvesPreviewSection({
           Shelves
         </div>
         <button type="button" className="button buttonCompact" onClick={() => navigateTo({ kind: "shelves" })}>
-          Open
+          View all
         </button>
       </div>
 
-      {!canLoad ? <div className="muted">Select a verified profile first.</div> : null}
-      {busy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
+      {!canLoad ? <div className="muted">Verify the connection to load shelves.</div> : null}
+      {busy ? <div className="muted">Loading shelves...</div> : null}
       {error ? (
         <ShelvesPreviewLoadFailure
           error={error}

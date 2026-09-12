@@ -9,7 +9,8 @@ type Props = { data: PaginatedResponse<Series> | null; busy: boolean; error: unk
 export function LibrarySeriesRows({ data, busy, error, page, profile, onSelectSeries, onViewBook, onPageChange }: Props) {
   return <>
     {error ? <LibraryResultsLoadErrorNotice error={error} /> : null}
-    {busy && !data ? <div className="muted" style={{ marginTop: 10 }}>{`Loading${"\u2026"}`}</div> : null}
+    {busy && !data ? <div className="muted" style={{ marginTop: 10 }}>Loading...</div> : null}
+    {data && data.results.length === 0 ? <div className="muted" style={{ marginTop: 10 }}>No series found.</div> : null}
     {data?.results.length ? <div className="libraryEntityList">{data.results.map((series) => {
       const open = () => onSelectSeries(String(series.id));
       return <div key={String(series.id)} className="libraryEntityCard">

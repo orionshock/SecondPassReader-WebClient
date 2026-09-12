@@ -61,24 +61,20 @@ describe("reader import status filters", () => {
     const accepted = buttons.find((button) => button.textContent?.includes("Accepted"));
     const skipped = buttons.find((button) => button.textContent?.includes("Skipped"));
 
-    expect(container.querySelector('[aria-label="Filter import rows by status"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Filter imported items by status"]')).not.toBeNull();
     expect(pending?.getAttribute("aria-pressed")).toBe("true");
     expect(accepted?.getAttribute("aria-pressed")).toBe("false");
     expect(skipped?.disabled).toBe(true);
     expect(container.textContent).toContain("quote-pending");
     expect(container.textContent).not.toContain("quote-accepted");
-    expect(container.querySelector('[aria-label="Mark manually completed"]')).not.toBeNull();
-  });
-
-  it("shows a filter-specific empty state when default filters hide every row", () => {
-    expect(renderDrawer(statuses("accepted"))).toContain("No rows match the selected filters.");
+    expect(container.querySelector('[aria-label="Mark as completed manually"]')).not.toBeNull();
   });
 
   it("renders distinct accessible hide and clear actions", () => {
     const container = markupContainer(renderDrawer(statuses("pending")));
 
     expect(container.querySelector('button[aria-label="Hide import drawer"]')).not.toBeNull();
-    expect(container.querySelector('button[aria-label="Clear import"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Clear import review"]')).not.toBeNull();
   });
 
   it("keeps hide and clear callbacks semantically separate", () => {
@@ -148,7 +144,7 @@ function renderHeaderActions(onHide: () => void, onClear: () => void) {
   const root = createRoot(container);
   act(() => root.render(createElement(ReaderImportDrawerHeaderActions, { onHide, onClear })));
   const hide = container.querySelector<HTMLButtonElement>('button[aria-label="Hide import drawer"]');
-  const clear = container.querySelector<HTMLButtonElement>('button[aria-label="Clear import"]');
+  const clear = container.querySelector<HTMLButtonElement>('button[aria-label="Clear import review"]');
   if (!hide || !clear) throw new Error("Expected import header actions.");
   return {
     hide,

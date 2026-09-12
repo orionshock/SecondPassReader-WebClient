@@ -46,7 +46,7 @@ export function AppHeader({
       : route?.kind === "library"
         ? "Library"
         : route?.kind === "sessions" || route?.kind === "session"
-          ? "Session Management"
+          ? "Reading Sessions"
         : route?.kind === "shelves" || route?.kind === "shelf"
           ? "Shelves"
           : view === "settings"
@@ -131,7 +131,7 @@ export function AppHeader({
               Shelves
             </button>
             <button type="button" className="button buttonCompact" onClick={onShowSessions}>
-              Sessions
+              Reading Sessions
             </button>
             <button
               type="button"

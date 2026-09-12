@@ -33,7 +33,7 @@ export function ShelfEditInfoModal({
       <section ref={dialogRef} className="modalPanel shelfModalPanel" role="dialog" aria-modal="true" aria-labelledby="shelf-info-title" tabIndex={-1}>
         <div className="modalHeaderRow">
           <div className="modalTitle" id="shelf-info-title">
-            Change shelf info
+            Edit shelf details
           </div>
           <button
             ref={closeButtonRef}

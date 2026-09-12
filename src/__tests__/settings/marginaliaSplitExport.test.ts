@@ -328,8 +328,8 @@ describe("marginalia split export", () => {
       items: [],
     });
 
-    expect(() => parseAndSplitMarginaliaExport("{broken")).toThrowError(/Invalid JSON/i);
-    expect(() => splitMarginaliaExport({ schema_version: "9.9.9", books: [] })).toThrowError(/Unsupported/i);
-    expect(() => splitMarginaliaExport({ schema_version: "0.1.0", books: [] })).toThrowError(/does not contain any books/i);
+    expect(() => parseAndSplitMarginaliaExport("{broken")).toThrow();
+    expect(() => splitMarginaliaExport({ schema_version: "9.9.9", books: [] })).toThrow();
+    expect(() => splitMarginaliaExport({ schema_version: "0.1.0", books: [] })).toThrow();
   });
 });

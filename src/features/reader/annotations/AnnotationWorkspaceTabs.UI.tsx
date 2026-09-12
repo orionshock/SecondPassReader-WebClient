@@ -11,8 +11,8 @@ export function AnnotationWorkspaceTabs({
 }) {
   const tabListRef = useRef<HTMLDivElement | null>(null);
   const tabs: Array<{ value: AnnotationWorkspaceTabKey; label: string }> = [
-    { value: "current", label: "Current session" },
-    { value: "previous", label: "Previous sessions" },
+    { value: "current", label: "Current Reading Session" },
+    { value: "previous", label: "Previous Reading Sessions" },
   ];
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -31,7 +31,7 @@ export function AnnotationWorkspaceTabs({
   };
 
   return (
-    <div ref={tabListRef} className="spAnnotationTabs" role="tablist" aria-label="Annotation tabs" onKeyDown={handleKeyDown}>
+    <div ref={tabListRef} className="spAnnotationTabs" role="tablist" aria-label="Annotation views" onKeyDown={handleKeyDown}>
       {tabs.map((item) => (
         <button
           key={item.value}

@@ -94,18 +94,18 @@ export function OfflineSettingsView({
             disabled={retryDisabled}
             onClick={() => void controller.retrySync()}
           >
-            {state.action === "syncing" ? "Retrying sync..." : "Retry sync"}
+            {state.action === "syncing" ? "Retrying..." : "Retry sync"}
           </button>
         </div>
         {state.pending.intents > 0 ? (
           <div>
             <div className="settingsStatRow muted">
-              <span>{state.pending.intents} pending change{state.pending.intents === 1 ? "" : "s"}</span>
+              <span>{state.pending.intents} change{state.pending.intents === 1 ? "" : "s"} waiting to sync</span>
               <span>{state.pending.annotations} annotation{state.pending.annotations === 1 ? "" : "s"}</span>
-              <span>{state.pending.progress} progress update{state.pending.progress === 1 ? "" : "s"}</span>
-              <span>{state.pending.sessionEstablishment} session continuation{state.pending.sessionEstablishment === 1 ? "" : "s"}</span>
-              {state.pending.attentionBooks > 0 ? <span>{state.pending.attentionBooks} need{state.pending.attentionBooks === 1 ? "s" : ""} attention</span> : null}
-              {state.pending.deferredBooks > 0 ? <span>{state.pending.deferredBooks} waiting to retry</span> : null}
+              <span>{state.pending.progress} reading position{state.pending.progress === 1 ? "" : "s"}</span>
+              <span>{state.pending.sessionEstablishment} Reading Session{state.pending.sessionEstablishment === 1 ? "" : "s"} to reconnect</span>
+              {state.pending.attentionBooks > 0 ? <span>{state.pending.attentionBooks} Book{state.pending.attentionBooks === 1 ? "" : "s"} need{state.pending.attentionBooks === 1 ? "s" : ""} attention</span> : null}
+              {state.pending.deferredBooks > 0 ? <span>{state.pending.deferredBooks} Book{state.pending.deferredBooks === 1 ? "" : "s"} waiting to retry</span> : null}
             </div>
             <div className="settingsOfflineAssetList">
               {state.pendingBooks.map((book) => (
@@ -120,7 +120,7 @@ export function OfflineSettingsView({
                   onRetry={() => void controller.retryBook(book.bookId)}
                   onOpenReader={() => onOpenReader(book.bookId)}
                   onDiscardProgress={() => {
-                    if (window.confirm("Discard this pending reading position? Your local reading position will remain available on this device.")) {
+                    if (window.confirm("Discard the pending reading position? It will no longer sync, but the Reader will keep it for local resume.")) {
                       void controller.discardPendingProgress(book.bookId);
                     }
                   }}
@@ -128,9 +128,9 @@ export function OfflineSettingsView({
               ))}
             </div>
           </div>
-        ) : <p className="muted">All offline changes are synced.</p>}
+        ) : <p className="muted">All changes are synced.</p>}
         {state.connectivity !== "online" && state.pending.books > 0 ? (
-          <p className="muted">Connect to the library to retry pending changes.</p>
+          <p className="muted">Go online to retry changes.</p>
         ) : null}
       </section>
 
@@ -139,7 +139,7 @@ export function OfflineSettingsView({
           <div>
             <h2 className="panelTitle">Available offline</h2>
             <div className="settingsLabel">
-              {state.assets.length} book{state.assets.length === 1 ? "" : "s"} - {formatOfflineAssetBytes(state.totalAssetBytes)}
+              {state.assets.length} Book{state.assets.length === 1 ? "" : "s"} - {formatOfflineAssetBytes(state.totalAssetBytes)}
             </div>
           </div>
           {state.assets.length > 0 && !confirmRemoveAll ? (
@@ -151,7 +151,7 @@ export function OfflineSettingsView({
 
         {confirmRemoveAll ? (
           <div className="settingsOfflineConfirmation" role="alert">
-            <p>Remove all downloaded book files for this library? Offline reading will no longer be available, but reading progress, annotations, and pending changes will remain.</p>
+            <p>Remove all offline copies? Downloaded Book files will be removed. Reading progress, annotations, and changes waiting to sync will remain.</p>
             <div className="settingsActions">
               <button type="button" className="button" disabled={busy} onClick={() => setConfirmRemoveAll(false)}>Cancel</button>
               <button type="button" className="button buttonDanger" disabled={busy} onClick={() => void controller.removeAllAssets()}>
@@ -162,7 +162,7 @@ export function OfflineSettingsView({
         ) : null}
 
         {state.assets.length === 0 ? (
-          <p className="muted">No books are currently available offline.</p>
+          <p className="muted">No Books are available offline.</p>
         ) : (
           <div className="settingsOfflineAssetList">
             {state.assets.map((asset) => (
@@ -205,10 +205,10 @@ function OfflineAssetRow({
         <div className="settingsLabel">{asset.title}</div>
         <div className="muted">{asset.format.toUpperCase()} - {formatOfflineAssetBytes(asset.byteLength)}</div>
         {selected
-          ? <span className="muted">Selected</span>
-          : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>View details</button>}
+          ? <span className="muted">Details shown</span>
+          : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>Show details</button>}
       </div>
-      <button type="button" className="button" disabled={disabled} onClick={onRemove}>
+      <button type="button" className="button" disabled={disabled} onClick={onRemove} aria-label={`Remove offline copy of ${asset.title}`}>
         {removing ? "Removing..." : "Remove"}
       </button>
     </div>
@@ -241,28 +241,28 @@ function PendingBookRow({
       <div className="settingsOfflineAssetCopy">
         <div className="settingsLabel">{book.title}</div>
         <div className="muted">
-          {book.pendingIntentCount} pending change{book.pendingIntentCount === 1 ? "" : "s"}
+          {book.pendingIntentCount} change{book.pendingIntentCount === 1 ? "" : "s"} waiting to sync
           {book.status !== "waiting" ? ` - ${pendingBookStatusLabel(book.status)}` : ""}
         </div>
         {selected
-          ? <span className="muted">Selected</span>
-          : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>View details</button>}
+          ? <span className="muted">Details shown</span>
+          : <button type="button" className="settingsLinkButton" onClick={onSelect} disabled={disabled}>Show details</button>}
         {selected ? (
           <div className="settingsGrid">
-            {book.needsSessionEstablishment ? <div>Reading session - {categoryStatusLabel(book.sessionStatus)}</div> : null}
-            {book.hasProgress ? <div>Reading position - {categoryStatusLabel(book.progressStatus)}</div> : null}
+            {book.needsSessionEstablishment ? <div>Reading Session: {categoryStatusLabel(book.sessionStatus)}</div> : null}
+            {book.hasProgress ? <div>Reading position: {categoryStatusLabel(book.progressStatus)}</div> : null}
             {book.annotationUpsertCount > 0 ? (
-              <div>{countLabel(book.annotationUpsertCount, "annotation change", "annotation changes")} - {categoryStatusLabel(book.annotationStatus)}</div>
+              <div>{countLabel(book.annotationUpsertCount, "annotation change", "annotation changes")}: {categoryStatusLabel(book.annotationStatus)}</div>
             ) : null}
             {book.annotationDeleteCount > 0 ? (
-              <div>{countLabel(book.annotationDeleteCount, "annotation deletion", "annotation deletions")} - {categoryStatusLabel(book.annotationStatus)}</div>
+              <div>{countLabel(book.annotationDeleteCount, "annotation deletion", "annotation deletions")}: {categoryStatusLabel(book.annotationStatus)}</div>
             ) : null}
             {book.hasOfflineAsset ? (
-              <div className="muted">Offline copy: {book.assetFormats.join(", ")} - {formatOfflineAssetBytes(book.assetBytes)}</div>
+              <div className="muted">Available offline: {book.assetFormats.join(", ")} - {formatOfflineAssetBytes(book.assetBytes)}</div>
             ) : null}
             <div className="settingsActions">
               <button type="button" className="button buttonPrimary" disabled={disabled || connectivity !== "online"} onClick={onRetry}>
-                {working ? "Retrying this book..." : "Retry this book"}
+                {working ? "Retrying..." : "Retry this book"}
               </button>
               <button type="button" className="button" disabled={disabled} onClick={onOpenReader}>Open reader</button>
               {book.hasProgress ? (

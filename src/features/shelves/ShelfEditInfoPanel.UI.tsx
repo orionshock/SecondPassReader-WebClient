@@ -19,7 +19,7 @@ export function ShelfEditInfoPanel({
       <ServerRichText value={shelf.description} className="muted" />
       {canEdit ? (
         <button type="button" className="button buttonCompact" onClick={onChangeInfo}>
-          Change shelf info
+          Edit shelf details
         </button>
       ) : (
         <div className="muted">This shelf is read-only.</div>

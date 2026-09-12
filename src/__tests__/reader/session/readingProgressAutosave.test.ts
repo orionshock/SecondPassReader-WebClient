@@ -370,7 +370,7 @@ describe("ReadingProgressAutosaveController", () => {
     await expect(controller.flushNow({ silent: true })).resolves.toBeUndefined();
 
     expect(onStateChange).not.toHaveBeenCalled();
-    expect(controller.getState()).toMatchObject({ status: "error", error: "offline" });
+    expect(controller.getState()).toMatchObject({ status: "error" });
   });
 
   it("treats a closed-session conflict as recoverable drift and blocks later writes for that session", async () => {

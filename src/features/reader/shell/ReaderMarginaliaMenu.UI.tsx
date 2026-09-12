@@ -77,7 +77,7 @@ export function MarginaliaMenu(props: {
   const previousLayers = useMemo(() => props.previousLayers ?? [], [props.previousLayers]);
   const importTools = props.onImportMarginalia || (props.importJobActive && props.onOpenImport) ? (
     <div className="spMarginaliaMenuSection">
-      <div className="spMarginaliaMenuSectionTitle muted">Import tools</div>
+      <div className="spMarginaliaMenuSectionTitle muted">Import</div>
       <div className="spMarginaliaMenuActions">
         {props.onImportMarginalia ? (
           <button
@@ -88,7 +88,7 @@ export function MarginaliaMenu(props: {
               props.onImportMarginalia?.();
             }}
           >
-            Import marginalia...
+            Import Marginalia...
           </button>
         ) : null}
         {props.importJobActive && props.onOpenImport ? (
@@ -152,7 +152,7 @@ export function MarginaliaMenu(props: {
                 type="button"
                 className="button buttonCompact spIconButton spMarginaliaMenuCloseButton"
                 onClick={props.onClose}
-                aria-label="Close marginalia menu"
+                aria-label="Close Marginalia"
                 title="Close"
               >
                 <MaterialIcon name="close" />
@@ -161,14 +161,14 @@ export function MarginaliaMenu(props: {
 
             <div className="spMarginaliaMenuBody">
               <div className="spMarginaliaMenuSection">
-                <div className="spMarginaliaMenuSectionTitle muted">Previous sessions</div>
-                {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading...</div> : null}
-                {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">Failed to load sessions: {props.listError}</div> : null}
+                <div className="spMarginaliaMenuSectionTitle muted">Previous Reading Sessions</div>
+                {props.listStatus === "loading" ? <div className="muted spMarginaliaEmpty">Loading Reading Sessions...</div> : null}
+                {props.listStatus === "error" && props.listError ? <div className="muted spMarginaliaEmpty">{props.listError}</div> : null}
                 {props.listStatus !== "loading" && previousLayers.length === 0 ? (
-                  <div className="muted spMarginaliaEmpty">No previous sessions.</div>
+                  <div className="muted spMarginaliaEmpty">No previous Reading Sessions.</div>
                 ) : null}
                 {previousLayers.length > 0 ? (
-                  <div className="spMarginaliaLayerList" role="group" aria-label="Previous session layers">
+                  <div className="spMarginaliaLayerList" role="group" aria-label="Previous Reading Sessions">
                     {previousLayers.map((layer) => {
                       const checked = props.selectedPreviousSessionIds.has(layer.sessionId);
                       const disabled = layer.status === "loading";
@@ -202,7 +202,7 @@ export function MarginaliaMenu(props: {
               {props.onCloseSession ? (
                 <div className="spMarginaliaMenuFooter">
                   <div className="muted spMarginaliaSessionNote">
-                    Edit Session Details in Annotations below the book text.
+                    Reading Session details are in Annotations below the book.
                   </div>
                   <button
                     type="button"
@@ -212,7 +212,7 @@ export function MarginaliaMenu(props: {
                       props.onCloseSession?.();
                     }}
                   >
-                    Close session
+                    Close Reading Session
                   </button>
                 </div>
               ) : null}

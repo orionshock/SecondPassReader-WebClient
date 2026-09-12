@@ -6,7 +6,7 @@ describe("getEffectiveLibraryGroupId", () => {
     expect(getEffectiveLibraryGroupId("group-1", true)).toBe("group-1");
   });
 
-  it("forces All Library scope when advanced groups are disabled", () => {
+  it("forces Entire Library scope when advanced groups are disabled", () => {
     expect(getEffectiveLibraryGroupId("group-1", false)).toBeUndefined();
     expect(getEffectiveLibraryGroupId(undefined, false)).toBeUndefined();
   });

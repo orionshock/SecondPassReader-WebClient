@@ -5,6 +5,7 @@ import type { ReaderSelection } from "../../domain/ReaderDomain.Types";
 import { getAnnotationColor } from "../../display/ReaderAnnotation.Presenter";
 import { buildCurrentSessionHighlightCommit, buildHighlightUpdate } from "../ReadingSessionMarginalia.Actions";
 import type { CurrentSessionAnnotationController } from "./CurrentSessionAnnotation.Controller";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 export function useCurrentSessionHighlightActions(args: {
   controller: CurrentSessionAnnotationController;
@@ -34,7 +35,7 @@ export function useCurrentSessionHighlightActions(args: {
           ]);
           return { value: undefined, annotations: response.annotations };
         },
-        getErrorMessage: (error) => error instanceof Error ? error.message : "Failed to update highlight.",
+        getErrorMessage: () => "Couldn't update the highlight. Try again.",
       });
     },
     [args.annotationsRaw, args.canMutate, args.controller, args.sessionId, args.spl],
@@ -65,7 +66,10 @@ export function useCurrentSessionHighlightActions(args: {
           ]);
           return { value: undefined, annotations: response.annotations };
         },
-        getErrorMessage: (error) => error instanceof Error ? error.message : "Failed to create highlight.",
+        getErrorMessage: (error) => {
+          debugWarn("reader", "highlight creation did not complete", { error });
+          return "Couldn't save the highlight. Try again.";
+        },
       });
     },
     [args.annotationsRawRef, args.canMutate, args.controller, args.locationLabel, args.sessionId, args.spl],

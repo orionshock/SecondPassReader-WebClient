@@ -8,7 +8,7 @@ import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Stor
 let container: HTMLDivElement;
 let root: Root;
 
-describe("offline Library Server settings", () => {
+describe("offline Second Pass Library settings", () => {
   beforeEach(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     container = document.createElement("div");
@@ -39,7 +39,7 @@ describe("offline Library Server settings", () => {
 
     expect(button("Check connection").disabled).toBe(true);
     expect(button("Repair connection").disabled).toBe(true);
-    expect(button("Log out").disabled).toBe(true);
+    expect(button("Sign out").disabled).toBe(true);
     expect(button("Sign out locally").disabled).toBe(false);
     expect(button("Forget connection and local data").disabled).toBe(false);
   });

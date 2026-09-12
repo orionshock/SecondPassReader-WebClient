@@ -14,8 +14,8 @@ export type ReaderViewportProps = {
 export const ReaderViewport = forwardRef<HTMLDivElement, ReaderViewportProps>(function ReaderViewport(props, ref) {
   return (
     <div className="spReaderViewport" role="region" aria-label="Book content" aria-busy={props.status === "loading" ? true : undefined}>
-      {props.status === "loading" ? <span className="srOnly" role="status">Loading book content</span> : null}
-      {props.status === "error" ? <div className="errorText" role="alert">{props.errorMessage ?? "Reader failed to load."}</div> : null}
+      {props.status === "loading" ? <span className="srOnly" role="status">Loading book...</span> : null}
+      {props.status === "error" ? <div className="errorText" role="alert">{props.errorMessage ?? "Couldn't load the reader."}</div> : null}
       <div className="spReaderViewportMountWrapper" ref={props.mountWrapperRef}>
         <div className="spReaderViewportMount" ref={ref} />
         {props.overlay ? <div className="spReaderViewportOverlay">{props.overlay}</div> : null}

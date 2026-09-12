@@ -37,7 +37,7 @@ describe("Library accessibility semantics", () => {
     const html = renderToStaticMarkup(
       <LibraryScopeSelect groups={[]} busy={false} error={null} onChange={noop} />,
     );
-    expect(html).toContain('aria-label="Library scope: All Library"');
+    expect(html).toContain('aria-label="Library scope: Entire Library"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('aria-checked="true"');
   });

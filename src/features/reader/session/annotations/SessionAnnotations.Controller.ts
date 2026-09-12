@@ -17,6 +17,7 @@ import {
   type SessionAnnotationDescriptionEntry,
 } from "./SessionAnnotations.Presenter";
 import { mapOfflineReaderAnnotations } from "./OfflineReaderAnnotations.Mapper";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 export type SessionAnnotations = {
   raw: MarginaliaAnnotation[];
@@ -146,8 +147,13 @@ export function useSessionAnnotations(args: {
       } catch (e) {
         if (cancelled) return;
         if (loadGenerationRef.current !== generation) return;
+        debugWarn("reader", "current Reading Session annotations could not be loaded", {
+          bookId: String(args.openedBook.book.id),
+          sessionId,
+          error: e,
+        });
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Failed to load annotations.");
+        setError("Couldn't load annotations. Reopen the reader to try again.");
       }
     })();
 

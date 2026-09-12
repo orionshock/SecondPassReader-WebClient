@@ -1,6 +1,7 @@
 import Papa from "papaparse";
 import { registerReaderImportHandler } from "../../ReaderImportFormats.Registry";
 import type { ReaderImportRow } from "../../ReaderImport.Types";
+import { debugReaderImport } from "../../ReaderImportDebug.Diagnostics";
 import { decodeHtmlEntities } from "./GlaspHtmlEntities.Adapter";
 
 const HIGHLIGHT_TEXT_COLUMNS = ["highlight text", "highlight", "text"];
@@ -10,7 +11,7 @@ type GlaspCsvRecord = Record<string, unknown>;
 export const glaspCsvImportHandler = {
   kind: "glasp-csv" as const,
   displayName: "Glasp CSV",
-  description: "Stage highlights from a Glasp CSV export.",
+  description: "Import highlights from a Glasp CSV export.",
   accept: ".csv,text/csv",
   importFile: async (file: File) => {
     const parsed = parseGlaspCsv(await file.text());
@@ -38,14 +39,22 @@ function parseGlaspCsv(text: string): { rows: ReaderImportRow[]; warnings: strin
     transform: (value) => value.trim(),
   });
   if (parsed.errors.length > 0) {
-    warnings.push(...parsed.errors.slice(0, 3).map((error) => `CSV parse warning: ${error.message}.`));
+    debugReaderImport("Glasp CSV parser reported warnings", {
+      errors: parsed.errors.map((error) => ({
+        code: error.code,
+        message: error.message,
+        row: error.row,
+        type: error.type,
+      })),
+    });
+    warnings.push("Some CSV data could not be read correctly. Review the imported items.");
   }
 
   const fields = parsed.meta.fields ?? [];
-  if (fields.length === 0) return { rows: [], warnings: ["The CSV file was empty."] };
+  if (fields.length === 0) return { rows: [], warnings: ["This CSV is empty. Choose a Glasp export with highlights."] };
 
   const textColumn = findColumn(fields, HIGHLIGHT_TEXT_COLUMNS);
-  if (!textColumn) throw new Error("Glasp CSV is missing a Highlight Text column.");
+  if (!textColumn) throw new Error("This Glasp CSV has no Highlight Text column. Export it again from Glasp and retry.");
 
   const noteColumn = findColumn(fields, ["note", "notes"]);
   const colorColumn = findColumn(fields, ["color", "highlight color"]);
@@ -75,9 +84,9 @@ function parseGlaspCsv(text: string): { rows: ReaderImportRow[]; warnings: strin
   });
 
   if (skippedBlankRows > 0) {
-    warnings.push(`Skipped ${skippedBlankRows} row${skippedBlankRows === 1 ? "" : "s"} without highlight text.`);
+    warnings.push(`${skippedBlankRows} row${skippedBlankRows === 1 ? "" : "s"} without highlight text ${skippedBlankRows === 1 ? "was" : "were"} skipped.`);
   }
-  if (rows.length === 0) warnings.push("No highlight rows were found.");
+  if (rows.length === 0) warnings.push("No highlights were found. Choose a Glasp export that contains highlights.");
   return { rows, warnings };
 }
 

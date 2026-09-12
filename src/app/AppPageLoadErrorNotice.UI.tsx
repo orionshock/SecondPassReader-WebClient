@@ -31,7 +31,7 @@ export function PageLoadErrorNotice({
       ) : null}{" "}
       {isAuthorizationError(error) ? (
         <a className="button buttonCompact" href="#/settings?tab=library-server">
-          Manage connection
+          View connection
         </a>
       ) : null}
     </div>

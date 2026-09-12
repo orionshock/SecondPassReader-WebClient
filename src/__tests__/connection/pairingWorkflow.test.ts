@@ -109,7 +109,10 @@ describe("pairing workflow", () => {
 
   it("maps malformed failures to bounded UI copy instead of exposing a TypeError", () => {
     const reason = new TypeError("Cannot read properties of undefined (reading 'id') at https://private.example/poll/request-1");
-    expect(getPairingErrorMessage(reason)).toBe("Could not start linking with this server.");
+    const message = getPairingErrorMessage(reason);
+    expect(message).not.toContain(reason.message);
+    expect(message).not.toContain("private.example");
+    expect(message).not.toContain("request-1");
   });
 });
 

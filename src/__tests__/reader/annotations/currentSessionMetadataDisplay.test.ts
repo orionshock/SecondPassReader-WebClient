@@ -13,7 +13,7 @@ describe("Reader current-session metadata", () => {
       onSave: vi.fn(),
     }));
 
-    expect(html).toContain("Unnamed Session 5a7445");
+    expect(html).toContain("5a7445");
     expect(html).not.toContain(rawSessionId);
   });
 
@@ -28,6 +28,6 @@ describe("Reader current-session metadata", () => {
     }));
 
     expect(html).toContain("Closed reading");
-    expect(html).not.toContain("Edit session details");
+    expect(html).not.toContain("<button");
   });
 });

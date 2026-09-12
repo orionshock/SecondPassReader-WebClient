@@ -6,6 +6,7 @@ import type { ReaderBookmark } from "../../annotations/ReaderBookmark.Mapper";
 import { CurrentSessionAnnotationController } from "./CurrentSessionAnnotation.Controller";
 import { useCurrentSessionBookmarkActions } from "./CurrentSessionBookmark.Actions";
 import { useCurrentSessionHighlightActions } from "./CurrentSessionHighlight.Actions";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 
 export function useCurrentSessionAnnotationActions(args: {
   identity: string;
@@ -53,7 +54,10 @@ export function useCurrentSessionAnnotationActions(args: {
             ]);
             return { value: undefined, annotations: response.annotations };
           },
-          getErrorMessage: (error) => error instanceof Error ? error.message : "Failed to remove annotation.",
+          getErrorMessage: (error) => {
+            debugWarn("reader", "annotation removal did not complete", { annotationId, error });
+            return "Couldn't remove the annotation. Try again.";
+          },
         });
       } catch {
         // Delete already reports active-session failures through the controller.

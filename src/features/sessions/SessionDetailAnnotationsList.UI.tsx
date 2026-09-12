@@ -28,7 +28,7 @@ export function SessionDetailAnnotationsList({
       </div>
 
       {annoError ? <div className="errorText">{annoError}</div> : null}
-      {annoBusy ? <div className="muted">{`Loading${"\u2026"}`}</div> : null}
+      {annoBusy ? <div className="muted">Loading annotations...</div> : null}
 
       {annotations?.length ? (
         <div className="sessionAnnoList">
@@ -76,7 +76,7 @@ export function SessionDetailAnnotationsList({
           })}
         </div>
       ) : !annoBusy ? (
-        <div className="muted">No annotations yet.</div>
+        <div className="muted">No annotations in this Reading Session.</div>
       ) : null}
 
     </div>

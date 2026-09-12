@@ -4,6 +4,7 @@ import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } fr
 import { getAnnotationFragmentCfi } from "../../annotations/ReaderAnnotation.Mapper";
 import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../../storage/MarginaliaLayerPreferences.Store";
 import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
+import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 import {
   toPreviousSessionHighlightMarks,
   toPreviousSessionItems,
@@ -96,8 +97,12 @@ export function usePreviousSessionLayers(args: {
         setListStatus("ready");
       } catch (e) {
         if (cancelled) return;
+        debugWarn("reader", "previous Reading Sessions could not be loaded", {
+          bookId: String(bookId),
+          error: e,
+        });
         setListStatus("error");
-        setListError(e instanceof Error ? e.message : "Failed to list previous sessions.");
+        setListError("Couldn't load previous Reading Sessions. Reopen the reader to try again.");
       }
     })();
 
@@ -126,7 +131,15 @@ export function usePreviousSessionLayers(args: {
         const { marks, highlightCount } = toPreviousSessionHighlightMarks(annotations, id);
         cacheRef.current.set(id, { status: "ready", annotations, highlightMarks: marks, highlightCount });
       } catch (e) {
-        cacheRef.current.set(id, { status: "error", error: e instanceof Error ? e.message : "Failed to load annotations." });
+        debugWarn("reader", "previous Reading Session annotations could not be loaded", {
+          bookId: String(args.bookId ?? ""),
+          sessionId: id,
+          error: e,
+        });
+        cacheRef.current.set(id, {
+          status: "error",
+          error: "Couldn't load annotations. Hide and show this Reading Session to try again.",
+        });
       } finally {
         bump();
       }

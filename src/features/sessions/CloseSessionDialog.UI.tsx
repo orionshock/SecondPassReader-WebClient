@@ -4,6 +4,7 @@ import { getBookCoverUrl } from "../library/BookCover.Mapper";
 import { formatSeriesIndex } from "../library/SeriesMetadata.Presenter";
 import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export type CloseSessionAfterAction = "nextBook" | "restartBook" | "home" | "detail" | "sessions";
 
@@ -19,8 +20,8 @@ export type CloseSessionAfterOption = {
 };
 
 const DEFAULT_AFTER_OPTIONS: CloseSessionAfterOption[] = [
-  { action: "detail", label: "View closed session" },
-  { action: "sessions", label: "Go to sessions" },
+  { action: "detail", label: "View closed Reading Session" },
+  { action: "sessions", label: "Go to Reading Sessions" },
 ];
 
 export function CloseSessionDialog({
@@ -68,7 +69,8 @@ export function CloseSessionDialog({
     try {
       await onSaveAndClose({ name: trimmedName, notes, afterAction });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to close session.");
+      debugWarn("reader", "Reading Session close did not complete", { error: e });
+      setError("Couldn't close the Reading Session. Try again.");
       setBusy(false);
     }
   }
@@ -79,22 +81,21 @@ export function CloseSessionDialog({
     }}>
       <section ref={dialogRef} className="closeSessionDialog" role="dialog" aria-modal="true" aria-labelledby="close-session-title" tabIndex={-1}>
         <div className="closeSessionHeader">
-          <h2 id="close-session-title" className="closeSessionTitle">Close session</h2>
+          <h2 id="close-session-title" className="closeSessionTitle">Close Reading Session</h2>
         </div>
 
         <div className="closeSessionBody">
           <p className="muted">
-            Before closing, you can name this session and add final notes. Closed sessions are historical and cannot be
-            renamed or edited later.
+            Review the name and notes before closing. Closed Reading Sessions cannot be edited.
           </p>
           {unnamed ? (
             <p id="close-session-name-warning" className="warningText closeSessionWarning">
-              This session has no name. Closed sessions cannot be renamed later. Notes also become read-only.
+              This Reading Session has no name. Closing it now will leave it unnamed and read-only.
             </p>
           ) : null}
 
           <label className="field">
-            <span className="fieldLabel">Session name</span>
+            <span className="fieldLabel">Reading Session name</span>
             <input
               ref={nameRef}
               className="input"
@@ -107,7 +108,7 @@ export function CloseSessionDialog({
           </label>
 
           <label className="field">
-            <span className="fieldLabel">Session notes</span>
+            <span className="fieldLabel">Reading Session notes</span>
             <textarea
               className="input closeSessionNotes"
               value={notes}
@@ -161,7 +162,7 @@ export function CloseSessionDialog({
             Cancel
           </button>
           <button type="button" className="button buttonPrimary" onClick={() => void submit()} disabled={busy}>
-            {busy ? `Closing${"\u2026"}` : unnamed ? "Close unnamed session" : "Close session"}
+            {busy ? `Closing${"\u2026"}` : unnamed ? "Close unnamed Reading Session" : "Close Reading Session"}
           </button>
         </div>
       </section>

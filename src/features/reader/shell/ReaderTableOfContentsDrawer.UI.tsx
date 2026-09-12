@@ -130,14 +130,14 @@ export function TableOfContentsDrawer({
             className="input spTocDrawerSearchInput"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search..."
+            placeholder="Search contents"
             aria-label="Search table of contents"
           />
         </div>
 
         <div className="spTocDrawerBody">
-          {!hasToc ? <div className="muted spTocEmpty">No table of contents available.</div> : null}
-          {hasToc && !hasMatches ? <div className="muted spTocEmpty">No matching contents entries.</div> : null}
+          {!hasToc ? <div className="muted spTocEmpty">No table of contents.</div> : null}
+          {hasToc && !hasMatches ? <div className="muted spTocEmpty">No matching sections.</div> : null}
           {hasToc && hasMatches ? (
             <TocTree
               items={filtered}

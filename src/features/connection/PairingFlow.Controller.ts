@@ -4,15 +4,18 @@ import type {
   SecondPassClient,
   SecondPassDiscovery,
 } from "@secondpass/client";
+import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type ConsumedPairing = Extract<ClientApiConsumeResponse, { accessToken: string }>;
 
-export const PAIRING_ALREADY_USED_MESSAGE = "Pairing was already used. Start again.";
+export const PAIRING_ALREADY_USED_MESSAGE = "This approval request was already used. Start again.";
 
 export class PairingFlowError extends Error {}
 
 export function getPairingErrorMessage(reason: unknown): string {
-  return reason instanceof PairingFlowError ? reason.message : "Could not start linking with this server.";
+  if (reason instanceof PairingFlowError) return reason.message;
+  debugWarn("reader", "connection approval request did not complete", { error: reason });
+  return "Couldn't request approval from Second Pass Library. Start again.";
 }
 
 export async function runPairingAttempt(input: {
@@ -50,12 +53,12 @@ export async function runPairingAttempt(input: {
         input.onConsumed(consumed);
         return;
       }
-      if (consumed.status === "denied") throw new PairingFlowError("Pairing was denied.");
-      if (consumed.status === "expired") throw new PairingFlowError("Pairing expired. Start again.");
+      if (consumed.status === "denied") throw new PairingFlowError("The approval request was denied.");
+      if (consumed.status === "expired") throw new PairingFlowError("The approval request expired. Start again.");
     } else if (poll.status === "denied") {
-      throw new PairingFlowError("Pairing was denied.");
+      throw new PairingFlowError("The approval request was denied.");
     } else if (poll.status === "expired") {
-      throw new PairingFlowError("Pairing expired. Start again.");
+      throw new PairingFlowError("The approval request expired. Start again.");
     } else if (poll.status === "consumed") {
       throw new PairingFlowError(PAIRING_ALREADY_USED_MESSAGE);
     }

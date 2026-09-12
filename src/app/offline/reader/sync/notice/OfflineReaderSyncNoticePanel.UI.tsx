@@ -24,7 +24,7 @@ export function OfflineReaderSyncNoticePanel() {
         type="button"
         className="button buttonCompact"
         onClick={() => dismissOfflineReaderSyncNotice(snapshot.id)}
-        aria-label="Dismiss sync notice"
+        aria-label="Dismiss sync message"
       >
         Dismiss
       </button>

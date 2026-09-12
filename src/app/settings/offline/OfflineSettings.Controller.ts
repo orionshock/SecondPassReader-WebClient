@@ -20,6 +20,7 @@ import {
   createOfflineReaderSyncOutcome,
 } from "../../offline/reader/sync/notice/OfflineReaderSyncOutcome.State";
 import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.Presenter";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 import { discardPendingReaderProgress } from "../../offline/reader/outbox/OfflineReaderPendingRepair.Actions";
 import { offlineReaderRetryEligibility } from "../../offline/reader/retry/OfflineReaderRetryEligibility.Policy";
 
@@ -143,9 +144,13 @@ export function createOfflineSettingsController(
         removingAssetKey: null,
         message,
       });
-    } catch {
+    } catch (error) {
       if (!isCurrent(expected)) return;
-      publish({ ...state, status: "error", action: "idle", activeBookId: null, removingAssetKey: null, message: "Offline data could not be loaded." });
+      debugWarn("reader", "offline Settings data could not be loaded", {
+        namespaceKey,
+        error,
+      });
+      publish({ ...state, status: "error", action: "idle", activeBookId: null, removingAssetKey: null, message: "Couldn't load offline data. Reload the app to try again." });
     }
   };
 
@@ -167,7 +172,13 @@ export function createOfflineSettingsController(
     publish({ ...state, action, activeBookId, removingAssetKey, message: null });
     try {
       await operation(currentRepositories, expected);
-    } catch {
+    } catch (error) {
+      debugWarn("reader", "offline Settings action did not complete", {
+        action,
+        activeBookId,
+        removingAssetKey,
+        error,
+      });
       if (isCurrent(expected)) await load(expected, failureMessage);
     }
   };
@@ -184,7 +195,7 @@ export function createOfflineSettingsController(
       generation += 1;
       const expected = generation;
       if (!namespaceKey) {
-        publish({ ...state, status: "unavailable", message: "Offline management is unavailable for this connection." });
+        publish({ ...state, status: "unavailable", message: "Repair or reconnect to Second Pass Library to view offline data." });
         return () => { started = false; generation += 1; };
       }
       const unsubscribeConnectivity = dependencies.subscribeConnectivity(() => {
@@ -201,8 +212,9 @@ export function createOfflineSettingsController(
           }
           repositories = opened;
           await load(expected);
-        } catch {
-          if (isCurrent(expected)) publish({ ...state, status: "error", message: "Offline storage is unavailable." });
+        } catch (error) {
+          debugWarn("reader", "offline Settings storage could not be opened", { error });
+          if (isCurrent(expected)) publish({ ...state, status: "error", message: "Offline data isn't available. Check browser storage settings and reload the app." });
         }
       })();
       return () => {
@@ -219,7 +231,7 @@ export function createOfflineSettingsController(
     async retrySync() {
       if (!input.client || state.connectivity !== "online" || state.pending.books === 0) {
         if (state.status === "ready" && state.connectivity !== "online") {
-          publish({ ...state, message: "Connect to the library before retrying sync." });
+          publish({ ...state, message: "Go online before retrying sync." });
         }
         return;
       }
@@ -233,14 +245,14 @@ export function createOfflineSettingsController(
           onCompleted: dependencies.showSyncOutcome,
         });
         if (!isCurrent(expected)) return;
-        await load(expected, result.status === "failed" ? "Sync could not be retried." : null);
-      }, "Sync could not be retried.");
+        await load(expected, result.status === "failed" ? "Couldn't retry sync. Check your connection and try again." : null);
+      }, "Couldn't retry sync. Check your connection and try again.");
     },
     async retryBook(bookId) {
       const normalizedBookId = bookId.trim();
       if (!input.client || !normalizedBookId || state.connectivity !== "online") {
         if (state.status === "ready" && state.connectivity !== "online") {
-          publish({ ...state, message: "Connect to the library before retrying sync." });
+          publish({ ...state, message: "Go online before retrying sync." });
         }
         return;
       }
@@ -263,7 +275,7 @@ export function createOfflineSettingsController(
         };
         dependencies.showSyncOutcome(completed);
         if (isCurrent(expected)) await load(expected);
-      }, "This book could not be retried.", null, normalizedBookId);
+      }, "Couldn't retry this Book. Check your connection and try again.", null, normalizedBookId);
     },
     async discardPendingProgress(bookId) {
       const normalizedBookId = bookId.trim();
@@ -275,19 +287,19 @@ export function createOfflineSettingsController(
           outboxRepository: currentRepositories.readerOutbox,
         });
         if (isCurrent(expected)) await load(expected);
-      }, "The pending reading position could not be discarded.", null, normalizedBookId);
+      }, "Couldn't discard the pending reading position. Reload the app and try again.", null, normalizedBookId);
     },
     async removeAsset(asset) {
       await runAction("removing", async (currentRepositories, expected) => {
         await currentRepositories.publicationAssets.delete(namespaceKey, asset.bookId, asset.format);
         await load(expected);
-      }, "The offline copy could not be removed.", asset.key);
+      }, "Couldn't remove the offline copy. Try again.", asset.key);
     },
     async removeAllAssets() {
       await runAction("removing-all", async (currentRepositories, expected) => {
         await currentRepositories.publicationAssets.deleteNamespace(namespaceKey);
         await load(expected);
-      }, "Offline copies could not be removed.");
+      }, "Couldn't remove the offline copies. Try again.");
     },
   };
 }

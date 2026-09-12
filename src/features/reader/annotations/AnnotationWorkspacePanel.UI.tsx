@@ -80,12 +80,12 @@ export function AnnotationWorkspace({
       {tab === "current" ? (
         <div id="annotation-current-panel" role="tabpanel" aria-labelledby="annotation-current-tab" className="spAnnotationTabPanel" tabIndex={0}>
           {status === "loading" ? <div className="muted">Loading annotations...</div> : null}
-          {status === "error" && error ? <div className="muted">Failed to load annotations: {error}</div> : null}
-          {busy ? <div className="muted">Updating annotations...</div> : null}
-          {annotations.length === 0 ? <div className="muted">No annotations yet.</div> : null}
+          {status === "error" && error ? <div className="muted">{error}</div> : null}
+          {busy ? <div className="muted">Saving changes...</div> : null}
+          {annotations.length === 0 ? <div className="muted">No annotations in this Reading Session.</div> : null}
 
           {annotations.length > 0 ? (
-            <div className="spAnnotationList" aria-label="Current session annotations">
+            <div className="spAnnotationList" aria-label="Current Reading Session annotations">
               {annotations.map((a) => {
                 return (
                   <CurrentAnnotationCard

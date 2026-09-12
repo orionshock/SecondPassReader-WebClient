@@ -29,7 +29,7 @@ function groupOwnerName(shelf: Shelf): string {
   return (
     asString(shelf.owner_group?.name) ??
     asString((shelf.owner_group as any)?.display_name) ??
-    (shelf.owner_group?.id !== undefined ? String(shelf.owner_group.id) : "Group shelf")
+    (shelf.owner_group?.id !== undefined ? String(shelf.owner_group.id) : "Library Group shelf")
   );
 }
 
@@ -48,12 +48,13 @@ export function formatShelfOwnerParts(shelf: Shelf): { kind: "user"; displayName
   return {
     kind: "user",
     displayName: formatUserDisplayName(shelf.owner_user),
-    handle: formatUserHandle(shelf.owner_user) || "Unknown user",
+    handle: formatUserHandle(shelf.owner_user) || "Unknown account",
   };
 }
 
 export function ShelfMetaLine({ shelf }: { shelf: Shelf }) {
-  const secondary = [formatShelfVisibility(shelf.visibility), `${(shelf.item_count ?? 0).toString()} items`];
+  const itemCount = shelf.item_count ?? 0;
+  const secondary = [formatShelfVisibility(shelf.visibility), `${itemCount} ${itemCount === 1 ? "book" : "books"}`];
   const ownerParts = formatShelfOwnerParts(shelf);
 
   if (ownerParts.kind === "group") {

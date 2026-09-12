@@ -18,6 +18,7 @@ import {
   type OfflineHomeShelfItem,
 } from "./OfflineHome.Presenter";
 import type { OfflineHomeRecentProjection, OfflineHomeShelvesProjection } from "./OfflineHome.Types";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 type Repositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -119,7 +120,8 @@ export function createOfflineHomeController(
           ? { status: "available", items: presentOfflineHomeShelves(shelves), cachedAt: shelfRecord.fetchedAt }
           : { status: "missing", items: [], cachedAt: null },
       });
-    } catch {
+    } catch (error) {
+      debugWarn("reader", "saved Home data could not be loaded", { error });
       if (isCurrent(expectedGeneration, expectedLoad)) publish(emptyState("error"));
     }
   };
@@ -152,7 +154,8 @@ export function createOfflineHomeController(
           }
           repositories = opened;
           await load();
-        } catch {
+        } catch (error) {
+          debugWarn("reader", "saved Home storage could not be opened", { error });
           if (started && generation === expectedGeneration) publish(emptyState("error"));
         }
       })();
@@ -181,7 +184,8 @@ async function readProjection<T>(
 > {
   try {
     return { status: "loaded", record: await repositories.projections.get<T>(namespaceKey, projectionKey) };
-  } catch {
+  } catch (error) {
+    debugWarn("reader", "saved Home projection could not be read", { projectionKey, error });
     return { status: "error" };
   }
 }

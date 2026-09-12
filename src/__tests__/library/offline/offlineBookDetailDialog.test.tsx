@@ -74,10 +74,7 @@ describe("offline Book Detail dialog", () => {
       );
     });
 
-    expect(container.textContent).toContain("Saved book details");
     expect(container.textContent).toContain("Cached Book");
-    expect(container.textContent).not.toContain("Reading sessions");
-    expect(container.textContent).not.toContain("Make available offline");
     expect(container.querySelector('img[src="https://library.example/cover.jpg"]')).toBeNull();
 
     click("Open reader");

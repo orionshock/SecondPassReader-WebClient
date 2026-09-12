@@ -38,6 +38,7 @@ import { useReaderCommandRoutingLifecycle } from "./ReaderCommandRouting.Lifecyc
 import { useReaderSettingsReflowLifecycle } from "./ReaderSettingsReflow.Lifecycle";
 import { useReaderStagedToolbarController } from "./ReaderStagedToolbar.Controller";
 import { useReaderDurableAnnotationToolbarController } from "./ReaderDurableAnnotationToolbar.Controller";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 export type ReadingShellProps = {
   blob: Blob;
@@ -170,9 +171,10 @@ export function ReadingShell(props: ReadingShellProps) {
   const reportOperationError = useCallback(
     (err: unknown, fallback: string, generation: number, kind: ReaderOperationFailureKind) => {
       if (engineGenerationRef.current !== generation) return;
+      debugWarn("reader", "Reader operation did not complete", { kind, error: err });
       if (classifyReaderOperationError(kind, hasReadableViewportRef.current) === "fatal") {
         setReadiness("error");
-        setErrorMessage(err instanceof Error ? err.message : fallback);
+        setErrorMessage(fallback);
       }
       onEventRef.current?.({ type: "displayError", error: err });
     },
@@ -267,11 +269,11 @@ export function ReadingShell(props: ReadingShellProps) {
   ]);
 
   const goPrev = async () => {
-    await runImmediateCommand({ type: "previous" }, "Previous page failed.");
+    await runImmediateCommand({ type: "previous" }, "Couldn't open that page. Try again.");
   };
 
   const goNext = async () => {
-    await runImmediateCommand({ type: "next" }, "Next page failed.");
+    await runImmediateCommand({ type: "next" }, "Couldn't open that page. Try again.");
   };
 
   return (
@@ -288,8 +290,8 @@ export function ReadingShell(props: ReadingShellProps) {
               className="spReaderTocButton"
               onClick={() => setTocOpen(true)}
               disabled={!isReaderFullyReady(readiness)}
-              aria-label="Table of Contents"
-              title="Table of Contents"
+              aria-label="Table of contents"
+              title="Table of contents"
             >
               <MaterialIcon name="menu" className="spReaderTocButtonIcon" />
             </button>

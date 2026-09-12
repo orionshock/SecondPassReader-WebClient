@@ -30,8 +30,8 @@ export function ReaderDisplaySettingsMenu(props: {
         className="spReaderSettingsButton"
         onClick={() => (props.open ? props.onClose() : props.onOpen())}
         disabled={props.disabled}
-        aria-label="Reader Settings"
-        title="Reader Settings"
+        aria-label="Reader settings"
+        title="Reader settings"
         aria-expanded={props.open}
       >
         <MaterialIcon name="settings" className="spReaderSettingsButtonIcon" />
@@ -90,7 +90,7 @@ export function ReaderDisplaySettingsMenu(props: {
                 onPick={(fontSizePercent) => props.onChange({ fontSizePercent })}
               />
               <ReaderSettingsButtonGroup
-                label="Line Height"
+                label="Line height"
                 options={READER_LINE_HEIGHT_OPTIONS}
                 value={props.settings.lineHeight}
                 onPick={(lineHeight) => props.onChange({ lineHeight })}

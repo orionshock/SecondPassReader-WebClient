@@ -8,7 +8,7 @@ import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 import type { AppRoute } from "./AppNavigation.Router";
 import { navigateTo } from "./AppNavigation.Router";
-import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
+import { debugLog, debugWarn } from "../lib/debug/DebugLogger.Diagnostics";
 import {
   getBrowserConnectivitySnapshot,
   subscribeToBrowserConnectivity,
@@ -189,13 +189,12 @@ export function useAppReaderOpenController({
           setReaderRestoreError("This book is not available offline.");
           return;
         }
+        debugWarn("reader", "Book could not be opened in Reader", { bookId: requestedBookId, error });
         reportAuthorizationFailure(error);
         const message =
           error instanceof ApiError && error.status === 404
             ? "That book could not be found or you do not have access to it."
-            : error instanceof Error
-              ? error.message
-              : "Failed to open book.";
+            : "Couldn't open the Book. Return to Home and try again.";
         setReaderRestoreError(message);
         navigateTo({ kind: "home" });
       } finally {

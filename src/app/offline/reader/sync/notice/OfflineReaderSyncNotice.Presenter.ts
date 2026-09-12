@@ -23,16 +23,16 @@ export function presentOfflineReaderSyncNotice(
   const messages: string[] = [];
   if (outcome.forwardedConfirmedEdits > 0) {
     messages.push(
-      `${counted(outcome.forwardedConfirmedEdits, "annotation edit was", "annotation edits were")} moved to your current reading session because the previous session had already closed.`,
+      `${counted(outcome.forwardedConfirmedEdits, "annotation edit was", "annotation edits were")} moved to your current Reading Session because the previous Reading Session was already closed.`,
     );
   }
   if (outcome.droppedConfirmedDeletes > 0) {
     messages.push(
-      `${counted(outcome.droppedConfirmedDeletes, "annotation deletion couldn't", "annotation deletions couldn't")} be applied because the original reading session had already closed.`,
+      `${counted(outcome.droppedConfirmedDeletes, "annotation deletion was", "annotation deletions were")} not applied because the original Reading Session is closed.`,
     );
   }
   if (hasTerminal) {
-    messages.push("Some offline changes couldn't be synced and are still saved on this device.");
+    messages.push("Some changes couldn't sync and need attention. Review them in Settings > Offline.");
   }
 
   return {

@@ -23,7 +23,7 @@ export async function forgetConnectionAndOfflineData(input: {
 }): Promise<ForgetConnectionResult> {
   const namespaceKey = input.namespaceKey?.trim() ?? "";
   if (!namespaceKey) {
-    if (!input.confirm("Forget this saved connection?")) return { status: "cancelled" };
+    if (!input.confirm("Forget this connection?")) return { status: "cancelled" };
     input.onRemoved();
     return { status: "removed" };
   }

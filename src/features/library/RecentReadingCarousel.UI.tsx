@@ -69,7 +69,7 @@ export function RecentReadingCarousel({
         ref={trackRef}
         className="recentCarousel"
         role="region"
-        aria-label="Recent reading"
+        aria-label="Recent History"
         onScroll={updateScrollState}
       >
         {items.map((item) => {
@@ -124,7 +124,7 @@ export function RecentReadingCarousel({
           <button
             type="button"
             className="recentCarouselControl recentCarouselControlLeft"
-            aria-label="Scroll recent reading left"
+            aria-label="Scroll Recent History left"
             onClick={() => scroll(-1)}
             disabled={!canScrollLeft}
           >
@@ -133,7 +133,7 @@ export function RecentReadingCarousel({
           <button
             type="button"
             className="recentCarouselControl recentCarouselControlRight"
-            aria-label="Scroll recent reading right"
+            aria-label="Scroll Recent History right"
             onClick={() => scroll(1)}
             disabled={!canScrollRight}
           >

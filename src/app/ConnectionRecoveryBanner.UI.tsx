@@ -18,17 +18,17 @@ export function ConnectionRecoveryBanner({ repairRequired = false }: { repairReq
       <div className="connectionRecoveryCopy">
         <h2 id="connection-recovery-title" className="connectionRecoveryTitle">
           {repairRequired
-            ? "This saved connection needs to be repaired."
-            : "This device cannot access this library resource."}
+            ? "This connection needs repair"
+            : "This account can't access this item"}
         </h2>
         <p className="connectionRecoveryDescription">
           {repairRequired
-            ? "Sign in again to keep using this library. Offline reading data remains stored."
-            : "Manage the connection or try again after access is restored."}
+            ? "Sign in again to restore access. Offline reading data remains saved."
+            : "Check the connection or try again after access is restored."}
         </p>
       </div>
       <a className="button buttonPrimary buttonCompact" href="#/settings?tab=library-server">
-        {repairRequired ? "Repair connection" : "Manage connection"}
+        {repairRequired ? "Repair connection" : "View connection"}
       </a>
     </section>
   );

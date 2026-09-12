@@ -56,7 +56,7 @@ export function SessionDetailHeader({
           </button>
           {isActive ? (
             <button type="button" className="button buttonCompact buttonDanger" onClick={onCloseSession}>
-              Close session
+              Close Reading Session
             </button>
           ) : null}
         </div>
@@ -68,7 +68,7 @@ export function SessionDetailHeader({
             type="button"
             className="sessionBookTitleButton sessionHeroBookTitle"
             onClick={onOpenBookSessions}
-            title="View reading sessions for this book"
+            title="View Reading Sessions for this Book"
           >
             {book.title}
           </button>

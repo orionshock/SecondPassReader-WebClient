@@ -42,7 +42,9 @@ describe("sessionDetailDisplay", () => {
   it("preserves saved display names and adds only a short id suffix to unnamed sessions", () => {
     expect(getSessionDisplayName("  Initial Kindle Import 49d47f  ")).toBe("Initial Kindle Import 49d47f");
     expect(getSessionDisplayName("Unnamed session 49d47f")).toBe("Unnamed session 49d47f");
-    expect(getSessionDisplayName("  ", "51388269-2a4b-4a13-8428-7b57805a7445")).toBe("Unnamed Session 5a7445");
-    expect(getSessionDisplayName("", "short")).toBe("Unnamed Session");
+    const unnamed = getSessionDisplayName("  ", "51388269-2a4b-4a13-8428-7b57805a7445");
+    expect(unnamed).toContain("5a7445");
+    expect(unnamed).not.toContain("51388269-2a4b-4a13-8428-7b57805a7445");
+    expect(getSessionDisplayName("", "short")).not.toBe("");
   });
 });

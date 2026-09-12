@@ -43,11 +43,10 @@ describe("Sessions page display", () => {
       root.render(<SessionsPage profile={null} spl={{} as SecondPassClient} />);
     });
 
-    expect(container.textContent).toContain("Unnamed Session 5a7445");
+    expect(container.textContent).toContain("5a7445");
     expect(container.innerHTML).not.toContain(rawSessionId);
-    expect(container.querySelector('[aria-label="Manage Unnamed Session 5a7445"]')).not.toBeNull();
-    expect(container.querySelector('[role="group"][aria-label="Session filter"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Open Unnamed Reading Session 5a7445"]')).not.toBeNull();
+    expect(container.querySelector('[role="group"][aria-label="Reading Session status"]')).not.toBeNull();
     expect(container.querySelector('button[aria-pressed="true"]')?.textContent).toBe("All");
-    expect(container.querySelector("h1")?.textContent).toBe("Reading sessions");
   });
 });

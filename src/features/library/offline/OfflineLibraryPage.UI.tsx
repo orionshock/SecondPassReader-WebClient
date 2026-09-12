@@ -14,12 +14,12 @@ export function OfflineLibraryPage({
 
   useEffect(() => controller.start(), [controller]);
 
-  if (state.status === "loading") return <p className="muted">{`Loading downloaded books${"\u2026"}`}</p>;
+  if (state.status === "loading") return <p className="muted">Loading downloaded books...</p>;
   if (state.status === "unavailable") {
-    return <p className="muted">Offline Library is unavailable until this connection is verified.</p>;
+    return <p className="muted">Verify the connection to view books available offline.</p>;
   }
   if (state.status === "error") {
-    return <div className="errorText">Downloaded books could not be loaded.</div>;
+    return <div className="errorText">Books available offline couldn't be loaded. Check browser storage settings and reload the app.</div>;
   }
 
   return (
@@ -27,7 +27,7 @@ export function OfflineLibraryPage({
       <div className="offlineLibraryHeader">
         <div>
           <h1 id="offline-library-title" className="panelTitle">Library</h1>
-          <p className="muted">Showing books available on this device.</p>
+          <p className="muted">Books available offline in this browser.</p>
         </div>
         <label className="offlineLibrarySearch">
           <span className="srOnly">Search downloaded books</span>
@@ -43,11 +43,11 @@ export function OfflineLibraryPage({
 
       {state.books.length === 0 ? (
         <div className="emptyState">
-          <h2>No books are available offline.</h2>
-          <p className="muted">When online, use Make available offline from a book to keep it on this device.</p>
+          <h2>No books are available offline</h2>
+          <p className="muted">When online, choose Make available offline in Book Detail.</p>
         </div>
       ) : state.visibleBooks.length === 0 ? (
-        <p className="muted">No downloaded books match this title.</p>
+        <p className="muted">No downloaded books match that title.</p>
       ) : (
         <div className="bookList">
           {state.visibleBooks.map((book) => (
@@ -70,8 +70,8 @@ function OfflineLibraryRow({
   const status = available
     ? "Available offline"
     : book.admission === "unsupported-format"
-      ? `${book.format.toUpperCase()} is not supported by this Reader`
-      : "Offline copy cannot be opened";
+      ? `${book.format.toUpperCase()} isn't supported by Reader.`
+      : "Offline copy needs attention.";
 
   return (
     <article className="bookDisplayButton bookListRow offlineLibraryBookRow">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { LibraryGroup, SecondPassClient } from "@secondpass/client";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 const GROUP_PAGE_SIZE = 100;
 
@@ -25,7 +26,10 @@ export function useLibraryScopeOptions(spl: SecondPassClient) {
         }
         if (!cancelled) setGroups(loaded);
       } catch (reason) {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Failed to load library groups.");
+        if (!cancelled) {
+          debugWarn("reader", "Library Groups could not be loaded", { error: reason });
+          setError("Couldn't load Library Groups. Reload the page to try again.");
+        }
       } finally {
         if (!cancelled) setBusy(false);
       }

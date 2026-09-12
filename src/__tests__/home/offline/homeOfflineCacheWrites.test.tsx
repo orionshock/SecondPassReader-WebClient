@@ -74,13 +74,14 @@ describe("online Home cache side effects", () => {
     act(() => root.unmount());
     root = createRoot(container);
     vi.clearAllMocks();
+    const failedRecent = vi.fn(async () => { throw new Error("server failed"); });
     const failedClient = {
-      marginalia: { sessions: { recent: vi.fn(async () => { throw new Error("server failed"); }) } },
+      marginalia: { sessions: { recent: failedRecent } },
     } as unknown as SecondPassClient;
     await act(async () => {
       root.render(<RecentReadingSection profile={null} spl={failedClient} offlineNamespaceKey="account-a" />);
     });
-    await waitFor(() => container.textContent?.includes("Could not load recent reading") === true);
+    await waitFor(() => failedRecent.mock.calls.length === 1);
 
     expect(cacheSpies.recent).not.toHaveBeenCalled();
   });
