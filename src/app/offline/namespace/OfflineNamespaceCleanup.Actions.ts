@@ -2,6 +2,7 @@ import { openIndexedDbOfflineRepositories } from "../storage/IndexedDbOfflineRep
 import type { IndexedDbOfflineRepositories } from "../storage/IndexedDbOfflineRepositories.Factory";
 import type { OfflineNamespaceRetentionSummary } from "./OfflineNamespaceRetention.Presenter";
 import { summarizeOfflineNamespaceRetention } from "./OfflineNamespaceRetention.Presenter";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 type NamespaceRepositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -21,7 +22,8 @@ export async function inspectOfflineNamespace(
       repositories.publicationAssets.list(namespaceKey),
     ]);
     return summarizeOfflineNamespaceRetention(intents, assets);
-  } catch {
+  } catch (error) {
+    debugWarn("reader", "offline namespace inspection failed", { error });
     return null;
   } finally {
     repositories?.close();
@@ -40,7 +42,8 @@ export async function removeOfflineNamespace(
     await repositories.readerState.deleteNamespace(namespaceKey);
     await repositories.readerOutbox.deleteNamespace(namespaceKey);
     return { status: "removed" };
-  } catch {
+  } catch (error) {
+    debugWarn("reader", "offline namespace cleanup failed", { error });
     return { status: "failed" };
   } finally {
     repositories?.close();

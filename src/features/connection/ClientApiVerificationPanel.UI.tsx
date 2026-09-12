@@ -69,7 +69,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
           save: saveConnectionProfile,
         });
         if (result.status === "failed") {
-          debugWarn("offline", "previous account data could not be removed after connection repair", {
+          debugWarn("reader", "previous account data could not be removed after connection repair", {
             previousProfileId: profile.verifiedUser?.profileId,
             verifiedProfileId: updated.verifiedUser?.profileId,
           });

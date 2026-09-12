@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { CurrentUser, ServerInfo } from "@secondpass/client";
 import { getAppWorkflowStep } from "../../app/AppWorkflow.Policy";
 import { buildOfflineCacheNamespace } from "../../app/offline/namespace/OfflineCacheNamespace.Policy";
 import { applyAuthenticatedContextToProfile } from "../../features/connection/ConnectionAccountProfile.Mapper";
 import { markConnectionRepairRequired } from "../../features/connection/ConnectionRepair.State";
+import { finalizeConnectionRepair } from "../../features/connection/ConnectionRepair.Controller";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 
 describe("connection repair identity", () => {
@@ -45,6 +46,53 @@ describe("connection repair identity", () => {
     );
 
     expect(namespace(repaired)).not.toBe(previous);
+  });
+
+  it("preserves the exact namespace when repair verifies the same identity", async () => {
+    const previous = { ...profile(), authenticationState: "verifying-repair" as const };
+    const verified = applyAuthenticatedContextToProfile(previous, user("profile-a"), serverInfo(), "2026-09-09T01:00:00.000Z");
+    const save = vi.fn();
+    const removeNamespace = vi.fn();
+
+    await expect(finalizeConnectionRepair({ previous, verified, save, removeNamespace }))
+      .resolves.toEqual({ status: "saved", identity: "same" });
+
+    expect(removeNamespace).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledWith(verified);
+  });
+
+  it("removes the previous namespace before activating a different verified identity", async () => {
+    const previous = { ...profile(), authenticationState: "verifying-repair" as const };
+    const verified = applyAuthenticatedContextToProfile(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
+    const order: string[] = [];
+
+    await expect(finalizeConnectionRepair({
+      previous,
+      verified,
+      save: () => { order.push("save"); },
+      removeNamespace: async (key) => {
+        expect(key).toBe(namespace(previous));
+        order.push("remove");
+        return { status: "removed" };
+      },
+    })).resolves.toEqual({ status: "saved", identity: "different" });
+
+    expect(order).toEqual(["remove", "save"]);
+  });
+
+  it("does not activate a different identity when previous namespace cleanup fails", async () => {
+    const previous = { ...profile(), authenticationState: "verifying-repair" as const };
+    const verified = applyAuthenticatedContextToProfile(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
+    const save = vi.fn();
+
+    await expect(finalizeConnectionRepair({
+      previous,
+      verified,
+      save,
+      removeNamespace: async () => ({ status: "failed" }),
+    })).resolves.toEqual({ status: "failed" });
+
+    expect(save).not.toHaveBeenCalled();
   });
 });
 

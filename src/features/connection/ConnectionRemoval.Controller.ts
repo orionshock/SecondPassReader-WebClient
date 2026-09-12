@@ -63,7 +63,7 @@ export async function removeConnectionAndOfflineData(input: {
         ?? (await import("../../app/offline/reader/sync/OfflineReaderPendingSync.Actions")).syncPendingOfflineReaderWork;
       await syncPending({ namespaceKey, client: input.client, mode: "wait" });
     } catch (error) {
-      debugWarn("offline", "pending Reader sync before connection removal did not complete", { error });
+      debugWarn("reader", "pending Reader sync before connection removal did not complete", { error });
     }
     try {
       summary = await inspect(namespaceKey);
@@ -86,7 +86,9 @@ export async function removeConnectionAndOfflineData(input: {
   }
 
   const result = await (input.removeNamespace ?? removeOfflineNamespace)(namespaceKey);
-  if (result.status !== "removed") return { status: "failed", stage: "cleanup", remoteCompleted };
+  if (result.status !== "removed") {
+    return { status: "failed", stage: "cleanup", remoteCompleted };
+  }
   input.onRemoved();
   return { status: "removed" };
 }

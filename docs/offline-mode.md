@@ -205,13 +205,17 @@ Each destination then owns one explicit behavior:
 | Library | Downloaded publication assets with local title search. |
 | Book Detail | Saved projection metadata and publication-asset management. |
 | Reader | Local EPUB reading and authored state when opened from an offline bootstrap. A Reader already opened online remains mounted but pauses server-owned mutations until connectivity returns. |
-| Settings | Local sync inspection, manual retry eligibility, asset management, and account-retention actions. Server connection checks, repair, and remote logout are disabled while offline. |
+| Settings | Local sync inspection, manual retry eligibility, asset management, and connection-removal actions. Server connection checks, repair, and remote logout are disabled while offline. |
 | Sessions and Shelves | Intentional offline-unavailable state; their server query and mutation owners do not mount. |
 
 `Offline` describes connectivity, `Available offline` describes a verified retained publication
 asset, saved details/previews describe cached server snapshots, and `Waiting to sync` or `Needs
 attention` describes durable authored work. Repair-required authentication remains distinct from
 browser connectivity and continues to gate all namespace-owned personal data.
+
+Cached data provides read-only continuity or context; it does not enable server-owned workflows.
+A cached Shelf preview is not an offline Shelf, cached Book metadata is not a readable publication,
+and cached Reading Session metadata is not editable offline.
 
 ## Offline Reader Admission
 
@@ -328,17 +332,19 @@ Credential rejection is a repairable connection state, not a deletion signal. A 
 does not clear publication assets, cached projections, Reader continuity, annotations, or pending
 Reader intent. Repair uses the normal pair-and-verify flow. Only the verified normalized server
 origin and `/accounts/me` profile ID may reclaim an existing namespace: the same identity resumes
-it unchanged, while a different server or profile receives an isolated namespace. Retained data is
-not exposed through authenticated feature UI until verification succeeds.
+it unchanged. If repair verifies a different server or profile, the previous namespace is removed
+before the new identity becomes active. Retained data is not exposed through authenticated feature
+UI until verification succeeds.
 
-Ordinary logout or local sign-out removes the saved connection and credentials but retains its
-namespace data for a later verified sign-in. `Forget connection and local data` is the separate
-destructive operation. It inspects pending Reader work, makes one waiting coordinated sync attempt
-when online, rechecks durable state, and requires confirmation before deleting projections,
-publication assets, Reader state, and outbox records for that exact namespace. Failure keeps the
-connection available for another attempt. Settings `Remove all offline copies` remains
-publication-asset-only and does not use complete namespace cleanup. There is still no periodic
-retry, background sync, service worker, or authored-work repair console.
+The Web Client keeps one active signed-in user context. Intentional remote or local sign-out and
+`Forget connection and local data` all remove the saved connection and its complete offline
+namespace. They inspect pending Reader work, make one waiting coordinated sync attempt when online,
+recheck durable state, and require confirmation before deleting projections, publication assets,
+Reader state, and outbox records for that exact namespace. A failed cleanup keeps enough connection
+context to retry it. Repair is the only path that preserves local data, and only for the same
+verified identity. Settings `Remove all offline copies` remains publication-asset-only and does not
+use complete namespace cleanup. There is still no background sync, service worker, or authored-work
+repair console.
 
 Offline Settings presents pending Reader work by Book using cached titles when available and a
 Book-ID fallback otherwise. It describes session reconnection, reading position, annotation
@@ -512,4 +518,3 @@ These are responsibility boundaries, not prescribed classes or storage schemas.
 - How should quota pressure, eviction, and lost availability be presented?
 - What are the exact download, status, retry, and remove interactions for **Available offline**?
 - How should terminally failed annotation operations be retained and resolved?
-- What should **Forget account** do when unacknowledged Reader writes remain?

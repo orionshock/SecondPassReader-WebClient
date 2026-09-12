@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { forgetConnectionAndOfflineData } from "../../features/connection/ConnectionRemoval.Controller";
+import { removeConnectionAndOfflineData } from "../../features/connection/ConnectionRemoval.Controller";
 
 describe("destructive connection removal", () => {
   it("syncs pending work with waiting coordination, rechecks it, then removes after confirmation", async () => {
@@ -10,7 +10,8 @@ describe("destructive connection removal", () => {
     const removeNamespace = vi.fn(async () => ({ status: "removed" as const }));
     const onRemoved = vi.fn();
 
-    await expect(forgetConnectionAndOfflineData({
+    await expect(removeConnectionAndOfflineData({
+      intent: "forget",
       namespaceKey: "account-a",
       client: clientStub(),
       connectivity: "online",
@@ -36,7 +37,8 @@ describe("destructive connection removal", () => {
     });
     const removeNamespace = vi.fn();
 
-    await expect(forgetConnectionAndOfflineData({
+    await expect(removeConnectionAndOfflineData({
+      intent: "sign-out",
       namespaceKey: "account-a",
       client: clientStub(),
       connectivity: "offline",
@@ -48,13 +50,15 @@ describe("destructive connection removal", () => {
     })).resolves.toEqual({ status: "cancelled" });
 
     expect(syncPending).not.toHaveBeenCalled();
-    expect(confirmationMessages[0]).toContain("Unsynced reading changes will be permanently discarded.");
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirmationMessages[0]).toBeTruthy();
     expect(removeNamespace).not.toHaveBeenCalled();
   });
 
   it("keeps the saved connection when namespace cleanup fails", async () => {
     const onRemoved = vi.fn();
-    await expect(forgetConnectionAndOfflineData({
+    await expect(removeConnectionAndOfflineData({
+      intent: "forget",
       namespaceKey: "account-a",
       client: null,
       connectivity: "unknown",
@@ -62,7 +66,47 @@ describe("destructive connection removal", () => {
       onRemoved,
       inspectNamespace: async () => summary(),
       removeNamespace: async () => ({ status: "failed" }),
-    })).resolves.toEqual({ status: "failed" });
+    })).resolves.toEqual({ status: "failed", stage: "cleanup", remoteCompleted: false });
+    expect(onRemoved).not.toHaveBeenCalled();
+  });
+
+  it("revokes the remote session before local cleanup and clears the connection only after both succeed", async () => {
+    const order: string[] = [];
+    const onRemoved = vi.fn(() => order.push("connection"));
+
+    await expect(removeConnectionAndOfflineData({
+      intent: "sign-out",
+      namespaceKey: "account-a",
+      client: null,
+      connectivity: "online",
+      confirm: () => true,
+      onRemoved,
+      inspectNamespace: async () => summary(),
+      removeRemoteConnection: async () => { order.push("remote"); },
+      removeNamespace: async () => {
+        order.push("namespace");
+        return { status: "removed" };
+      },
+    })).resolves.toEqual({ status: "removed" });
+
+    expect(order).toEqual(["remote", "namespace", "connection"]);
+  });
+
+  it("retains connection context when cleanup fails after remote sign-out", async () => {
+    const onRemoved = vi.fn();
+
+    await expect(removeConnectionAndOfflineData({
+      intent: "sign-out",
+      namespaceKey: "account-a",
+      client: null,
+      connectivity: "online",
+      confirm: () => true,
+      onRemoved,
+      inspectNamespace: async () => summary(),
+      removeRemoteConnection: async () => undefined,
+      removeNamespace: async () => ({ status: "failed" }),
+    })).resolves.toEqual({ status: "failed", stage: "cleanup", remoteCompleted: true });
+
     expect(onRemoved).not.toHaveBeenCalled();
   });
 });

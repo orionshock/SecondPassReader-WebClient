@@ -123,16 +123,17 @@ export function SettingsPanel({
       });
       return;
     }
+    const { apiBaseUrl, accessToken, clientSessionId, tokenType } = profile;
 
     await removeConnection("sign-out", "logging_out", async () => {
       const endpoint = new URL(
-        `/api/v1/accounts/me/client-sessions/${encodeURIComponent(profile.clientSessionId)}/`,
-        profile.apiBaseUrl,
+        `/api/v1/accounts/me/client-sessions/${encodeURIComponent(clientSessionId)}/`,
+        apiBaseUrl,
       );
       const response = await fetch(endpoint, {
         method: "DELETE",
         headers: {
-          Authorization: `${profile.tokenType ?? "Bearer"} ${profile.accessToken}`,
+          Authorization: `${tokenType ?? "Bearer"} ${accessToken}`,
         },
       });
       if (!response.ok) {
