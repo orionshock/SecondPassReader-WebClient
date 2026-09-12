@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
+import { toReaderAnnotation } from "../../../features/reader/annotations/ReaderAnnotation.Mapper";
 import {
   getAnnotationFragmentCfi,
   isBookmarkAnnotation,
@@ -56,5 +57,27 @@ describe("reader annotation boundary", () => {
       body: { ...highlight.body, text: "Stored\n\n exactly\t as returned" },
     };
     expect(getAnnotationDescribingText(stored)).toBe("Stored\n\n exactly\t as returned");
+  });
+
+  it("maps marginalia bookmarks into the Reader domain", () => {
+    expect(toReaderAnnotation(bookmark)).toEqual({
+      kind: "bookmark",
+      id: "bookmark-1",
+      cfi: "epubcfi(/6/2)",
+    });
+  });
+
+  it("maps marginalia highlights into the Reader domain", () => {
+    expect(toReaderAnnotation(highlight)).toEqual({
+      kind: "highlight",
+      id: "highlight-1",
+      cfiRange: "epubcfi(/6/4,/2,/8)",
+      text: "Hello",
+    });
+  });
+
+  it("rejects annotations without a CFI", () => {
+    expect(toReaderAnnotation({ ...bookmark, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
+    expect(toReaderAnnotation({ ...highlight, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
 import type { ReaderHighlightMark, ReaderLocationDescription, ReaderTocItem } from "../../domain/ReaderDomain.Types";
-import { getAnnotationFragmentCfi } from "../../annotations/ReaderAnnotation.Mapper";
+import { getAnnotationFragmentCfi } from "../../annotations/ReaderAnnotationSelectors.Queries";
 import { loadMarginaliaLayerPreferences, saveMarginaliaLayerPreferences } from "../../../../storage/MarginaliaLayerPreferences.Store";
 import { describeCfiBestEffort } from "../ReadingSessionCfiDescriptions.Queries";
 import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";

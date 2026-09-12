@@ -7,11 +7,13 @@ import {
   getAnnotationTimestamp,
 } from "../../display/ReaderAnnotation.Presenter";
 import {
+  toReaderAnnotation,
+} from "../../annotations/ReaderAnnotation.Mapper";
+import {
   getAnnotationFragmentCfi,
   isBookmarkAnnotation,
   isHighlightAnnotation,
-  toReaderAnnotation,
-} from "../../annotations/ReaderAnnotation.Mapper";
+} from "../../annotations/ReaderAnnotationSelectors.Queries";
 import { toReaderCfiLocationDisplay } from "../ReadingSessionCfiDescriptions.Queries";
 
 export type PreviousSessionLocationDescriptionCacheEntry =

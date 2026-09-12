@@ -6,7 +6,8 @@ import {
   getAnnotationNoteText,
   getAnnotationTimestamp,
 } from "../../display/ReaderAnnotation.Presenter";
-import { isHighlightAnnotation, toReaderAnnotation } from "../../annotations/ReaderAnnotation.Mapper";
+import { toReaderAnnotation } from "../../annotations/ReaderAnnotation.Mapper";
+import { isHighlightAnnotation } from "../../annotations/ReaderAnnotationSelectors.Queries";
 import {
   toBookmarkViewModel,
   toReaderBookmark,
