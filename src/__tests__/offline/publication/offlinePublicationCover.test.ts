@@ -88,6 +88,21 @@ describe("offline publication covers", () => {
     expect(covers.current()).toEqual(oldCover);
   });
 
+  it("treats a cross-origin fetch failure as nonfatal and preserves the previous cover", async () => {
+    const oldCover = cover("https://library.example/covers/old.jpg");
+    const covers = coverStore(oldCover);
+
+    const result = await acquireOfflinePublicationCover({
+      namespace,
+      book: book("https://cdn.example/covers/new.jpg"),
+      spl: client(vi.fn(async () => { throw new TypeError("Failed to fetch"); })),
+      repository: covers.repository,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(covers.current()).toEqual(oldCover);
+  });
+
   it("removes the Book cover with its last publication format and removes all by namespace", async () => {
     const covers = coverStore(cover("https://library.example/covers/old.jpg"));
     const assets = assetStore([asset("epub"), asset("pdf")]);

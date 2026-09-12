@@ -177,19 +177,15 @@ export async function downloadBookFile(ctx: AuthenticatedClientContext, bookId: 
 }
 
 export async function downloadBookCover(
-  ctx: AuthenticatedClientContext,
+  apiBaseUrl: string,
   coverUrl: string,
 ): Promise<BookCoverDownloadResult> {
-  const url = new URL(coverUrl, ctx.apiBaseUrl);
+  const url = new URL(coverUrl, apiBaseUrl);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Book cover URL must use HTTP or HTTPS.");
   }
-  const apiOrigin = new URL(ctx.apiBaseUrl).origin;
-  const sameApiOrigin = url.origin === apiOrigin;
   const { blob, response } = await requestBlob({
-    apiBaseUrl: ctx.apiBaseUrl,
-    accessToken: sameApiOrigin ? ctx.accessToken : undefined,
-    tokenType: sameApiOrigin ? ctx.tokenType : undefined,
+    apiBaseUrl,
     endpointOrUrl: url.toString(),
     options: { accept: "image/avif, image/webp, image/png, image/jpeg, image/gif, image/*" },
   });

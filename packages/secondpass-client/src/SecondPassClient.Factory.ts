@@ -119,7 +119,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           return downloadBookBlob(book);
         },
         downloadCover: async (coverUrl) => {
-          return downloadBookCover(requireAuth(ctx), coverUrl);
+          return downloadBookCover(ctx.apiBaseUrl, coverUrl);
         },
       },
 

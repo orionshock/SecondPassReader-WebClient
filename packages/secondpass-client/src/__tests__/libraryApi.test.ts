@@ -260,20 +260,42 @@ describe("SDK Library API", () => {
     expect(String(fetchMock.mock.calls[0]![0])).toBe("https://api.example/library/books/1/download/");
   });
 
-  it("downloads same-origin covers with auth and cross-origin covers without leaking auth", async () => {
+  it("downloads every public cover URL without credentials", async () => {
     const fetchMock = asMockFetch();
     fetchMock
       .mockResolvedValueOnce(blobResponse(new Blob(["one"], { type: "image/jpeg" })))
-      .mockResolvedValueOnce(blobResponse(new Blob(["two"], { type: "image/png" })));
+      .mockResolvedValueOnce(blobResponse(new Blob(["two"], { type: "image/png" })))
+      .mockResolvedValueOnce(blobResponse(new Blob(["three"], { type: "image/webp" })));
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "secret" });
 
-    const sameOrigin = await spl.library.books.downloadCover("/media/cover.jpg");
+    const relative = await spl.library.books.downloadCover("/media/cover.jpg");
+    const sameOrigin = await spl.library.books.downloadCover("https://api.example/media/cover.png");
     const external = await spl.library.books.downloadCover("https://cdn.example/cover.png");
 
-    expect(sameOrigin.contentType).toBe("image/jpeg");
-    expect(external.contentType).toBe("image/png");
-    expect((fetchMock.mock.calls[0]![1]?.headers as Record<string, string>).Authorization).toBe("Bearer secret");
-    expect((fetchMock.mock.calls[1]![1]?.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect(relative.contentType).toBe("image/jpeg");
+    expect(sameOrigin.contentType).toBe("image/png");
+    expect(external.contentType).toBe("image/webp");
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      "https://api.example/media/cover.jpg",
+      "https://api.example/media/cover.png",
+      "https://cdn.example/cover.png",
+    ]);
+    for (const [input, init] of fetchMock.mock.calls) {
+      expect((init?.headers as Record<string, string>).Authorization).toBeUndefined();
+      expect(init?.credentials).toBeUndefined();
+      expect(new URL(String(input)).searchParams.toString()).not.toContain("secret");
+    }
+  });
+
+  it("does not require an access token to download a public cover", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["cover"], { type: "image/jpeg" })));
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
+
+    await expect(spl.library.books.downloadCover("/media/cover.jpg")).resolves.toMatchObject({
+      contentType: "image/jpeg",
+    });
+    expect((fetchMock.mock.calls[0]![1]?.headers as Record<string, string>).Authorization).toBeUndefined();
   });
 
 });

@@ -52,6 +52,8 @@ semantics where applicable:
 
 - Durable publication and cover retention requires an explicit **Available offline** action.
   Opening or browsing a book does not silently make either resource durable.
+- Server-provided cover URLs are public. Online images and explicit durable-cover acquisition use
+  them without bearer credentials; cross-origin Blob acquisition still depends on browser CORS.
 - Large assets and durable Reader data belong in the app-owned IndexedDB database, not
   `localStorage`.
 - A service worker is not required for the first phase. Add one only when a defined runtime behavior
