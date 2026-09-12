@@ -1,158 +1,170 @@
-# Reader Architecture
+# Reader architecture
 
-The Reader centers each EPUB workflow on a reading session. The server stores books, sessions,
-progress, and annotations. The browser manages the UI lifecycle and sends EPUB operations through
-an engine adapter. EPUB CFI is the canonical spatial and restore anchor. Renderer state is
-transient, not an annotation model.
+The Reader organizes each EPUB workflow around a Reading Session and its Marginalia. Second Pass
+Library owns server data; the browser owns interaction state and sends EPUB operations through the
+Reader engine boundary. EPUB CFI is the canonical machine anchor. Renderer state is transient.
 
-## Top-Level Flow
+## Opening a Book
 
-1. `src/app/AppReaderOpen.Controller.ts` restores the route, fetches book metadata, opens the
-   marginalia session, downloads the EPUB, and manages object URL replacement and cleanup.
-2. `src/features/reader/ReadingActivity.Orchestrator.tsx` renders Reader chrome, panels, dialogs, settings,
-   import review, and completion controls.
-3. `src/features/reader/session/ReadingSession.Orchestrator.tsx` wires server-backed session state
-   to renderer-neutral bridge capabilities.
-4. `src/features/reader/shell/ReadingShell.Orchestrator.tsx` renders the viewport and wires shell lifecycles.
-5. `src/features/reader/engine/EpubTsBook.Engine.ts` is the public adapter around
-   `@likecoin/epub-ts`.
+`src/app/AppReaderOpen.Controller.ts` owns both supported opening paths:
 
-Direct navigation to `#/reader/:bookId` uses the same open/restore path. A `search` query parameter
-starts an in-book search after the search capability is readable and ready.
+- With `online` or `unknown` connectivity, it loads Book metadata, opens or resumes the server
+  Reading Session, downloads the EPUB, and creates the publication object URL.
+- With explicit `offline` connectivity, it requires the verified account namespace, retained Book
+  metadata, and a complete EPUB whose format and checksum pass the offline publication policy. It
+  then restores local Reader continuity without mounting server request owners.
 
-## Activity Owners
+An arbitrary server failure never falls back to retained bytes. Both paths use the same Reader route
+and object URL cleanup. A Reader opened online remains mounted if connectivity drops, but
+server-owned mutations pause until connectivity returns. Connectivity changes do not recreate the
+EPUB engine.
+
+See [offline-mode.md](./offline-mode.md) for local authoring, outbox, sync, and cleanup behavior.
+
+## Composition flow
+
+1. `src/app/AppReaderOpen.Controller.ts` opens the requested Book and owns object URL replacement.
+2. `src/features/reader/ReadingActivity.Orchestrator.tsx` composes Reader chrome, panels, imports,
+   and completion controls.
+3. `src/features/reader/session/ReadingSession.Orchestrator.tsx` connects Reading Session state and
+   Marginalia to renderer-neutral capabilities.
+4. `src/features/reader/shell/ReadingShell.Orchestrator.tsx` owns the viewport and shell lifecycles.
+5. `src/features/reader/engine/EpubTsBook.Engine.ts` provides the public EPUB engine facade.
+
+Direct navigation to `#/reader/:bookId` uses the same opening path. A `search` query parameter starts
+an in-book search after the search capability becomes readable.
+
+## Activity owners
 
 | Owner | Responsibility |
 | --- | --- |
-| `ReaderActivityImport.Controller.ts` | Activity-level import modal/drawer wiring, activation handoff, manual completion, clear/hide cleanup, and layout resize requests. Matching and range repair remain under `imports/`. |
-| `ReaderActivityCompletion.Controller.ts` | End-of-book state, next-series lookup, close-dialog transitions, return-target persistence, and post-close navigation/reload choices. |
-| `ReaderActivityHeader.UI.tsx` | Reader header controls and status presentation. |
-| `ReaderActivitySidePanels.UI.tsx` | Search, import, marginalia, and annotation workspace composition. |
-| `ReaderActivityDialogs.UI.tsx` | Import, close-session, and end-of-book dialog composition. |
+| `ReaderActivityImport.Controller.ts` | Import review, activation handoff, manual completion, cleanup, and layout resize requests |
+| `ReaderActivityCompletion.Controller.ts` | End-of-book state, next-Series lookup, close-dialog transitions, return-target persistence, and post-close navigation |
+| `ReaderActivityHeader.UI.tsx` | Reader header controls and status |
+| `ReaderActivitySidePanels.UI.tsx` | Search, import, Marginalia, and annotation workspace composition |
+| `ReaderActivityDialogs.UI.tsx` | Import, Reading Session close, and end-of-book dialogs |
 
-Import code must clear its temporary search/staging state before hiding, clearing, skipping, or
-handing confirmed annotation intent to the session layer. It must not call annotation endpoints
+Import code clears temporary search and staging state before hiding, clearing, skipping, or handing
+confirmed annotation intent to the Reading Session layer. It does not call annotation endpoints
 directly.
 
-## Session Owners
+## Reading Session owners
 
-`ReadingSession.Orchestrator.tsx` wires server-backed data and actions to renderer-neutral handles
-used by the activity.
-
-| Owner | Responsibility |
-| --- | --- |
-| `ReadingSessionBridge.Controller.ts` | Stores shell capabilities and events, creates sequenced shell commands, scopes location state to the active book, and owns temporary search-flash state. |
-| `annotations/SessionAnnotations.Controller.ts` | Loads current-session annotations, resets by active session generation, and coordinates CFI descriptions. |
-| `annotations/SessionAnnotations.Presenter.ts` | Maps canonical annotations to bookmark/highlight view models and durable renderer marks. |
-| `annotations/CurrentSessionAnnotation.Controller.ts` | Serializes current-session mutations and rejects stale generations. |
-| `annotations/CurrentSessionAnnotation.Actions.ts` | Composes bookmark and highlight actions without changing their payload builders. |
-| `progress/ReadingProgressAutosave.Controller.ts` | Debounces and serializes progress replacement. |
-| `progress/ReadingProgressAutosave.Lifecycle.ts` | Seeds saved progress, performs a bounded best-effort exit flush, and drains/stops writes before session close. |
-| `previousSession/PreviousSessionLayers.Controller.ts` | Loads and selects previous-session annotation layers as read-only context. |
-| `CurrentSessionMetadata.Controller.ts` | Loads and updates editable metadata for the active session. |
-| `ReadingSessionClose.Actions.ts` | Applies changed metadata, closes the session with final progress when available, and leaves activity-level navigation outside this owner. |
-| `ReadingSessionRender.Presenter.ts` | Builds render state, toolbar items, and the ordered current-plus-previous durable mark list. |
-
-Current-session owners may mutate. `previousSession/` and the general Sessions feature are read-only
-with respect to Reader annotation mutation modules.
-
-### Live session contract
-
-- Normal `POST /books/:id/open/` responses contain one active session: `201` creates it and `200`
-  reuses it. The server's unique constraint owns the one-active-session-per-user/book invariant;
-  clients must not select between competing active sessions.
-- The shared bootstrap type allows for `GET /books/:id/active-session/` to return no
-  session and a concurrent close can rarely make an `open` response contain a closed snapshot. A
-  closed snapshot is rendered read-only and does not start progress autosave.
-- Closing from Reader first drains and stops pending progress writes. Close then sends the latest
-  stable CFI and location label so metadata, final progress, and closed status commit atomically.
-- A progress `409` means the server has already closed the session. Autosave treats that as closed
-  state drift, stops further writes for that session, and leaves the Reader usable.
-
-## Shell Owners
-
-`ReadingShell.Orchestrator.tsx` holds composition refs and renders chrome. The modules below own its behavior.
+`ReadingSession.Orchestrator.tsx` connects server-backed or local continuity state to
+renderer-neutral handles used by the activity.
 
 | Owner | Responsibility |
 | --- | --- |
-| `ReaderEngineBootstrap.Lifecycle.ts` | Creates the engine generation, attaches it to runtime control, applies initial durable marks, performs the initial display, publishes capabilities after readable readiness, and tears the generation down. |
-| `ReaderCapabilityPublication.Lifecycle.ts` | Publishes and unpublishes renderer-neutral describe/probe/display/search handles only while the current engine generation is readable. |
-| `ReaderCommandRouting.Lifecycle.ts` | Defers one pre-ready command, routes post-ready display/search/next/previous/resize commands, classifies navigation intent, and reports command failures. |
-| `ReaderLocationPublication.Lifecycle.ts` | Converts relocation callbacks into readable-viewport state, guarded progress events, staged-selection relocation decisions, durable toolbar close, and protected re-anchor requests. |
-| `ReaderSettingsReflow.Lifecycle.ts` | Applies settings and reader-width changes through serialized reflow without recreating the engine. |
-| `ReaderRuntime.Controller.ts` | Serializes viewport mutations, rejects stale generations, and coalesces adjacent settings/resize reflows. |
-| `ReaderReflow.Coordinator.ts` | Preserves the ordering of reflow, mark refresh, and staged-toolbar re-anchor. |
-| `ReaderStagedToolbar.Controller.ts` | Connects staged selection behavior to toolbar rendering and shell capabilities. |
-| `ReaderStagedSelection.Controller.ts` | Owns staged state, mark handoff, commit/cancel behavior, and keyboard cleanup. |
-| `ReaderStagedSelectionReanchor.Controller.ts` | Measures and repositions the staged toolbar; newer requests supersede stale measurements. |
-| `StagedSelection.Lifecycle.ts` | Protects operation-owned import/layout relocations and cancels staging for unrelated navigation. |
-| `ReaderDurableAnnotationToolbar.Controller.ts` | Opens, closes, and positions the durable annotation toolbar while coordinating staged cancellation. |
-| `ReaderBootstrapProgressGuard.State.ts` | Quarantines bootstrap relocations and protects the restored CFI until readable startup is established. |
+| `ReadingSessionBridge.Controller.ts` | Shell capabilities and events, sequenced commands, Book-scoped location state, and temporary search marks |
+| `annotations/SessionAnnotations.Controller.ts` | Current Reading Session annotation loading, generation reset, and CFI descriptions |
+| `annotations/SessionAnnotations.Presenter.ts` | Annotation view models and durable renderer marks |
+| `annotations/CurrentSessionAnnotation.Controller.ts` | Serialized current Reading Session mutations with generation checks |
+| `annotations/CurrentSessionAnnotation.Actions.ts` | Bookmark and highlight action composition |
+| `annotations/OfflineCurrentSessionAnnotation.Controller.ts` | Local-first annotation mutation and durable intent |
+| `progress/ReadingProgressAutosave.Controller.ts` | Debounced, serialized online progress replacement |
+| `progress/ReadingProgressAutosave.Lifecycle.ts` | Progress seeding, bounded exit flush, and shutdown before close |
+| `progress/OfflineReadingProgress.Controller.ts` | Local progress persistence and outbox intent |
+| `previousSession/PreviousSessionLayers.Controller.ts` | Selected read-only Marginalia from previous Reading Sessions |
+| `CurrentSessionMetadata.Controller.ts` | Active Reading Session metadata loading and updates |
+| `ReadingSessionClose.Actions.ts` | Metadata update and atomic close with final progress |
+| `ReadingSessionRender.Presenter.ts` | Render state, toolbar items, and ordered durable marks |
 
-Attaching the engine does not make it ready. Readiness requires either a successful readable display
-or a relocation that proves content is readable. Search, CFI, and staging capabilities are not
-published before then.
+Current Reading Session owners may mutate. Previous Reading Session layers are read-only and never
+enter current-session mutation actions.
 
-## Engine Owners
+### Server-backed Reading Session contract
 
-`EpubTsBook.Engine.ts` is the public facade. Runtime imports of `@likecoin/epub-ts` stay under
-`src/features/reader/engine/`.
+- `POST /books/:id/open/` returns the one active Reading Session: `201` creates it and `200` reuses
+  it. The server enforces one active Reading Session per user and Book; clients do not choose among
+  competing sessions.
+- `GET /books/:id/active-session/` may return no Reading Session. A concurrent close can also make an
+  `open` response contain a closed snapshot. Closed snapshots render read-only and do not start
+  progress autosave.
+- Closing from the Reader drains and stops progress writes, then sends the latest stable CFI and
+  location label so metadata, final progress, and closed status commit atomically.
+- Progress `409 SESSION_CLOSED` means the server has closed the Reading Session. Autosave stops
+  further writes for it while leaving the Reader usable.
+
+## Shell owners
+
+`ReadingShell.Orchestrator.tsx` holds composition refs and renders the viewport. Its lifecycle
+modules own the behavior below.
 
 | Owner | Responsibility |
 | --- | --- |
-| `EpubTsBook.Engine.ts` | Book/rendition construction, event binding, navigation facade, selection handoff, CFI operations, TOC setup, and destruction. |
-| `EpubTsBookSearch.Engine.ts` | Serialized section search execution. |
-| `ReaderSearch.Controller.ts` | Prevents concurrent full-book section traversal. |
-| `EpubTsHighlightRenderer.Engine.ts` | Durable, staged, and temporary renderer-mark reconciliation and click metadata. |
-| `EpubTsImportRangeRepair.Engine.ts` | DOM range reconstruction and epub-ts CFI conversion for imported fragments. |
-| `EpubImportRangeRepair.Policy.ts` | Pure normalized-text and punctuation-tolerant repair matching. |
-| `EpubTsRenditionSettings.Engine.ts` | Scoped rendition theme/style application. |
-| `EpubTsLocation.Mapper.ts` | Renderer location and TOC mapping into Reader domain shapes. |
-| `EpubSelection.Adapter.ts` | Browser selection extraction and quote context handoff. |
-| `EpubVisibleCfiRangeAnchor.Placement.ts` | Visible range geometry used by toolbar placement. |
-| `ReaderReflowTarget.Policy.ts` | Chooses the CFI preserved across resize/settings reflow. |
+| `ReaderEngineBootstrap.Lifecycle.ts` | Engine generation, initial marks and display, capability readiness, and teardown |
+| `ReaderCapabilityPublication.Lifecycle.ts` | Renderer-neutral describe, probe, display, and search capability publication |
+| `ReaderCommandRouting.Lifecycle.ts` | Pre-ready deferral, command routing, navigation classification, and failure reporting |
+| `ReaderLocationPublication.Lifecycle.ts` | Viewport location, progress events, staged-selection decisions, toolbar close, and re-anchor requests |
+| `ReaderSettingsReflow.Lifecycle.ts` | Serialized settings and Reader-width reflow without engine recreation |
+| `ReaderRuntime.Controller.ts` | Viewport mutation serialization, stale-generation rejection, and adjacent reflow coalescing |
+| `ReaderReflow.Coordinator.ts` | Reflow, durable-mark refresh, and staged-toolbar re-anchor ordering |
+| `ReaderStagedToolbar.Controller.ts` | Staged-selection behavior and toolbar rendering |
+| `ReaderStagedSelection.Controller.ts` | Staged state, mark handoff, commit, cancel, and keyboard cleanup |
+| `ReaderStagedSelectionReanchor.Controller.ts` | Staged-toolbar measurement and latest-request positioning |
+| `StagedSelection.Lifecycle.ts` | Relocation ownership during import and layout operations |
+| `ReaderDurableAnnotationToolbar.Controller.ts` | Durable annotation toolbar state and staged cancellation |
+| `ReaderBootstrapProgressGuard.State.ts` | Bootstrap relocation quarantine and restored-CFI protection |
 
-Known support-library defects and limitations are tracked in
-[epub-ts-support-issues.md](./epub-ts-support-issues.md).
+Attaching the engine does not make it ready. Readiness requires a readable display or relocation.
+Search, CFI, and staging capabilities remain unpublished until then.
 
-## Operating Invariants
+## Engine owners
 
-- CFI is the canonical restore and spatial anchor. Href, labels, and percentage are presentation
+Runtime imports of `@likecoin/epub-ts` stay under `src/features/reader/engine/`.
+
+| Owner | Responsibility |
+| --- | --- |
+| `EpubTsBook.Engine.ts` | Book and rendition construction, events, navigation, selection, CFI operations, TOC, and destruction |
+| `EpubTsBookSearch.Engine.ts` | Serialized section search |
+| `ReaderSearch.Controller.ts` | Exclusive full-Book section traversal |
+| `EpubTsHighlightRenderer.Engine.ts` | Durable, staged, and temporary mark reconciliation |
+| `EpubTsImportRangeRepair.Engine.ts` | DOM range reconstruction and epub-ts CFI conversion |
+| `EpubImportRangeRepair.Policy.ts` | Normalized-text and punctuation-tolerant repair matching |
+| `EpubTsRenditionSettings.Engine.ts` | Scoped rendition theme and style application |
+| `EpubTsLocation.Mapper.ts` | Renderer locations and TOC entries mapped to Reader domain values |
+| `EpubSelection.Adapter.ts` | Browser selection and quote-context extraction |
+| `EpubVisibleCfiRangeAnchor.Placement.ts` | Visible range geometry for toolbar placement |
+| `ReaderReflowTarget.Policy.ts` | CFI selection across resize and settings reflow |
+
+Known library defects and limits belong in the
+[epub-ts support ledger](./epub-ts-support-issues.md).
+
+## Operating invariants
+
+- CFI is the canonical restore and spatial anchor. Href, labels, and percentage are display
   metadata.
-- Drawer, menu, modal, settings, import, annotation, and toolbar state must not recreate the EPUB
-  engine. Bootstrap dependencies are limited to true lifecycle identity inputs and stable callbacks.
-- Viewport mutations run through `ReaderRuntime.Controller.ts`; do not issue competing display,
-  navigation, resize, or settings operations directly.
-- Opened progress seeds autosave. Bootstrap relocation quarantine must prevent stale initial
+- Drawer, menu, dialog, Settings, import, annotation, toolbar, and connectivity state must not
+  recreate the EPUB engine.
+- Viewport mutations run through `ReaderRuntime.Controller.ts`; competing display, navigation,
+  resize, or settings operations must not bypass it.
+- Opened progress seeds autosave. Bootstrap relocation quarantine prevents intermediate startup
   relocations from overwriting the restored CFI.
 - Unrelated navigation cancels staged selection. Import staging and layout reflow protect their own
-  relocations, and protected relocations request toolbar re-anchoring.
-- Reflow order is apply settings/resize, refresh marks, then re-anchor the staged toolbar.
-- Temporary search marks are cleared before staged/durable handoff. Staged marks are cleared before
-  commit/cancel completion, and durable marks are restored from canonical annotation state.
-- epub-ts cannot independently address multiple highlights at the same CFI and renderer type. A
-  same-CFI staged preview temporarily replaces the durable renderer mark. A current-session commit
-  at the exact same CFI updates the existing application annotation instead of creating a duplicate.
-- Previous-session layers remain read-only. Their marks may be displayed, but their data must not
-  enter current-session mutation actions.
-- Cleanup is generation-safe: stale async work cannot publish capabilities, mutate the active
+  relocations and request toolbar re-anchoring.
+- Reflow applies settings or size, refreshes marks, then re-anchors the staged toolbar.
+- Temporary search marks clear before staged or durable handoff. Staged marks clear before commit or
+  cancel completes. Canonical annotation state restores durable marks.
+- epub-ts identifies marks by CFI and renderer type. A same-CFI staged preview temporarily replaces
+  the durable mark; an exact same-CFI commit in the current Reading Session updates the existing
+  application annotation.
+- Marginalia from previous Reading Sessions remains read-only.
+- Cleanup is generation-safe: stale asynchronous work cannot publish capabilities, mutate the active
   runtime, or retain an obsolete engine.
 
-## Current Product Limits
+## Product limits
 
-- Reader settings and themes are browser-local preferences; they are not synchronized to the
-  server.
-- In-book search runs only for an explicit submit action or an initial reader search route. It does
-  not search on every keystroke.
-- Search uses epub-ts section traversal. The Reader has no general fuzzy-search engine, and import
-  range repair does not cross spine sections.
-- Glasp CSV is the only supported import format. Import jobs are in memory, are reviewed row by row,
-  and do not survive reload.
+- Reader settings and themes are browser-local preferences.
+- In-book search runs on explicit submission or an initial Reader search route, not every keystroke.
+- Search uses epub-ts section traversal. There is no general fuzzy-search engine, and import range
+  repair does not cross spine sections.
+- Glasp CSV is the only import format. Import jobs stay in memory, are reviewed row by row, and do
+  not survive reload.
 - Import does not persist provenance or perform import-level duplicate detection. Confirmed rows use
-  the normal annotation action path; same-CFI current-session update policy still applies there.
-- Highlight CFI anchors are immutable after creation. Endpoint drag handles and arbitrary CFI range
-  editing are not implemented; changing an anchor requires deleting and recreating the highlight.
-- Previous-session annotations are display-only context.
+  the normal annotation path and same-CFI update policy.
+- Highlight CFIs are immutable after creation. Changing an anchor requires deleting and recreating
+  the highlight; endpoint drag editing is unsupported.
+- Marginalia from previous Reading Sessions is display-only context.
 
 ## Diagnostics
 
@@ -162,29 +174,27 @@ Debug logging is opt-in. Categories are `reader`, `imports`, and `staged-selecti
 localStorage.setItem("secondpass.debug.logs", "reader,imports,staged-selection")
 ```
 
-Use `*` to enable every category and remove the key to disable logging. The Settings tools panel
-provides the same category controls.
+Use `*` to enable every category and remove the key to disable logging. Settings > Tools provides
+the same controls.
 
-Import diagnostics normally truncate text previews. Full import previews are enabled separately:
+Full import text previews require a separate setting:
 
 ```js
 localStorage.setItem("secondpass.debug.logs.imports.verbose", "1")
 ```
 
-Only enable verbose previews with non-sensitive fixture data. Do not log bearer tokens, request
+Enable verbose previews only with non-sensitive fixture data. Never log bearer tokens,
 authorization values, or private URLs.
 
-Useful diagnostic owners:
+Diagnostic owners:
 
-- `imports/ReaderImportDebug.Diagnostics.ts`: activation attempts, candidates, repair decisions,
-  and cleanup.
-- `imports/ReaderRangeRepairDebug.Adapter.ts`: range-repair diagnostic payloads.
-- `shell/ReaderStagedSelection.Diagnostics.ts`: navigation intent, relocation protection, cancel,
-  and re-anchor requests.
+- `imports/ReaderImportDebug.Diagnostics.ts`
+- `imports/ReaderRangeRepairDebug.Adapter.ts`
+- `shell/ReaderStagedSelection.Diagnostics.ts`
 
 ## Validation
 
-Run the full validation set after Reader changes:
+Run after Reader changes:
 
 ```powershell
 npm.cmd run hygiene

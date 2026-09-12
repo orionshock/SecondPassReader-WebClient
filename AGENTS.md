@@ -157,6 +157,7 @@ After changing lifecycle-sensitive code, verify that ordinary UI interactions do
 
 ## Testing and validation
 
+- Run npm scripts with `npm.cmd` in the primary Windows development environment.
 - Tests protect important runtime behavior, public contracts, regressions, and invariants.
 - Add or change a test when failure of the protected behavior would materially affect the product or delivery process.
 - Do not add tests merely to lock down prose, copy, repository layout, formatting, generated artifacts, tooling, deployment code, or configuration text.

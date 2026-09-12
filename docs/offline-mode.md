@@ -1,527 +1,394 @@
-# Offline and Cached Mode
+# Offline behavior
 
-## Purpose
+Second Pass Reader supports offline reading continuity for Books explicitly made Available offline.
+It does not reproduce Second Pass Library's catalog, Shelf, Reading Session history, or
+administrative workflows.
 
-Web offline mode preserves reading continuity for books a reader explicitly makes available
-offline. The Web client remains lightweight and on-demand by default. Offline mode does not turn
-the full library, shelf, or administration surface into an offline-writable application.
+## Product boundary
 
-This document defines the product model and the boundaries that later implementation must preserve.
-It does not select a complete storage or synchronization architecture.
+The application distinguishes three states:
 
-## Product Model
+- **Online:** Second Pass Library supplies current data and remains authoritative.
+- **Saved details:** cached server projections may provide read-only context. They may be stale or
+  evicted and do not make a Book readable offline.
+- **Available offline:** the verified namespace contains a complete publication asset supported by
+  the Reader. This is an explicit user-managed promise.
 
-- **Live:** The client is connected, reads current server state, and sends mutations directly. The
-  server remains authoritative.
-- **Cached:** The client may show recent Home or reading state as a resilience convenience. Cached
-  data may be stale or evicted and is not a promise that a book can be opened offline.
-- **Available offline:** The reader has explicitly requested offline-stable access to a book. A
-  verified publication asset exists and the app has a Reader capable of its format. The client
-  must report when that availability is lost and provide an explicit removal path.
+Cached data does not grant offline mutation or navigation capability. A cached Shelf preview is not
+an offline Shelf, cached Book metadata is not a readable publication, and cached Reading Session
+metadata is not editable offline.
 
-## Initial Scope
+Offline-capable routes branch only when centralized browser connectivity is explicitly `offline`.
+`online` and `unknown` use the normal server-backed owners. A failed request, server error, or
+authentication problem does not trigger an offline fallback.
 
-- Cache successful Home Recent and Shelf preview responses as replaceable convenience snapshots.
-- Offer explicit offline-ready EPUB files from Book Detail and admit verified files to a local
-  Reader bootstrap while the browser explicitly reports offline.
-- Support durable offline Reader progress and current-session annotation activity for those books.
-- While explicitly offline, show only locally retained publication assets and provide local title
-  search over that downloaded subset. Full catalog search and pagination remain online-dependent.
-- Keep shelf mutations and library or administration mutations online-only.
-- Keep reading-session metadata edits online-only initially.
+## Identity and privacy
 
-## Android Parity Rules
+Account-owned records use a namespace derived from normalized Second Pass Library origin and the
+verified profile ID returned by `/accounts/me`:
 
-Web may use different browser mechanisms, but it must preserve these session and marginalia
-semantics where applicable:
+```text
+server:<encoded-origin>|profile:<encoded-profile-id>
+```
 
-- The server authorizes access before book content is delivered or retained for offline use.
-- A closed session is immutable: it is never reopened and receives no later progress, annotation,
-  or metadata writes.
-- A provisional local session identity is not a server session identity. Reconciliation must not
-  confuse or silently merge them.
-- Reader-authored progress and annotation intent is recorded locally first when offline operation
-  is supported.
-- Progress is latest-only; replay does not preserve obsolete intermediate positions.
-- Annotation client IDs remain stable across retries and continuation.
-- A queued mutation is cleared only by an exact acknowledgement of that mutation.
-- `SESSION_CLOSED` ends writes to the closed session. Unacknowledged Reader activity continues
-  through a new valid session rather than reopening or modifying the closed one.
+Both values are required. Display names, bearer tokens, local connection IDs, client-session IDs,
+API paths, and release metadata are not identity.
 
-## Web-Specific Choices
+The Web Client keeps one active connection:
 
-- Durable publication and cover retention requires an explicit **Available offline** action.
-  Opening or browsing a book does not silently make either resource durable.
-- Server-provided cover URLs are public. Online images and explicit durable-cover acquisition use
-  them without bearer credentials; cross-origin Blob acquisition still depends on browser CORS.
-- Large assets and durable Reader data belong in the app-owned IndexedDB database, not
-  `localStorage`.
-- A service worker is not required for the first phase. Add one only when a defined runtime behavior
-  requires it.
-- Browser quota and eviction are expected conditions. The app must be able to detect and explain
-  when requested offline availability is no longer intact.
-- No background-sync guarantee is assumed. Replay must also work when the app is open and regains
-  connectivity.
-- Cross-tab ownership and single-writer behavior must be designed before replay is introduced.
+- A rejected credential enters repair-required state without deleting local data.
+- Personal cached data stays inaccessible until identity is verified again.
+- Repair preserves the namespace only when normalized server origin and profile ID both match.
+- If repair verifies a different identity, the previous namespace is removed before the new
+  identity becomes active.
+- Intentional Sign out and Forget connection and local data remove the active connection and its
+  complete namespace.
 
-## Data Categories
+Repair is the only preservation path across an authentication interruption.
 
-| Data | Initial stance |
+## Storage ownership
+
+The native IndexedDB database `secondpass-reader-offline` is version 3 and contains five
+namespace-indexed stores:
+
+| Store | Ownership |
 | --- | --- |
-| Connection profile and bearer token | Keep existing behavior unchanged in this phase; credential persistence policy remains an open question. |
-| Home and recent snapshots | Retain successful Recent and Shelf previews for a narrow read-only offline Home. |
-| Library search and pages | Offline mode lists downloaded Books only and searches their retained titles locally; the full catalog remains online-only. |
-| Publication assets | Retain only through explicit offline availability. EPUB is the only currently supported Reader format. |
-| Progress | Store one durable latest local value, scoped to the correct book and session lifecycle. |
-| Annotations | Store current local desired state and coalesced delivery intents with stable client IDs. |
-| Shelves | Online-only initially. |
+| `projections` | Successful server-derived snapshots such as retained Book details and Home previews |
+| `publicationAssets` | Complete publication Blobs keyed by namespace, Book, and format |
+| `publicationCovers` | Durable cover Blobs keyed by namespace and Book |
+| `readerState` | Local Reader continuity keyed by namespace and Book |
+| `readerOutbox` | Coalesced Reader delivery intent keyed by namespace and resource |
 
-## Cache Identity
+Repositories return detached values and expose namespace-scoped deletion. Persistence failures do
+not fall back silently to `localStorage` or memory.
 
-Account-owned cached data is isolated by normalized server origin and the verified account profile
-ID from `/accounts/me`. Both are required. The serialized namespace is
-`server:<encoded-origin>|profile:<encoded-profile-id>`.
+Small synchronous preferences remain in browser storage outside this database. See
+[DEVELOPMENT.md](./DEVELOPMENT.md) for the local-data summary.
 
-- Server display metadata, bearer tokens, local connection IDs, client-session IDs, and release
-  fields are never part of cache identity.
-- Token refresh and re-pairing do not create a new namespace for the same server account.
-- Identity that is missing or invalid produces no namespace; account-owned data must not be cached,
-  displayed, or replayed without one.
-- Server identity follows the current origin-level discovery model. API paths are endpoint
-  locations, not cache identity.
+## Publication availability
 
-Future records remain inside that namespace and add their own identity: Home/recent uses a fixed
-snapshot category; publication assets use Book, format, and file-checksum identity; Reader state
-uses book and session identity; catalog results and contextual tag aggregates use the exact query
-context; scope-level tag endpoints remain separate tag universes.
+Making a Book Available offline is an explicit Book Detail action. Browsing, opening, or caching
+metadata does not retain publication or cover bytes.
 
-## Publication Asset Availability
+Publication identity consists of namespace, Book ID, normalized format, and SHA-256 checksum. A
+stored asset is readable only when:
 
-Cached Book metadata and cover images do not admit a book to the offline Reader. A stored
-publication asset is valid only when it is complete and its recorded SHA-256 checksum matches the
-current Book file metadata. Its identity is cache namespace, Book ID, normalized format, and
-checksum; title, author, description, cover, download URL, and file size are not identity.
+- it is complete;
+- its format is supported by the Reader;
+- its recorded checksum is valid; and
+- its checksum matches current retained Book file metadata.
 
-Missing, partial, format-mismatched, or checksum-mismatched assets are not offline-readable. Complete
-assets without a valid server and recorded checksum are `unverifiable` and do not receive the
-offline-stable promise. File size is diagnostic metadata only: a mismatch must be reported, but a
-matching checksum remains decisive. A known checksum change requires replacement; different Book
-IDs remain different assets and no CFI portability is inferred between editions.
+Missing, partial, unverifiable, format-mismatched, and checksum-mismatched assets are not admitted.
+A file-size mismatch is diagnostic; a matching checksum remains decisive. Different Book IDs remain
+different assets, and no CFI portability is inferred between editions.
 
-Downloaded publication files are verified by streaming Blob chunks through an incremental SHA-256 hash. This
-avoids the whole-file `arrayBuffer()` copy required by Web Crypto's non-streaming digest API, so
-working memory is bounded to the browser-owned Blob, the current stream chunk, and hash state as
-far as the runtime permits. There is no arbitrary file-size limit. Missing or malformed server
-checksums skip hashing and remain unverifiable; completed bytes are not published as an offline
-asset until the checksum matches.
+Publication verification streams Blob chunks through incremental SHA-256 hashing. It does not copy
+the entire file through Web Crypto's non-streaming `arrayBuffer()` digest path. There is no
+arbitrary publication-size limit.
 
-Explicit offline acquisition checks browser capability and quota before optionally requesting
-persistent storage, downloading through the authenticated SDK, and verifying the Blob. Limited
-capability may proceed best-effort when quota can still be established; persistence denial or
-failure is advisory. Only a verified complete Blob is published. A previous verified asset remains
-in place until its replacement commits successfully. Partial and resumable downloads remain out of
-scope.
+The acquisition sequence is:
 
-Book Detail is the first explicit offline-stability surface. It can make one supported Book file
-available offline, update a changed file, or remove its publication asset. Removal does not clear cached projections,
-Reader continuity state, annotations, or pending Reader intents. Settings owns namespace-wide asset
-management separately.
+1. Validate Book identity, EPUB metadata, browser capability, and storage admission.
+2. Optionally request persistent storage from the explicit user action.
+3. Download the publication through the authenticated SDK.
+4. Verify and commit the complete Blob.
+5. Attempt to acquire the durable cover.
 
-The shared asset policy, storage, checksum verification, and acquisition ownership are
-format-neutral. EPUB is the only currently supported Reader format. Future formats require their
-own engines and format-owned navigation, location, selection, and annotation semantics; EPUB CFI
-is not a generic publication location model.
+The publication is primary. Cover failure never makes a verified publication unavailable.
+A previous publication remains in place until its replacement commits successfully.
 
-## Offline Library
+The storage admission policy reserves the greater of 10% of estimated quota or 100 MiB. An unknown
+or failed estimate is not treated as available capacity. Browser quota races, eviction, and
+user-initiated site-data removal can still invalidate retained data. A denied persistent-storage
+request leaves IndexedDB usable under normal best-effort eviction rules.
 
-When browser connectivity is explicitly `offline`, Library mounts a local downloaded-only view
-instead of its server catalog query owners. `online` and `unknown` retain the existing
-server-authoritative Library. The local view requires a verified account namespace and lists its
-retained publication assets; cached Book metadata without an asset never admits a Book.
+EPUB is the only Reader format supported by this application. Publication storage remains
+format-neutral; another format would require its own engine and location, navigation, selection,
+and annotation semantics.
 
-Offline Library search is case-insensitive title search over that local subset, with deterministic
-local title ordering and a Book-ID fallback when retained metadata is missing. Groups, tags,
-Authors, Series, remote sorting, and pagination are not fabricated offline. Retained metadata has
-remote cover URLs for ordinary catalog display. For Books explicitly retained offline, it may also
-use the Book-scoped durable cover Blob. Otherwise the offline view uses a placeholder and makes no
-cover request. Online Library rendering remains URL-driven and retains normal browser-cache behavior.
+## Durable covers
 
-Reader admission remains stricter than storage listing: the current Web Reader opens only a
-complete EPUB Blob whose retained checksum and format match the cached Book file metadata. A
-retained asset that lacks usable metadata, is corrupt, or uses an unsupported format stays visible
-as unavailable rather than masquerading as readable. Offline Library opens a local cached Book
-Detail before the existing local Reader route. Publication-asset changes refresh the current
-runtime, and focus refresh picks up later changes from another tab; there is no polling or cross-tab
-catalog channel.
+Durable covers belong to explicit publication retention, not general browsing:
 
-## Offline Home
+- Online screens continue to use server-provided cover URLs and normal browser caching.
+- Explicit offline acquisition may retain a Book-scoped cover Blob.
+- Offline Home, Library, and Book Detail use that Blob when available and otherwise show a
+  placeholder without requesting the remote URL.
+- Existing retained publications without durable covers remain valid and readable.
 
-When connectivity is explicitly `offline`, Home mounts a local cached-preview page before any of
-the server-backed Home owners. `online` and `unknown` keep the existing server Home. Successful
-online loads retain two normalized projections for the verified namespace: `home-recent` contains
-the most recently displayed Recent History items, and `home-shelves` contains the six-item Shelf
-preview. Failed loads never replace these snapshots, and cache persistence failure does not affect
-online rendering.
+Cover URLs are public and unauthenticated. `spl.library.books.downloadCover(coverUrl)` resolves
+relative URLs against Second Pass Library. Its relative, same-origin, and cross-origin requests
+attach no Authorization header and do not opt into credential forwarding. Cross-origin Blob
+acquisition still requires a CORS-readable response. Failure is diagnostic and nonfatal; a failed
+changed-source replacement leaves the prior durable cover intact.
 
-Offline Recent preserves the cached server membership, order, Session identity, name, status, and
-activity metadata. A matching durable local Reader state may replace only the desired CFI,
-percentage, and stable location label; no CFI ordering comparison is performed. Provisional local
-continuity does not make a cached Session active, and Reader state for Books outside the cached
-Recent membership is not appended.
+Accepted cover records contain a non-empty Blob with matching byte length and a supported image
+type: AVIF, GIF, JPEG, PNG, or WebP. Rendering uses owned object URLs and revokes them when the
+controller or component releases the cover.
 
-Cached Shelves preserve the server preview membership and order but are read-only offline. There
-is no Shelf navigation, editing, pagination, or locally reconstructed organization. Home preview
-covers normally remain remote URLs. A Recent Book may use its durable local cover only when that
-Book is explicitly retained offline; otherwise the offline page uses a placeholder and makes no
-image request. Online Home remains URL-driven. Recent Books open the local cached Book Detail. Reader opening from there
-remains available only when the existing verified EPUB asset admission policy succeeds; cached
-activity without publication bytes remains visible and manageable but cannot open the Reader.
+Removing the last retained publication format for a Book also removes its durable cover. Removing
+all offline copies removes all publication assets and covers in the namespace. Neither action
+removes Reader state, progress, annotations, outbox work, or cached projections.
 
-Each cached section is independent. Missing Shelf data does not hide Recent data, and an empty
-cache presents a route to the downloaded-only Offline Library. Local Reader changes and window
-focus re-read durable state without polling. Offline Home remains an incomplete convenience
-snapshot; online Home remains server-authoritative.
-
-## Offline Book Detail
-
-When connectivity is explicitly `offline`, Book Detail branches before mounting its server Book,
-marginalia, Session, or Shelf owners. It renders the retained `reader-book:<bookId>` projection,
-with a stable Book-ID fallback when descriptive metadata is missing. `online` and `unknown` retain
-the existing server-authoritative Book Detail path and normal cover URL. The offline detail uses a
-durable local cover only for an explicitly retained Book and otherwise shows a placeholder without
-requesting remote cover bytes.
-
-The local detail exposes only locally valid operations. `Open reader` uses the existing strict EPUB
-asset policy and remains disabled for missing, corrupt, mismatched, or unsupported assets. `Manage
-offline` opens the selected Book in Settings, and `Remove offline copy` removes the publication
-asset and its durable cover; Reader progress, annotations, continuity, projections, and pending
-sync work remain intact. A missing or failed cover never changes publication readability.
-There is no offline acquisition, Shelf mutation, Session history, marginalia fetch, or other
-fabricated server authority. Offline Home and Library now use this local detail as their normal Book
-navigation step.
-
-## Offline Surface Behavior
-
-The authenticated app shell shows a small `Offline` connectivity status while retaining navigation.
-Each destination then owns one explicit behavior:
+## Offline surfaces
 
 | Surface | Explicit offline behavior |
 | --- | --- |
-| Home | Last-known cached Recent and Shelf previews, with local Reader progress overlay. |
-| Library | Downloaded publication assets with local title search. |
-| Book Detail | Saved projection metadata and publication-asset management. |
-| Reader | Local EPUB reading and authored state when opened from an offline bootstrap. A Reader already opened online remains mounted but pauses server-owned mutations until connectivity returns. |
-| Settings | Local sync inspection, manual retry eligibility, asset management, and connection-removal actions. Server connection checks, repair, and remote logout are disabled while offline. |
-| Sessions and Shelves | Intentional offline-unavailable state; their server query and mutation owners do not mount. |
+| Home | Read-only saved Recent History and Shelf previews, with a local Reader progress overlay |
+| Library | Downloaded Books only, with local title search |
+| Book Detail | Saved metadata, publication status, Open Reader, Manage offline, and removal |
+| Reader | Retained EPUB reading and local Reading Session/Marginalia continuity |
+| Settings | Offline assets, pending Reader work, retry, and local cleanup |
+| Shelves and standalone Reading Sessions | Unavailable; server query and mutation owners do not mount |
 
-`Offline` describes connectivity, `Available offline` describes a verified retained publication
-asset, saved details/previews describe cached server snapshots, and `Waiting to sync` or `Needs
-attention` describes durable authored work. Repair-required authentication remains distinct from
-browser connectivity and continues to gate all namespace-owned personal data.
+The authenticated shell shows a small Offline status. Repair-required authentication is separate
+from connectivity and continues to block access to namespace-owned data.
 
-Cached data provides read-only continuity or context; it does not enable server-owned workflows.
-A cached Shelf preview is not an offline Shelf, cached Book metadata is not a readable publication,
-and cached Reading Session metadata is not editable offline.
+### Home
 
-## Offline Reader Admission
+Successful online Home loads retain two normalized projections:
 
-Reader opening branches only on an explicit browser `offline` signal. `online` and `unknown` keep
-the existing server-authorized Session-open and download path; arbitrary server failure does not
-fall back to cached bytes. Offline opening requires the account namespace, a retained Book-detail
-projection, current EPUB Reader support, and a complete stored Blob whose format and checksum
-match that Book metadata.
+- `home-recent`: the displayed Recent History items;
+- `home-shelves`: the six-item Shelf preview.
 
-The local bootstrap carries local continuity and its distinct local Session identity. It is not a
-server marginalia bootstrap and never exposes a provisional identity to SDK mutation owners. The
-offline Reader permits EPUB reading, navigation, TOC, search, display settings, and local-first
-current-session annotation authoring. Session metadata, close, and other server-backed mutations
-remain disabled.
-The existing Reader lifecycle owns and revokes object URLs for both downloaded and stored Blobs.
+Failed loads do not replace good snapshots, and cache-write failure does not affect online
+rendering.
 
-### Durable Offline Progress
+Offline Home preserves cached membership, ordering, Reading Session identity, status, and activity
+metadata. Matching local Reader state may replace only desired CFI, percentage, and stable location
+label. CFI strings are never compared for order. Provisional continuity does not change cached
+server status, and local Books absent from the cached Recent History are not appended.
 
-Settled offline Reader movement persists the latest canonical CFI, integer percentage, and stable
-percent-first location label in local Reader continuity. Writes are debounced to reduce IndexedDB
-churn, and Reader hide, page exit, or close requests a bounded local-only flush. Reader state is
-written before its coalesced `replace-progress` outbox intent, so an outbox failure cannot erase the
-latest durable position.
+Shelf previews remain read-only and do not navigate into Shelf management. Missing sections are
+independent: Recent History can render without Shelves and vice versa. With no useful snapshot,
+Home links to the downloaded-only Library.
 
-Offline reopen prefers that durable local progress; CFI strings are never compared for ordering.
-The online three-second server autosave remains separate and unchanged. Foreground reconciliation
-uses exact revisions so a stale acknowledgement cannot clear newer local progress.
+### Library
 
-### Durable Offline Annotations
+Offline Library lists only retained publication assets in the verified namespace. Cached metadata
+alone never adds a Book. It provides case-insensitive local title search and deterministic title
+ordering with a Book-ID fallback.
 
-Offline current-session highlights, bookmarks, and notes update the local projection immediately,
-then persist Reader state before their coalesced outbox intent. Stable annotation client IDs and
-origin metadata are preserved through edits. An unconfirmed create followed by delete leaves no
-delivery intent; confirmed edits and deletes retain the authority context needed by later
-reconciliation. Previous-session annotations and known-closed Sessions remain read-only.
+Library Groups, tags, Authors, Series, server ordering, and pagination are not recreated offline.
+A retained asset remains visible when metadata is missing or the Reader cannot admit it, but it is
+not presented as readable.
 
-Persistence failure does not roll back the visible authored change. State-write failure skips the
-outbox write; outbox failure retains the durable local projection and dirty intent for another
-local flush opportunity. The existing online annotation path remains server-authoritative and
-unchanged; per-annotation pending badges remain out of scope.
+Selecting a Book opens local Book Detail. Publication changes refresh the current runtime, and a
+focus refresh discovers changes from another tab without polling.
 
-Annotation replay is an explicit action after Session authority resolution. It sends one bounded
-batch of complete annotation desired state to the authoritative active Session, adopts the complete
-server collection as baseline, overlays newer local intent, and exact-acknowledges only delivered
-revisions that are still current. Terminal validation failure retains authored state and intent.
+### Book Detail
 
-If delivery reports `SESSION_CLOSED`, that Session receives no retry. Authority is resolved again;
-local-unconfirmed upserts continue with the same client ID, while confirmed historical edits are
-copied forward under a new stable client ID and become local-unconfirmed. Confirmed deletes against
-the closed Session are dropped rather than applied to the continuation Session. The action returns
-continuation counts that the automatic foreground sweep can aggregate into a single notice.
-`start-over` is never automatic recovery.
+Offline Book Detail loads the retained `reader-book:<bookId>` projection and falls back to a stable
+Book ID when descriptive metadata is missing. It does not mount Book, Marginalia, Reading Session,
+or Shelf request owners.
 
-Progress replay is a separate explicit action after Session authority resolution and annotation
-replay. It sends only the progress value that still matches durable local desired state and
-exact-acknowledges only the delivered revision. A newer local revision written during delivery
-remains visible and pending; CFI strings are never compared for recency. `SESSION_CLOSED` stops
-delivery to that Session, resolves a writable continuation, reloads the current desired progress,
-and sends that latest value to the continuation. Same-runtime delivery is serialized per account
-and Book because server progress is last-write-wins.
+Open Reader is enabled only when the strict EPUB asset policy succeeds. Manage offline opens the
+selected Book in Settings. Remove offline copy removes the publication and its durable cover while
+leaving authored Reader state intact. Missing publication bytes cannot be acquired while offline.
 
-One explicit Reader sync action composes a complete manual cycle: inspect pending Book intent,
-resolve writable Session authority, replay annotations, then replay progress against the final
-Session returned by any annotation continuation. A failed later stage does not roll back successful
-earlier delivery; the result reports safe stage, count, continuation, and partial-success metadata.
-The coordinator shares one same-runtime cycle per account and Book and never mutates the outbox
-outside the lower-level exact-acknowledgement actions. Automatic foreground triggers invoke the
-cross-tab coordinated entry point; retry loops remain future work.
+Shelf mutations, Reading Session history, server metadata edits, and administrative actions are
+absent.
 
-The cross-tab entry point wraps that explicit cycle in an exclusive Web Lock scoped by normalized
-account namespace and Book. Waiting is the default; a non-waiting caller may receive `busy` without
-starting sync. Durable intent is inspected by the sync action only after ownership is acquired, so a
-waiter can observe that the previous tab already finished the work. Different Books and namespaces
-remain independent. Web Locks require a supporting browser and secure context; unsupported contexts
-report unavailable coordination rather than using a fragile storage mutex. Production deployment
-expects the operator's reverse proxy to provide HTTPS and its certificate configuration.
+### Reader admission
 
-Pending Reader outbox work has two automatic foreground triggers: authenticated startup while the
-centralized browser status is explicitly `online`, and a later explicit `offline` to `online`
-transition. Startup initially at `unknown` waits for the first definite state; `online` runs its one
-catch-up attempt, while `offline` leaves later delivery to reconnect. Reconnect detection itself
-still ignores initial `online` and `unknown` to `online`.
+An offline Reader open requires:
 
-Both triggers share one namespace-scoped pending-Book sweep and same-runtime guard. The sweep lists
-the namespace outbox once, derives distinct Books, and uses up to three workers to invoke non-waiting
-cross-tab coordination per Book. `busy` means another tab owns that Book and is not an error. Account
-lifecycle disposal prevents an old namespace generation from starting more Books, while already
-started work settles before its shared repository connection closes. Failed work remains durable
-for a later reconnect or manual action; there is no retry timer, periodic sweep, service worker,
-or background sync.
+- a verified account namespace;
+- retained Book metadata;
+- a complete retained EPUB Blob; and
+- matching format and checksum metadata.
 
-Each completed automatic foreground sweep also aggregates safe reconciliation outcomes across its
-Books. Routine success, no work, cross-tab contention, and transient retry remain silent. Confirmed
-annotation edits carried into a continuation Session, deletes that could not be applied to an
-already-closed Session, and terminal authored work can produce one dismissible, nonblocking app
-notice for the sweep. Terminal work remains saved locally; the notice does not discard it or imply
-that a repair workflow exists. Cross-tab notice fan-out, retry scheduling, background sync, and a
-per-intent repair UI remain future work.
+The local bootstrap carries Reader continuity and a distinct local Reading Session identity. It is
+not a server Marginalia bootstrap and never exposes a provisional ID to SDK mutation owners. EPUB
+navigation, Table of Contents, search, display settings, progress, bookmarks, highlights, and notes
+remain available. Reading Session metadata changes and close operations remain server-owned.
 
-Settings includes a focused Offline surface for the current verified account namespace. It reports
-distinct Books and resource counts with pending Reader work, and an explicit retry runs the shared
-pending-Book sweep with waiting cross-tab lock semantics. Automatic startup and reconnect sweeps
-remain non-waiting. Settings also lists locally retained publication assets using cached Book
-metadata when available, with an ID-based fallback when it is not, and reports Blob-backed file
-sizes without contacting the server.
+The Reader lifecycle owns and revokes publication object URLs. Removing durable storage does not
+force-close an already-open Reader.
 
-Removing one offline copy deletes only its namespace, Book, format asset, and Book-scoped durable
-cover once no retained format remains. Removing all offline copies deletes publication assets and
-durable covers in that namespace and requires confirmation. Neither operation
-deletes projections, Reader continuity, progress, annotations, outbox intent, or account data; an
-already-open Reader retains its in-memory Blob URL until its existing lifecycle closes. There is no
-periodic retry, service-worker delivery, background sync, or repair console.
+## Local Reader continuity
 
-Credential rejection is a repairable connection state, not a deletion signal. A rejected token
-does not clear publication assets, cached projections, Reader continuity, annotations, or pending
-Reader intent. Repair uses the normal pair-and-verify flow. Only the verified normalized server
-origin and `/accounts/me` profile ID may reclaim an existing namespace: the same identity resumes
-it unchanged. If repair verifies a different server or profile, the previous namespace is removed
-before the new identity becomes active. Retained data is not exposed through authenticated feature
-UI until verification succeeds.
+Local Reading Session identity is separate from server authority. A confirmed local record carries
+its server Reading Session ID and last-known `active`, `closed`, or unknown state. Only a
+last-known-active confirmed Reading Session is writable offline.
 
-The Web Client keeps one active signed-in user context. Intentional remote or local sign-out and
-`Forget connection and local data` all remove the saved connection and its complete offline
-namespace. They inspect pending Reader work, make one waiting coordinated sync attempt when online,
-recheck durable state, and require confirmation before deleting projections, publication assets,
-Reader state, and outbox records for that exact namespace. A failed cleanup keeps enough connection
-context to retry it. Repair is the only path that preserves local data, and only for the same
-verified identity. Settings `Remove all offline copies` remains publication-asset-only and does not
-use complete namespace cleanup. There is still no background sync, service worker, or authored-work
-repair console.
+When no writable confirmed Reading Session exists, the client creates or reuses one Book-scoped
+provisional identity prefixed with `local:`. Its server Reading Session ID is null. Repeated opens
+reuse it and coalesce one `establish-session` intent.
 
-Offline Settings presents pending Reader work by Book using cached titles when available and a
-Book-ID fallback otherwise. It describes session reconnection, reading position, annotation
-changes, and annotation deletions in user terms without exposing outbox keys, revisions, Session
-IDs, or payloads. A Book can be selected through
-`#/settings?tab=offline&book=<book-id>` and retried through the existing coordinated sync action
-with waiting lock semantics. Book Detail links retained offline copies to that selected management
-state; Reader opening still uses the normal Reader route and admission policy.
+Reconciliation first performs the read-only active-session lookup. It binds local continuity to an
+existing active Reading Session or calls normal `open` to converge on the server's writable
+Reading Session. Binding preserves local progress, annotations, tombstones, and origins.
+Provisional IDs are never sent as server IDs, and `start-over` is never automatic recovery.
 
-Pending reading-position delivery may be explicitly discarded without removing the durable local
-position used for local resume. Later Reader movement can create a new latest progress intent.
-Annotation discard is not offered yet: the current durable projection does not retain a separate
-authoritative baseline for safely undoing confirmed edits/deletes, and local projection plus outbox
-updates do not yet share one transaction. Offline asset removal remains separate from Reader-authored
-pending state.
+### Progress
 
-## Publication Asset Storage Admission
+Settled offline movement persists the latest CFI, integer percentage, and stable location label.
+Writes are debounced. Reader hide, page exit, or close requests a bounded local-only flush.
+Reader state is written before its coalesced `replace-progress` intent.
 
-Before retaining a publication asset, the client uses the browser's advisory origin usage and quota estimate.
-There is no universal asset size cap. Admission preserves the greater of 10% of estimated quota or
-100 MiB, and declines an attempt that would cross the remaining usable budget. Missing, incomplete,
-or failed estimates remain explicit unknown or unavailable capacity; they are not evidence of free
-space.
+Offline reopen uses durable local progress. CFI strings are never compared for recency. Exact
+revision acknowledgement prevents a stale response from clearing newer movement.
 
-An admitted write is still subject to quota races and browser eviction. A stored asset does not
-become offline-readable until the checksum admission rules above verify it. Persistent storage may
-reduce automatic eviction, but grant behavior varies by browser and users can still clear it. The
-explicit Book Detail offline action may check `persisted()` and request `persist()`; startup does
-not request persistence.
+### Marginalia
 
-## Browser Offline Capability
+Current Reading Session bookmarks, highlights, and notes update the local projection immediately.
+The client persists Reader state before writing the coalesced outbox intent. Stable annotation
+`clientId` and origin metadata survive edits, retries, and continuation.
 
-Browser offline capability is separate from connectivity, current quota admission, and whether a
-specific Book asset is verified. IndexedDB must pass a lightweight open-and-close probe before the
-client can claim offline-stable support. A useful storage estimate plus working persistence query
-and request APIs provide full capability; missing or failed StorageManager features leave
-best-effort storage as limited capability rather than making IndexedDB unusable.
+An unconfirmed create followed by delete leaves no delivery intent. Confirmed edits and deletes
+retain the authority needed for reconciliation. Marginalia from previous or known-closed Reading
+Sessions remains read-only.
 
-Capability checks are read-only except for creating the empty versioned IndexedDB schema when it
-  does not exist. They query `persisted()` but never call `persist()`. The explicit **Available
-offline** action owns any persistence request. Persistent permission reduces automatic eviction,
-but browser or user site-data clearing can still remove local data.
+A state-write failure prevents the outbox write but does not roll back the visible authored change.
+An outbox failure leaves the durable local projection dirty for a later local flush opportunity.
 
-Persistent storage is never requested during startup, capability inspection, or background work.
-An explicit offline-availability action first checks `persisted()` and calls `persist()` at
-most once when needed. A denied request does not make IndexedDB unusable; it leaves any later
-offline-retention attempt subject to best-effort eviction. A grant reduces automatic eviction risk
-but does not prevent the user or browser controls from clearing site data.
+## Outbox and exact revisions
 
-## Reader Outbox Intents
+The Reader outbox stores domain desired state, never HTTP requests, bearer tokens, URLs, raw errors,
+or response bodies. Its scope is:
 
-The Reader outbox stores domain desired state, never serialized HTTP requests. Initial queued scope
-is limited to establishing a writable Session through normal `open`, latest progress, and complete
-annotation upsert or delete intent. Session close, `start-over`, Session metadata, Shelves, and
-other library mutations remain excluded. Bearer tokens and request URLs do not belong in intents.
+- establish a writable Reading Session;
+- replace latest progress;
+- upsert a complete annotation; and
+- delete an annotation.
 
-Progress coalesces to the latest CFI, percentage, and stable location label without comparing CFI
-order. Annotation intent coalesces by account namespace, Book, target Session, and stable
-`clientId`: edits replace earlier upserts, an unconfirmed create followed by delete disappears,
-confirmed edit followed by delete becomes one delete, restore replaces delete, and repeated deletes
-become one. Mutable intents carry a local revision so later replay can acknowledge only the exact
-version it delivered.
+Reading Session close, `start-over`, Reading Session metadata, Shelves, and other Library mutations
+are excluded.
 
-After `SESSION_CLOSED`, unresolved progress and annotation upserts may transfer to the writable
-continuation Session. Upserts that originated as confirmed annotations retain their original
-server Session identity so a future reconciler can assign a new `clientId` when required. Deletes
-of annotations confirmed in the closed Session do not transfer. Session establishment resolves
-through normal `open`; `start-over` is never automatic recovery.
+Progress coalesces to the latest value. Annotation intent coalesces by namespace, Book, target
+Reading Session, and stable `clientId`. Mutable resources carry an `intentRevision`. Delivery
+removes or replaces a resource only when the current revision still matches the attempted revision.
+A newer local edit clears obsolete attempt state and remains eligible as new work.
 
-## Local Reader Continuity
+Each current revision may retain one normalized attempt:
 
-Local Reader Session identity is separate from server Session authority. A server-confirmed local
-record carries its server Session ID and last-known `active`, `closed`, or unknown status. Only a
-last-known-active confirmed Session is selected for offline local writes. A confirmed closed or
-authority-unknown Session is never treated as writable or reopened.
+- classification;
+- attempt count;
+- attempt time; and
+- computed `retryEligibleAt` for retry-later work.
 
-When no writable confirmed Session exists, the client creates or reuses one Book-scoped
-provisional Session for the account namespace. Its durable identity is prefixed `local:` and its
-server Session ID is always null. It is only a container for local Reader continuity and authored
-intent. Repeated loads reuse that identity and ensure one coalesced `establish-session` intent.
+No success history is stored.
 
-Reconnect resolves Session authority before any Reader intent is replayed. The client first uses
-the read-only active-session lookup and binds local continuity to its active Session when present;
-otherwise normal `open` converges on the server's one writable Session. A successful bind preserves
-the local Session identity, progress, annotations, tombstones, and annotation origins while adding
-the authoritative active server Session ID. It may then exact-remove only the fulfilled
-`establish-session` intent. Provisional IDs are never sent as server Session IDs, and `start-over`
-remains explicit user intent rather than a recovery path. Progress and annotation delivery remain
-explicit replay actions rather than automatic reconnect behavior.
+## Replay and Reading Session continuation
 
-## Durable Repository Boundaries
+Replay groups work by namespace and Book, then orders it as:
 
-Browser persistence uses one versioned native IndexedDB database, split by ownership: successful
-authoritative projections, complete publication assets, local Reader continuity state, and Reader outbox
-intents use separate async repositories. Complete publication payloads use structured-clone-safe browser
-`Blob` values.
-All account-owned records and operations are namespace-scoped, namespace purge is isolated, and
-repository reads and writes do not expose mutable stored object identity.
+1. writable Reading Session authority;
+2. annotations;
+3. latest progress.
 
-The outbox repository owns atomic read-coalesce-write and exact-revision removal. Listing order is
-not a replay contract. IndexedDB adapters must satisfy the shared repository conformance cases.
-Persistence failures remain failures: there is no silent `localStorage` or in-memory fallback.
-Cross-tab Reader replay uses namespace-and-Book-scoped Web Locks. Service-worker behavior remains a
-later decision.
+Annotation replay sends one bounded batch of complete eligible desired state. It adopts the returned
+server collection as baseline, overlays newer local intent, and acknowledges only exact delivered
+revisions. Progress replay reloads current desired progress and applies the same exact-revision
+rule. A later-stage failure does not undo an earlier successful stage.
 
-## Retry and Replay Policy
+`409 SESSION_CLOSED` never writes to the closed Reading Session. Reconciliation obtains another
+writable Reading Session:
 
-Delivery failures are classified without retaining raw response bodies or request URLs. Network
-interruption, `429`, known in-progress idempotency work, and `5xx` retry later; `401` requires
-reauthentication; `403` and ambiguous `404` require authority refresh rather than blind retry;
-validation failures are terminal for the unchanged intent. `409 SESSION_CLOSED` remains distinct
-because eligible Reader state may continue through a newly opened writable Session.
+- local-unconfirmed annotation upserts retain their `clientId`;
+- confirmed historical upserts receive a new stable `clientId`;
+- progress transfers as the latest desired value; and
+- confirmed deletes against the closed Reading Session are dropped rather than applied elsewhere.
 
-Each pending Reader resource retains only its latest normalized attempt state, tied to the exact
-resource revision. A newer edit or replacement clears the old failure state. Retry-later attempts
-store a computed eligibility time using the existing backoff and normalized server retry delay;
-terminal, authentication, authority, and unknown failures remain durable without raw errors or
-response data. Automatic startup and reconnect sweeps skip resources that are not currently
-eligible, while an explicit Settings retry may attempt deferred or manual-attention work. Eligible
-progress can still sync when an unrelated annotation requires manual attention. Settings therefore
-keeps `Needs attention` and deferred status across reloads.
+The automatic sweep may report copied edits and dropped deletes in one nonblocking notice.
+`start-over` remains explicit user intent.
 
-While an authenticated foreground app remains alive, one namespace timer tracks the earliest
-durable retry eligibility. At wake it rechecks connectivity and durable outbox state, then invokes
-the existing non-waiting, cross-tab-coordinated pending sweep. Terminal, authentication, authority,
-and other manual-only work never schedules the timer. Offline or unknown connectivity suspends
-timer-driven delivery, and returning to a visible tab rescans overdue work to tolerate browser timer
-throttling. The scheduler is disposed with its authenticated namespace and does not promise execution
-after the app or browser closes. There is still no polling, service worker, or browser background sync.
+## Failure and retry policy
 
-Transient retries use deterministic exponential backoff beginning at 30 seconds and capped at 15
-minutes, unless a valid server retry delay is supplied. Policy computes delay only; the foreground
-scheduler consumes its durable timestamp and does not run a periodic loop. Time-dependent code receives a clock with a
-`now()` function so tests need no wall-clock sleeps.
+Delivery failures are normalized as follows:
 
-Replay is grouped by account namespace and Book, then ordered deterministically as writable Session
-authority, annotations, and latest progress. Repository list order has no meaning. Mutable intents
-are acknowledged only when the delivered revision still exactly matches current desired state.
-Closed-Session continuation retains Phase 0F transfer/drop rules, and `start-over` is never
-automatic recovery. A future executor must enforce one active replay writer per account namespace
-across browser tabs.
+| Failure | Policy |
+| --- | --- |
+| Network interruption, `429`, `5xx`, or `IDEMPOTENCY_IN_PROGRESS` | Retry later |
+| `401` | Repair authentication |
+| `403` or ambiguous `404` | Refresh authority; do not retry blindly |
+| Validation failure or `IDEMPOTENCY_KEY_REUSED` | Manual attention |
+| `409 SESSION_CLOSED` | Reading Session continuation |
+| Unknown failure | Manual attention |
 
-## Architecture Seams
+Retry-later delay starts at 30 seconds, doubles per attempt, and caps at 15 minutes. A normalized
+server retry delay overrides the computed backoff. The resulting `retryEligibleAt` is stored on the
+exact resource revision.
 
-Keep these seams explicit before broad feature wiring, with server calls behind the existing client
-boundary and renderer details behind the Reader bridge:
+Automatic sync skips deferred, authentication-blocked, authority-blocked, terminal, and unknown
+manual-only resources. It may still deliver eligible progress when an unrelated annotation needs
+attention. A verified user's explicit Settings retry overrides retry timing and manual-only
+eligibility; repair-required state blocks network delivery.
 
-- browser connectivity source limited to `online`, `offline`, or `unknown`; it reports browser
-  connectivity signals only and does not infer server, authentication, cache, or book availability
-- server/account-profile cache namespace independent of storage implementation
-- cache repositories for replaceable snapshots and durable Reader state
-- publication asset store, keyed by Book and format
-- annotation desired-state outbox
-- replay executor with exact outcomes
-- sync outcome notice presenter
+## Foreground sync and coordination
 
-These are responsibility boundaries, not prescribed classes or storage schemas.
+Automatic delivery runs after authenticated startup when connectivity is `online`, after an
+`offline` to `online` transition, and when the foreground retry scheduler reaches durable
+eligibility.
 
-## Testing Principles
+The namespace sweep lists the outbox once, derives eligible Books, and uses at most three workers.
+Each Book sync obtains an exclusive Web Lock scoped by namespace and Book. Automatic callers use
+non-waiting `if-available` coordination; Settings and connection removal use waiting coordination.
+A busy lock is normal cross-tab contention and does not start a tight retry loop.
 
-- Test executable runtime behavior, contracts, and invariants only.
-- Do not add tests for this document, repository layout, labels, or configuration text.
-- Avoid coverage-driven test volume.
-- Test each storage, lifecycle, and replay seam before large feature wiring depends on it.
-- Give special protection to closed-session immutability, latest-only progress, stable annotation
-  identity, exact acknowledgement, continuation, and cross-tab ownership.
+One foreground timer per authenticated namespace tracks the earliest future
+`retryEligibleAt`. Outbox changes rescan the schedule. At wake, the scheduler rechecks namespace,
+connectivity, and durable state before invoking the shared automatic sweep. Offline or `unknown`
+connectivity cancels timer-driven delivery. Returning to a visible tab rescans overdue work to
+tolerate browser timer throttling.
 
-## Open Questions
+The timer is derived state. It does not recalculate backoff, create per-Book timers, poll, or promise
+execution after the app or browser closes.
 
-- What browser credential and storage policy is acceptable for offline use?
-- How should quota pressure, eviction, and lost availability be presented?
-- What are the exact download, status, retry, and remove interactions for **Available offline**?
-- How should terminally failed annotation operations be retained and resolved?
+Routine success remains silent. New continuation or terminal outcomes may feed the existing
+aggregated notice. Merely loading durable terminal state does not repeat a warning.
+
+## Settings
+
+Settings > Offline is the management surface for the verified namespace. It lists retained
+publication assets and Books with pending Reader work, using cached titles or a Book-ID fallback.
+Statuses distinguish Waiting to sync, Waiting to retry, Needs attention, connection repair, and
+authority blocking without exposing internal revisions, IDs, or payloads.
+
+Global and per-Book Retry use the shared waiting coordination path. Pending reading-position
+delivery may be discarded without removing the durable local position used for resume. Annotation
+discard is unavailable because the local projection does not retain a separate authoritative
+baseline for safely undoing confirmed edits or deletes.
+
+Removing one or all offline copies affects publication assets and durable covers only. It does not
+remove authored Reader data.
+
+## Sign out, Forget, and repair
+
+Sign out and Forget connection and local data use complete namespace cleanup:
+
+1. Inspect pending Reader work.
+2. When online, attempt one waiting coordinated sync.
+3. Re-read durable pending state.
+4. Warn before discarding unsynced work.
+5. Remove projections, covers, publication assets, Reader state, and outbox records.
+6. Remove the active connection only after local cleanup succeeds.
+
+If remote sign-out succeeds but cleanup fails, the client retains enough local connection context
+to retry cleanup. Intentional removal never leaves dormant account namespaces.
+
+Authentication failure alone is nondestructive. Same-identity repair restores access to the existing
+namespace; different-identity verification deletes the old namespace before activation.
+
+## Browser requirements and unsupported capabilities
+
+IndexedDB must pass a lightweight open-and-close probe before the application claims offline
+storage support. Storage estimates and persistence APIs refine that capability but do not replace
+the IndexedDB requirement. Capability inspection may create the empty versioned database; only the
+explicit Available offline action requests persistent storage.
+
+Web Locks require browser support and a secure context. Production HTTPS is supplied by the
+operator-managed reverse proxy; internal HTTP to container nginx is valid. See
+[deployment.md](./deployment.md).
+
+The application intentionally does not support service-worker delivery, browser Background Sync,
+periodic polling, offline Shelf management, standalone offline Reading Session management, general
+catalog caching, partial publication downloads, or resumable downloads.
+
+## Testing priorities
+
+Tests protect namespace isolation, publication integrity, exact revision acknowledgement,
+closed-Reading-Session immutability, latest-only progress, stable annotation identity, retry
+eligibility, cross-tab ownership, cleanup, and zero-network offline route boundaries. They do not
+lock down documentation prose or repository layout.

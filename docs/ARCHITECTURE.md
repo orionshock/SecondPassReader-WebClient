@@ -1,7 +1,7 @@
 # Architecture
 
-Second Pass Reader is a standalone static browser app. It does not use Django templates,
-server-rendered routes, or server runtime code.
+Second Pass Reader is a standalone, hash-routed browser application. It does not use Django
+templates, server-rendered routes, or Second Pass Library runtime code.
 
 ## Stack
 
@@ -9,126 +9,104 @@ server-rendered routes, or server runtime code.
 - TypeScript
 - Vite
 - `@likecoin/epub-ts` for EPUB rendering
-- Workspace package `@secondpass/client` for Second Pass server calls
-- CSS in repo-owned stylesheets, without a styling framework
+- `@secondpass/client` for Second Pass Library calls
+- Repo-owned CSS without a styling framework
 
-## Routing and startup
+## Startup and routing
 
-The app is hash-routed. Route parsing and hash generation live in `src/app/AppNavigation.Router.ts`.
+`src/app/App.tsx` selects the connection workflow or authenticated application. Main routes do not
+mount until the active connection is authenticated and its account identity is verified.
 
-Primary route families:
+`src/app/AppNavigation.Router.ts` parses and generates these hash-route families:
 
-- `#/connect`, `#/pair`, `#/verify`
-- `#/home`
-- `#/library`
-- `#/shelves`
-- `#/sessions`
+- `#/connect`, `#/pair`, and `#/verify`
+- `#/home` and `#/library`, with Book Detail carried by a `book` query parameter
+- `#/shelves`, Shelf detail, and Shelf editing
+- `#/sessions` and Reading Session detail
+- `#/settings`
 - `#/reader/:bookId`
 
-The workflow gate in `src/app/App.tsx` blocks the main app routes until the selected profile is
-authenticated and verified.
+Because navigation state follows `#`, application routes are not sent to the static server. See
+[deployment.md](./deployment.md) for the root-path and nginx contract.
 
-## Data Boundaries
+## Authority and data boundaries
 
-- The server is canonical for library data, reading sessions, progress, and annotations.
-- Browser storage keeps local connection profiles, app theme, reader settings, library display preference, return targets, and marginalia layer preferences.
-- Renderer state is transient and never canonical app data.
-- Live annotation/session data uses the SPL Marginalia Profile shape with EPUB CFI selectors.
-- `@likecoin/epub-ts` details stay behind the reader engine boundary.
+- Second Pass Library is authoritative for catalog, Shelf, Reading Session, progress, and
+  Marginalia data.
+- The Web Client keeps one active connection and browser-local display preferences.
+- IndexedDB stores namespace-scoped cached projections, explicitly retained publication assets and
+  covers, Reader continuity, and pending Reader work.
+- Renderer state is transient. It is never canonical Reader or Marginalia data.
+- W3C Web Annotation JSON-LD and EPUB CFI selectors remain the canonical annotation contract.
+- `@likecoin/epub-ts` types and behavior stay behind the Reader engine boundary.
 
-## Application Constraints
+The active connection contains a bearer token after linking. Treat the token as a password: never
+log it or place it in a URL. Linking uses the PIN/code Client API flow; OAuth/OIDC is not part of
+the application.
 
-- Static deployment and hash routing keep the app independent of server-rendered routes.
-- Connection profiles and browser preferences are local state, not server-synchronized settings.
-- Connection profiles contain bearer tokens after linking. Tokens are password-equivalent and must
-  not be logged or placed in URLs.
-- Server linking uses the PIN/code Client API flow. OAuth/OIDC is not part of the current product.
-- Reader themes use repo-owned CSS variables and activity attributes; there is no styling framework.
-
-See [reader.md](./reader.md) for Reader limits and
-[epub-ts-support-issues.md](./epub-ts-support-issues.md) for renderer defects and library limits.
-
-## Client SDK Boundary
+## SDK boundary
 
 Application features call the `@secondpass/client` facade. The package owns endpoint URLs,
-authentication headers, wire payloads, response projection, and API error normalization. Feature
-code must not recreate those contracts.
+authentication, wire payloads, response projection, and API error normalization. Feature code must
+not reproduce those contracts.
 
-SDK documentation has a separate package audience:
+- [SDK overview](../packages/secondpass-client/README.md)
+- [SDK API](../packages/secondpass-client/docs/API.md)
+- [SDK data model](../packages/secondpass-client/docs/DATA_MODEL.md)
 
-- [Package overview](../packages/secondpass-client/README.md)
-- [Public API](../packages/secondpass-client/docs/API.md)
-- [Data model](../packages/secondpass-client/docs/DATA_MODEL.md)
+## Source ownership
 
-## Source Layout
+| Path | Ownership |
+| --- | --- |
+| `src/app/` | Application composition, routing, authenticated context, connectivity, Settings, and offline infrastructure |
+| `src/app/offline/browser/` | Browser storage capability and persistence APIs |
+| `src/app/offline/storage/` | IndexedDB schema, repository contracts, and repository construction |
+| `src/app/offline/publication/` | Publication assets, durable covers, verification, storage admission, and removal |
+| `src/app/offline/reader/` | Local Reader continuity, outbox, replay, retry, coordination, and sync notices |
+| `src/app/offline/namespace/` | Namespace identity, inspection, retention messaging, and complete cleanup |
+| `src/components/` | Small shared visual components and structured-content renderers |
+| `src/features/connection/` | Discovery, PIN/code linking, verification, repair, and connection removal |
+| `src/features/home/` | Server Home and cached offline Home previews |
+| `src/features/library/` | Catalog browsing, Book Detail, offline Library, and publication availability controls |
+| `src/features/shelves/` | Online Shelf list, detail, and editing |
+| `src/features/sessions/` | Online Reading Session list, detail, metadata, and close flows |
+| `src/features/reader/` | Reader activity, Reading Session orchestration, shell, EPUB engine, Marginalia, search, imports, and display settings |
+| `src/storage/` | Small synchronous browser stores for the active connection and preferences |
+| `src/styles/` | Global and Reader stylesheets |
+| `packages/secondpass-client/` | Transport-independent TypeScript client for Second Pass Library |
 
-`src/app/`
-: Top-level app shell, routing helpers, workflow selection, SPL client creation, header, settings panel.
+Folders represent product or subsystem ownership. Filename suffixes identify responsibility; see
+[AGENTS.md](../AGENTS.md) for the naming and folder rules.
 
-`src/components/`
-: Shared small UI components.
-
-`src/features/connection/`
-: Server discovery, Client API linking, and account verification UI.
-
-`src/features/home/`
-: Home dashboard.
-
-`src/features/library/`
-: Library browsing, book detail modal, book download/open workflow.
-
-`src/features/shelves/`
-: Shelf list, detail, and edit flows.
-
-`src/features/sessions/`
-: Reading session list/detail and close-session UI.
-
-`src/features/reader/`
-: Reader activity, EPUB shell/engine, reading session orchestration, annotations, search, imports, settings, and viewport.
-
-`src/storage/`
-: Local browser persistence helpers.
-
-`src/styles/`
-: Global and reader CSS.
-
-`packages/secondpass-client/`
-: Pure TypeScript client package for server API workflows.
-
-## Layer ownership
+## Major owners
 
 `App.tsx`
-: Wires the global workflow, routes, selected connection profile, connection recovery, and top-level
-route rendering. `AppReaderOpen.Controller.ts` owns Reader restore/open state and object URL cleanup.
+: Composes the connection workflow, authenticated lifecycle, routes, global notices, and top-level
+  online/offline route selection.
+
+`AppReaderOpen.Controller.ts`
+: Selects server-backed or retained-local Reader opening and owns publication object URL cleanup.
 
 `ReadingActivity.Orchestrator.tsx`
-: Renders Reader chrome and layout. Controllers under `src/features/reader/activity/` handle import
-review, completion, and end-of-book behavior.
+: Composes Reader chrome, imports, completion, and Reading Session behavior.
 
 `ReadingSession.Orchestrator.tsx`
-: Wires session metadata, progress autosave, annotations, previous-session layers, renderer-neutral
-bridge state, and shell render state.
+: Connects Reading Session progress and Marginalia to renderer-neutral capabilities.
 
 `ReadingShell.Orchestrator.tsx`
-: Wires Reader chrome to the shell lifecycle modules under `src/features/reader/shell/`: bootstrap,
-capability publication, command routing, location publication, settings reflow, runtime
-serialization, and toolbar control.
+: Coordinates the Reader viewport, engine lifecycle, commands, location publication, and reflow.
 
 `EpubTsBook.Engine.ts`
-: Public `@likecoin/epub-ts` facade. Search, highlight rendering, rendition settings, range
-repair, location mapping, and geometry remain engine-owned modules behind that facade.
+: Exposes EPUB rendering behind the Reader engine boundary.
 
-`@secondpass/client`
-: Owns HTTP, auth headers, endpoint details, payload shaping, response projection, and API error
-normalization.
+Detailed Reader ownership and lifecycle invariants belong in [reader.md](./reader.md). Offline
+storage, sync, retry, and cleanup belong in [offline-mode.md](./offline-mode.md).
 
-## Lifecycle Boundaries
+## Lifecycle constraints
 
-The EPUB engine is expensive and stateful. Opening menus, drawers, dialogs, tabs, or tool panels must
-not recreate it. Callback identity and effect dependencies near `ReadingShell` and
-`EpubTsBookEngine` are lifecycle-sensitive.
+The EPUB engine is stateful and expensive. Menus, drawers, dialogs, tabs, connectivity changes, and
+tool panels must not recreate it. Only document identity, mount identity, and settings that require
+reinitialization belong in engine bootstrap dependencies.
 
-The layer that creates temporary state must resolve or clear it before handoff. Search flashes,
-staged highlight previews, and durable annotation marks have separate lifecycles.
-
-See [reader.md](./reader.md) for the detailed Reader ownership map and operating invariants.
+The layer that creates temporary interaction state must clear or resolve it before handoff. Search
+marks, staged highlights, and durable annotation marks have separate owners and lifecycles.

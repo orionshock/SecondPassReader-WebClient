@@ -9,6 +9,8 @@ Audit baseline:
 - Package: `@likecoin/epub-ts`
 - Installed version: `0.7.2`
 - Audit date: 2026-09-12
+- Upstream 0.7.2 strips ASCII controls and spaces before link-scheme checks and blocks
+  `vbscript:` URLs. This security change is upstream and separate from the local search patch.
 - Canonical package integration: `src/features/reader/engine/EpubTsBook.Engine.ts`
 - Upstream source references below use the TypeScript paths and line numbers embedded in
   `node_modules/@likecoin/epub-ts/dist/epub.js.map`. Line numbers are version-specific.
@@ -45,12 +47,13 @@ Audit baseline:
 
 **Current status:** Locally patched for the browser ESM entry point in
 `patches/@likecoin+epub-ts+0.7.2.patch`. The patch is reapplied by the root `postinstall` script and
-is guarded by `src/__tests__/reader/engine/epubTsSectionSearchPatch.test.ts`.
+is guarded by `src/__tests__/reader/engine/epubTsSectionSearchPatch.test.ts`. Docker copies
+`patches/` before `npm ci`, so a patch failure also fails the image build.
 
 **Impact:** Built-in search can miss exact visible prose near the end of a chapter. This affects
 normal Reader search and guided import matching.
 
-**SecondPass mitigation:** The patch drains every residual search-window start without changing
+**Second Pass mitigation:** The patch drains every residual search-window start without changing
 query generation, result ordering, CFI construction, or import ranking.
 
 ### Evidence
@@ -125,7 +128,7 @@ Upstream regression tests should cover:
 that visible CFI to a DOM `Range`. Toolbars and other geometry-dependent UI fall back or appear in
 the wrong place on the first display of a page.
 
-**SecondPass mitigation:** Protected relocations request a new staged-toolbar measurement. The
+**Second Pass mitigation:** Protected relocations request a new staged-toolbar measurement. The
 newest measurement wins, and range geometry is calculated against the visible EPUB mount bounds.
 
 ### Evidence
@@ -176,7 +179,7 @@ settled API completes.
 **Impact:** Consumers cannot reliably distinguish user navigation from delayed relocation events
 caused by display, resize, content reflow, or internal re-anchoring.
 
-**SecondPass mitigation:** `StagedSelection.Lifecycle.ts` assigns protection to import-staging and
+**Second Pass mitigation:** `StagedSelection.Lifecycle.ts` assigns protection to import-staging and
 layout-reflow operations. Unrelated navigation cancels staging; operation-owned and trailing
 protected relocations preserve it and request a re-anchor.
 
@@ -229,7 +232,7 @@ navigation. Mark the final event for an operation as settled.
 viewport to an earlier page-start CFI. If consumers persist every relocation, correct progress can
 also be overwritten with the earlier location.
 
-**SecondPass mitigation:** Bootstrap retains the authoritative restore CFI for reflow targeting and
+**Second Pass mitigation:** Bootstrap retains the authoritative restore CFI for reflow targeting and
 quarantines intermediate relocation progress until readable startup is established.
 
 ### Evidence
@@ -271,7 +274,7 @@ boundary.
 **Impact:** `Rendition.getRange(cfi)` cannot be used as a general CFI existence probe and may return
 `undefined` immediately after a nominally successful display.
 
-**SecondPass mitigation:** Visible geometry uses `rendition.getRange()`. Book-level validation loads
+**Second Pass mitigation:** Visible geometry uses `rendition.getRange()`. Book-level validation loads
 the target section and resolves the CFI against that section document.
 
 ### Evidence
@@ -306,7 +309,7 @@ would also address display timing without forcing callers to inspect private vie
 **Impact:** Search flashes, staged previews, and durable annotations at the same CFI can overwrite or
 detach each other. Two app annotations at an identical CFI cannot have independent renderer identity.
 
-**SecondPass mitigation:** Temporary marks are cleared before ownership handoff. A same-CFI staged
+**Second Pass mitigation:** Temporary marks are cleared before ownership handoff. A same-CFI staged
 preview temporarily replaces the durable renderer mark, which is restored from canonical annotation
 state after commit or cancel. Exact same-session CFI commits update the existing app annotation.
 
@@ -397,7 +400,7 @@ Upstream regression tests should cover:
 large queue operation. Percentage metadata then becomes unavailable and mutable section state may
 remain live longer than expected.
 
-**SecondPass mitigation:** Location generation failure is non-fatal; reading continues without
+**Second Pass mitigation:** Location generation failure is non-fatal; reading continues without
 whole-book percentage metadata.
 
 ### Evidence
@@ -424,7 +427,7 @@ all generation or produce partial locations plus structured per-section errors.
 **Impact:** Chrome reports a scroll-blocking listener whenever highlights are painted. This can hurt
 touch scrolling responsiveness.
 
-**SecondPass mitigation:** None. Highlight behavior is retained because disabling marks would cause
+**Second Pass mitigation:** None. Highlight behavior is retained because disabling marks would cause
 greater product impact than the warning.
 
 ### Evidence
@@ -449,7 +452,7 @@ Pointer events may simplify this code, but are not required for the small fix.
 **Impact:** Visible prose can fail to match when punctuation, whitespace, or DOM boundaries differ.
 Search cannot cross spine sections and can span only the configured number of sequential text nodes.
 
-**SecondPass mitigation:** Search traversal is serialized. Import matching tries the full quote
+**Second Pass mitigation:** Search traversal is serialized. Import matching tries the full quote
 first, then bounded punctuation-light fragments and same-section range repair without replacing
 epub-ts with a second full-book search engine.
 
@@ -483,7 +486,7 @@ Cross-section search can remain out of scope, but the boundary should be explici
 **Impact:** The application cannot safely offer draggable highlight endpoints or reliably measure a
 range without reaching into the rendered iframe and CFI internals.
 
-**SecondPass mitigation:** The engine exposes visible range-anchor measurement only. The app does
+**Second Pass mitigation:** The engine exposes visible range-anchor measurement only. The app does
 not perform unsupported CFI surgery or expose drag handles.
 
 ### Evidence
@@ -516,7 +519,7 @@ boundary.
 **Impact:** Some configured colors, especially lighter pinks, can appear faint, inconsistent, or
 temporarily absent depending on view/mark rendering.
 
-**SecondPass mitigation:** Highlight attributes include both SVG paint and DOM background
+**Second Pass mitigation:** Highlight attributes include both SVG paint and DOM background
 properties with the intended opacity and blend mode.
 
 ### Evidence
@@ -543,7 +546,7 @@ and screenshot comparison before filing as a definite defect.
 **Impact:** Percentage width/height settings have produced invalid or unstable pagination
 measurements, making next/previous behave more like section jumps in affected layouts.
 
-**SecondPass mitigation:** Engine bootstrap waits for a non-zero mount measurement and supplies
+**Second Pass mitigation:** Engine bootstrap waits for a non-zero mount measurement and supplies
 integer pixel dimensions to the rendition.
 
 ### Evidence

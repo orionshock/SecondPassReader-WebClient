@@ -2,82 +2,47 @@
 
 ## Prerequisites
 
-- The primary development environment is Windows 10 with VS Code.
-- Install the Node.js version in `.node-version` and the npm major declared in
-  `package.json`.
-- Keep the repo in a normal local folder rather than a synced/network folder when possible.
+- Windows 10 with VS Code is the primary development environment.
+- Install the Node.js version in `.node-version` and the npm major declared in `package.json`.
+- Prefer a normal local directory over a synchronized or network directory.
 
 ## Install
 
-```bash
-npm install
+Use the committed lockfile for a clean, reproducible install:
+
+```powershell
+npm.cmd ci
 ```
 
-## Run Locally
+The root `postinstall` script applies patches with `patch-package`. Installation must report that
+`patches/@likecoin+epub-ts+0.7.2.patch` applied successfully; a patch failure is an install failure.
+See [epub-ts-support-issues.md](./epub-ts-support-issues.md) for the defect and regression evidence.
 
-```bash
-npm run dev
+When intentionally changing a dependency, use:
+
+```powershell
+npm.cmd install <package>
+```
+
+Commit the resulting `package.json` and `package-lock.json` changes. Do not edit the lockfile by
+hand. If the epub-ts version changes, re-evaluate the patch against pristine upstream code before
+regenerating or removing it.
+
+## Run locally
+
+```powershell
+npm.cmd run dev
 ```
 
 Vite prints the local URL, usually `http://localhost:5173/`.
 
-The Django server is separate from this repo. For local development, configure the server to allow
-the Vite origin with CORS. Do not bypass CORS in the client.
+Second Pass Library runs separately. Its CORS policy must allow the Vite origin; do not bypass CORS
+inside the Web Client.
 
-## Build
+## Local Library presets
 
-```bash
-npm run build
-```
-
-The build command:
-
-1. Builds `@secondpass/client`.
-2. Runs TypeScript project build with `tsc -b`.
-3. Runs `vite build`.
-
-## Preview
-
-```bash
-npm run preview
-```
-
-## Tests
-
-```bash
-npm run test
-```
-
-Tests use Vitest. Current app tests live under `src/__tests__/`.
-
-For the client package only:
-
-```bash
-npm run test -w @secondpass/client
-```
-
-## Verify
-
-Run the complete local verification gate with:
-
-```bash
-npm run verify
-```
-
-This runs repository hygiene, Vitest in noninteractive mode, and the production build. The VS Code
-`Verify: all` task runs the same command.
-
-## Static Deployment
-
-The build output is in `dist/`. Serve it from a static HTTP server. Users select a Second Pass server
-in the browser connection flow.
-
-## Local Server Presets
-
-To test pinned servers with `npm run dev`, create the ignored file
-`public/secondpass-servers.json`. Vite serves it at `/secondpass-servers.json`.
-
-The file contains a JSON array of server URLs:
+Create the ignored file `public/secondpass-servers.json` to populate the local server picker. Vite
+serves it at `/secondpass-servers.json`.
 
 ```json
 [
@@ -86,19 +51,51 @@ The file contains a JSON array of server URLs:
 ]
 ```
 
-The connection page loads each server's public name and description through unauthenticated
-discovery. The servers must allow requests from the Vite development origin through CORS. Do not
-put bearer tokens or other credentials in this file.
+The file contains only Second Pass Library URLs. The connection page obtains names and descriptions
+through public discovery. Each Library must allow the Vite origin through CORS. Never put bearer
+tokens or other credentials in this file.
 
-## Common Local State
+## Validation
 
-Browser storage contains:
+Run the repository verification gate:
 
-- connection profiles and bearer token
-- app theme
-- reader settings
-- library display preferences
-- reader return targets
-- marginalia layer preferences
+```powershell
+npm.cmd run verify
+```
 
-Bearer tokens are password-equivalent. Do not log them or add them to URLs.
+It runs repository hygiene, Vitest in noninteractive mode, and the production build. The VS Code
+`Verify: all` task runs the same script.
+
+Individual commands are available when a narrower check is appropriate:
+
+```powershell
+npm.cmd run hygiene
+npm.cmd test -- --run
+npm.cmd run build
+npm.cmd --prefix packages/secondpass-client test
+npm.cmd --prefix packages/secondpass-client run build
+git diff --check
+```
+
+The application and SDK tests are discovered recursively under their respective `src/__tests__/`
+directories.
+
+## Build and preview
+
+```powershell
+npm.cmd run build
+npm.cmd run preview
+```
+
+The build writes the static application to `dist/`. Production container and reverse-proxy
+requirements belong in [deployment.md](./deployment.md).
+
+## Browser-local data
+
+The browser stores one active connection, its bearer token, application appearance, Reader
+settings, Library display preferences, Reader return targets, and Marginalia layer preferences.
+IndexedDB separately stores namespace-scoped cached projections, explicitly retained publication
+assets and covers, Reader continuity, and pending Reader work.
+
+Bearer tokens are password-equivalent. Never log them or place them in URLs. See
+[offline-mode.md](./offline-mode.md) for namespace, retention, repair, and cleanup rules.

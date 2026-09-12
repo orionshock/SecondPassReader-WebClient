@@ -1,10 +1,10 @@
 # `@secondpass/client`
 
-TypeScript client library for the Second Pass Reader app.
+`@secondpass/client` is the TypeScript SDK used by Second Pass Reader. It exposes workflow-shaped
+methods rather than raw endpoints. Application code should not construct server payloads,
+authentication headers, or publication URLs for normal flows.
 
-This package exposes product/workflow-shaped methods (not raw endpoints). App code should call the client facade and should not construct server wire payloads, auth headers, or download URLs for normal flows.
-
-## Install / import (workspace)
+## Workspace import
 
 ```ts
 import { createSecondPassClient } from "@secondpass/client";
@@ -15,29 +15,25 @@ import { createSecondPassClient } from "@secondpass/client";
 ```ts
 const spl = createSecondPassClient({
   apiBaseUrl,
-  accessToken, // optional for server discovery/linking; required for server.info()
-  tokenType,   // optional, defaults to "Bearer"
+  accessToken,
+  tokenType,
 });
 ```
 
-- Server discovery/linking methods may run without an access token.
-- `spl.server.info()` and non-server namespaces require auth and throw an `ApiError(kind="unauthorized")` if called without credentials.
+`accessToken` is optional for public discovery, linking, and cover retrieval. It is required for
+`spl.server.info()` and all other account, Library, Shelf, publication, and Marginalia operations.
+`tokenType` defaults to `Bearer`.
 
-## Docs
+## Documentation
 
-- API: `packages/secondpass-client/docs/API.md`
-- Domain notes: `packages/secondpass-client/docs/DATA_MODEL.md`
+- [API](docs/API.md)
+- [Data model](docs/DATA_MODEL.md)
 
-## Tests
+## Validation
 
-Run tests from the repo root:
+Run from the repository root:
 
-```bash
-npm run test
-```
-
-Or for this workspace only:
-
-```bash
-npm run test -w @secondpass/client
+```powershell
+npm.cmd --prefix packages/secondpass-client test
+npm.cmd --prefix packages/secondpass-client run build
 ```

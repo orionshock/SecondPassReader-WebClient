@@ -1,142 +1,147 @@
-# Static Docker Deployment
+# Static Docker deployment
 
-The `docker/` kit serves the Vite build as static files through nginx. It does not configure a
-backend proxy, TLS, public hostnames, or Second Pass Library credentials. The supported production
-shape is:
+Second Pass Reader ships as a static Vite application served by container nginx on HTTP port
+`8000`. The container does not own public ingress, TLS, DNS, or Second Pass Library credentials.
 
 ```text
 HTTPS browser
-  -> operator-managed reverse proxy or ingress (DNS, TLS, public access)
+  -> operator-managed reverse proxy or ingress
   -> private HTTP to secondpassreader-webclient:8000
-  -> container nginx (static SPA, runtime presets, health endpoint)
+  -> container nginx
 ```
 
-Internal HTTP is expected. The operator-managed public HTTPS origin, not the internal hop, gives
-the browser the secure context required by Web Locks and other offline-storage capabilities.
+| Concern | Owner |
+| --- | --- |
+| Public DNS, ingress, certificates, TLS, exposure controls, and edge HSTS | Operator |
+| Static SPA, runtime presets, cache headers, and `/healthz` | Container nginx |
+| Library API, publication, and cover requests | Browser to Second Pass Library |
+| API CORS and HTTPS compatibility | Second Pass Library and operator configuration |
 
-## Quick start
+The browser-facing HTTPS origin provides the secure context required by Web Locks and offline
+storage. Plain HTTP between the TLS-terminating proxy and the container is expected.
 
-No `.env` file is required. Copy the Compose example, then build and run the Reader:
+## Start with Compose
+
+No `.env` file is required. Copy the example and start the container:
 
 ```bash
 cp docker/compose.example.yml docker/compose.yml
 docker/restart.sh
 ```
 
-The container listens on HTTP port `8000`, which Compose exposes to other containers without
-publishing it on the host. Route an operator-managed proxy on the same private network to
-`secondpassreader-webclient:8000`. Copy `docker/.env.example` to `docker/.env` only when configuring
-server presets.
+Compose exposes port `8000` to its container network without publishing it on the host. Connect the
+operator-managed proxy to `secondpassreader-webclient:8000` on that private network.
 
-## Optional server presets
+## Runtime Library presets
 
-Copy `docker/.env.example` to `docker/.env`, then configure known Library server URLs. The canonical
-JSON form is an array of strings:
+Presets populate the connection page with Second Pass Library URLs. They contain no display names,
+tokens, or credentials and do not bypass discovery, linking, or verification.
+
+Copy `docker/.env.example` to `docker/.env` and provide either a JSON array:
 
 ```dotenv
 SECONDPASS_SERVER_PRESETS_JSON=["https://library.example.com","https://library-two.example.com"]
 ```
 
-Alternatively, leave `SECONDPASS_SERVER_PRESETS_JSON` empty and use indexed URLs:
+or indexed URLs:
 
 ```dotenv
 SECONDPASS_SERVER_1_URL=https://library.example.com
 SECONDPASS_SERVER_2_URL=https://library-two.example.com
 ```
 
-A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. If it is empty or
-invalid, startup reads non-empty indexed URL values. It trims URLs, then writes the public,
-credential-free string array to `/usr/share/nginx/html/secondpass-servers.json`, which nginx
-serves at `/secondpass-servers.json`. With no configuration, the file contains `[]`.
+A valid `SECONDPASS_SERVER_PRESETS_JSON` value takes precedence, including `[]`. If that value is
+empty or invalid, startup reads non-empty indexed URLs. With no configured URLs, the generated file
+contains `[]`.
 
-After changing presets, run `docker compose -f docker/compose.yml up -d secondpassreader-webclient`
-to recreate the container with the new environment. You do not need to rebuild the image. Presets
-only populate the server picker. On page load, the Reader requests each server's name and
-description through unauthenticated discovery. Selecting a preset fills the URL field at any point
-during that request. The normal Connect action verifies the server again before the existing
-PIN/code pairing flow. Presets contain no display names or tokens and do not bypass linking.
+The entrypoint trims the URLs and atomically writes the credential-free array to
+`/usr/share/nginx/html/secondpass-servers.json`. nginx serves it as
+`/secondpass-servers.json` with `Cache-Control: no-store`.
+
+After changing presets, recreate the container without rebuilding the image:
+
+```bash
+docker compose -f docker/compose.yml up -d secondpassreader-webclient
+```
+
+On page load, the browser obtains each preset's public name and description through unauthenticated
+discovery. Selecting a preset fills the connection URL; Connect verifies it again before starting
+the PIN/code flow.
+
+## Reverse proxy and Library access
+
+Route the public proxy to container port `8000`. Do not configure certificate paths or internal
+HTTP-to-HTTPS redirects in this container.
+
+Container nginx does not use `Host`, `Forwarded`, `X-Forwarded-Proto`, `X-Forwarded-Host`, or
+`X-Forwarded-For` to generate URLs or redirects. Those headers are not application requirements.
+Preserving `Host` may still be useful for proxy logs. nginx records the immediate network peer and
+does not trust forwarded client-IP headers.
+
+The browser calls each configured Second Pass Library directly. The Reader container does not proxy
+Library API, publication, cover, WebSocket, or SSE traffic. Therefore:
+
+- each Library must be reachable from the user's browser;
+- each Library must allow the Reader's public origin through CORS; and
+- an HTTPS Reader must use HTTPS-compatible Library and discovery URLs to avoid mixed-content
+  blocking.
+
+The operator's Reader proxy does not remove the Library's CORS responsibility. No WebSocket, SSE,
+service-worker, or proxy-upgrade support is required.
+
+## Base path and SPA routing
+
+Deploy the app at an origin root such as `https://reader.example.com/`. Subpath deployment such as
+`/reader/` is unsupported: Vite assets, the favicon, and `/secondpass-servers.json` use root-relative
+URLs.
+
+Application navigation uses fragments such as `/#/library`, which browsers do not send to nginx.
+The nginx fallback serves `index.html` for application paths. Dedicated asset, favicon, and preset
+locations return normal missing-file responses instead of rewriting them to the SPA.
 
 ## Version stamp
 
-Vite stamps each build with `git describe --tags --always --dirty` and the latest commit date. Local
-builds read both values from Git. `docker/restart.sh` passes them to Docker because `.git` is excluded
-from the image build context.
+Vite stamps builds with `git describe --tags --always --dirty` and the latest commit date.
+`docker/restart.sh` supplies both values because `.git` is excluded from the Docker build context.
 
-The compiled values are shown under Settings > Library Server > This Device. Builds without Git metadata or explicit Docker build arguments report `development` and `unknown` rather than inventing a release identity.
-
-The version stamp is build metadata. Changing server presets does not alter it or require an image
-rebuild.
-
-## Reverse proxy
-
-For production, route the public reverse proxy to the Reader container on internal HTTP port
-`8000`. Public DNS, certificates, TLS termination, exposure controls, and any edge-level HSTS are
-operator responsibilities. Do not configure certificate paths or an internal HTTP-to-HTTPS redirect
-for this container.
-
-Container nginx serves only static files. It does not use `Host`, `Forwarded`, `X-Forwarded-Proto`,
-`X-Forwarded-Host`, or `X-Forwarded-For` to generate URLs or redirects. Preserving `Host` is harmless
-and often useful for ordinary proxy logs, but none of those headers is required by the application.
-The container logs the immediate network peer and does not trust forwarded client IP headers.
-
-The app is supported at the origin root, such as `https://reader.example.com/`. It is not currently
-configured or tested for a subpath such as `/reader/`: Vite assets, the favicon, and
-`/secondpass-servers.json` use root-relative URLs. Application navigation uses URL fragments such as
-`/#/library`, so the fragment is never sent to nginx. The existing nginx fallback serves
-`index.html`; dedicated asset, favicon, and runtime-preset locations return normal missing-file
-responses instead of rewriting those requests.
-
-Users pair the static Reader app to a Second Pass Library through the PIN/code Client API flow. Do
-not put bearer tokens, credentials, or server API secrets in preset configuration.
-
-## Browser-to-Library connectivity
-
-The browser calls each configured Second Pass Library directly using the absolute origins returned
-by discovery. The Reader container does not proxy Library API, publication, cover, WebSocket, or SSE
-traffic. Therefore:
-
-- the Library must be reachable from the user's browser, not merely from the Reader container;
-- the Library must allow the Reader's public origin through its CORS policy;
-- an HTTPS Reader deployment must use HTTPS-compatible Library and discovery URLs, or browser
-  mixed-content policy will block them; and
-- the operator's Reader reverse proxy does not remove the Library's CORS responsibility.
-
-There is currently no WebSocket, SSE, service-worker, or proxy-upgrade requirement.
+Settings > Library Server > This Device displays the compiled values. Builds without Git metadata
+or explicit build arguments report `development` and `unknown`. Changing runtime presets does not
+change the version stamp.
 
 ## Health and caching
 
-`GET /healthz` returns `204` from container nginx without contacting a Library server, requiring
-authentication, or depending on TLS. The image healthcheck probes
-`http://127.0.0.1:8000/healthz`; an operator may use the same path through the private network.
+`GET /healthz` returns `204` from container nginx without contacting Second Pass Library, requiring
+authentication, or depending on TLS. The image healthcheck requests
+`http://127.0.0.1:8000/healthz`; operators may use the same path over the private network.
 
 | Resource | Container cache policy |
 | --- | --- |
-| `/assets/*` content-hashed build files | `public, max-age=31536000, immutable` |
-| `/index.html` and the `/` document | `no-cache` |
+| `/assets/*` content-hashed files | `public, max-age=31536000, immutable` |
+| `/index.html` and `/` | `no-cache` |
 | `/secondpass-servers.json` | `no-store` |
 | `/favicon.png` | `public, max-age=86400` |
 | `/healthz` | `no-store` |
 
-An edge proxy may augment compression and caching, but it must not make `index.html` or runtime
-presets immutable. The repository does not require Brotli or precompressed files, and the container
-does not explicitly enable compression. Compression at the edge is optional.
+An edge may add compression or compatible cache behavior, but it must not make `index.html` or the
+runtime presets immutable. The container does not explicitly enable compression and ships no
+precompressed files.
 
-The container does not currently impose CSP, COOP, COEP, CORP, frame, or Permissions Policy
-headers. EPUB rendering, Blob URLs, remote Library origins, and dynamic imports require a dedicated
-compatibility review before adding an aggressive CSP. HSTS belongs at the public HTTPS edge.
+The container does not set CSP, COOP, COEP, CORP, frame, or Permissions Policy headers. EPUB
+rendering, Blob URLs, remote Library origins, and dynamic imports require compatibility review before
+adding an aggressive CSP. Set HSTS at the public HTTPS edge.
 
-Official nginx container logging remains on stdout/stderr. Hashed asset and healthcheck access logs
-are suppressed; application document and nginx error requests remain visible. URL fragments and
-bearer authorization headers are not included in nginx request lines.
+nginx logs to stdout and stderr. Hashed assets and healthchecks omit access logs; document requests
+and nginx errors remain visible. URL fragments and bearer authorization headers do not appear in
+nginx request lines.
 
 ## Runtime filesystem
 
-At startup, the entrypoint atomically writes `secondpass-servers.json` into the nginx document root.
-The container therefore requires that location and nginx's normal runtime paths to be writable; a
-fully read-only root filesystem is not currently supported. Supply presets through environment
-variables rather than mounting a read-only file over the generated path.
+The entrypoint writes `secondpass-servers.json` into the nginx document root. That location and
+nginx's standard runtime paths must be writable; a fully read-only root filesystem is unsupported.
+Supply presets through environment variables rather than mounting a read-only file over the
+generated path.
 
-## Build without compose
+## Build without Compose
 
 ```bash
 docker build -f docker/Dockerfile \
@@ -146,5 +151,5 @@ docker build -f docker/Dockerfile \
 docker run --rm -p 8000:8000 secondpassreader-webclient:local
 ```
 
-Publishing port 8000 is useful for local verification. In production, keep the container on a
-private network and expose it through the operator-managed HTTPS proxy.
+Publishing port `8000` is appropriate for local verification. In production, keep the container on
+a private network behind the operator-managed HTTPS proxy.
