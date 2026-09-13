@@ -43,3 +43,4 @@ scripts/*-linecount.txt
 # Test Import files
 TestImportFiles
 docs/test-quality.md
+test-results/
