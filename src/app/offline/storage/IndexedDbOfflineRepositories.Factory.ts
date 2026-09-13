@@ -1,3 +1,5 @@
+import { IndexedDbLocalReaderAnnotationCommitRepository } from "../reader/annotations/IndexedDbLocalReaderAnnotationCommit.Repository";
+import type { LocalReaderAnnotationCommitRepository } from "../reader/annotations/LocalReaderAnnotationCommit.Repository";
 import type {
   OfflinePublicationAssetRepository,
   OfflinePublicationCoverRepository,
@@ -14,12 +16,6 @@ import { IndexedDbOfflinePublicationCoverRepository } from "../publication/Index
 import { IndexedDbOfflineProjectionRepository } from "./IndexedDbOfflineProjection.Repository";
 import { IndexedDbOfflineReaderStateRepository } from "../reader/continuity/IndexedDbOfflineReaderState.Repository";
 import { IndexedDbReaderOutboxRepository } from "../reader/outbox/IndexedDbReaderOutbox.Repository";
-import {
-  IndexedDbOfflineReaderAnnotationContinuationRepository,
-} from "../reader/replay/IndexedDbOfflineReaderAnnotationContinuation.Repository";
-import type {
-  ReaderAnnotationContinuationRepository,
-} from "../reader/replay/OfflineReaderAnnotationContinuation.Actions";
 
 export type IndexedDbOfflineRepositories<TAssetPayload = Blob> = {
   projections: OfflineProjectionRepository;
@@ -27,7 +23,7 @@ export type IndexedDbOfflineRepositories<TAssetPayload = Blob> = {
   publicationCovers: OfflinePublicationCoverRepository<TAssetPayload>;
   readerState: OfflineReaderStateRepository;
   readerOutbox: ReaderOutboxRepository;
-  readerAnnotationContinuation: ReaderAnnotationContinuationRepository;
+  readerAnnotationCommit: LocalReaderAnnotationCommitRepository;
   close(): void;
 };
 
@@ -41,7 +37,7 @@ export async function openIndexedDbOfflineRepositories<TAssetPayload = Blob>(
     publicationCovers: new IndexedDbOfflinePublicationCoverRepository<TAssetPayload>(database),
     readerState: new IndexedDbOfflineReaderStateRepository(database),
     readerOutbox: new IndexedDbReaderOutboxRepository(database),
-    readerAnnotationContinuation: new IndexedDbOfflineReaderAnnotationContinuationRepository(database),
+    readerAnnotationCommit: new IndexedDbLocalReaderAnnotationCommitRepository(database),
     close: () => database.close(),
   };
 }

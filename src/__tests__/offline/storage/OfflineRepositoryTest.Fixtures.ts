@@ -1,3 +1,6 @@
+import { planLocalReaderAnnotationCommit } from "../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Policy";
+import type { LocalReaderAnnotationCommit, LocalReaderAnnotationCommitResult } from "../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
+import type { LocalReaderAnnotationCommitRepository } from "../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 import type {
   OfflinePublicationAssetCompleteRecord,
   OfflinePublicationAssetRepository,
@@ -16,12 +19,6 @@ import {
   type ReaderOutboxAttempt,
   type ReaderOutboxIntent,
 } from "../../../app/offline/reader/outbox/ReaderOutbox.Policy";
-import {
-  continuationProjectionMatchesIntent,
-  transformContinuationProjection,
-  type ContinuationTransform,
-  type ReaderAnnotationContinuationRepository,
-} from "../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
 
 export type OfflineRepositoryTestFactories = {
   createProjectionRepository(): OfflineProjectionRepository | Promise<OfflineProjectionRepository>;
@@ -44,13 +41,13 @@ export function createInMemoryOfflineRepositoryFactories(): OfflineRepositoryTes
 export function createInMemoryReaderRepositories(): {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
-  continuationRepository: ReaderAnnotationContinuationRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
 } {
   const storage = new InMemoryReaderStorage();
   return {
     stateRepository: new InMemoryOfflineReaderStateRepository(storage),
     outboxRepository: new InMemoryReaderOutboxRepository(storage),
-    continuationRepository: new InMemoryReaderAnnotationContinuationRepository(storage),
+    annotationCommitRepository: new InMemoryLocalReaderAnnotationCommitRepository(storage),
   };
 }
 
@@ -215,53 +212,17 @@ class InMemoryReaderOutboxRepository implements ReaderOutboxRepository {
   }
 }
 
-class InMemoryReaderAnnotationContinuationRepository implements ReaderAnnotationContinuationRepository {
+class InMemoryLocalReaderAnnotationCommitRepository implements LocalReaderAnnotationCommitRepository {
   constructor(private readonly storage: InMemoryReaderStorage) {}
 
-  async commit(input: {
-    namespaceKey: string;
-    bookId: string;
-    transforms: readonly ContinuationTransform[];
-  }): Promise<{ status: "committed" | "conflict" | "no-local-state" }> {
+  async commit(input: LocalReaderAnnotationCommit): Promise<LocalReaderAnnotationCommitResult> {
     const stateKey = scopedKey(input.namespaceKey, input.bookId);
-    const state = this.storage.states.get(stateKey);
-    if (!state) return { status: "no-local-state" };
-    const appliedIndexes = input.transforms.flatMap((transform, index) => {
-      const intent = this.storage.intents.find((candidate) => (
-        candidate.namespaceKey === input.namespaceKey
-          && readerIntentResourceKey(candidate) === readerIntentResourceKey(transform.current)
-      ));
-      const clientId = transform.current.type === "upsert-annotation"
-        ? transform.current.annotation.clientId
-        : transform.current.clientId;
-      const projection = state.annotations.find((candidate) => (
-        candidate.status === "present" ? candidate.annotation.clientId === clientId : candidate.clientId === clientId
-      ));
-      return intent
-        && readerIntentRevision(intent) === transform.current.intentRevision
-        && projection
-        && continuationProjectionMatchesIntent(projection, transform.current)
-        ? [index]
-        : [];
-    });
-    if (appliedIndexes.length !== input.transforms.length) return { status: "conflict" };
-    const applied = input.transforms;
-    this.storage.states.set(stateKey, clone({
-      ...state,
-      annotations: transformContinuationProjection(state.annotations, applied),
-    }));
-    for (const transform of applied) {
-      const key = readerIntentResourceKey(transform.current);
-      const index = this.storage.intents.findIndex((intent) => (
-        intent.namespaceKey === input.namespaceKey && readerIntentResourceKey(intent) === key
-      ));
-      if (index < 0) continue;
-      this.storage.intents.splice(index, 1);
-      if (transform.replacement) {
-        this.storage.intents = clone(coalesceReaderIntent(this.storage.intents, transform.replacement));
-      }
-    }
-    return { status: "committed" };
+    const plan = planLocalReaderAnnotationCommit(this.storage.states.get(stateKey), this.storage.intents, input);
+    if (plan.status !== "committed") return plan;
+    const detached = clone(plan);
+    this.storage.states.set(stateKey, detached.state);
+    this.storage.intents = detached.intents;
+    return { status: "committed", state: clone(detached.state) };
   }
 }
 

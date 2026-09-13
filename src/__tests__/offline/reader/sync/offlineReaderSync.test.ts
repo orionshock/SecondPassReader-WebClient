@@ -1,3 +1,4 @@
+import type { LocalReaderAnnotationCommitRepository } from "../../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 import { ApiError } from "@secondpass/client";
 import type {
   MarginaliaAnnotation,
@@ -15,7 +16,7 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
-import type { ReaderAnnotationContinuationRepository } from "../../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
+
 import {
   readerIntentResourceKey,
   type ReaderOutboxIntent,
@@ -216,7 +217,7 @@ describe("explicit offline Reader sync", () => {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
-  continuationRepository: ReaderAnnotationContinuationRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
 };
 
 async function repositoriesWithState(
@@ -268,6 +269,7 @@ function readerState(
   bookId = "book-1",
 ): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey,
     bookId,
     schemaVersion: 1,

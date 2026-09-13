@@ -430,6 +430,7 @@ function coverRecord(
 
 function readerState(namespaceKey: string, bookId: string, cfi: string): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey,
     bookId,
     schemaVersion: 1,

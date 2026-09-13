@@ -16,7 +16,7 @@ import {
 
 type OfflineAnnotationRepositories = Pick<
   IndexedDbOfflineRepositories<Blob>,
-  "readerState" | "readerOutbox" | "close"
+  "readerAnnotationCommit" | "close"
 >;
 
 const openProductionRepositories = () => openIndexedDbOfflineRepositories<Blob>();
@@ -67,8 +67,7 @@ export function useOfflineCurrentSessionAnnotations(input: {
         }
         controller = new OfflineCurrentSessionAnnotationController({
           initialState: bootstrap.continuity,
-          stateRepository: repositories.readerState,
-          outboxRepository: repositories.readerOutbox,
+          annotationCommitRepository: repositories.readerAnnotationCommit,
           onAnnotationsChange: (annotations) => {
             if (!cancelled) setAnnotationsRawRef.current(annotations);
           },

@@ -1,3 +1,4 @@
+import { projectionClientId } from "../annotations/ReaderAnnotationDesiredState.Policy";
 import type {
   MarginaliaAnnotation,
   MarginaliaBookmarkUpsert,
@@ -97,6 +98,7 @@ function buildFallbackState(input: {
     namespaceKey: input.namespaceKey,
     bookId: input.bookId,
     schemaVersion: 1,
+    annotationRevision: 0,
     session: selectHandoffSession(null, input.session, input.generateLocalId),
     progress: input.progress,
     annotations: mapServerAnnotations(input.annotations, input.session?.id.trim() || null),
@@ -171,10 +173,6 @@ function toUpsert(annotation: MarginaliaAnnotation): MarginaliaHighlightUpsert |
     location: { ...annotation.location },
     body: { ...annotation.body },
   };
-}
-
-function projectionClientId(projection: OfflineReaderAnnotationProjection): string {
-  return projection.status === "present" ? projection.annotation.clientId : projection.clientId;
 }
 
 function createLocalSessionId(generateLocalId = generateBrowserLocalId): string {

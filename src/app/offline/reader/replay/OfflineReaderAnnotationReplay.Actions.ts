@@ -1,3 +1,5 @@
+import type { ReaderAnnotationIntent } from "../annotations/ReaderAnnotationDesiredState.Policy";
+import type { LocalReaderAnnotationCommitRepository } from "../annotations/LocalReaderAnnotationCommit.Repository";
 import type {
   MarginaliaAnnotationBatchOperation,
   MarginaliaAnnotationCollection,
@@ -6,15 +8,8 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../storage/OfflineRepositories.Types";
-import {
-  mergeAuthoritativeReaderAnnotations,
-  type ReaderAnnotationIntent,
-} from "./OfflineReaderAnnotationReplay.State";
-import {
-  prepareOfflineReaderAnnotationContinuation,
-  type ReaderAnnotationContinuationOutcome,
-  type ReaderAnnotationContinuationRepository,
-} from "./OfflineReaderAnnotationContinuation.Actions";
+import { mergeAuthoritativeReaderAnnotations } from "./OfflineReaderAnnotationReplay.State";
+import { prepareOfflineReaderAnnotationContinuation, type ReaderAnnotationContinuationOutcome } from "./OfflineReaderAnnotationContinuation.Actions";
 import {
   reconcileOfflineReaderSessionAuthority,
   type ReaderSessionAuthority,
@@ -77,7 +72,7 @@ type ReplayInput = {
   client: ReaderAnnotationReplayClient;
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
-  continuationRepository: ReaderAnnotationContinuationRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
   generateClientId?: () => string;
   attemptMode?: OfflineReaderAttemptMode;
   now?: () => number;

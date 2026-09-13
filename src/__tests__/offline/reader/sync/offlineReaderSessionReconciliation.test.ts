@@ -286,6 +286,7 @@ function authorityWith(active: MarginaliaBootstrap, opened = activeBootstrap("op
 
 function state(kind: "provisional" | "active" | "closed", serverSessionId = "server-existing"): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

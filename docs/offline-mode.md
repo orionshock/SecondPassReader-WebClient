@@ -254,16 +254,28 @@ revision acknowledgement prevents a stale response from clearing newer movement.
 
 ### Marginalia
 
-Current Reading Session bookmarks, highlights, and notes update the local projection immediately.
-The client persists Reader state before writing the coalesced outbox intent. Stable annotation
-`clientId` and origin metadata survive edits, retries, and continuation.
+Current Reading Session authoring uses one semantic mutation vocabulary: bookmark upsert,
+highlight upsert, or delete by `clientId`. Manual selections, note/color edits, bookmark controls,
+and confirmed imports use the same annotation builders and exact-CFI highlight update policy.
+CFI is the spatial anchor; `clientId` is annotation identity.
+
+Online authority delivers the mutation through the serialized SDK owner and publishes the
+authoritative response. Local-first authority displays the local change immediately and commits
+the Reader annotation projection plus coalesced delivery intent in one IndexedDB read/write
+transaction. Either record alone is insufficient to recover authored work after process loss.
+Stable `clientId` and origin metadata survive edits, retries, and continuation.
+
+The local commit rechecks durable Reading Session identity, writability, the expected annotation
+revision, and the affected projection. A stale conflicting mutation cannot overwrite newer work.
+Successful completion means both stores have committed; reopening finds matching desired state
+and delivery intent. Retrying the same desired mutation after a lost completion preserves identity.
 
 An unconfirmed create followed by delete leaves no delivery intent. Confirmed edits and deletes
 retain the authority needed for reconciliation. Marginalia from previous or known-closed Reading
 Sessions remains read-only.
 
-A state-write failure prevents the outbox write but does not roll back the visible authored change.
-An outbox failure leaves the durable local projection dirty for a later local flush opportunity.
+A persistence failure rolls back both stores. The visible authored change remains an unsaved draft
+with the existing error state and retry-on-flush behavior; it is never reported as durably saved.
 
 ## Outbox and exact revisions
 
@@ -300,7 +312,8 @@ Replay groups work by namespace and Book, then orders it as:
 2. annotations;
 3. latest progress.
 
-Annotation replay sends one bounded batch of complete eligible desired state. It adopts the returned
+Annotation replay delivers already-durable desired state; it does not create new authoring intent.
+It sends one bounded batch of complete eligible desired state. It adopts the returned
 server collection as baseline, overlays newer local intent, and acknowledges only exact delivered
 revisions. Progress replay reloads current desired progress and applies the same exact-revision
 rule. A later-stage failure does not undo an earlier successful stage.
@@ -313,7 +326,8 @@ writable Reading Session:
 - progress transfers as the latest desired value; and
 - confirmed deletes against the closed Reading Session are dropped rather than applied elsewhere.
 
-The annotation projection and its continuation outbox changes commit in one IndexedDB transaction.
+Continuation uses the same local annotation commit repository and desired-state policy as ordinary
+authoring. The annotation projection and outbox changes commit in one IndexedDB transaction.
 The commit rechecks exact intent revisions and matching projection content; a conflict leaves both
 stores unchanged for a later retry. A committed continuation therefore survives an interrupted or
 unobserved completion without assigning another replacement identity.

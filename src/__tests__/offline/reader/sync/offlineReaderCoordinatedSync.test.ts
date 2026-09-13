@@ -1,3 +1,4 @@
+import type { LocalReaderAnnotationCommitRepository } from "../../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 import type { MarginaliaBootstrap, MarginaliaSession } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -11,7 +12,7 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
-import type { ReaderAnnotationContinuationRepository } from "../../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
+
 import type { OfflineReaderSyncClient } from "../../../../app/offline/reader/sync/OfflineReaderSync.Actions";
 import { createInMemoryReaderRepositories } from "../../storage/OfflineRepositoryTest.Fixtures";
 
@@ -214,7 +215,7 @@ function lockName(namespaceKey: string, bookId: string): string {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
-  continuationRepository: ReaderAnnotationContinuationRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
 };
 
 async function emptyRepositories(): Promise<Repositories> {
@@ -224,6 +225,7 @@ async function emptyRepositories(): Promise<Repositories> {
 async function repositoriesWithEstablishIntent(): Promise<Repositories> {
   const repositories = await emptyRepositories();
   const state: OfflineReaderBookState = {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

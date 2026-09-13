@@ -1,6 +1,6 @@
+import type { CurrentSessionAnnotationMutation } from "./annotations/CurrentSessionAnnotation.Types";
 import type {
   MarginaliaAnnotation,
-  MarginaliaAnnotationBatchOperation,
   MarginaliaHighlight,
   MarginaliaHighlightColor,
   MarginaliaProgressInput,
@@ -26,7 +26,7 @@ export function buildBookmarkUpsert(input: {
   clientId: string;
   cfi: string;
   locationLabel?: string;
-}): MarginaliaAnnotationBatchOperation {
+}): CurrentSessionAnnotationMutation {
   return {
     action: "upsert",
     annotation: {
@@ -46,7 +46,7 @@ export function buildHighlightUpsert(input: {
   suffix?: string;
   color: MarginaliaHighlightColor;
   note?: string;
-}): MarginaliaAnnotationBatchOperation {
+}): CurrentSessionAnnotationMutation {
   const text = normalizeHighlightText(input.text);
   if (!text) throw new Error("Highlight text must not be blank.");
 
@@ -70,7 +70,7 @@ export function buildHighlightUpsert(input: {
 export function buildHighlightUpdate(annotation: MarginaliaHighlight, input: {
   color: MarginaliaHighlightColor;
   note: string;
-}): MarginaliaAnnotationBatchOperation {
+}): CurrentSessionAnnotationMutation {
   const text = normalizeHighlightText(annotation.body.text);
   if (!text) throw new Error("Highlight text must not be blank.");
 
@@ -102,7 +102,7 @@ export function buildCurrentSessionHighlightCommit(input: {
   suffix?: string;
   color: MarginaliaHighlightColor;
   note?: string;
-}): { kind: "created" | "updated"; operation: MarginaliaAnnotationBatchOperation } {
+}): { kind: "created" | "updated"; operation: CurrentSessionAnnotationMutation } {
   const existing = input.currentAnnotations.find(
     (annotation): annotation is MarginaliaHighlight =>
       annotation.kind === "highlight" && annotation.location.cfi === input.cfi,

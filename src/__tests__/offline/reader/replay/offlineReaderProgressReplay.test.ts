@@ -315,6 +315,7 @@ function replayClient(confirmed = serverProgress(progress("epubcfi(/6/8)", 30)))
 
 function readerState(value: ReplaceReaderProgressIntent["progress"]): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

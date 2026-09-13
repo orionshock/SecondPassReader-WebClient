@@ -58,6 +58,7 @@ function openedBook(): OpenedBook {
       kind: "local",
       serverWritesAllowed: false,
       continuity: {
+        annotationRevision: 0,
         namespaceKey: "account-a",
         bookId: "42",
         schemaVersion: 1,

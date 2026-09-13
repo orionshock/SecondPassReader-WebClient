@@ -221,6 +221,7 @@ function controllerFor(repositories: Repositories) {
 
 function initialState(): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

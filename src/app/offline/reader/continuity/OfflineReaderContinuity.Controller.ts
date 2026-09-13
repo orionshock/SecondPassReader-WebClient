@@ -59,6 +59,7 @@ async function loadOrCreate(input: OfflineReaderContinuityInput): Promise<Offlin
         session: selected.session,
         progress: existing?.progress ?? null,
         annotations: existing?.annotations ?? [],
+        annotationRevision: existing ? existing.annotationRevision : 0,
       }
     : existing!;
 

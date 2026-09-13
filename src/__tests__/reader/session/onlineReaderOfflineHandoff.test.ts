@@ -4,11 +4,11 @@ import { establishOnlineReaderOfflineHandoff } from "../../../app/offline/reader
 import type { OfflineReaderBookState } from "../../../app/offline/storage/OfflineRepositories.Types";
 import { OfflineCurrentSessionAnnotationController } from "../../../features/reader/session/annotations/OfflineCurrentSessionAnnotation.Controller";
 import { OfflineReadingProgressController } from "../../../features/reader/session/progress/OfflineReadingProgress.Controller";
-import { createInMemoryOfflineRepositoryFactories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryOfflineRepositoryFactories, createInMemoryReaderRepositories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
 
 describe("online Reader offline handoff", () => {
   it("seeds confirmed authority and uses the normal local progress and annotation outbox", async () => {
-    const { stateRepository, outboxRepository, publicationAssets } = await repositories();
+    const { stateRepository, outboxRepository, annotationCommitRepository, publicationAssets } = await repositories();
     const result = await establishOnlineReaderOfflineHandoff({
       namespaceKey: "account-a",
       bookId: "book-1",
@@ -44,8 +44,7 @@ describe("online Reader offline handoff", () => {
 
     const annotations = new OfflineCurrentSessionAnnotationController({
       initialState: (await stateRepository.getBookState("account-a", "book-1"))!,
-      stateRepository,
-      outboxRepository,
+      annotationCommitRepository,
       generateClientId: () => "highlight-2",
     });
     await annotations.createHighlight({
@@ -102,7 +101,7 @@ describe("online Reader offline handoff", () => {
   });
 
   it("keeps a confirmed closed Reading Session non-writable", async () => {
-    const { stateRepository, outboxRepository } = await repositories();
+    const { stateRepository, outboxRepository, annotationCommitRepository } = await repositories();
     const result = await establishOnlineReaderOfflineHandoff({
       namespaceKey: "account-a",
       bookId: "book-1",
@@ -116,8 +115,7 @@ describe("online Reader offline handoff", () => {
 
     const controller = new OfflineCurrentSessionAnnotationController({
       initialState: result.state,
-      stateRepository,
-      outboxRepository,
+      annotationCommitRepository,
     });
     expect(controller.canMutate()).toBe(false);
   });
@@ -149,8 +147,7 @@ describe("online Reader offline handoff", () => {
 async function repositories() {
   const factories = createInMemoryOfflineRepositoryFactories();
   return {
-    stateRepository: await factories.createReaderStateRepository(),
-    outboxRepository: await factories.createReaderOutboxRepository(),
+    ...createInMemoryReaderRepositories(),
     publicationAssets: await factories.createPublicationAssetRepository(),
   };
 }
@@ -183,6 +180,7 @@ function bookmark(clientId: string): MarginaliaAnnotation {
 
 function existingState(): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

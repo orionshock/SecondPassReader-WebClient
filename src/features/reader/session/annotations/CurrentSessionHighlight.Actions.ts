@@ -1,3 +1,4 @@
+import { commitServerCurrentSessionAnnotation } from "./ServerCurrentSessionAnnotation.Adapter";
 import { useCallback } from "react";
 import type { MutableRefObject } from "react";
 import type { MarginaliaAnnotation, MarginaliaHighlightColor, SecondPassClient } from "@secondpass/client";
@@ -30,9 +31,9 @@ export function useCurrentSessionHighlightActions(args: {
 
       await args.controller.mutate({
         run: async () => {
-          const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
+          const response = await commitServerCurrentSessionAnnotation(args.spl!, args.sessionId,
             buildHighlightUpdate(raw, { color: nextColor as MarginaliaHighlightColor, note: nextNote }),
-          ]);
+          );
           return { value: undefined, annotations: response.annotations };
         },
         getErrorMessage: () => "Couldn't update the highlight. Try again.",
@@ -51,7 +52,7 @@ export function useCurrentSessionHighlightActions(args: {
 
       await args.controller.mutate({
         run: async () => {
-          const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
+          const response = await commitServerCurrentSessionAnnotation(args.spl!, args.sessionId,
             buildCurrentSessionHighlightCommit({
               currentAnnotations: args.annotationsRawRef.current,
               createClientId: () => crypto.randomUUID(),
@@ -63,7 +64,7 @@ export function useCurrentSessionHighlightActions(args: {
               prefix: selection.quotePrefix,
               suffix: selection.quoteSuffix,
             }).operation,
-          ]);
+          );
           return { value: undefined, annotations: response.annotations };
         },
         getErrorMessage: (error) => {

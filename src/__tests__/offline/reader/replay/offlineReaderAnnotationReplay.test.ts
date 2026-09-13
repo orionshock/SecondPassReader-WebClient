@@ -1,3 +1,4 @@
+import type { LocalReaderAnnotationCommitRepository } from "../../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 import { ApiError } from "@secondpass/client";
 import { IDBFactory } from "fake-indexeddb";
 import type {
@@ -17,7 +18,7 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
-import type { ReaderAnnotationContinuationRepository } from "../../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
+
 import type {
   ReaderAnnotationOrigin,
   ReaderOutboxIntent,
@@ -226,7 +227,7 @@ describe("offline Reader annotation replay", () => {
     const repositories = {
       stateRepository: first.readerState,
       outboxRepository: first.readerOutbox,
-      continuationRepository: first.readerAnnotationContinuation,
+      annotationCommitRepository: first.readerAnnotationCommit,
     };
     await repositories.stateRepository.putBookState(state);
     await repositories.outboxRepository.upsertIntent(confirmed);
@@ -291,12 +292,14 @@ describe("offline Reader annotation replay", () => {
       uncloneable: () => undefined,
     } as unknown as UpsertReaderAnnotationIntent;
 
-    await expect(repositories.readerAnnotationContinuation.commit({
+    await expect(repositories.readerAnnotationCommit.commit({
       namespaceKey: "account-a",
       bookId: "book-1",
+      kind: "continue",
+      targetSessionId: "session-new",
       transforms: [
-        { current: deleted, replacement: null, kind: "drop-confirmed" },
-        { current: confirmed, replacement, kind: "forward-confirmed" },
+        { current: { ...deleted, origin: { kind: "server-confirmed", serverSessionId: "session-old" } }, replacement: null, kind: "drop-confirmed" },
+        { current: { ...confirmed, origin: { kind: "server-confirmed", serverSessionId: "session-old" } }, replacement: { ...replacement, origin: { kind: "local-unconfirmed" } }, kind: "forward-confirmed" },
       ],
     })).rejects.toBeDefined();
 
@@ -330,9 +333,9 @@ describe("offline Reader annotation replay", () => {
     const repositories = await repositoriesWithState(state);
     await repositories.outboxRepository.upsertIntent(confirmed);
     await repositories.outboxRepository.upsertIntent(deleted);
-    const durableCommit = repositories.continuationRepository.commit.bind(repositories.continuationRepository);
+    const durableCommit = repositories.annotationCommitRepository.commit.bind(repositories.annotationCommitRepository);
     let obscureFirstCommit = true;
-    repositories.continuationRepository = {
+    repositories.annotationCommitRepository = {
       commit: async (input) => {
         const result = await durableCommit(input);
         if (obscureFirstCommit) {
@@ -382,8 +385,8 @@ describe("offline Reader annotation replay", () => {
     state.annotations = [projection(confirmed)];
     const repositories = await repositoriesWithState(state);
     await repositories.outboxRepository.upsertIntent(confirmed);
-    const durableCommit = repositories.continuationRepository.commit.bind(repositories.continuationRepository);
-    repositories.continuationRepository = {
+    const durableCommit = repositories.annotationCommitRepository.commit.bind(repositories.annotationCommitRepository);
+    repositories.annotationCommitRepository = {
       commit: async (input) => {
         const current = (await repositories.stateRepository.getBookState("account-a", "book-1"))!;
         current.annotations = [projection(newer)];
@@ -429,7 +432,7 @@ describe("offline Reader annotation replay", () => {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
-  continuationRepository: ReaderAnnotationContinuationRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
 };
 
 async function repositoriesWithState(state: OfflineReaderBookState): Promise<Repositories> {
@@ -470,6 +473,7 @@ function replayClient(annotations: MarginaliaAnnotation[]): ReaderAnnotationRepl
 
 function readerState(serverSessionId: string): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

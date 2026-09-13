@@ -1,3 +1,4 @@
+import type { LocalReaderAnnotationCommitRepository } from "../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it, vi } from "vitest";
 import type { MarginaliaAnnotation } from "@secondpass/client";
@@ -9,13 +10,16 @@ import type {
 } from "../../../app/offline/storage/OfflineRepositories.Types";
 import { OfflineCurrentSessionAnnotationController } from "../../../features/reader/session/annotations/OfflineCurrentSessionAnnotation.Controller";
 import { OfflineReadingProgressController } from "../../../features/reader/session/progress/OfflineReadingProgress.Controller";
-import { createInMemoryOfflineRepositoryFactories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryReaderRepositories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
 
 describe("offline current-session annotations", () => {
   it("shows and durably stores a highlight before any server delivery exists", async () => {
     const repositories = await inMemoryRepositories();
     const visible = vi.fn();
     const controller = controllerFor(repositories, initialState(), visible);
+    const commit = vi.spyOn(repositories.annotationCommitRepository, "commit");
+    const stateWrite = vi.spyOn(repositories.stateRepository, "putBookState");
+    const outboxWrite = vi.spyOn(repositories.outboxRepository, "upsertIntent");
 
     await controller.createHighlight({
       selection: { cfiRange: "epubcfi(/6/4)", text: " Selected   text ", quotePrefix: "Before", quoteSuffix: "After" },
@@ -34,6 +38,10 @@ describe("offline current-session annotations", () => {
     expect(await repositories.outboxRepository.list("account-a")).toEqual([
       expect.objectContaining({ type: "upsert-annotation", serverSessionId: null, intentRevision: 1 }),
     ]);
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit.mock.calls[0][0]).toMatchObject({ kind: "author", mutation: { action: "upsert", annotation: { clientId: "annotation-1" } } });
+    expect(stateWrite).not.toHaveBeenCalled();
+    expect(outboxWrite).not.toHaveBeenCalled();
   });
 
   it("creates a body-free bookmark with one stable client ID", async () => {
@@ -95,7 +103,7 @@ describe("offline current-session annotations", () => {
     expect(await repositories.outboxRepository.list("account-a")).toEqual([]);
   });
 
-  it("turns a confirmed edit into one confirmed delete and allows restore as latest upsert", async () => {
+  it("turns a confirmed edit into one confirmed delete and rejects resurrection from a stale snapshot", async () => {
     const repositories = await inMemoryRepositories();
     const state = confirmedState();
     await repositories.stateRepository.putBookState(state);
@@ -117,9 +125,9 @@ describe("offline current-session annotations", () => {
 
     const restoredState = confirmedState();
     const restoredController = controllerFor(repositories, restoredState);
-    await restoredController.updateHighlight("local:confirmed-1", { color: "blue", note: "restored" });
+    await expect(restoredController.updateHighlight("local:confirmed-1", { color: "blue", note: "restored" })).rejects.toThrow("Offline annotation was not saved.");
     expect(await repositories.outboxRepository.list("account-a")).toEqual([
-      expect.objectContaining({ type: "upsert-annotation", annotation: expect.objectContaining({ clientId: "confirmed-1" }) }),
+      expect.objectContaining({ type: "delete-annotation", clientId: "confirmed-1" }),
     ]);
   });
 
@@ -143,9 +151,9 @@ describe("offline current-session annotations", () => {
       .not.toContain("local:continuity-only");
   });
 
-  it("keeps the visible and durable projection when outbox persistence fails", async () => {
+  it("keeps an unsaved visible draft but no durable projection when the atomic commit fails", async () => {
     const repositories = await inMemoryRepositories();
-    repositories.outboxRepository.upsertIntent = vi.fn(async () => {
+    repositories.annotationCommitRepository.commit = vi.fn(async () => {
       throw new Error("secret storage details");
     });
     const visible = vi.fn();
@@ -157,13 +165,14 @@ describe("offline current-session annotations", () => {
     })).rejects.toThrow("Offline annotation was not saved.");
 
     expect(visible).toHaveBeenCalledWith([expect.objectContaining({ clientId: "annotation-1" })]);
-    expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.annotations).toHaveLength(1);
+    expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.annotations).toEqual([]);
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([]);
     expect(controller.getState()).toEqual({ status: "error", dirty: true });
   });
 
-  it("skips outbox persistence when Reader-state persistence fails", async () => {
+  it("uses one commit call and never writes the standalone state or outbox repositories", async () => {
     const repositories = await inMemoryRepositories();
-    repositories.stateRepository.putBookState = vi.fn(async () => {
+    repositories.annotationCommitRepository.commit = vi.fn(async () => {
       throw new Error("quota details");
     });
     const upsert = vi.spyOn(repositories.outboxRepository, "upsertIntent");
@@ -175,16 +184,17 @@ describe("offline current-session annotations", () => {
     })).rejects.toThrow("Offline annotation was not saved.");
     expect(controller.getAnnotations()).toHaveLength(1);
     expect(upsert).not.toHaveBeenCalled();
+    expect(repositories.annotationCommitRepository.commit).toHaveBeenCalledOnce();
   });
 
   it("retains local annotations across an IndexedDB close and reopen", async () => {
     const indexedDb = new IDBFactory();
     const options = { indexedDb, databaseName: "offline-annotation-reopen" };
     const first = await openIndexedDbOfflineRepositories(options);
+    await first.readerState.putBookState(initialState());
     const controller = new OfflineCurrentSessionAnnotationController({
       initialState: initialState(),
-      stateRepository: first.readerState,
-      outboxRepository: first.readerOutbox,
+      annotationCommitRepository: first.readerAnnotationCommit,
       generateClientId: () => "persisted-1",
     });
     await controller.createHighlight({
@@ -227,14 +237,13 @@ describe("offline current-session annotations", () => {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
 };
 
 async function inMemoryRepositories(): Promise<Repositories> {
-  const factories = createInMemoryOfflineRepositoryFactories();
-  return {
-    stateRepository: await factories.createReaderStateRepository(),
-    outboxRepository: await factories.createReaderOutboxRepository(),
-  };
+  const repositories = createInMemoryReaderRepositories();
+  await repositories.stateRepository.putBookState(initialState());
+  return repositories;
 }
 
 function controllerFor(
@@ -245,8 +254,7 @@ function controllerFor(
 ) {
   return new OfflineCurrentSessionAnnotationController({
     initialState: state,
-    stateRepository: repositories.stateRepository,
-    outboxRepository: repositories.outboxRepository,
+    annotationCommitRepository: repositories.annotationCommitRepository,
     generateClientId,
     onAnnotationsChange,
   });
@@ -254,6 +262,7 @@ function controllerFor(
 
 function initialState(): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

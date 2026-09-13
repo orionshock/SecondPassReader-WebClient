@@ -6,7 +6,7 @@ import type { MarginaliaAnnotation } from "@secondpass/client";
 import type { OfflineReaderBootstrap } from "../../../features/reader/Reader.Types";
 import type { ReaderBookmark } from "../../../features/reader/annotations/ReaderBookmark.Mapper";
 import { useOfflineCurrentSessionAnnotations } from "../../../features/reader/session/annotations/OfflineCurrentSessionAnnotation.Lifecycle";
-import { createInMemoryOfflineRepositoryFactories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryReaderRepositories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
 
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
@@ -33,16 +33,15 @@ describe("offline current-session annotation lifecycle", () => {
   });
 
   it("enables local actions after repository readiness and persists without an SDK owner", async () => {
-    const factories = createInMemoryOfflineRepositoryFactories();
-    const readerState = await factories.createReaderStateRepository();
-    const readerOutbox = await factories.createReaderOutboxRepository();
+    const { stateRepository: readerState, outboxRepository: readerOutbox, annotationCommitRepository: readerAnnotationCommit } = createInMemoryReaderRepositories();
+    await readerState.putBookState(bootstrap().continuity);
     const close = vi.fn();
     let actions!: ReturnType<typeof useOfflineCurrentSessionAnnotations>;
 
     await act(async () => root.render(
       <Harness
         bootstrap={bootstrap()}
-        openRepositories={async () => ({ readerState, readerOutbox, close })}
+        openRepositories={async () => ({ readerAnnotationCommit, close })}
         onActions={(value) => { actions = value; }}
       />,
     ));
@@ -63,9 +62,8 @@ describe("offline current-session annotation lifecycle", () => {
   });
 
   it("publishes the durable annotation snapshot when local ownership becomes ready", async () => {
-    const factories = createInMemoryOfflineRepositoryFactories();
-    const readerState = await factories.createReaderStateRepository();
-    const readerOutbox = await factories.createReaderOutboxRepository();
+    const { stateRepository: readerState, annotationCommitRepository: readerAnnotationCommit } = createInMemoryReaderRepositories();
+    await readerState.putBookState(bootstrap().continuity);
     const value = bootstrap();
     value.continuity.annotations = [{
       status: "present",
@@ -80,7 +78,7 @@ describe("offline current-session annotation lifecycle", () => {
     await act(async () => root.render(
       <Harness
         bootstrap={value}
-        openRepositories={async () => ({ readerState, readerOutbox, close: vi.fn() })}
+        openRepositories={async () => ({ readerAnnotationCommit, close: vi.fn() })}
         onActions={() => undefined}
       />,
     ));
@@ -118,6 +116,7 @@ function bootstrap(): OfflineReaderBootstrap {
     kind: "local",
     serverWritesAllowed: false,
     continuity: {
+      annotationRevision: 0,
       namespaceKey: "account-a",
       bookId: "book-1",
       schemaVersion: 1,

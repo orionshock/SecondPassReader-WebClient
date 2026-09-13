@@ -1,3 +1,4 @@
+import { commitServerCurrentSessionAnnotation } from "./ServerCurrentSessionAnnotation.Adapter";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
@@ -55,9 +56,9 @@ export function useCurrentSessionAnnotationActions(args: {
         if (!annotation) return;
         await controller.mutate({
           run: async () => {
-            const response = await args.spl!.marginalia.sessions.batchAnnotations(args.sessionId!, [
+            const response = await commitServerCurrentSessionAnnotation(args.spl!, args.sessionId,
               { action: "delete", clientId: annotation.clientId },
-            ]);
+            );
             return { value: undefined, annotations: response.annotations };
           },
           getErrorMessage: (error) => {

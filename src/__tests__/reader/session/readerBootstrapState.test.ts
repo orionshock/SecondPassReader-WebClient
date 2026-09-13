@@ -46,6 +46,7 @@ function offlineBook(lastKnownServerStatus: "active" | "closed"): OpenedBook {
       kind: "local",
       serverWritesAllowed: false,
       continuity: {
+        annotationRevision: 0,
         namespaceKey: "account-a",
         bookId: "book-1",
         schemaVersion: 1,

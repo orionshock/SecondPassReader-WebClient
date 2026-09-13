@@ -66,6 +66,8 @@ renderer-neutral handles used by the activity.
 | `annotations/CurrentSessionAnnotation.Controller.ts` | Serialized current Reading Session mutations with generation checks |
 | `annotations/CurrentSessionAnnotation.Actions.ts` | Bookmark and highlight action composition |
 | `annotations/OfflineCurrentSessionAnnotation.Controller.ts` | Local-first annotation mutation and durable intent |
+| `annotations/CurrentSessionAnnotation.Types.ts` | Canonical bookmark/highlight upsert and delete intent |
+| `annotations/ServerCurrentSessionAnnotation.Adapter.ts` | Commits canonical intent through the server authority |
 | `progress/ReadingProgressAutosave.Controller.ts` | Debounced, serialized online progress replacement |
 | `progress/ReadingProgressAutosave.Lifecycle.ts` | Progress seeding, bounded exit flush, and shutdown before close |
 | `progress/OfflineReadingProgress.Controller.ts` | Local progress persistence and outbox intent |
@@ -73,6 +75,13 @@ renderer-neutral handles used by the activity.
 | `CurrentSessionMetadata.Controller.ts` | Active Reading Session metadata loading and updates |
 | `ReadingSessionClose.Actions.ts` | Metadata update and atomic close with final progress |
 | `ReadingSessionRender.Presenter.ts` | Render state, toolbar items, and ordered durable marks |
+
+All current-session authoring uses the same mutation vocabulary and normalization builders in
+`ReadingSessionMarginalia.Actions.ts`, including confirmed imports and exact-CFI highlight updates.
+The orchestrator selects server or local-first authority. Server responses remain authoritative;
+local-first commits persist annotation projection and delivery intent atomically before reporting
+saved status. Replay delivers that durable intent, and continuation reuses the same local commit
+repository. These authority changes do not rebuild the Reader engine.
 
 Current Reading Session owners may mutate. Previous Reading Session layers are read-only and never
 enter current-session mutation actions.

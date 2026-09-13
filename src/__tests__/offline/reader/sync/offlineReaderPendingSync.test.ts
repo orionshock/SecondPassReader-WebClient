@@ -244,7 +244,7 @@ describe("pending offline Reader sync", () => {
 });
 
 async function createHarness(intents: ReaderOutboxIntent[], namespaceKey = "account-a") {
-  const { stateRepository: readerState, outboxRepository: readerOutbox, continuationRepository } =
+  const { stateRepository: readerState, outboxRepository: readerOutbox, annotationCommitRepository } =
     createInMemoryReaderRepositories();
   for (const intent of intents) await readerOutbox.upsertIntent(intent);
   const close = vi.fn();
@@ -252,7 +252,7 @@ async function createHarness(intents: ReaderOutboxIntent[], namespaceKey = "acco
   const openRepositories = vi.fn(async () => ({
     readerState,
     readerOutbox,
-    readerAnnotationContinuation: continuationRepository,
+    readerAnnotationCommit: annotationCommitRepository,
     close,
   }));
   const syncBook = vi.fn<OfflineReaderPendingSyncDependencies["syncBook"]>(async () => completed());

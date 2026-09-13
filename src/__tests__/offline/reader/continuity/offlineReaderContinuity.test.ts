@@ -121,6 +121,7 @@ describe("offline Reader continuity persistence", () => {
   it("continues from known closed authority without reopening its server Session", async () => {
     const repositories = await inMemoryReaderRepositories();
     const closedState = readerState(serverSession("closed"));
+    closedState.annotationRevision = 7;
     closedState.progress = {
       cfi: "epubcfi(/6/4)",
       percentage: 20,
@@ -134,6 +135,7 @@ describe("offline Reader continuity persistence", () => {
     expect(result.state.session.serverSessionId).toBeNull();
     expect(result.state.session.localSessionId).toBe("local:continuation");
     expect(result.state.progress).toEqual(closedState.progress);
+    expect(result.state.annotationRevision).toBe(7);
     expect(await repositories.outboxRepository.list("account-a")).toEqual([
       { type: "establish-session", namespaceKey: "account-a", bookId: "book-1" },
     ]);
@@ -210,6 +212,7 @@ function serverSession(
 
 function readerState(session: OfflineReaderSession): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId: "book-1",
     schemaVersion: 1,

@@ -269,7 +269,7 @@ export function createOfflineSettingsController(
           client: input.client!,
           stateRepository: currentRepositories.readerState,
           outboxRepository: currentRepositories.readerOutbox,
-          continuationRepository: currentRepositories.readerAnnotationContinuation,
+          annotationCommitRepository: currentRepositories.readerAnnotationCommit,
           mode: "wait",
           attemptMode: "manual",
         });

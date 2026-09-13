@@ -82,6 +82,7 @@ export type OfflineReaderBookState = {
   session: OfflineReaderSession;
   progress: ReplaceReaderProgressIntent["progress"] | null;
   annotations: OfflineReaderAnnotationProjection[];
+  annotationRevision: number;
 };
 
 // Reader continuity is local desired state; it is not an authoritative server projection.

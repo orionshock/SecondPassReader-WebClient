@@ -1,3 +1,4 @@
+import { commitServerCurrentSessionAnnotation } from "./ServerCurrentSessionAnnotation.Adapter";
 import { useCallback } from "react";
 import type { MarginaliaAnnotation, SecondPassClient } from "@secondpass/client";
 import type { ReaderLocation } from "../../domain/ReaderDomain.Types";
@@ -39,15 +40,15 @@ export async function executeReaderBookmarkMutation(args: {
       const annotation = args.annotationsRaw.find((item) => item.id === args.currentBookmark?.id);
       if (!annotation) return { result: { ok: false, reason: "missing-state" } };
 
-      const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId, [
+      const response = await commitServerCurrentSessionAnnotation(args.spl!, args.sessionId,
         { action: "delete", clientId: annotation.clientId },
-      ]);
+      );
       return { result: { ok: true, action: "deleted" }, annotations: response.annotations };
     }
 
-    const response = await args.spl.marginalia.sessions.batchAnnotations(args.sessionId, [
+    const response = await commitServerCurrentSessionAnnotation(args.spl!, args.sessionId,
       buildBookmarkUpsert({ clientId: crypto.randomUUID(), cfi, locationLabel: args.locationLabel }),
-    ]);
+    );
     const created = response.annotations.find((item) => item.kind === "bookmark" && item.location.cfi === cfi);
     if (!created || !toReaderBookmark(created)) {
       return {

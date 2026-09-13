@@ -206,6 +206,7 @@ function offlineOpenedBook(value: BookDetail): OfflineOpenedBook {
       kind: "local",
       serverWritesAllowed: false,
       continuity: {
+        annotationRevision: 0,
         namespaceKey: "account-a",
         bookId: "book-1",
         schemaVersion: 1,

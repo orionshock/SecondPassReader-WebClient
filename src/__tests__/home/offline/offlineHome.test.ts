@@ -237,6 +237,7 @@ function recent(bookId: string, title: string, status: "active" | "closed" = "ac
 
 function readerState(bookId: string, cfi: string, locationLabel: string): OfflineReaderBookState {
   return {
+    annotationRevision: 0,
     namespaceKey: "account-a",
     bookId,
     schemaVersion: 1,

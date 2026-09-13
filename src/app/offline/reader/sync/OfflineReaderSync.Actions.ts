@@ -1,3 +1,4 @@
+import type { LocalReaderAnnotationCommitRepository } from "../annotations/LocalReaderAnnotationCommit.Repository";
 import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
@@ -8,7 +9,7 @@ import {
   type ReaderAnnotationReplayClient,
 } from "../replay/OfflineReaderAnnotationReplay.Actions";
 import type { ReaderAnnotationContinuationOutcome } from "../replay/OfflineReaderAnnotationContinuation.Actions";
-import type { ReaderAnnotationContinuationRepository } from "../replay/OfflineReaderAnnotationContinuation.Actions";
+
 import {
   replayOfflineReaderProgress,
   type OfflineReaderProgressReplayResult,
@@ -61,7 +62,7 @@ export type OfflineReaderSyncInput = {
   client: OfflineReaderSyncClient;
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
-  continuationRepository: ReaderAnnotationContinuationRepository;
+  annotationCommitRepository: LocalReaderAnnotationCommitRepository;
   generateClientId?: () => string;
   attemptMode?: OfflineReaderAttemptMode;
   now?: () => number;
@@ -128,7 +129,7 @@ async function runSync(input: OfflineReaderSyncInput): Promise<OfflineReaderSync
     client: input.client,
     stateRepository: input.stateRepository,
     outboxRepository: input.outboxRepository,
-    continuationRepository: input.continuationRepository,
+    annotationCommitRepository: input.annotationCommitRepository,
     generateClientId: input.generateClientId,
     attemptMode,
     now: input.now,

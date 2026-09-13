@@ -1,13 +1,13 @@
 import type { MarginaliaAnnotation } from "@secondpass/client";
 
-export type CurrentSessionAnnotationMutationOutcome<T> = {
+export type CurrentSessionAnnotationExecutionOutcome<T> = {
   value: T;
   annotations?: MarginaliaAnnotation[];
   errorMessage?: string;
 };
 
-export type CurrentSessionAnnotationMutation<T> = {
-  run: () => Promise<CurrentSessionAnnotationMutationOutcome<T>>;
+export type CurrentSessionAnnotationExecution<T> = {
+  run: () => Promise<CurrentSessionAnnotationExecutionOutcome<T>>;
   getErrorMessage: (error: unknown) => string;
 };
 
@@ -26,7 +26,7 @@ type ActiveSession = {
 
 type QueuedMutation<T> = {
   generation: number;
-  mutation: CurrentSessionAnnotationMutation<T>;
+  mutation: CurrentSessionAnnotationExecution<T>;
   resolve: (value: T) => void;
   reject: (error: unknown) => void;
 };
@@ -63,7 +63,7 @@ export class CurrentSessionAnnotationController {
     this.active = null;
   }
 
-  mutate<T>(mutation: CurrentSessionAnnotationMutation<T>): Promise<T> {
+  mutate<T>(mutation: CurrentSessionAnnotationExecution<T>): Promise<T> {
     const active = this.active;
     if (!active) return Promise.reject(new CurrentSessionAnnotationStaleGenerationError());
 

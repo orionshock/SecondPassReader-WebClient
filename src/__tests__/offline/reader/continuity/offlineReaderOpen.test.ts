@@ -66,6 +66,7 @@ describe("offline Reader admission", () => {
   it("restores the latest durable local progress without a server bootstrap", async () => {
     const repositories = await repositoriesWithAsset(asset(CHECKSUM));
     await repositories.readerStateRepository.putBookState({
+      annotationRevision: 0,
       namespaceKey: namespace.key,
       bookId: "book-1",
       schemaVersion: 1,
