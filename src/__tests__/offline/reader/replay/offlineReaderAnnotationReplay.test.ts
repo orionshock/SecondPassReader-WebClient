@@ -17,12 +17,13 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
+import type { ReaderAnnotationContinuationRepository } from "../../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
 import type {
   ReaderAnnotationOrigin,
   ReaderOutboxIntent,
   UpsertReaderAnnotationIntent,
 } from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
-import { createInMemoryOfflineRepositoryFactories } from "../../storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryReaderRepositories } from "../../storage/OfflineRepositoryTest.Fixtures";
 
 describe("offline Reader annotation replay", () => {
   it("sends complete upsert and delete intent in one batch and adopts the authoritative collection", async () => {
@@ -222,7 +223,11 @@ describe("offline Reader annotation replay", () => {
     const indexedDb = new IDBFactory();
     const options = { indexedDb, databaseName: "annotation-continuation-reopen" };
     const first = await openIndexedDbOfflineRepositories(options);
-    const repositories = { stateRepository: first.readerState, outboxRepository: first.readerOutbox };
+    const repositories = {
+      stateRepository: first.readerState,
+      outboxRepository: first.readerOutbox,
+      continuationRepository: first.readerAnnotationContinuation,
+    };
     await repositories.stateRepository.putBookState(state);
     await repositories.outboxRepository.upsertIntent(confirmed);
     const client = replayClient([]);
@@ -249,6 +254,158 @@ describe("offline Reader annotation replay", () => {
     reopened.close();
   });
 
+  it("rolls back projection and outbox together when a continuation store write fails", async () => {
+    const confirmed = highlightIntent(
+      "confirmed-1",
+      3,
+      { kind: "server-confirmed", serverSessionId: "session-old" },
+      "confirmed edit",
+      "session-old",
+    );
+    const indexedDb = new IDBFactory();
+    const repositories = await openIndexedDbOfflineRepositories({
+      indexedDb,
+      databaseName: "annotation-continuation-atomic-failure",
+    });
+    const state = readerState("session-new");
+    const deleted = deleteIntent(
+      "confirmed-delete",
+      2,
+      { kind: "server-confirmed", serverSessionId: "session-old" },
+      "session-old",
+    );
+    state.annotations = [projection(confirmed), {
+      status: "deleted",
+      origin: deleted.origin,
+      clientId: deleted.clientId,
+    }];
+    await repositories.readerState.putBookState(state);
+    await repositories.readerOutbox.upsertIntent(confirmed);
+    await repositories.readerOutbox.upsertIntent(deleted);
+    const replacement = {
+      ...confirmed,
+      serverSessionId: "session-new",
+      intentRevision: 4,
+      origin: { kind: "local-unconfirmed" as const },
+      annotation: { ...confirmed.annotation, clientId: "new-copy-1" },
+      uncloneable: () => undefined,
+    } as unknown as UpsertReaderAnnotationIntent;
+
+    await expect(repositories.readerAnnotationContinuation.commit({
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      transforms: [
+        { current: deleted, replacement: null, kind: "drop-confirmed" },
+        { current: confirmed, replacement, kind: "forward-confirmed" },
+      ],
+    })).rejects.toBeDefined();
+
+    expect((await repositories.readerState.getBookState("account-a", "book-1"))?.annotations)
+      .toEqual(state.annotations);
+    expect(await repositories.readerOutbox.list("account-a")).toEqual(expect.arrayContaining([confirmed, deleted]));
+    expect(await repositories.readerOutbox.list("account-a")).toHaveLength(2);
+    repositories.close();
+  });
+
+  it("retries an ambiguously completed continuation without assigning another identity", async () => {
+    const confirmed = highlightIntent(
+      "confirmed-1",
+      3,
+      { kind: "server-confirmed", serverSessionId: "session-old" },
+      "confirmed edit",
+      "session-old",
+    );
+    const state = readerState("session-old");
+    const deleted = deleteIntent(
+      "confirmed-delete",
+      2,
+      { kind: "server-confirmed", serverSessionId: "session-old" },
+      "session-old",
+    );
+    state.annotations = [projection(confirmed), {
+      status: "deleted",
+      origin: deleted.origin,
+      clientId: deleted.clientId,
+    }];
+    const repositories = await repositoriesWithState(state);
+    await repositories.outboxRepository.upsertIntent(confirmed);
+    await repositories.outboxRepository.upsertIntent(deleted);
+    const durableCommit = repositories.continuationRepository.commit.bind(repositories.continuationRepository);
+    let obscureFirstCommit = true;
+    repositories.continuationRepository = {
+      commit: async (input) => {
+        const result = await durableCommit(input);
+        if (obscureFirstCommit) {
+          obscureFirstCommit = false;
+          throw new Error("completion was not observed");
+        }
+        return result;
+      },
+    };
+    const firstClient = replayClient([]);
+    vi.mocked(firstClient.marginalia.sessions.batchAnnotations)
+      .mockRejectedValueOnce(apiError(409, "SESSION_CLOSED"));
+    vi.mocked(firstClient.marginalia.books.getActiveSession).mockResolvedValue(activeBootstrap("session-new"));
+    const generateClientId = vi.fn(() => "new-copy-1");
+
+    await expect(replay(firstClient, repositories, "session-old", generateClientId))
+      .resolves.toEqual({ status: "failed" });
+
+    const retryClient = replayClient([serverHighlight("new-copy-1", "confirmed edit")]);
+    await expect(replay(retryClient, repositories, "session-new", generateClientId))
+      .resolves.toMatchObject({ status: "replayed", acknowledged: 1 });
+    expect(generateClientId).toHaveBeenCalledOnce();
+    expect(batchOperations(retryClient)).toEqual([
+      expect.objectContaining({ action: "upsert", annotation: expect.objectContaining({ clientId: "new-copy-1" }) }),
+    ]);
+    expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.annotations)
+      .toEqual([expect.objectContaining({ annotation: expect.objectContaining({ clientId: "new-copy-1" }) })]);
+    expect(JSON.stringify(await repositories.outboxRepository.list("account-a"))).not.toContain("confirmed-delete");
+  });
+
+  it("does not overwrite or deliver a newer revision when a continuation commit becomes stale", async () => {
+    const confirmed = highlightIntent(
+      "confirmed-1",
+      3,
+      { kind: "server-confirmed", serverSessionId: "session-old" },
+      "first edit",
+      "session-old",
+    );
+    const newer = highlightIntent(
+      "confirmed-1",
+      4,
+      { kind: "server-confirmed", serverSessionId: "session-old" },
+      "newer edit",
+      "session-old",
+    );
+    const state = readerState("session-old");
+    state.annotations = [projection(confirmed)];
+    const repositories = await repositoriesWithState(state);
+    await repositories.outboxRepository.upsertIntent(confirmed);
+    const durableCommit = repositories.continuationRepository.commit.bind(repositories.continuationRepository);
+    repositories.continuationRepository = {
+      commit: async (input) => {
+        const current = (await repositories.stateRepository.getBookState("account-a", "book-1"))!;
+        current.annotations = [projection(newer)];
+        await repositories.stateRepository.putBookState(current);
+        await repositories.outboxRepository.upsertIntent(newer);
+        return durableCommit(input);
+      },
+    };
+    const client = replayClient([]);
+    vi.mocked(client.marginalia.sessions.batchAnnotations)
+      .mockRejectedValueOnce(apiError(409, "SESSION_CLOSED"));
+    vi.mocked(client.marginalia.books.getActiveSession).mockResolvedValue(activeBootstrap("session-new"));
+
+    await expect(replay(client, repositories, "session-old", () => "stale-copy"))
+      .resolves.toEqual({ status: "failed" });
+
+    expect(client.marginalia.sessions.batchAnnotations).toHaveBeenCalledOnce();
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([newer]);
+    expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.annotations)
+      .toEqual([projection(newer)]);
+  });
+
   it("guards concurrent same-runtime replay and exposes no start-over operation", async () => {
     const intent = highlightIntent("local-1", 1, { kind: "local-unconfirmed" });
     const repositories = await repositoriesWithState(readerState("session-1"));
@@ -272,14 +429,11 @@ describe("offline Reader annotation replay", () => {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
+  continuationRepository: ReaderAnnotationContinuationRepository;
 };
 
 async function repositoriesWithState(state: OfflineReaderBookState): Promise<Repositories> {
-  const factories = createInMemoryOfflineRepositoryFactories();
-  const repositories = {
-    stateRepository: await factories.createReaderStateRepository(),
-    outboxRepository: await factories.createReaderOutboxRepository(),
-  };
+  const repositories = createInMemoryReaderRepositories();
   await repositories.stateRepository.putBookState(state);
   return repositories;
 }

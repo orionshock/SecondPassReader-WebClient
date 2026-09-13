@@ -15,13 +15,14 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
+import type { ReaderAnnotationContinuationRepository } from "../../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
 import {
   readerIntentResourceKey,
   type ReaderOutboxIntent,
   type ReplaceReaderProgressIntent,
   type UpsertReaderAnnotationIntent,
 } from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
-import { createInMemoryOfflineRepositoryFactories } from "../../storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryReaderRepositories } from "../../storage/OfflineRepositoryTest.Fixtures";
 
 describe("explicit offline Reader sync", () => {
   it("returns nothing-to-sync without touching server authority", async () => {
@@ -215,17 +216,14 @@ describe("explicit offline Reader sync", () => {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
+  continuationRepository: ReaderAnnotationContinuationRepository;
 };
 
 async function repositoriesWithState(
   state: OfflineReaderBookState,
   intents: ReaderOutboxIntent[] = [],
 ): Promise<Repositories> {
-  const factories = createInMemoryOfflineRepositoryFactories();
-  const repositories = {
-    stateRepository: await factories.createReaderStateRepository(),
-    outboxRepository: await factories.createReaderOutboxRepository(),
-  };
+  const repositories = createInMemoryReaderRepositories();
   await repositories.stateRepository.putBookState(state);
   for (const intent of intents) await repositories.outboxRepository.upsertIntent(intent);
   return repositories;

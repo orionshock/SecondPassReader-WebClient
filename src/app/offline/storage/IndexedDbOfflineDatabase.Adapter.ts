@@ -105,6 +105,11 @@ export async function runTransaction<T>(
     await completion;
     return result;
   } catch (error) {
+    try {
+      transaction.abort();
+    } catch {
+      // A request failure may already have aborted or completed the transaction.
+    }
     await completion.catch(() => undefined);
     throw error;
   }

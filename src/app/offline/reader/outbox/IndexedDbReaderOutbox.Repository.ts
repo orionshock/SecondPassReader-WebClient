@@ -15,7 +15,7 @@ import {
 } from "../../storage/IndexedDbOfflineDatabase.Adapter";
 import { publishOfflineReaderOutboxChange } from "./OfflineReaderOutboxChange.State";
 
-type StoredReaderOutboxIntent = {
+export type StoredReaderOutboxIntent = {
   namespaceKey: string;
   resourceKey: string;
   schemaVersion: number;

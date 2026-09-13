@@ -13,6 +13,7 @@ import {
 import {
   prepareOfflineReaderAnnotationContinuation,
   type ReaderAnnotationContinuationOutcome,
+  type ReaderAnnotationContinuationRepository,
 } from "./OfflineReaderAnnotationContinuation.Actions";
 import {
   reconcileOfflineReaderSessionAuthority,
@@ -76,6 +77,7 @@ type ReplayInput = {
   client: ReaderAnnotationReplayClient;
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
+  continuationRepository: ReaderAnnotationContinuationRepository;
   generateClientId?: () => string;
   attemptMode?: OfflineReaderAttemptMode;
   now?: () => number;

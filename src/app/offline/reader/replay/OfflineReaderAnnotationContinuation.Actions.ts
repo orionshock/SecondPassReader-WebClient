@@ -4,8 +4,8 @@ import type {
   ReaderOutboxRepository,
 } from "../../storage/OfflineRepositories.Types";
 import { annotationIntentClientId, type ReaderAnnotationIntent } from "./OfflineReaderAnnotationReplay.State";
-import { updateOfflineReaderBookState } from "../continuity/OfflineReaderStateWrite.Coordinator";
-import { readerIntentResourceKey, type ReaderOutboxIntent } from "../outbox/ReaderOutbox.Policy";
+import { coordinateOfflineReaderBookStateWrite } from "../continuity/OfflineReaderStateWrite.Coordinator";
+import type { ReaderOutboxIntent } from "../outbox/ReaderOutbox.Policy";
 import { sortReaderIntentsForReplay } from "./ReaderReplay.Policy";
 
 export type ReaderAnnotationContinuationOutcome = {
@@ -16,10 +16,18 @@ export type ReaderAnnotationContinuationOutcome = {
   toSessionId: string;
 };
 
-type ContinuationTransform = {
+export type ContinuationTransform = {
   current: ReaderAnnotationIntent;
   replacement: ReaderAnnotationIntent | null;
   kind: "forward-confirmed" | "drop-confirmed" | "continue-local" | "drop-local-delete";
+};
+
+export type ReaderAnnotationContinuationRepository = {
+  commit(input: {
+    namespaceKey: string;
+    bookId: string;
+    transforms: readonly ContinuationTransform[];
+  }): Promise<{ status: "committed" | "conflict" | "no-local-state" }>;
 };
 
 export async function prepareOfflineReaderAnnotationContinuation(input: {
@@ -29,6 +37,7 @@ export async function prepareOfflineReaderAnnotationContinuation(input: {
   closedSessionId: string | null;
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
+  continuationRepository: ReaderAnnotationContinuationRepository;
   generateClientId?: () => string;
 }): Promise<
   | { status: "prepared"; continuation: ReaderAnnotationContinuationOutcome | null }
@@ -50,25 +59,20 @@ export async function prepareOfflineReaderAnnotationContinuation(input: {
   if (transforms.length === 0) return { status: "prepared", continuation: null };
   const applied: ContinuationTransform[] = [];
   try {
-    await updateOfflineReaderBookState({
+    // Projection and intent identity are one continuation invariant. The IndexedDB implementation
+    // commits both stores together; exact intent revisions make stale transforms no-ops.
+    const committed = await coordinateOfflineReaderBookStateWrite({
       namespaceKey: input.namespaceKey,
       bookId: input.bookId,
-      fallbackState: state,
-      repository: input.stateRepository,
-      update: (current) => ({ ...current, annotations: transformProjection(current.annotations, transforms) }),
+      write: () => input.continuationRepository.commit({
+        namespaceKey: input.namespaceKey,
+        bookId: input.bookId,
+        transforms,
+      }),
     });
-    for (const transform of transforms) {
-      const key = readerIntentResourceKey(transform.current);
-      const changed = transform.replacement
-        ? await input.outboxRepository.replace(
-          input.namespaceKey,
-          key,
-          transform.current.intentRevision,
-          transform.replacement,
-        )
-        : await input.outboxRepository.remove(input.namespaceKey, key, transform.current.intentRevision);
-      if (changed) applied.push(transform);
-    }
+    if (committed.status === "no-local-state") return { status: "no-local-state" };
+    if (committed.status === "conflict") return { status: "failed" };
+    applied.push(...transforms);
   } catch {
     return { status: "failed" };
   }
@@ -141,7 +145,7 @@ function buildTransforms(
   return transforms;
 }
 
-function transformProjection(
+export function transformContinuationProjection(
   projections: OfflineReaderBookState["annotations"],
   transforms: readonly ContinuationTransform[],
 ) {
@@ -152,7 +156,7 @@ function transformProjection(
       item.status === "present" ? item.annotation.clientId === clientId : item.clientId === clientId
     ));
     if (transform.kind === "forward-confirmed" && transform.replacement?.type === "upsert-annotation") {
-      if (index >= 0 && projectionMatchesIntent(next[index], transform.current)) {
+      if (index >= 0 && continuationProjectionMatchesIntent(next[index], transform.current)) {
         next[index] = {
           status: "present",
           origin: { kind: "local-unconfirmed" },
@@ -160,13 +164,13 @@ function transformProjection(
         };
       }
     } else if (transform.kind === "drop-confirmed" || transform.kind === "drop-local-delete") {
-      if (index >= 0 && projectionMatchesIntent(next[index], transform.current)) next.splice(index, 1);
+      if (index >= 0 && continuationProjectionMatchesIntent(next[index], transform.current)) next.splice(index, 1);
     }
   }
   return next;
 }
 
-function projectionMatchesIntent(
+export function continuationProjectionMatchesIntent(
   projection: OfflineReaderBookState["annotations"][number],
   intent: ReaderAnnotationIntent,
 ): boolean {

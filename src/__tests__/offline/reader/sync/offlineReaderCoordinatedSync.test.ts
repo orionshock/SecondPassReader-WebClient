@@ -11,8 +11,9 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
+import type { ReaderAnnotationContinuationRepository } from "../../../../app/offline/reader/replay/OfflineReaderAnnotationContinuation.Actions";
 import type { OfflineReaderSyncClient } from "../../../../app/offline/reader/sync/OfflineReaderSync.Actions";
-import { createInMemoryOfflineRepositoryFactories } from "../../storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryReaderRepositories } from "../../storage/OfflineRepositoryTest.Fixtures";
 
 describe("browser offline sync lock", () => {
   it("serializes waiting callers for the same namespace and Book", async () => {
@@ -213,14 +214,11 @@ function lockName(namespaceKey: string, bookId: string): string {
 type Repositories = {
   stateRepository: OfflineReaderStateRepository;
   outboxRepository: ReaderOutboxRepository;
+  continuationRepository: ReaderAnnotationContinuationRepository;
 };
 
 async function emptyRepositories(): Promise<Repositories> {
-  const factories = createInMemoryOfflineRepositoryFactories();
-  return {
-    stateRepository: await factories.createReaderStateRepository(),
-    outboxRepository: await factories.createReaderOutboxRepository(),
-  };
+  return createInMemoryReaderRepositories();
 }
 
 async function repositoriesWithEstablishIntent(): Promise<Repositories> {

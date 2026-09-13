@@ -23,7 +23,7 @@ const activePendingSyncs = new Map<string, ActivePendingSync>();
 
 type PendingSyncRepositories = Pick<
   IndexedDbOfflineRepositories<Blob>,
-  "readerState" | "readerOutbox" | "close"
+  "readerState" | "readerOutbox" | "readerAnnotationContinuation" | "close"
 >;
 
 export type OfflineReaderPendingSyncResult =
@@ -144,6 +144,7 @@ async function runPendingSync(input: {
             client: input.client,
             stateRepository: repositories.readerState,
             outboxRepository: repositories.readerOutbox,
+            continuationRepository: repositories.readerAnnotationContinuation,
             mode: input.mode,
             attemptMode: input.attemptMode,
           });

@@ -313,6 +313,11 @@ writable Reading Session:
 - progress transfers as the latest desired value; and
 - confirmed deletes against the closed Reading Session are dropped rather than applied elsewhere.
 
+The annotation projection and its continuation outbox changes commit in one IndexedDB transaction.
+The commit rechecks exact intent revisions and matching projection content; a conflict leaves both
+stores unchanged for a later retry. A committed continuation therefore survives an interrupted or
+unobserved completion without assigning another replacement identity.
+
 The automatic sweep may report copied edits and dropped deletes in one nonblocking notice.
 `start-over` remains explicit user intent.
 

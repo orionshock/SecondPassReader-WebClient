@@ -7,7 +7,7 @@ import {
 import type { OfflineReaderCoordinatedSyncResult } from "../../../../app/offline/reader/sync/OfflineReaderCoordinatedSync.Actions";
 import type { ReaderOutboxIntent } from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
 import type { OfflineReaderSyncClient } from "../../../../app/offline/reader/sync/OfflineReaderSync.Actions";
-import { createInMemoryOfflineRepositoryFactories } from "../../storage/OfflineRepositoryTest.Fixtures";
+import { createInMemoryReaderRepositories } from "../../storage/OfflineRepositoryTest.Fixtures";
 
 describe("pending offline Reader sync", () => {
   it("derives sorted distinct Books across all Reader intent types", () => {
@@ -244,13 +244,17 @@ describe("pending offline Reader sync", () => {
 });
 
 async function createHarness(intents: ReaderOutboxIntent[], namespaceKey = "account-a") {
-  const factories = createInMemoryOfflineRepositoryFactories();
-  const readerState = await factories.createReaderStateRepository();
-  const readerOutbox = await factories.createReaderOutboxRepository();
+  const { stateRepository: readerState, outboxRepository: readerOutbox, continuationRepository } =
+    createInMemoryReaderRepositories();
   for (const intent of intents) await readerOutbox.upsertIntent(intent);
   const close = vi.fn();
   const list = vi.spyOn(readerOutbox, "list");
-  const openRepositories = vi.fn(async () => ({ readerState, readerOutbox, close }));
+  const openRepositories = vi.fn(async () => ({
+    readerState,
+    readerOutbox,
+    readerAnnotationContinuation: continuationRepository,
+    close,
+  }));
   const syncBook = vi.fn<OfflineReaderPendingSyncDependencies["syncBook"]>(async () => completed());
   const reportFailure = vi.fn<OfflineReaderPendingSyncDependencies["reportFailure"]>();
   const dependencies: OfflineReaderPendingSyncDependencies = { openRepositories, syncBook, reportFailure };
