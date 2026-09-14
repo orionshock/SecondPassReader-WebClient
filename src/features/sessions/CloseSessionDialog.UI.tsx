@@ -1,10 +1,10 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import type { CompactBook } from "@secondpass/client";
 import { getBookCoverUrl } from "../library/BookCover.Mapper";
 import { formatSeriesIndex } from "../library/SeriesMetadata.Presenter";
 import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
-import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
+import { useCloseSession } from "./CloseSession.Controller";
 
 export type CloseSessionAfterAction = "nextBook" | "restartBook" | "home" | "detail" | "sessions";
 
@@ -43,15 +43,9 @@ export function CloseSessionDialog({
   onCancel: () => void;
   onSaveAndClose: (input: CloseSessionInput) => Promise<void>;
 }) {
-  const initialAfterAction =
-    defaultAfterAction && afterOptions.some((option) => option.action === defaultAfterAction)
-      ? defaultAfterAction
-      : afterOptions[0]?.action ?? "detail";
-  const [name, setName] = useState(initialName);
-  const [notes, setNotes] = useState(initialNotes);
-  const [afterAction, setAfterAction] = useState<CloseSessionAfterAction>(initialAfterAction);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { name, notes, afterAction, busy, error, changeName, changeNotes, chooseAfterAction, submit } = useCloseSession({
+    initialName, initialNotes, afterOptions, defaultAfterAction, onSaveAndClose,
+  });
   const nameRef = useRef<HTMLInputElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
 
@@ -62,18 +56,6 @@ export function CloseSessionDialog({
   const nextBookSeriesIndex = nextBook ? formatSeriesIndex(nextBook.series?.seriesIndex) : null;
 
   useModalDialogFocus({ active: true, dialogRef, initialFocusRef: nameRef, onDismiss: onCancel, dismissDisabled: busy });
-
-  async function submit() {
-    setBusy(true);
-    setError(null);
-    try {
-      await onSaveAndClose({ name: trimmedName, notes, afterAction });
-    } catch (e) {
-      debugWarn("reader", "Reading Session close did not complete", { error: e });
-      setError("Couldn't close the Reading Session. Try again.");
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="modalOverlay closeSessionOverlay" role="presentation" onMouseDown={(e) => {
@@ -100,7 +82,7 @@ export function CloseSessionDialog({
               ref={nameRef}
               className="input"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => changeName(e.target.value)}
               maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
               disabled={busy}
               aria-describedby={unnamed ? "close-session-name-warning" : undefined}
@@ -112,7 +94,7 @@ export function CloseSessionDialog({
             <textarea
               className="input closeSessionNotes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
+              onChange={(e) => changeNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
               rows={5}
               maxLength={SESSION_METADATA_LIMITS.notesMaxChars}
               disabled={busy}
@@ -128,7 +110,7 @@ export function CloseSessionDialog({
                   type="radio"
                   name="close-session-after"
                   checked={afterAction === option.action}
-                  onChange={() => setAfterAction(option.action)}
+                  onChange={() => chooseAfterAction(option.action)}
                   disabled={busy}
                 />
                 <span>{option.label}</span>

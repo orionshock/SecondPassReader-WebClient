@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { ApiError } from "@secondpass/client";
-import type { BoundedSessionBook, MarginaliaSessionListItem, MarginaliaSessionSummary, PaginatedResponse, SecondPassClient } from "@secondpass/client";
+import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "../library/BookCover.Mapper";
@@ -8,9 +8,8 @@ import { InlineMeta, MetaSeparator } from "../../components/Metadata.UI";
 import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
-import { loadSessionsPage } from "../reader/ReaderMarginalia.Queries";
+import { useSessionsList } from "./SessionsList.Controller";
 import { getSessionDisplayName } from "./SessionDisplayName.Presenter";
-import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 function formatIso(iso?: string | null): string | null {
   if (!iso) return null;
@@ -27,8 +26,6 @@ function formatAnnotationCount(n?: number | null): string | null {
   const count = Math.max(0, Math.floor(n));
   return count === 1 ? "1 annotation" : `${count} annotations`;
 }
-
-type Filter = "all" | "active" | "closed";
 
 export function getSessionsLoadErrorMessage(error: unknown, hasBookFilter: boolean): string {
   const authMessage = getAuthRecoveryMessage("access Reading Sessions");
@@ -71,64 +68,11 @@ export function SessionsPage({
   bookId?: string | null;
   searchQuery?: string | null;
 }) {
-  const canLoad = Boolean(spl);
-  const bookFilter = typeof bookId === "string" && bookId.trim() ? bookId.trim() : null;
-  const effectiveSearchQuery = typeof searchQuery === "string" ? searchQuery.trim() : "";
-  const [filter, setFilter] = useState<Filter>("all");
-  const [pageSize, setPageSize] = useState(20);
-  const [searchDraft, setSearchDraft] = useState(effectiveSearchQuery);
-
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState<(PaginatedResponse<MarginaliaSessionSummary | MarginaliaSessionListItem> & { context?: { book: BoundedSessionBook } }) | null>(null);
-
-  const load = useCallback(
-    async (targetPage: number) => {
-      if (!spl) return;
-      setBusy(true);
-      setError(null);
-      try {
-        const r = await loadSessionsPage({
-          spl,
-          bookId: bookFilter ?? undefined,
-          status: filter === "all" ? undefined : filter,
-          q: effectiveSearchQuery || undefined,
-          page: targetPage,
-          pageSize,
-        });
-        setData(r);
-        setPage(targetPage);
-      } catch (e) {
-        debugWarn("reader", "Reading Sessions could not be loaded", {
-          bookId: bookFilter,
-          page: targetPage,
-          error: e,
-        });
-        setError(e instanceof Error ? e : new Error("Could not load Reading Sessions."));
-        setData(null);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [bookFilter, effectiveSearchQuery, filter, pageSize, spl],
-  );
-
-  useEffect(() => {
-    setSearchDraft(effectiveSearchQuery);
-  }, [effectiveSearchQuery]);
-
-  useEffect(() => {
-    setData(null);
-    setError(null);
-    setBusy(false);
-    setPage(1);
-    if (!canLoad) return;
-    void load(1);
-  }, [bookFilter, canLoad, effectiveSearchQuery, filter, load, pageSize]);
-
-  const contextBook = data?.context?.book ?? null;
-  const sessions = data?.results ?? [];
+  const {
+    canLoad, bookFilter, effectiveSearchQuery, filter, pageSize, searchDraft,
+    busy, error, page, data, contextBook, sessions,
+    changeFilter, changePageSize, changeSearchDraft, previousPage, nextPage,
+  } = useSessionsList({ spl, bookId, searchQuery });
 
   const commitSearch = useCallback(() => {
     const next = searchDraft.trim();
@@ -151,13 +95,13 @@ export function SessionsPage({
         }}
       >
         <div className="sessionsFilters" role="group" aria-label="Reading Session status">
-          <button type="button" aria-pressed={filter === "all"} className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("all")}>
+          <button type="button" aria-pressed={filter === "all"} className={`sessionsFilter ${filter === "all" ? "sessionsFilterActive" : ""}`} onClick={() => changeFilter("all")}>
             All
           </button>
-          <button type="button" aria-pressed={filter === "active"} className={`sessionsFilter ${filter === "active" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("active")}>
+          <button type="button" aria-pressed={filter === "active"} className={`sessionsFilter ${filter === "active" ? "sessionsFilterActive" : ""}`} onClick={() => changeFilter("active")}>
             Active
           </button>
-          <button type="button" aria-pressed={filter === "closed"} className={`sessionsFilter ${filter === "closed" ? "sessionsFilterActive" : ""}`} onClick={() => setFilter("closed")}>
+          <button type="button" aria-pressed={filter === "closed"} className={`sessionsFilter ${filter === "closed" ? "sessionsFilterActive" : ""}`} onClick={() => changeFilter("closed")}>
             Closed
           </button>
         </div>
@@ -167,7 +111,7 @@ export function SessionsPage({
           <input
             className="input sessionsSearchInput"
             value={searchDraft}
-            onChange={(e) => setSearchDraft(e.target.value)}
+            onChange={(e) => changeSearchDraft(e.target.value)}
             placeholder="Search Reading Sessions and books..."
             disabled={!canLoad}
           />
@@ -179,7 +123,7 @@ export function SessionsPage({
 
         <label className="toolbarField">
           <span className="srOnly">Page size</span>
-          <select className="input inputCompact" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} disabled={busy}>
+          <select className="input inputCompact" value={pageSize} onChange={(e) => changePageSize(Number(e.target.value))} disabled={busy}>
             <option value={20}>20</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
@@ -204,10 +148,10 @@ export function SessionsPage({
               <InlineMeta items={[`Page ${page}`, `${data.count} Reading Sessions`]} />
             </div>
             <div className="pagerButtons">
-              <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
+              <button type="button" className="button buttonCompact" onClick={() => void previousPage()} disabled={busy || !data.previous}>
                 Previous
               </button>
-              <button type="button" className="button buttonCompact" onClick={() => void load(page + 1)} disabled={busy || !data.next}>
+              <button type="button" className="button buttonCompact" onClick={() => void nextPage()} disabled={busy || !data.next}>
                 Next
               </button>
             </div>
@@ -295,10 +239,10 @@ export function SessionsPage({
               <InlineMeta items={[`Page ${page}`, `${data.count} Reading Sessions`]} />
             </div>
             <div className="pagerButtons">
-              <button type="button" className="button buttonCompact" onClick={() => void load(Math.max(1, page - 1))} disabled={busy || !data.previous}>
+              <button type="button" className="button buttonCompact" onClick={() => void previousPage()} disabled={busy || !data.previous}>
                 Previous
               </button>
-              <button type="button" className="button buttonCompact" onClick={() => void load(page + 1)} disabled={busy || !data.next}>
+              <button type="button" className="button buttonCompact" onClick={() => void nextPage()} disabled={busy || !data.next}>
                 Next
               </button>
             </div>

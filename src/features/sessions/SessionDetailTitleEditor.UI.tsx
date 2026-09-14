@@ -3,27 +3,25 @@ import { SESSION_METADATA_LIMITS } from "./SessionMetadata.Policy";
 
 export function SessionDetailTitleEditor({
   displayName,
-  savedName,
   isActive,
   draftName,
-  setDraftName,
+  onChangeName,
   editingName,
-  setEditingName,
+  onBeginNameEdit,
+  onCancelNameEdit,
   saveBusy,
   saveError,
-  clearSaveError,
   onSaveName,
 }: {
   displayName: string;
-  savedName: string;
   isActive: boolean;
   draftName: string;
-  setDraftName: (value: string) => void;
+  onChangeName: (value: string) => void;
   editingName: boolean;
-  setEditingName: (value: boolean) => void;
+  onBeginNameEdit: () => void;
+  onCancelNameEdit: () => void;
   saveBusy: boolean;
   saveError: string | null;
-  clearSaveError: () => void;
   onSaveName: () => void;
 }) {
   return (
@@ -34,11 +32,7 @@ export function SessionDetailTitleEditor({
           <button
             type="button"
             className="button buttonCompact sessionTitleEditButton"
-            onClick={() => {
-              setDraftName(savedName);
-              clearSaveError();
-              setEditingName(true);
-            }}
+            onClick={onBeginNameEdit}
             aria-label="Edit Reading Session name"
             title="Edit Reading Session name"
           >
@@ -52,7 +46,7 @@ export function SessionDetailTitleEditor({
           <input
             className="input inputCompact sessionInlineEditInput"
             value={draftName}
-            onChange={(event) => setDraftName(event.target.value)}
+            onChange={(event) => onChangeName(event.target.value)}
             placeholder="Reading Session name"
             aria-label="Reading Session name"
             maxLength={SESSION_METADATA_LIMITS.nameMaxChars}
@@ -63,11 +57,7 @@ export function SessionDetailTitleEditor({
           <button
             type="button"
             className="button buttonCompact"
-            onClick={() => {
-              setEditingName(false);
-              setDraftName(savedName);
-              clearSaveError();
-            }}
+            onClick={onCancelNameEdit}
             disabled={saveBusy}
           >
             Cancel

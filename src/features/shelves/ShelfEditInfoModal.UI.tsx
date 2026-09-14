@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
-import { ShelfForm, type ShelfFormValues } from "./ShelfForm.UI";
+import { ShelfForm } from "./ShelfForm.UI";
+import type { ShelfFormValues } from "./ShelfForm.Types";
 
 export function ShelfEditInfoModal({
   values,

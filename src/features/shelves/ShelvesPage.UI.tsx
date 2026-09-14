@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
@@ -6,12 +6,12 @@ import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl.UI";
 import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack.UI";
 import { normalizePreviewBooks } from "../library/display/PreviewBooks.Mapper";
-import { createPersonalShelfInput, ShelfForm, type ShelfFormValues } from "./ShelfForm.UI";
+import { ShelfForm } from "./ShelfForm.UI";
 import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
-import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
+import { useShelfCollection } from "./ShelfCollection.Controller";
 
 type ShelfOrdering = "name" | "-item_count";
 
@@ -19,19 +19,6 @@ const SHELF_ORDERING_OPTIONS: Array<OrderingOption<ShelfOrdering>> = [
   { value: "name", label: "Shelf A-Z", icon: "sort_by_alpha" },
   { value: "-item_count", label: "Most books", icon: "format_list_numbered" },
 ];
-
-function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
-  return {
-    name: shelf?.name ?? "",
-    description: shelf?.description ?? "",
-    visibility: shelf?.visibility === "listed" ? "listed" : "private",
-  };
-}
-
-type ScopedShelves = {
-  personal: Shelf[];
-  shared: Shelf[];
-};
 
 export function ShelvesLoadErrorNotice({
   error,
@@ -71,100 +58,20 @@ export function ShelvesPage({
   pageSize?: number;
   onUpdateRoute?: (patch: { ordering?: string; page?: number; pageSize?: number }) => void;
 }) {
-  const canLoad = Boolean(spl);
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [data, setData] = useState<ScopedShelves | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
-  const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
-  const [mutationBusy, setMutationBusy] = useState(false);
-  const [mutationError, setMutationError] = useState<string | null>(null);
-  const loadRequestSeq = useRef(0);
+  const {
+    canLoad, busy, error, data, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
+    retry, createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
+  } = useShelfCollection({ spl, ordering, page, pageSize });
   const createDialogRef = useRef<HTMLElement | null>(null);
   const createDialogCloseRef = useRef<HTMLButtonElement | null>(null);
   useModalDialogFocus({
     active: createOpen,
     dialogRef: createDialogRef,
     initialFocusRef: createDialogCloseRef,
-    onDismiss: () => {
-      setCreateOpen(false);
-      setMutationError(null);
-    },
+    onDismiss: cancelCreate,
     dismissDisabled: mutationBusy,
   });
-
-  const load = useCallback(async () => {
-    if (!spl) return;
-    const requestSeq = ++loadRequestSeq.current;
-    setBusy(true);
-    setError(null);
-    try {
-      const [personal, shared] = await Promise.all([
-        spl.shelves.list({ scope: "personal", includePreviewBooks: true, ordering, page, pageSize }),
-        spl.shelves.list({ scope: "shared", includePreviewBooks: true, ordering, page, pageSize }),
-      ]);
-      if (requestSeq !== loadRequestSeq.current) return;
-      setData({
-        personal: personal.results ?? [],
-        shared: shared.results ?? [],
-      });
-    } catch (e) {
-      if (requestSeq !== loadRequestSeq.current) return;
-      debugWarn("reader", "shelves could not be loaded", { error: e });
-      setError(e instanceof Error ? e : new Error("Couldn't load shelves."));
-    } finally {
-      if (requestSeq === loadRequestSeq.current) setBusy(false);
-    }
-  }, [ordering, page, pageSize, spl]);
-
-  useEffect(() => {
-    setError(null);
-    setBusy(false);
-    setCreateOpen(false);
-    setMenuShelfId(null);
-    setMutationError(null);
-    if (!canLoad) return;
-    void load();
-  }, [canLoad, load]);
-
-  const handleCreate = useCallback(async () => {
-    if (!spl) return;
-    const name = createDraft.name.trim();
-    if (!name) return;
-    setMutationBusy(true);
-    setMutationError(null);
-    try {
-      await spl.shelves.create(createPersonalShelfInput(createDraft));
-      setCreateOpen(false);
-      setCreateDraft(shelfToFormValues());
-      setMenuShelfId(null);
-      await load();
-    } catch (e) {
-      debugWarn("reader", "shelf creation did not complete", { error: e });
-      setMutationError("Couldn't create the shelf. Try again.");
-    } finally {
-      setMutationBusy(false);
-    }
-  }, [createDraft, load, spl]);
-
-  const handleDelete = useCallback(async (shelf: Shelf) => {
-    if (!spl || !canEditShelf(shelf)) return;
-    if (!window.confirm("Delete this shelf? The books on it will remain in Library.")) return;
-    setMutationBusy(true);
-    setMutationError(null);
-    try {
-      await spl.shelves.remove(shelf.id);
-      setMenuShelfId(null);
-      await load();
-    } catch (e) {
-      debugWarn("reader", "shelf deletion did not complete", { shelfId: shelf.id, error: e });
-      setMutationError("Couldn't delete the shelf. Try again.");
-    } finally {
-      setMutationBusy(false);
-    }
-  }, [load, spl]);
 
   const renderShelf = useCallback((shelf: Shelf) => {
     const canEdit = canEditShelf(shelf);
@@ -197,7 +104,7 @@ export function ShelvesPage({
                 <button
                   type="button"
                   className="button buttonCompact shelfIconButton"
-                  onClick={() => setMenuShelfId((current) => (current === shelf.id ? null : shelf.id))}
+                  onClick={() => toggleMenu(shelf.id)}
                   disabled={mutationBusy}
                   aria-label={`More actions for ${shelf.name}`}
                   aria-expanded={menuOpen}
@@ -211,7 +118,7 @@ export function ShelvesPage({
                       type="button"
                       className="shelfOverflowItem"
                       onClick={() => {
-                        setMenuShelfId(null);
+                        dismissMenu();
                         navigateTo({ kind: "shelfEdit", shelfId: shelf.id });
                       }}
                       disabled={mutationBusy}
@@ -222,7 +129,7 @@ export function ShelvesPage({
                     <button
                       type="button"
                       className="shelfOverflowItem shelfOverflowItemDanger"
-                      onClick={() => void handleDelete(shelf)}
+                      onClick={() => void deleteShelf(shelf)}
                       disabled={mutationBusy}
                     >
                       <MaterialIcon name="delete" />
@@ -236,7 +143,7 @@ export function ShelvesPage({
         </div>
       </div>
     );
-  }, [handleDelete, menuShelfId, mutationBusy, profile]);
+  }, [deleteShelf, dismissMenu, menuShelfId, mutationBusy, profile, toggleMenu]);
 
   const formOpen = createOpen;
 
@@ -256,12 +163,7 @@ export function ShelvesPage({
               <button
                 type="button"
                 className="button buttonPrimary buttonCompact"
-                onClick={() => {
-                  setCreateOpen(true);
-                  setCreateDraft(shelfToFormValues());
-                  setMenuShelfId(null);
-                  setMutationError(null);
-                }}
+                onClick={beginCreate}
                 disabled={busy || mutationBusy || formOpen}
               >
                 Create personal shelf
@@ -276,7 +178,7 @@ export function ShelvesPage({
       {error ? (
         <ShelvesLoadErrorNotice
           error={error}
-          onRetry={() => void load()}
+          onRetry={() => void retry()}
           disabled={!canLoad || busy}
         />
       ) : null}
@@ -288,8 +190,7 @@ export function ShelvesPage({
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !mutationBusy) {
-              setCreateOpen(false);
-              setMutationError(null);
+              cancelCreate();
             }
           }}
         >
@@ -302,10 +203,7 @@ export function ShelvesPage({
                 ref={createDialogCloseRef}
                 type="button"
                 className="button buttonCompact shelfIconButton"
-                onClick={() => {
-                  setCreateOpen(false);
-                  setMutationError(null);
-                }}
+                onClick={cancelCreate}
                 disabled={mutationBusy}
                 aria-label="Close"
                 title="Close"
@@ -317,12 +215,9 @@ export function ShelvesPage({
               <p className="muted shelfModalHint">Library Group shelves are read-only here.</p>
               <ShelfForm
                 values={createDraft}
-                onChange={setCreateDraft}
-                onSubmit={() => void handleCreate()}
-                onCancel={() => {
-                  setCreateOpen(false);
-                  setMutationError(null);
-                }}
+                onChange={changeCreateDraft}
+                onSubmit={() => void createShelf()}
+                onCancel={cancelCreate}
                 submitLabel="Create personal shelf"
                 busy={mutationBusy}
                 descriptionError={mutationError}

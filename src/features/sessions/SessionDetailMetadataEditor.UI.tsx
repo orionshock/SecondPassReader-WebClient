@@ -6,23 +6,23 @@ export function SessionDetailMetadataEditor({
   session,
   isActive,
   draftNotes,
-  setDraftNotes,
+  onChangeNotes,
   editingNotes,
-  setEditingNotes,
+  onBeginNotesEdit,
+  onCancelNotesEdit,
   saveBusy,
   saveError,
-  clearSaveError,
   onSaveNotes,
 }: {
   session: MarginaliaSession;
   isActive: boolean;
   draftNotes: string;
-  setDraftNotes: (value: string) => void;
+  onChangeNotes: (value: string) => void;
   editingNotes: boolean;
-  setEditingNotes: (value: boolean) => void;
+  onBeginNotesEdit: () => void;
+  onCancelNotesEdit: () => void;
   saveBusy: boolean;
   saveError: string | null;
-  clearSaveError: () => void;
   onSaveNotes: () => void;
 }) {
   const noteText = session.notes.trim();
@@ -54,10 +54,7 @@ export function SessionDetailMetadataEditor({
             <button
               type="button"
               className="button buttonCompact sessionInlineEditButton"
-              onClick={() => {
-                setDraftNotes(typeof session.notes === "string" ? session.notes : "");
-                setEditingNotes(true);
-              }}
+              onClick={onBeginNotesEdit}
               aria-label="Edit Reading Session notes"
               title="Edit"
             >
@@ -75,7 +72,7 @@ export function SessionDetailMetadataEditor({
               cols={40}
               rows={8}
               value={draftNotes}
-              onChange={(e) => setDraftNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
+              onChange={(e) => onChangeNotes(e.target.value.slice(0, SESSION_METADATA_LIMITS.notesMaxChars))}
               aria-label="Reading Session note"
               maxLength={SESSION_METADATA_LIMITS.notesMaxChars}
             />
@@ -86,11 +83,7 @@ export function SessionDetailMetadataEditor({
               <button
                 type="button"
                 className="button buttonCompact"
-                onClick={() => {
-                  setEditingNotes(false);
-                  setDraftNotes(typeof session.notes === "string" ? session.notes : "");
-                  clearSaveError();
-                }}
+                onClick={onCancelNotesEdit}
                 disabled={saveBusy}
               >
                 Cancel
