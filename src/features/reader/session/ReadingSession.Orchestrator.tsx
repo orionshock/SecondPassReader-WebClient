@@ -1,25 +1,17 @@
 import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import { ReadingShell } from "../shell/ReadingShell.Orchestrator";
-import type { ReadingShellCommandValue, ReadingShellEvent } from "../shell/ReaderShell.Types";
-import type { ReaderDescribeCfiHandle, ReaderDisplayCfiHandle, ReaderProbeCfiHandle, ReaderSearchBookHandle, StagedSelectionHandle, StagedSelectionSource } from "../domain/ReaderBridge.Types";
-import type { ReaderLocationTarget, ReaderSelection } from "../domain/ReaderDomain.Types";
-import type { ReadingSessionState } from "./ReadingSession.Types";
+import type { ReadingShellEvent } from "../shell/ReaderShell.Types";
+import type { StagedSelectionSource } from "../domain/ReaderBridge.Types";
+import type { ReaderLocationTarget } from "../domain/ReaderDomain.Types";
+import type { ReadingSessionRenderState, ReadingSessionState } from "./ReadingSession.Types";
 import type { OpenedBook } from "../Reader.Types";
-import { useReadingProgressAutosave } from "./progress/ReadingProgressAutosave.Lifecycle";
-import { READING_PROGRESS_AUTOSAVE_DELAY_MS } from "./progress/ReadingProgressAutosave.Controller";
-import { buildReadingSessionAutosaveStatus } from "./progress/ReadingSessionProgress.Presenter";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ReaderBookmarkViewModel } from "../annotations/ReaderBookmark.Presenter";
-import type { HighlightViewModel } from "../annotations/ReaderAnnotationViewModels.Types";
 import { useSessionAnnotations } from "./annotations/SessionAnnotations.Controller";
 import { usePreviousSessionLayers } from "./previousSession/PreviousSessionLayers.Controller";
-import type { PreviousSessionAnnotationGroup } from "./previousSession/PreviousSessionViewModels.Presenter";
 import { useCurrentSessionMeta } from "./CurrentSessionMetadata.Controller";
 import { buildReaderStatusLine, buildSavedReaderLocationLabel } from "../display/ReaderLocation.Presenter";
-import { useCurrentSessionAnnotationActions } from "./annotations/CurrentSessionAnnotation.Actions";
-import type { ReaderBookmarkMutationResult } from "./annotations/CurrentSessionBookmark.Actions";
 import { useReadingSessionBridgeController } from "./ReadingSessionBridge.Controller";
 import {
   buildReadingSessionAnnotationToolbarItems,
@@ -27,12 +19,11 @@ import {
   composeReadingSessionDurableMarks,
 } from "./ReadingSessionRender.Presenter";
 import { getReaderBootstrapState } from "./ReaderBootstrap.State";
-import { useOfflineReadingProgress } from "./progress/OfflineReadingProgress.Lifecycle";
 import { buildOfflineReadingProgress } from "./progress/OfflineReadingProgress.Controller";
-import { useOfflineCurrentSessionAnnotations } from "./annotations/OfflineCurrentSessionAnnotation.Lifecycle";
 import { canMutateReaderServerSession } from "./ReaderConnectivity.Policy";
 import type { BrowserConnectivityStatus } from "../../../app/connectivity/BrowserConnectivity.State";
 import { useOnlineReaderOfflineHandoff } from "./OnlineReaderOfflineHandoff.Controller";
+import { useCurrentSessionAuthority } from "./CurrentSessionAuthority.Controller";
 
 export type ReadingSessionOrchestratorProps = {
   openedBook: OpenedBook;
@@ -46,52 +37,7 @@ export type ReadingSessionOrchestratorProps = {
   onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
   onUnrelatedNavigation?: () => void;
   onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
-  children: (arg: {
-    state: ReadingSessionState;
-    canMutateSession: boolean;
-    canMutateAnnotations: boolean;
-    statusLine: string[];
-    autosaveStatus: { text: string; title?: string } | null;
-    shell: ReactNode;
-    debugPanel: ReactNode | null;
-    sendCommand: (command: ReadingShellCommandValue) => void;
-    search: {
-      ready: boolean;
-      searchBook: ReaderSearchBookHandle | null;
-      probeCfi: ReaderProbeCfiHandle | null;
-      displayCfi: ReaderDisplayCfiHandle | null;
-      jumpToResult: (cfi: string) => void;
-      jumpToCfi: (cfi: string) => void;
-      jumpToCfiRange: (cfiRange: string) => void;
-      clearTemporaryHighlight: () => void;
-    };
-    stagedSelection: {
-      ready: boolean;
-      handle: StagedSelectionHandle | null;
-    };
-    marginalia: {
-      listStatus: "idle" | "loading" | "ready" | "error";
-      listError: string | null;
-      previousLayers: Array<{ sessionId: string; label: string; labelParts: string[]; highlightCount: number; status: "idle" | "loading" | "ready" | "error"; error?: string }>;
-      selectedPreviousSessionIds: string[];
-      togglePreviousSession: (sessionId: string) => void;
-    };
-    annotations: {
-      items: Array<ReaderBookmarkViewModel | HighlightViewModel>;
-      status: "idle" | "loading" | "ready" | "error";
-      error: string | null;
-      busy: boolean;
-      toggleBookmarkAtCurrentLocation: () => Promise<ReaderBookmarkMutationResult>;
-      createHighlight: (input: { selection: ReaderSelection; color: string; note?: string }) => Promise<void>;
-      removeById: (annotationId: string) => Promise<void>;
-      updateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
-      previousSessionGroups: PreviousSessionAnnotationGroup[];
-      enablePreviousSession: (sessionId: string) => void;
-      currentSessionMeta: { name: string | null; notes: string | null; status: "idle" | "loading" | "ready" | "error"; error: string | null };
-      updateCurrentSessionMeta: (update: { name: string; notes: string }) => Promise<void>;
-      closeCurrentSession: (input: { name: string; notes: string }) => Promise<void>;
-    };
-  }) => ReactNode;
+  children: (arg: ReadingSessionRenderState) => ReactNode;
 };
 
 // Selects server or durable-local mutation owners for one mounted Reading Session.
@@ -103,22 +49,14 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     progressLocation,
     toc,
     pendingCommand,
-    searchBook,
-    probeCfi,
-    displayCfi,
-    stagedSelectionHandle,
-    describeCfi,
+    rendererCapability,
     temporarySearchHighlightCfi,
     sendCommand,
     jumpToSearchResult,
     jumpToCfi,
     jumpToCfiRange,
     clearTemporaryHighlight,
-    handleSearchReady,
-    handleProbeCfiReady,
-    handleDisplayCfiReady,
-    handleStagedSelectionReady,
-    handleDescribeCfiReady: handleBridgeDescribeCfiReady,
+    handleRendererCapabilityReady,
     handleStagedSelectionCommitted,
     handleStagedSelectionCanceled,
     handleShellEvent,
@@ -199,19 +137,15 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   } = sessionAnnotations;
   handoffAnnotationsRef.current = annotationsRaw;
 
-  const handleDescribeCfiReadyForReader = useCallback(
-    (handle: ReaderDescribeCfiHandle | null) => {
-      handleDescribeCfiReady(handle);
-      handleBridgeDescribeCfiReady(handle);
-    },
-    [handleBridgeDescribeCfiReady, handleDescribeCfiReady],
-  );
+  useEffect(() => {
+    handleDescribeCfiReady(rendererCapability?.describeCfi ?? null);
+  }, [handleDescribeCfiReady, rendererCapability]);
 
   const previousLayers = usePreviousSessionLayers({
     spl: serverSpl,
     bookId: props.openedBook.book.id,
     currentSessionId: sessionId,
-    describeCfi,
+    describeCfi: rendererCapability?.describeCfi,
     toc,
     bookTitle: props.openedBook.book.title,
   });
@@ -226,59 +160,29 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     });
   }, [annotationsRaw, location, props.openedBook.book.id, sessionId, toc]);
 
-  const { autosave, prepareProgressForClose, resumeProgressAfterCloseFailure } = useReadingProgressAutosave({
-    enabled: canMutateSession,
-    autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
-    spl: serverSpl,
-    sessionId: state.sessionId,
+  const currentAuthority = useCurrentSessionAuthority({
+    activeBookKey,
+    serverClient: serverSpl,
+    serverSessionId: state.sessionId,
+    serverSessionWritable: canMutateSession,
+    savedServerProgress: bootstrapSession?.progress ?? null,
+    localBootstrap,
     location: progressLocation,
     toc,
     bookTitle: props.openedBook.book.title,
-    savedProgress: bootstrapSession?.progress ?? null,
-  });
-  const offlineProgress = useOfflineReadingProgress({
-    bootstrap: localBootstrap,
-    location: progressLocation,
-    toc,
-    bookTitle: props.openedBook.book.title,
+    locationLabel: generatedLocationLabel,
+    currentBookmark,
+    annotationsRaw,
+    setAnnotationsRaw,
+    setAnnotationError,
   });
   const { currentSessionMeta, updateCurrentSessionMeta, closeCurrentSession } = useCurrentSessionMeta({
     spl: serverSpl,
     sessionId,
     finalProgress,
-    prepareProgressForClose,
-    resumeProgressAfterCloseFailure,
+    prepareProgressForClose: currentAuthority.prepareServerProgressForClose,
+    resumeProgressAfterCloseFailure: currentAuthority.resumeServerProgressAfterCloseFailure,
   });
-
-  const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const shouldTickAutosaveCountdown = Boolean(
-    state.sessionId &&
-      autosave.status !== "saving" &&
-      autosave.status !== "saved" &&
-      typeof autosave.nextSaveAt === "number" &&
-      autosave.nextSaveAt > nowMs,
-  );
-
-  useEffect(() => {
-    if (!shouldTickAutosaveCountdown) return;
-    const id = window.setInterval(() => setNowMs(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, [shouldTickAutosaveCountdown]);
-
-  const autosaveStatus = useMemo((): { text: string; title?: string } | null => {
-    if (localBootstrap) {
-      return offlineProgress.status === "error"
-        ? { text: "Offline progress not saved." }
-        : null;
-    }
-    return buildReadingSessionAutosaveStatus({
-      sessionId: state.sessionId,
-      status: autosave.status,
-      lastSavedAt: autosave.lastSavedAt,
-      nextSaveAt: autosave.nextSaveAt,
-      nowMs,
-    });
-  }, [autosave.lastSavedAt, autosave.nextSaveAt, autosave.status, localBootstrap, nowMs, offlineProgress.status, state.sessionId]);
 
   const statusLine = useMemo(() => {
     const lines = buildReaderStatusLine({ location: state.location, toc: state.toc, bookTitle: props.openedBook.book.title });
@@ -303,47 +207,21 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
     handleShellEvent(event);
   }, [handleShellEvent, onLocationsReady]);
 
-  const {
-    annotationBusy: onlineAnnotationBusy,
-    removeById: removeOnlineAnnotation,
-    updateHighlight: updateOnlineHighlight,
-    toggleBookmarkAtCurrentLocation: toggleOnlineBookmark,
-    createHighlight: createOnlineHighlight,
-  } = useCurrentSessionAnnotationActions({
-    identity: `${activeBookKey}|${sessionId ?? ""}`,
-    spl: serverSpl,
-    sessionId,
-    location,
-    locationLabel: generatedLocationLabel,
-    currentBookmark,
-    annotationsRaw,
-    setAnnotationsRaw,
-    setAnnotationError,
-    canMutate: canMutateSession,
-  });
-  const offlineAnnotations = useOfflineCurrentSessionAnnotations({
-    bootstrap: localBootstrap,
-    location,
-    locationLabel: generatedLocationLabel,
-    currentBookmark,
-    setAnnotationsRaw,
-    setAnnotationError,
-  });
-  const canMutateAnnotations = canMutateSession || offlineAnnotations.canMutate;
-  const annotationBusy = localBootstrap ? offlineAnnotations.annotationBusy : onlineAnnotationBusy;
-  const removeById = localBootstrap ? offlineAnnotations.removeById : removeOnlineAnnotation;
-  const updateHighlight = localBootstrap ? offlineAnnotations.updateHighlight : updateOnlineHighlight;
-  const toggleBookmarkAtCurrentLocation = localBootstrap
-    ? offlineAnnotations.toggleBookmarkAtCurrentLocation
-    : toggleOnlineBookmark;
-  const createHighlight = localBootstrap ? offlineAnnotations.createHighlight : createOnlineHighlight;
+  const annotationCapability = currentAuthority.authority.annotations;
 
   return props.children({
     state,
-    canMutateSession,
-    canMutateAnnotations,
-    statusLine,
-    autosaveStatus,
+    presentation: {
+      statusLine,
+      autosaveStatus: currentAuthority.autosaveStatus,
+    },
+    authority: currentAuthority.authority,
+    administration: {
+      writable: canMutateSession,
+      currentSessionMeta,
+      updateCurrentSessionMeta,
+      closeCurrentSession,
+    },
     shell: (
       <ReadingShell
         blob={props.openedBook.blob}
@@ -353,41 +231,31 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
         toc={toc}
         currentHref={location?.href}
         temporarySearchHighlightCfi={temporarySearchHighlightCfi}
-        onDescribeCfiReady={handleDescribeCfiReadyForReader}
-        onProbeCfiReady={handleProbeCfiReady}
-        onDisplayCfiReady={handleDisplayCfiReady}
-        onSearchReady={handleSearchReady}
-        onStagedSelectionReady={handleStagedSelectionReady}
+        onRendererCapabilityReady={handleRendererCapabilityReady}
         onStagedSelectionCommitted={handleStagedSelectionCommitted}
         onStagedSelectionCanceled={handleStagedSelectionCanceled}
         onUnrelatedNavigation={props.onUnrelatedNavigation}
         annotationToolbarItems={annotationToolbarItems}
-        onUpdateHighlight={canMutateAnnotations ? updateHighlight : undefined}
-        onRemoveAnnotation={canMutateAnnotations ? removeById : undefined}
+        onUpdateHighlight={annotationCapability?.updateHighlight}
+        onRemoveAnnotation={annotationCapability?.removeById}
         onOpenAnnotationInWorkspace={props.onOpenAnnotationInWorkspace}
         highlightMarks={visibleHighlightMarks}
-        onCommitHighlight={canMutateAnnotations ? async (arg) => createHighlight(arg) : undefined}
-        highlightCommitBusy={annotationBusy}
+        onCommitHighlight={annotationCapability?.createHighlight}
+        highlightCommitBusy={annotationCapability?.busy ?? false}
         settings={props.settings}
         onSettingsChange={props.onSettingsChange}
         onSettingsReset={props.onSettingsReset}
       />
     ),
     debugPanel: null,
-    sendCommand,
-    search: {
-      ready: Boolean(searchBook),
-      searchBook,
-      probeCfi,
-      displayCfi,
+    renderer: {
+      ready: Boolean(rendererCapability),
+      capability: rendererCapability,
+      sendCommand,
       jumpToResult: jumpToSearchResult,
       jumpToCfi,
       jumpToCfiRange,
       clearTemporaryHighlight,
-    },
-    stagedSelection: {
-      ready: Boolean(stagedSelectionHandle),
-      handle: stagedSelectionHandle,
     },
     marginalia: {
       listStatus: previousLayers.listStatus,
@@ -400,16 +268,8 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
       items: annotationItems,
       status: annotationStatus,
       error: annotationError,
-      busy: annotationBusy,
-      toggleBookmarkAtCurrentLocation,
-      createHighlight,
-      removeById,
-      updateHighlight,
       previousSessionGroups: previousLayers.previousAnnotationGroups,
       enablePreviousSession: previousLayers.togglePreviousSession,
-      currentSessionMeta,
-      updateCurrentSessionMeta,
-      closeCurrentSession,
     },
   });
 }

@@ -1,10 +1,7 @@
 import { useEffect } from "react";
 import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import type {
-  ReaderDescribeCfiHandle,
-  ReaderDisplayCfiHandle,
-  ReaderProbeCfiHandle,
-  ReaderSearchBookHandle,
+  ReaderRendererCapability,
 } from "../domain/ReaderBridge.Types";
 import type { ReaderHighlightMark, ReaderLocationTarget, ReaderSelection } from "../domain/ReaderDomain.Types";
 import {
@@ -54,10 +51,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
   ) => void;
   clearDeferredCommand: () => void;
   flushDeferredCommand: (generation: number) => Promise<void>;
-  onDescribeCfiReady?: (handle: ReaderDescribeCfiHandle | null) => void;
-  onProbeCfiReady?: (handle: ReaderProbeCfiHandle | null) => void;
-  onDisplayCfiReady?: (handle: ReaderDisplayCfiHandle | null) => void;
-  onSearchReady?: (handle: ReaderSearchBookHandle | null) => void;
+  onRendererCapabilityReady: (capability: Omit<ReaderRendererCapability, "stagedSelection"> | null) => void;
 }): void {
   const {
     blob,
@@ -71,13 +65,10 @@ export function useReaderEngineBootstrapLifecycle(input: {
     initialDisplayTargetRef,
     markReadableViewport,
     mountEl,
-    onDescribeCfiReady,
-    onDisplayCfiReady,
+    onRendererCapabilityReady,
     onEngineHighlightClick,
     onEngineSelectionChanged,
     onEventRef,
-    onProbeCfiReady,
-    onSearchReady,
     reanchorStagedToolbarRef,
     recordReadableViewport,
     reportOperationError,
@@ -107,10 +98,7 @@ export function useReaderEngineBootstrapLifecycle(input: {
       bootstrapProgressGuard,
       runtimeController,
       stagedSelectionLifecycle,
-      onDescribeCfiReady,
-      onProbeCfiReady,
-      onDisplayCfiReady,
-      onSearchReady,
+      onRendererCapabilityReady,
     });
 
     void (async () => {
@@ -196,12 +184,9 @@ export function useReaderEngineBootstrapLifecycle(input: {
     closeDurableToolbar,
     markReadableViewport,
     mountEl,
-    onDescribeCfiReady,
-    onDisplayCfiReady,
+    onRendererCapabilityReady,
     onEngineHighlightClick,
     onEngineSelectionChanged,
-    onProbeCfiReady,
-    onSearchReady,
     recordReadableViewport,
     reportOperationError,
     runtimeController,

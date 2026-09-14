@@ -51,6 +51,15 @@ export type StagedSelectionHandle = {
   cancelStagedSelection(): void;
 };
 
+// Published only after one renderer generation has a readable viewport and a usable staging owner.
+export type ReaderRendererCapability = {
+  describeCfi: ReaderDescribeCfiHandle;
+  probeCfi: ReaderProbeCfiHandle;
+  displayCfi: ReaderDisplayCfiHandle;
+  searchBook: ReaderSearchBookHandle;
+  stagedSelection: StagedSelectionHandle;
+};
+
 export type StagedSelectionCommitInput = {
   selection: ReaderSelection;
   color: string;

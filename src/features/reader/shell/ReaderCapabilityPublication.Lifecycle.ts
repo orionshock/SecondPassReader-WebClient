@@ -1,8 +1,5 @@
 import type {
-  ReaderDescribeCfiHandle,
-  ReaderDisplayCfiHandle,
-  ReaderProbeCfiHandle,
-  ReaderSearchBookHandle,
+  ReaderRendererCapability,
 } from "../domain/ReaderBridge.Types";
 import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import { displayReaderCfiSafely } from "./ReaderCfiDisplay.Adapter";
@@ -12,10 +9,7 @@ import type { ReaderRuntimeController } from "./ReaderRuntime.Controller";
 import type { StagedSelectionLifecycle } from "./StagedSelection.Lifecycle";
 
 type ReaderCapabilityPublishers = {
-  onDescribeCfiReady?: (handle: ReaderDescribeCfiHandle | null) => void;
-  onProbeCfiReady?: (handle: ReaderProbeCfiHandle | null) => void;
-  onDisplayCfiReady?: (handle: ReaderDisplayCfiHandle | null) => void;
-  onSearchReady?: (handle: ReaderSearchBookHandle | null) => void;
+  onRendererCapabilityReady: (capability: Omit<ReaderRendererCapability, "stagedSelection"> | null) => void;
 };
 
 export class ReaderCapabilityPublicationLifecycle {
@@ -26,42 +20,41 @@ export class ReaderCapabilityPublicationLifecycle {
   }) {}
 
   publish(engine: EpubTsBookEngine, generation: number, isCurrent: () => boolean): void {
-    this.input.onDescribeCfiReady?.((cfi) => {
-      if (!isCurrent()) return Promise.reject(new Error("Reader engine is not ready."));
-      return engine.describeCfi(cfi);
-    });
-    this.input.onProbeCfiReady?.((cfi) => {
-      if (!isCurrent()) {
-        return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
-      }
-      return probeReaderCfi((candidate) => engine.probeCfi(candidate), cfi);
-    });
-    this.input.onDisplayCfiReady?.((cfi, options) => {
-      if (!isCurrent()) {
-        return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
-      }
-      this.input.bootstrapProgressGuard.recordExplicitNavigation(generation);
-      return displayReaderCfiSafely(
-        (candidate) => this.input.runtimeController.run({
-          kind: "safe-display",
-          run: ({ engine: activeEngine }) => this.input.stagedSelectionLifecycle.runNavigation(
-            options?.navigationIntent ?? "unrelated",
-            () => activeEngine.displayCfiSafely(candidate),
-          ),
-        }),
-        cfi,
-      );
-    });
-    this.input.onSearchReady?.((query, options) => {
-      if (!isCurrent()) return Promise.reject(new Error("Reader engine is not ready."));
-      return engine.searchBook(query, options);
+    this.input.onRendererCapabilityReady({
+      describeCfi: (cfi) => {
+        if (!isCurrent()) return Promise.reject(new Error("Reader engine is not ready."));
+        return engine.describeCfi(cfi);
+      },
+      probeCfi: (cfi) => {
+        if (!isCurrent()) {
+          return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
+        }
+        return probeReaderCfi((candidate) => engine.probeCfi(candidate), cfi);
+      },
+      displayCfi: (cfi, options) => {
+        if (!isCurrent()) {
+          return Promise.resolve({ ok: false, code: "unsupported", error: "Reader engine is not ready." });
+        }
+        this.input.bootstrapProgressGuard.recordExplicitNavigation(generation);
+        return displayReaderCfiSafely(
+          (candidate) => this.input.runtimeController.run({
+            kind: "safe-display",
+            run: ({ engine: activeEngine }) => this.input.stagedSelectionLifecycle.runNavigation(
+              options?.navigationIntent ?? "unrelated",
+              () => activeEngine.displayCfiSafely(candidate),
+            ),
+          }),
+          cfi,
+        );
+      },
+      searchBook: (query, options) => {
+        if (!isCurrent()) return Promise.reject(new Error("Reader engine is not ready."));
+        return engine.searchBook(query, options);
+      },
     });
   }
 
   unpublish(): void {
-    this.input.onDescribeCfiReady?.(null);
-    this.input.onProbeCfiReady?.(null);
-    this.input.onDisplayCfiReady?.(null);
-    this.input.onSearchReady?.(null);
+    this.input.onRendererCapabilityReady(null);
   }
 }

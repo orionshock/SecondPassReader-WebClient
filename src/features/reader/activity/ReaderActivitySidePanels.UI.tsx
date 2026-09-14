@@ -13,8 +13,8 @@ export function ReaderActivitySidePanels({
   importDrawerInLayout,
   shell,
   annotations,
-  canMutateSession,
-  canMutateAnnotations,
+  administration,
+  authority,
   currentSessionId,
   currentCfi,
   workspaceFocusRequest,
@@ -31,8 +31,8 @@ export function ReaderActivitySidePanels({
   importDrawerInLayout: boolean;
   shell: ReactNode;
   annotations: ReaderActivityRenderState["annotations"];
-  canMutateSession: boolean;
-  canMutateAnnotations: boolean;
+  administration: ReaderActivityRenderState["administration"];
+  authority: ReaderActivityRenderState["authority"];
   currentSessionId?: string | null;
   currentCfi?: string | null;
   workspaceFocusRequest: ReaderActivityWorkspaceFocusRequest | null;
@@ -46,6 +46,7 @@ export function ReaderActivitySidePanels({
   onMarkImportRowManuallyCompleted: (rowId: string) => void;
   onSkipImportRow: (rowId: string) => void;
 }) {
+  const annotationCapability = authority.annotations;
   const importDrawerOpen = Boolean(readerImport.drawerOpen && readerImport.job);
   const [importDrawerRequested, setImportDrawerRequested] = useState(importDrawerOpen);
 
@@ -62,20 +63,20 @@ export function ReaderActivitySidePanels({
             annotations={annotations.items}
             status={annotations.status}
             error={annotations.error}
-            busy={annotations.busy}
-            canMutateSession={canMutateSession}
-            canMutateAnnotations={canMutateAnnotations}
+            busy={annotationCapability?.busy ?? false}
+            canMutateSession={administration.writable}
+            canMutateAnnotations={authority.writable}
             currentSessionId={currentSessionId}
             currentCfi={currentCfi ?? null}
             previousSessionGroups={annotations.previousSessionGroups}
             onEnablePreviousSession={annotations.enablePreviousSession}
-            currentSessionMeta={annotations.currentSessionMeta}
-            onUpdateCurrentSessionMeta={annotations.updateCurrentSessionMeta}
+            currentSessionMeta={administration.currentSessionMeta}
+            onUpdateCurrentSessionMeta={administration.updateCurrentSessionMeta}
             focusRequest={workspaceFocusRequest}
             onRemoveAnnotation={(annotationId) => {
-              void annotations.removeById(annotationId);
+              void annotationCapability?.removeById(annotationId);
             }}
-            onUpdateHighlight={(annotationId, update) => annotations.updateHighlight(annotationId, update)}
+            onUpdateHighlight={(annotationId, update) => annotationCapability?.updateHighlight(annotationId, update) ?? Promise.resolve()}
             onJumpToCfi={onJumpToCfi}
             onJumpToCfiRange={onJumpToCfiRange}
           />

@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
-  ReaderDescribeCfiHandle,
-  ReaderDisplayCfiHandle,
-  ReaderProbeCfiHandle,
-  ReaderSearchBookHandle,
-  StagedSelectionHandle,
+  ReaderRendererCapability,
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
 import type { ReaderLocation, ReaderTocItem } from "../domain/ReaderDomain.Types";
@@ -23,11 +19,7 @@ export function useReadingSessionBridgeController(input: {
   const [progressLocationEntry, setProgressLocationEntry] = useState<{ bookKey: string; location: ReaderLocation } | null>(null);
   const [toc, setToc] = useState<ReaderTocItem[] | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ReadingShellCommand | null>(null);
-  const [searchBook, setSearchBook] = useState<ReaderSearchBookHandle | null>(null);
-  const [probeCfi, setProbeCfi] = useState<ReaderProbeCfiHandle | null>(null);
-  const [displayCfi, setDisplayCfi] = useState<ReaderDisplayCfiHandle | null>(null);
-  const [stagedSelectionHandle, setStagedSelectionHandle] = useState<StagedSelectionHandle | null>(null);
-  const [describeCfi, setDescribeCfi] = useState<ReaderDescribeCfiHandle | null>(null);
+  const [rendererCapability, setRendererCapability] = useState<ReaderRendererCapability | null>(null);
   const [temporarySearchHighlightCfi, setTemporarySearchHighlightCfi] = useState<string | null>(null);
   const commandSeqRef = useRef(0);
   const lastActiveBookKeyRef = useRef(input.activeBookKey);
@@ -44,11 +36,7 @@ export function useReadingSessionBridgeController(input: {
     setProgressLocationEntry(null);
     setToc(null);
     setPendingCommand(null);
-    setSearchBook(null);
-    setProbeCfi(null);
-    setDisplayCfi(null);
-    setStagedSelectionHandle(null);
-    setDescribeCfi(null);
+    setRendererCapability(null);
     setTemporarySearchHighlightCfi(null);
   }, [input.activeBookKey]);
 
@@ -95,28 +83,9 @@ export function useReadingSessionBridgeController(input: {
     return () => window.clearTimeout(id);
   }, [temporarySearchHighlightCfi]);
 
-  const handleSearchReady = useCallback((handle: ReaderSearchBookHandle | null) => {
-    setSearchBook(() => handle);
+  const handleRendererCapabilityReady = useCallback((capability: ReaderRendererCapability | null) => {
+    setRendererCapability(capability);
   }, []);
-
-  const handleProbeCfiReady = useCallback((handle: ReaderProbeCfiHandle | null) => {
-    setProbeCfi(() => handle);
-  }, []);
-
-  const handleDisplayCfiReady = useCallback((handle: ReaderDisplayCfiHandle | null) => {
-    setDisplayCfi(() => handle);
-  }, []);
-
-  const handleStagedSelectionReady = useCallback((handle: StagedSelectionHandle | null) => {
-    setStagedSelectionHandle(handle);
-  }, []);
-
-  const handleDescribeCfiReady = useCallback(
-    (handle: ReaderDescribeCfiHandle | null) => {
-      setDescribeCfi(() => handle);
-    },
-    [],
-  );
 
   const handleStagedSelectionCommitted = useCallback(
     (source: StagedSelectionSource) => {
@@ -165,47 +134,31 @@ export function useReadingSessionBridgeController(input: {
     progressLocation,
     toc,
     pendingCommand,
-    searchBook,
-    probeCfi,
-    displayCfi,
-    stagedSelectionHandle,
-    describeCfi,
+    rendererCapability,
     temporarySearchHighlightCfi,
     sendCommand,
     jumpToSearchResult,
     jumpToCfi,
     jumpToCfiRange,
     clearTemporaryHighlight,
-    handleSearchReady,
-    handleProbeCfiReady,
-    handleDisplayCfiReady,
-    handleStagedSelectionReady,
-    handleDescribeCfiReady,
+    handleRendererCapabilityReady,
     handleStagedSelectionCommitted,
     handleStagedSelectionCanceled,
     handleShellEvent,
   }), [
     clearTemporaryHighlight,
-    describeCfi,
-    displayCfi,
-    handleDescribeCfiReady,
-    handleDisplayCfiReady,
-    handleProbeCfiReady,
-    handleSearchReady,
+    handleRendererCapabilityReady,
     handleStagedSelectionCanceled,
     handleStagedSelectionCommitted,
-    handleStagedSelectionReady,
     jumpToCfi,
     jumpToCfiRange,
     jumpToSearchResult,
     location,
     handleShellEvent,
     pendingCommand,
-    probeCfi,
+    rendererCapability,
     progressLocation,
-    searchBook,
     sendCommand,
-    stagedSelectionHandle,
     temporarySearchHighlightCfi,
     toc,
   ]);

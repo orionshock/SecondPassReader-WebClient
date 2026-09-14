@@ -16,7 +16,7 @@ export function ReaderActivityDialogs({
   bookId,
   bookTitle,
   searchOpen,
-  search,
+  renderer,
   initialSearchQuery,
   onCloseSearch,
   importModalOpen,
@@ -44,7 +44,7 @@ export function ReaderActivityDialogs({
   bookId: string | number;
   bookTitle: string;
   searchOpen: boolean;
-  search: ReaderActivityRenderState["search"];
+  renderer: ReaderActivityRenderState["renderer"];
   initialSearchQuery?: string | null;
   onCloseSearch: () => void;
   importModalOpen: boolean;
@@ -80,13 +80,13 @@ export function ReaderActivityDialogs({
       <BookSearchDrawer
         key={String(bookId)}
         open={searchOpen}
-        ready={search.ready}
-        searchBook={search.searchBook}
+        ready={renderer.ready}
+        searchBook={renderer.capability?.searchBook ?? null}
         bookTitle={bookTitle}
         initialSearchQuery={initialSearchQuery}
         onClose={onCloseSearch}
         onJump={(result) => {
-          search.jumpToResult(result.cfi);
+          renderer.jumpToResult(result.cfi);
         }}
       />
 

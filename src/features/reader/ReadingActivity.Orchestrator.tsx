@@ -123,10 +123,11 @@ function ReaderActivityContent({
   readerWidth: ReaderWidth;
   connectivity: BrowserConnectivityStatus;
 }) {
-  const { state, statusLine, autosaveStatus, shell, annotations, marginalia } = readerState;
+  const { state, presentation, shell, annotations, marginalia, authority, administration, renderer } = readerState;
+  const annotationCapability = authority.annotations;
   const currentSessionId = state.sessionId;
   const canBookmark = canMutateReaderBookmark({
-    canMutateAnnotations: readerState.canMutateAnnotations,
+    canMutateAnnotations: authority.writable,
     cfi: state.location?.cfi,
   });
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
@@ -134,16 +135,14 @@ function ReaderActivityContent({
   const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
   const activityImport = useReaderActivityImportController({
     readerImport,
-    search: readerState.search,
-    stagedSelection: readerState.stagedSelection,
-    sendCommand: readerState.sendCommand,
-    toggleBookmarkAtCurrentLocation: annotations.toggleBookmarkAtCurrentLocation,
+    renderer,
+    annotations: annotationCapability,
   });
   const completion = useReaderActivityCompletionController({
     openedBook,
     spl,
     state,
-    closeCurrentSession: annotations.closeCurrentSession,
+    closeCurrentSession: administration.closeCurrentSession,
   });
 
   useEffect(() => {
@@ -155,18 +154,18 @@ function ReaderActivityContent({
     <>
       <ReaderActivityHeader
         title={openedBook.book.title}
-        statusLine={statusLine}
-        autosaveStatus={autosaveStatus}
+        statusLine={presentation.statusLine}
+        autosaveStatus={presentation.autosaveStatus}
         showFinishControls={completion.showFinishControls}
         headerEndLabel={completion.headerEndLabel}
         nextBookAvailable={completion.nextBookAvailable}
         onOpenEndBookDialog={completion.openEndBookDialog}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen(!searchOpen)}
-        searchReady={readerState.search.ready}
+        searchReady={renderer.ready}
         canBookmark={canBookmark}
         isBookmarked={isBookmarked}
-        annotationBusy={Boolean(annotations.busy)}
+        annotationBusy={Boolean(annotationCapability?.busy)}
         bookmarkSuggested={Boolean(readerImport.bookmarkSuggestion)}
         onToggleBookmark={activityImport.toggleBookmark}
         marginaliaOpen={marginaliaOpen}
@@ -175,15 +174,15 @@ function ReaderActivityContent({
         marginalia={marginalia}
         selectedPreviousSessionIds={selectedPreviousSessionIds}
         importJobActive={Boolean(readerImport.job)}
-        onImportMarginalia={readerState.canMutateAnnotations ? activityImport.openModal : undefined}
-        onOpenImport={readerState.canMutateAnnotations ? activityImport.openDrawer : undefined}
-        onCloseSession={readerState.canMutateSession && currentSessionId ? completion.openCloseDialog : undefined}
+        onImportMarginalia={authority.writable ? activityImport.openModal : undefined}
+        onOpenImport={authority.writable ? activityImport.openDrawer : undefined}
+        onCloseSession={administration.writable && currentSessionId ? completion.openCloseDialog : undefined}
         returnLabel={completion.returnLabel}
         onReturn={completion.returnToTarget}
         showHomeAction={completion.showHomeAction}
         onHome={onBackToLibrary}
         offlineStatus={connectivity === "offline"
-          ? readerState.canMutateAnnotations
+          ? authority.writable
             ? "Offline. Changes will sync when connected."
             : "Offline. Changes aren't available."
           : null}
@@ -193,13 +192,13 @@ function ReaderActivityContent({
         importDrawerInLayout={activityImport.drawerInLayout}
         shell={shell}
         annotations={annotations}
-        canMutateSession={readerState.canMutateSession}
-        canMutateAnnotations={readerState.canMutateAnnotations}
+        administration={administration}
+        authority={authority}
         currentSessionId={currentSessionId}
         currentCfi={state.location?.cfi ?? null}
         workspaceFocusRequest={workspaceFocusRequest}
-        onJumpToCfi={readerState.search.jumpToCfi}
-        onJumpToCfiRange={readerState.search.jumpToCfiRange}
+        onJumpToCfi={renderer.jumpToCfi}
+        onJumpToCfiRange={renderer.jumpToCfiRange}
         readerImport={readerImport}
         readerWidth={readerWidth}
         onClearImport={activityImport.clearJob}
@@ -215,10 +214,10 @@ function ReaderActivityContent({
         bookId={openedBook.book.id}
         bookTitle={openedBook.book.title}
         searchOpen={searchOpen}
-        search={readerState.search}
+        renderer={renderer}
         initialSearchQuery={initialSearchQuery}
         onCloseSearch={() => {
-          readerState.search.clearTemporaryHighlight();
+          renderer.clearTemporaryHighlight();
           setSearchOpen(false);
         }}
         importModalOpen={activityImport.modalOpen}
@@ -226,8 +225,8 @@ function ReaderActivityContent({
         onStartImport={readerImport.startImport}
         onParseImportAction={activityImport.handleParseAction}
         closeDialogOpen={completion.closeDialogOpen}
-        closeInitialName={annotations.currentSessionMeta.name ?? ""}
-        closeInitialNotes={annotations.currentSessionMeta.notes ?? ""}
+        closeInitialName={administration.currentSessionMeta.name ?? ""}
+        closeInitialNotes={administration.currentSessionMeta.notes ?? ""}
         closeAfterOptions={completion.closeAfterOptions}
         defaultAfterAction={completion.defaultAfterAction}
         nextBook={completion.nextSeriesBook}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReaderHighlightMark, ReaderSelection } from "../domain/ReaderDomain.Types";
 import type {
   StagedSelectionCommitInput,
@@ -18,6 +18,7 @@ export type ReaderStagedToolbarController = {
   onEngineSelectionChanged: (selection: ReaderSelection | null) => void;
   reanchorStagedToolbarRef: MutableRef<() => Promise<void>>;
   stagedSelectionLifecycle: StagedSelectionLifecycle;
+  stagedSelectionCapability: StagedSelectionHandle | null;
   toolbarProps: SelectionHighlightToolbarProps | null;
 };
 
@@ -28,7 +29,6 @@ export function useReaderStagedToolbarController(input: {
   highlightMarks?: ReaderHighlightMark[];
   onCommitHighlight?: (commit: StagedSelectionCommitInput) => Promise<void>;
   commitBusy?: boolean;
-  onStagedSelectionReady?: (handle: StagedSelectionHandle | null) => void;
   onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
   onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
   onUnrelatedNavigation?: () => void;
@@ -43,7 +43,6 @@ export function useReaderStagedToolbarController(input: {
     onSelectionStarted,
     onStagedSelectionCanceled,
     onStagedSelectionCommitted,
-    onStagedSelectionReady,
     onUnrelatedNavigation,
     readiness,
   } = input;
@@ -79,22 +78,17 @@ export function useReaderStagedToolbarController(input: {
     onSelectionChanged(selection);
   }, [onSelectionChanged, onSelectionStarted]);
 
-  useEffect(() => {
-    if (!isReaderFullyReady(readiness)) {
-      onStagedSelectionReady?.(null);
-      return;
-    }
-    onStagedSelectionReady?.({
+  const stagedSelectionCapability = useMemo<StagedSelectionHandle | null>(() => {
+    if (!isReaderFullyReady(readiness)) return null;
+    return {
       stageSelectionFromCfiRange: staged.stageSelectionFromCfiRange,
       runStagingTransaction: (operation) => stagedSelectionLifecycle.runNavigation(
         "import-staging",
         operation,
       ),
       cancelStagedSelection: staged.cancelStaged,
-    });
-    return () => onStagedSelectionReady?.(null);
+    };
   }, [
-    onStagedSelectionReady,
     readiness,
     staged.cancelStaged,
     staged.stageSelectionFromCfiRange,
@@ -124,6 +118,7 @@ export function useReaderStagedToolbarController(input: {
     onEngineSelectionChanged,
     reanchorStagedToolbarRef,
     stagedSelectionLifecycle,
+    stagedSelectionCapability,
     toolbarProps,
   };
 }

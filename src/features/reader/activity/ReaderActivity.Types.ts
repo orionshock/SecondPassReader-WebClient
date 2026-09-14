@@ -1,6 +1,6 @@
-import type { ReadingSessionOrchestratorProps } from "../session/ReadingSession.Orchestrator";
+import type { ReadingSessionRenderState } from "../session/ReadingSession.Types";
 
-export type ReaderActivityRenderState = Parameters<ReadingSessionOrchestratorProps["children"]>[0];
+export type ReaderActivityRenderState = ReadingSessionRenderState;
 
 export type ReaderActivityWorkspaceFocusRequest = {
   annotationId: string;

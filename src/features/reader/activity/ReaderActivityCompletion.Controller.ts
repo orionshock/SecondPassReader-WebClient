@@ -24,7 +24,7 @@ export function useReaderActivityCompletionController({
   openedBook: OpenedBook;
   spl?: SecondPassClient | null;
   state: ReaderActivityRenderState["state"];
-  closeCurrentSession: ReaderActivityRenderState["annotations"]["closeCurrentSession"];
+  closeCurrentSession: ReaderActivityRenderState["administration"]["closeCurrentSession"];
 }) {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [endBookDialogOpen, setEndBookDialogOpen] = useState(false);

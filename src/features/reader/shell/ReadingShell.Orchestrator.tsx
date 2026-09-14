@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
 import { ReaderViewport } from "./ReaderViewport.UI";
 import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
@@ -8,12 +8,8 @@ import type {
   ReadingShellEvent,
 } from "./ReaderShell.Types";
 import type {
-  ReaderDescribeCfiHandle,
-  ReaderDisplayCfiHandle,
-  ReaderProbeCfiHandle,
-  ReaderSearchBookHandle,
+  ReaderRendererCapability,
   StagedSelectionCommitInput,
-  StagedSelectionHandle,
   StagedSelectionSource,
 } from "../domain/ReaderBridge.Types";
 import { MaterialIcon } from "../../../components/MaterialIcon.UI";
@@ -52,7 +48,7 @@ export type ReadingShellProps = {
   temporarySearchHighlightCfi?: string | null;
   onCommitHighlight?: (input: StagedSelectionCommitInput) => Promise<void>;
   highlightCommitBusy?: boolean;
-  onStagedSelectionReady?: (handle: StagedSelectionHandle | null) => void;
+  onRendererCapabilityReady?: (capability: ReaderRendererCapability | null) => void;
   onStagedSelectionCommitted?: (source: StagedSelectionSource) => void;
   onStagedSelectionCanceled?: (source: StagedSelectionSource) => void;
   onUnrelatedNavigation?: () => void;
@@ -60,10 +56,6 @@ export type ReadingShellProps = {
   onUpdateHighlight?: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
   onRemoveAnnotation?: (annotationId: string) => Promise<void>;
   onOpenAnnotationInWorkspace?: (annotationId: string, mode: "editable" | "readonly") => void;
-  onDescribeCfiReady?: (fn: ReaderDescribeCfiHandle | null) => void;
-  onProbeCfiReady?: (fn: ReaderProbeCfiHandle | null) => void;
-  onDisplayCfiReady?: (fn: ReaderDisplayCfiHandle | null) => void;
-  onSearchReady?: (fn: ReaderSearchBookHandle | null) => void;
   settings?: ReaderSettings;
   onSettingsChange?: (patch: Partial<ReaderSettings>) => void;
   onSettingsReset?: () => void;
@@ -90,6 +82,7 @@ export function ReadingShell(props: ReadingShellProps) {
 
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
   const [readiness, setReadiness] = useState<ReaderReadinessState>("empty");
+  const [engineCapability, setEngineCapability] = useState<Omit<ReaderRendererCapability, "stagedSelection"> | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -144,6 +137,7 @@ export function ReadingShell(props: ReadingShellProps) {
     onEngineSelectionChanged,
     reanchorStagedToolbarRef,
     stagedSelectionLifecycle: stagedLifecycle,
+    stagedSelectionCapability,
     toolbarProps: stagedToolbarProps,
   } = useReaderStagedToolbarController({
     engineRef,
@@ -152,13 +146,22 @@ export function ReadingShell(props: ReadingShellProps) {
     highlightMarks: props.highlightMarks,
     onCommitHighlight: props.onCommitHighlight,
     commitBusy: props.highlightCommitBusy,
-    onStagedSelectionReady: props.onStagedSelectionReady,
     onStagedSelectionCommitted: props.onStagedSelectionCommitted,
     onStagedSelectionCanceled: props.onStagedSelectionCanceled,
     onUnrelatedNavigation: props.onUnrelatedNavigation,
     onSelectionStarted: closeDurableToolbar,
   });
   cancelStagedForDurableToolbarRef.current = cancelStaged;
+
+  const rendererCapability = useMemo<ReaderRendererCapability | null>(() => {
+    if (!engineCapability || !stagedSelectionCapability) return null;
+    return { ...engineCapability, stagedSelection: stagedSelectionCapability };
+  }, [engineCapability, stagedSelectionCapability]);
+
+  useEffect(() => {
+    props.onRendererCapabilityReady?.(rendererCapability);
+    return () => props.onRendererCapabilityReady?.(null);
+  }, [props.onRendererCapabilityReady, rendererCapability]);
 
   const recordReadableViewport = useCallback((generation: number) => {
     if (engineGenerationRef.current !== generation) return;
@@ -227,10 +230,7 @@ export function ReadingShell(props: ReadingShellProps) {
     reportOperationError,
     clearDeferredCommand,
     flushDeferredCommand,
-    onDescribeCfiReady: props.onDescribeCfiReady,
-    onProbeCfiReady: props.onProbeCfiReady,
-    onDisplayCfiReady: props.onDisplayCfiReady,
-    onSearchReady: props.onSearchReady,
+    onRendererCapabilityReady: setEngineCapability,
   });
 
   useReaderSettingsReflowLifecycle({

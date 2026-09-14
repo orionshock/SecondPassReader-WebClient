@@ -55,12 +55,15 @@ directly.
 
 ## Reading Session owners
 
-`ReadingSession.Orchestrator.tsx` connects server-backed or local continuity state to
-renderer-neutral handles used by the activity.
+`ReadingSession.Orchestrator.tsx` mounts the server-backed and local-first owners, then exposes one
+selected current-session authoring authority to the activity. Connectivity does not define the
+authority mode: after an online Reader hands off, the selected authority remains local-first until
+that Reader closes.
 
 | Owner | Responsibility |
 | --- | --- |
-| `ReadingSessionBridge.Controller.ts` | Shell capabilities and events, sequenced commands, Book-scoped location state, and temporary search marks |
+| `CurrentSessionAuthority.Controller.ts` | Unconditional online/local owner composition, one explicit authority selection, annotation mutation capability, and progress status/close coordination |
+| `ReadingSessionBridge.Controller.ts` | Coherent renderer capability, shell events, sequenced commands, Book-scoped location state, and temporary search marks |
 | `annotations/SessionAnnotations.Controller.ts` | Current Reading Session annotation loading, generation reset, and CFI descriptions |
 | `annotations/SessionAnnotations.Presenter.ts` | Annotation view models and durable renderer marks |
 | `annotations/CurrentSessionAnnotation.Controller.ts` | Serialized current Reading Session mutations with generation checks |
@@ -75,6 +78,11 @@ renderer-neutral handles used by the activity.
 | `CurrentSessionMetadata.Controller.ts` | Active Reading Session metadata loading and updates |
 | `ReadingSessionClose.Actions.ts` | Metadata update and atomic close with final progress |
 | `ReadingSessionRender.Presenter.ts` | Render state, toolbar items, and ordered durable marks |
+
+Authority modes are `server`, `local`, and `unavailable`. A server or local authority reports
+`writable`, `initializing`, or `read-only` status as applicable and exposes annotation mutation
+commands only while writable. Reading Session metadata and close remain a separate server-owned
+administration interface; previous-session Marginalia remains a separate read-only concern.
 
 All current-session authoring uses the same mutation vocabulary and normalization builders in
 `ReadingSessionMarginalia.Actions.ts`, including confirmed imports and exact-CFI highlight updates.
@@ -107,7 +115,7 @@ modules own the behavior below.
 | Owner | Responsibility |
 | --- | --- |
 | `ReaderEngineBootstrap.Lifecycle.ts` | Engine generation, initial marks and display, capability readiness, and teardown |
-| `ReaderCapabilityPublication.Lifecycle.ts` | Renderer-neutral describe, probe, display, and search capability publication |
+| `ReaderCapabilityPublication.Lifecycle.ts` | Generation-safe publication of one renderer-neutral describe, probe, display, and search capability |
 | `ReaderCommandRouting.Lifecycle.ts` | Pre-ready deferral, command routing, navigation classification, and failure reporting |
 | `ReaderLocationPublication.Lifecycle.ts` | Viewport location, progress events, staged-selection decisions, toolbar close, and re-anchor requests |
 | `ReaderSettingsReflow.Lifecycle.ts` | Serialized settings and Reader-width reflow without engine recreation |
@@ -121,7 +129,9 @@ modules own the behavior below.
 | `ReaderBootstrapProgressGuard.State.ts` | Bootstrap relocation quarantine and restored-CFI protection |
 
 Attaching the engine does not make it ready. Readiness requires a readable display or relocation.
-Search, CFI, and staging capabilities remain unpublished until then.
+The shell publishes one renderer capability only when describe, probe, display, search, and staged
+selection are all usable for the current generation. Teardown withdraws the capability as one
+value; retained methods still reject stale-generation work.
 
 ## Engine owners
 
