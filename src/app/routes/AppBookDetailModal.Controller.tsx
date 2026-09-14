@@ -6,6 +6,7 @@ import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
 import type { AppRoute } from "../AppNavigation.Router";
 import { navigateTo, routeToHash, withoutBookModal } from "../AppNavigation.Router";
 import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
+import { getLibraryTransitionSource, transitionLibraryRoute } from "./AppLibraryRoute.Policy";
 
 const OfflineBookDetailDialog = lazy(async () => {
   const module = await import("../../features/library/bookDetail/offline/OfflineBookDetailDialog.UI");
@@ -47,7 +48,7 @@ export function AppBookDetailModalController({
           bookId={modalBookId}
           onClose={() => {
             if (!route) return;
-            navigateTo(withoutBookModal(route), { replace: true });
+            navigateTo(closeBookDetailRoute(route), { replace: true });
           }}
           onOpenReader={(book) => onOpenReader(book, getReaderReturnTargetForRoute(route))}
           onManageOffline={() => navigateTo({ kind: "settings", tab: "offline", bookId: modalBookId })}
@@ -64,7 +65,7 @@ export function AppBookDetailModalController({
       initialBook={null}
       onClose={() => {
         if (!route) return;
-        navigateTo(withoutBookModal(route), { replace: true });
+        navigateTo(closeBookDetailRoute(route), { replace: true });
       }}
       onOpenReader={(book) => {
         onOpenReader(book, getReaderReturnTargetForRoute(route));
@@ -73,39 +74,22 @@ export function AppBookDetailModalController({
         navigateTo({ kind: "sessions", bookId: String(book.id) });
       }}
       onViewAuthor={(authorId) => {
-        navigateTo({
-          kind: "library",
-          browse: "authors",
-          authorId,
-          groupId: route?.kind === "library" ? route.groupId : undefined,
-          tag: route?.kind === "library" ? route.tag : undefined,
-          ordering: "title",
-          page: 1,
-          pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
-        });
+        navigateTo(transitionLibraryRoute(getLibraryTransitionSource(route), {
+          type: "follow-book-detail-link",
+          destination: { type: "author", id: authorId },
+        }));
       }}
       onViewSeries={(seriesId) => {
-        navigateTo({
-          kind: "library",
-          browse: "series",
-          seriesId,
-          groupId: route?.kind === "library" ? route.groupId : undefined,
-          tag: route?.kind === "library" ? route.tag : undefined,
-          ordering: "series_index",
-          page: 1,
-          pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
-        });
+        navigateTo(transitionLibraryRoute(getLibraryTransitionSource(route), {
+          type: "follow-book-detail-link",
+          destination: { type: "series", id: seriesId },
+        }));
       }}
       onViewTag={(tag) => {
-        navigateTo({
-          kind: "library",
-          browse: "books",
-          groupId: route?.kind === "library" ? route.groupId : undefined,
-          tag,
-          ordering: "title",
-          page: 1,
-          pageSize: route?.kind === "library" ? route.pageSize ?? 20 : 20,
-        });
+        navigateTo(transitionLibraryRoute(getLibraryTransitionSource(route), {
+          type: "follow-book-detail-link",
+          destination: { type: "tag", tag },
+        }));
       }}
       onManageShelves={() => navigateTo({ kind: "shelves" })}
       onManageOffline={(book) => navigateTo({ kind: "settings", tab: "offline", bookId: String(book.id) })}
@@ -121,7 +105,7 @@ function getReaderReturnTargetForRoute(route: AppRoute | null): ReaderReturnTarg
     return {
       kind: route.browse === "series" && route.seriesId ? "series" : "library",
       label: route.browse === "series" && route.seriesId ? "Series" : "Library",
-      route: routeToHash(withoutBookModal(route)),
+      route: routeToHash(closeBookDetailRoute(route)),
       seriesId: route.browse === "series" ? route.seriesId : undefined,
     };
   }
@@ -156,4 +140,10 @@ function getReaderReturnTargetForRoute(route: AppRoute | null): ReaderReturnTarg
     };
   }
   return { kind: "home", label: "Home", route: "#/home" };
+}
+
+function closeBookDetailRoute(route: AppRoute): AppRoute {
+  return route.kind === "library"
+    ? transitionLibraryRoute(route, { type: "close-book-detail" })
+    : withoutBookModal(route);
 }

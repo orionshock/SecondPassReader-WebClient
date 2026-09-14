@@ -69,7 +69,12 @@ type Props = {
   onShowAuthors?: () => void;
   onShowSeriesBooks?: (seriesId: string) => void;
   onShowAuthorBooks?: (authorId: string) => void;
-  onUpdateRoute?: (patch: { groupId?: string | null; tag?: string | null; ordering?: string; page?: number; pageSize?: number }) => void;
+  onSelectGroup?: (groupId: string | null) => void;
+  onRemoveUnavailableGroup?: () => void;
+  onSelectTag?: (tag: string | null) => void;
+  onChangeOrdering?: (ordering: string) => void;
+  onChangePageSize?: (pageSize: number) => void;
+  onChangePage?: (page: number) => void;
 };
 
 export function LibraryBrowsePage({
@@ -84,7 +89,12 @@ export function LibraryBrowsePage({
   onShowAuthors,
   onShowSeriesBooks,
   onShowAuthorBooks,
-  onUpdateRoute,
+  onSelectGroup,
+  onRemoveUnavailableGroup,
+  onSelectTag,
+  onChangeOrdering,
+  onChangePageSize,
+  onChangePage,
 }: Props) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const apiReady = Boolean(spl);
@@ -122,8 +132,8 @@ export function LibraryBrowsePage({
   const catalogResult = showBookList ? booksData : browseMode === "series" ? seriesData : authorsData;
 
   useEffect(() => {
-    if (!advancedGroupsEnabled && route.groupId) onUpdateRoute?.({ groupId: null });
-  }, [advancedGroupsEnabled, onUpdateRoute, route.groupId]);
+    if (!advancedGroupsEnabled && route.groupId) onRemoveUnavailableGroup?.();
+  }, [advancedGroupsEnabled, onRemoveUnavailableGroup, route.groupId]);
 
   useEffect(() => {
     const viewFromRoute = normalizeLibraryBooksView(route.view);
@@ -140,29 +150,29 @@ export function LibraryBrowsePage({
 
   const handleBookOrderingChange = useCallback(
     (ordering: BookOrdering) => {
-      onUpdateRoute?.({ ordering, page: 1, pageSize });
+      onChangeOrdering?.(ordering);
     },
-    [onUpdateRoute, pageSize],
+    [onChangeOrdering],
   );
 
   const handleSeriesOrderingChange = useCallback(
-    (ordering: EntityOrdering) => onUpdateRoute?.({ ordering, page: 1, pageSize }),
-    [onUpdateRoute, pageSize],
+    (ordering: EntityOrdering) => onChangeOrdering?.(ordering),
+    [onChangeOrdering],
   );
 
   const handleAuthorsOrderingChange = useCallback(
-    (ordering: EntityOrdering) => onUpdateRoute?.({ ordering, page: 1, pageSize }),
-    [onUpdateRoute, pageSize],
+    (ordering: EntityOrdering) => onChangeOrdering?.(ordering),
+    [onChangeOrdering],
   );
 
   const handlePageSizeChange = useCallback(
-    (nextPageSize: number) => onUpdateRoute?.({ ordering: route.ordering, page: 1, pageSize: nextPageSize }),
-    [onUpdateRoute, route.ordering],
+    (nextPageSize: number) => onChangePageSize?.(nextPageSize),
+    [onChangePageSize],
   );
 
   const handlePageChange = useCallback(
-    (page: number) => onUpdateRoute?.({ ordering: route.ordering, page, pageSize }),
-    [onUpdateRoute, pageSize, route.ordering],
+    (page: number) => onChangePage?.(page),
+    [onChangePage],
   );
 
   const handleCommitSearch = useCallback(() => {
@@ -201,7 +211,7 @@ export function LibraryBrowsePage({
                   spl={spl}
                   groupId={effectiveGroupId}
                   onSelectedNameChange={setScopeName}
-                  onChange={(groupId) => onUpdateRoute?.({ groupId: groupId ?? null, tag: null, page: 1, pageSize })}
+                  onChange={(groupId) => onSelectGroup?.(groupId ?? null)}
                 />
               ) : null}
               <LibraryAxisTabs
@@ -230,7 +240,7 @@ export function LibraryBrowsePage({
                 groupId={effectiveGroupId}
                 catalogResult={catalogResult}
                 selectedSlug={tagSlug}
-                onSelect={(slug) => onUpdateRoute?.({ tag: slug ?? null, page: 1, pageSize })}
+                onSelect={(slug) => onSelectTag?.(slug ?? null)}
               />
             ) : null}
             <div

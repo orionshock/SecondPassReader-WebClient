@@ -1,4 +1,6 @@
 import { getEffectiveLibraryGroupId } from "../libraryScope/LibraryScope.Policy";
+import { DEFAULT_APP_PAGE_SIZE } from "../../../app/AppNavigation.Constants";
+import { getDefaultLibraryOrdering } from "../../../app/routes/AppLibraryRoute.Policy";
 
 export type LibraryAxis = "books" | "authors" | "series";
 export type LibraryResultKind = LibraryAxis;
@@ -55,10 +57,16 @@ export function deriveLibraryRouteState(
   let ordering: LibraryOrdering;
   if (resultKind === "books") {
     const allowed = selectedSeriesId ? SERIES_BOOK_ORDERINGS : BOOK_ORDERINGS;
-    const fallback: LibraryBookOrdering = selectedSeriesId ? "series_index" : "title";
+    const fallback = getDefaultLibraryOrdering({
+      browse: axis,
+      seriesId: selectedSeriesId,
+      authorId: selectedAuthorId,
+    }) as LibraryBookOrdering;
     ordering = allowed.has(route.ordering as LibraryBookOrdering) ? route.ordering as LibraryBookOrdering : fallback;
   } else {
-    ordering = ENTITY_ORDERINGS.has(route.ordering as LibraryEntityOrdering) ? route.ordering as LibraryEntityOrdering : "name";
+    ordering = ENTITY_ORDERINGS.has(route.ordering as LibraryEntityOrdering)
+      ? route.ordering as LibraryEntityOrdering
+      : getDefaultLibraryOrdering({ browse: axis }) as LibraryEntityOrdering;
   }
 
   return {
@@ -69,7 +77,7 @@ export function deriveLibraryRouteState(
     searchMode,
     tag: route.tag?.trim() || undefined,
     page: Number.isInteger(route.page) && (route.page ?? 0) > 0 ? route.page! : 1,
-    pageSize: Number.isInteger(route.pageSize) && (route.pageSize ?? 0) > 0 ? route.pageSize! : 20,
+    pageSize: Number.isInteger(route.pageSize) && (route.pageSize ?? 0) > 0 ? route.pageSize! : DEFAULT_APP_PAGE_SIZE,
     ordering,
     selectedAuthorId,
     selectedSeriesId,

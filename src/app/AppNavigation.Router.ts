@@ -1,3 +1,6 @@
+import { DEFAULT_APP_PAGE_SIZE } from "./AppNavigation.Constants";
+import { getDefaultLibraryOrdering } from "./routes/AppLibraryRoute.Policy";
+
 export type AppRoute =
   | { kind: "connect" }
   | { kind: "pair" }
@@ -47,22 +50,12 @@ function buildQuery(params: Record<string, string | number | undefined>): string
   return s ? `?${s}` : "";
 }
 
-const DEFAULT_PAGE_SIZE = 20;
-
 function nonDefaultPage(page?: number): number | undefined {
   return typeof page === "number" && page > 1 ? page : undefined;
 }
 
 function nonDefaultPageSize(pageSize?: number): number | undefined {
-  return typeof pageSize === "number" && pageSize !== DEFAULT_PAGE_SIZE ? pageSize : undefined;
-}
-
-function getDefaultLibraryOrdering(route: Extract<AppRoute, { kind: "library" }>): string {
-  if (route.browse === "series" && route.seriesId) return "series_index";
-  if (route.browse === "series") return "name";
-  if (route.browse === "authors" && route.authorId) return "title";
-  if (route.browse === "authors") return "name";
-  return "title";
+  return typeof pageSize === "number" && pageSize !== DEFAULT_APP_PAGE_SIZE ? pageSize : undefined;
 }
 
 function nonDefaultOrdering(ordering: string | undefined, defaultOrdering: string): string | undefined {

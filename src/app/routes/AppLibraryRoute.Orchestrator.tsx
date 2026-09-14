@@ -10,8 +10,9 @@ import { ShelfDetailPage } from "../../features/shelves/ShelfDetailPage.UI";
 import { ShelfEditPage } from "../../features/shelves/ShelfEditPage.UI";
 import { ShelvesPage } from "../../features/shelves/ShelvesPage.UI";
 import type { AppRoute } from "../AppNavigation.Router";
-import { navigateTo, withBookModal } from "../AppNavigation.Router";
+import { navigateTo } from "../AppNavigation.Router";
 import type { BrowserConnectivityStatus } from "../connectivity/BrowserConnectivity.State";
+import { transitionLibraryRoute } from "./AppLibraryRoute.Policy";
 import { OfflineRouteUnavailableNotice } from "./OfflineRouteUnavailableNotice.UI";
 
 const ReadingActivity = lazy(async () => {
@@ -193,7 +194,10 @@ export function AppLibraryRouteRenderer({
           <Suspense fallback={<p className="muted">{`Loading downloaded books${"\u2026"}`}</p>}>
             <OfflineLibraryPage
               namespaceKey={offlineNamespaceKey}
-              onViewBook={(bookId) => navigateTo(withBookModal(route, bookId))}
+              onViewBook={(bookId) => navigateTo(transitionLibraryRoute(route, {
+                type: "open-book-detail",
+                bookId,
+              }))}
             />
           </Suspense>
         </div>
@@ -204,132 +208,58 @@ export function AppLibraryRouteRenderer({
         <LibraryBrowsePage
           profile={profile}
           spl={spl}
-          route={{
-            q: route.q,
-            searchMode: route.searchMode,
-            browse: route.browse,
-            seriesId: route.seriesId,
-            authorId: route.authorId,
-            groupId: route.groupId,
-            tag: route.tag,
-            view: route.view,
-            ordering: route.ordering,
-            page: route.page,
-            pageSize: route.pageSize,
-          }}
+          route={route}
           selectedBookId={route.bookId ?? null}
           onViewBook={(bookId) => {
-            navigateTo(withBookModal(route, bookId));
+            navigateTo(transitionLibraryRoute(route, { type: "open-book-detail", bookId }));
           }}
           onCommitSearch={(q) => {
-            const next = q.trim();
-            const browse = route.browse ?? "books";
-            const ordering = browse === "books" ? "title" : "name";
-            navigateTo(
-              next
-                ? {
-                    kind: "library",
-                    browse,
-                    q: next,
-                    searchMode: route.searchMode,
-                    groupId: route.groupId,
-                    tag: route.tag,
-                    ordering,
-                    page: 1,
-                    pageSize: route.pageSize ?? 20,
-                    bookId: route.bookId,
-                  }
-                : {
-                    kind: "library",
-                    browse,
-                    groupId: route.groupId,
-                    tag: route.tag,
-                    ordering,
-                    page: 1,
-                    pageSize: route.pageSize ?? 20,
-                    bookId: route.bookId,
-                  },
-            );
+            navigateTo(transitionLibraryRoute(route, { type: "commit-search", query: q }));
           }}
           onShowBooks={() => {
-            navigateTo({
-              kind: "library",
-              browse: "books",
-              groupId: route.groupId,
-              tag: route.tag,
-              ordering: "title",
-              page: 1,
-              pageSize: route.pageSize ?? 20,
-              bookId: route.bookId,
-            });
+            navigateTo(transitionLibraryRoute(route, { type: "select-axis", axis: "books" }));
           }}
           onShowSeries={() => {
-            navigateTo({
-              kind: "library",
-              browse: "series",
-              groupId: route.groupId,
-              tag: route.tag,
-              ordering: "name",
-              page: 1,
-              pageSize: route.pageSize ?? 20,
-              bookId: route.bookId,
-            });
+            navigateTo(transitionLibraryRoute(route, { type: "select-axis", axis: "series" }));
           }}
           onShowAuthors={() => {
-            navigateTo({
-              kind: "library",
-              browse: "authors",
-              groupId: route.groupId,
-              tag: route.tag,
-              ordering: "name",
-              page: 1,
-              pageSize: route.pageSize ?? 20,
-              bookId: route.bookId,
-            });
+            navigateTo(transitionLibraryRoute(route, { type: "select-axis", axis: "authors" }));
           }}
           onShowSeriesBooks={(seriesId) => {
-            navigateTo({
-              kind: "library",
-              browse: "series",
-              seriesId,
-              groupId: route.groupId,
-              tag: route.tag,
-              ordering: "series_index",
-              page: 1,
-              pageSize: route.pageSize ?? 20,
-              bookId: route.bookId,
-            });
+            navigateTo(transitionLibraryRoute(route, {
+              type: "select-entity",
+              entity: { type: "series", id: seriesId },
+            }));
           }}
           onShowAuthorBooks={(authorId) => {
-            navigateTo({
-              kind: "library",
-              browse: "authors",
-              authorId,
-              groupId: route.groupId,
-              tag: route.tag,
-              ordering: "title",
-              page: 1,
-              pageSize: route.pageSize ?? 20,
-              bookId: route.bookId,
-            });
+            navigateTo(transitionLibraryRoute(route, {
+              type: "select-entity",
+              entity: { type: "author", id: authorId },
+            }));
           }}
-          onUpdateRoute={(patch) => {
-            navigateTo({
-              kind: "library",
-              q: route.q,
-              searchMode: patch.tag !== undefined && patch.tag !== null ? undefined : route.searchMode,
-              browse: route.browse ?? "books",
-              seriesId: route.seriesId,
-              authorId: route.authorId,
-              groupId: patch.groupId === null ? undefined : patch.groupId ?? route.groupId,
-              tag: patch.tag === null ? undefined : patch.tag ?? route.tag,
-              view: route.view,
-              ordering: patch.ordering ?? route.ordering,
-              page: patch.page ?? route.page ?? 1,
-              pageSize: patch.pageSize ?? route.pageSize ?? 20,
-              bookId: route.bookId,
-            });
-          }}
+          onSelectGroup={(groupId) => navigateTo(transitionLibraryRoute(route, {
+            type: "select-group",
+            groupId: groupId ?? undefined,
+          }))}
+          onRemoveUnavailableGroup={() => navigateTo(transitionLibraryRoute(route, {
+            type: "remove-unavailable-group",
+          }))}
+          onSelectTag={(tag) => navigateTo(transitionLibraryRoute(route, {
+            type: "select-tag",
+            tag: tag ?? undefined,
+          }))}
+          onChangeOrdering={(ordering) => navigateTo(transitionLibraryRoute(route, {
+            type: "change-ordering",
+            ordering,
+          }))}
+          onChangePageSize={(pageSize) => navigateTo(transitionLibraryRoute(route, {
+            type: "change-page-size",
+            pageSize,
+          }))}
+          onChangePage={(page) => navigateTo(transitionLibraryRoute(route, {
+            type: "change-page",
+            page,
+          }))}
         />
       </div>
     );

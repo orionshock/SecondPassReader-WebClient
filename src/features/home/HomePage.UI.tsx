@@ -5,7 +5,10 @@ import { navigateTo } from "../../app/AppNavigation.Router";
 import { RecentReadingSection } from "../library/RecentReadingPanel.UI";
 import { getConnectionStatus } from "../connection/ConnectionStatus.Presenter";
 import { ShelvesPreviewSection } from "./ShelvesPreviewPanel.UI";
-import { getHomeLibrarySearchRoute, HOME_LIBRARY_SEARCH_LABEL, HOME_LIBRARY_SEARCH_PLACEHOLDER } from "./HomeLibrarySearch.Router";
+import { startLibraryGlobalSearch } from "../../app/routes/AppLibraryRoute.Policy";
+
+const HOME_LIBRARY_SEARCH_LABEL = "Search Library";
+const HOME_LIBRARY_SEARCH_PLACEHOLDER = "Search books, authors, series, and publishers...";
 
 export function HomePage({
   profile,
@@ -39,7 +42,7 @@ export function HomePage({
               className="libraryToolbar"
               onSubmit={(e) => {
                 e.preventDefault();
-                const nextRoute = getHomeLibrarySearchRoute(homeSearch);
+                const nextRoute = startLibraryGlobalSearch(homeSearch);
                 if (nextRoute) navigateTo(nextRoute);
               }}
             >

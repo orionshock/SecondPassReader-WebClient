@@ -28,6 +28,10 @@ verified. Route-derived page metadata supplies the document title and main-landm
 - `#/settings`
 - `#/reader/:bookId`
 
+`src/app/routes/AppLibraryRoute.Policy.ts` owns the pure Library transition rules for search,
+axes and entities, Group and tag scope, ordering, pagination, and modal Book Detail state. Library
+UI emits those intents while the app route orchestrator binds the resulting route to navigation.
+
 Because navigation state follows `#`, application routes are not sent to the static server. See
 [deployment.md](./deployment.md) for the root-path and nginx contract.
 
