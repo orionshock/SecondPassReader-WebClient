@@ -146,3 +146,128 @@ it("keeps items and pagination after load-more failure and does nothing on cance
   await act(async () => state.removeItem(item));
   expect(api.removeItem).not.toHaveBeenCalled();
 });
+
+it.each([
+  ["detail", "success"], ["detail", "failure"],
+  ["items", "success"], ["items", "failure"],
+] as const)("ignores Shelf A %s %s after switching to B", async (stage, outcome) => {
+  let resolve!: (value: unknown) => void;
+  let reject!: (error: Error) => void;
+  api[stage === "detail" ? "get" : "items"].mockReturnValueOnce(new Promise((done, fail) => { resolve = done; reject = fail; }));
+  await act(async () => root.render(<Harness />));
+  api.get.mockResolvedValueOnce({ ...shelf, id: "shelf-2", name: "Shelf B" });
+  api.items.mockResolvedValueOnce({ results: [{ ...item, id: "B" }], next: null });
+  await act(async () => root.render(<Harness shelfId="shelf-2" />));
+  await act(async () => {
+    if (outcome === "success") resolve(stage === "detail" ? shelf : firstPage);
+    else reject(new Error("obsolete"));
+  });
+  expect(state.shelf?.name).toBe("Shelf B");
+  expect(state.items.map((entry) => entry.id)).toEqual(["B"]);
+  expect(state.error).toBeNull();
+  expect(state.busy).toBe(false);
+  if (stage === "detail") expect(api.items).toHaveBeenCalledExactlyOnceWith("shelf-2", { page: 1 });
+});
+
+it.each(["success", "failure"])("ignores stale metadata %s without disturbing B's active save", async (outcome) => {
+  await act(async () => root.render(<Harness />));
+  let resolveOld!: (value: Shelf) => void;
+  let rejectOld!: (error: Error) => void;
+  api.update.mockReturnValueOnce(new Promise((done, fail) => { resolveOld = done; rejectOld = fail; }));
+  let oldSave!: Promise<void>;
+  act(() => { oldSave = state.saveInfo(); });
+  api.get.mockResolvedValueOnce({ ...shelf, id: "shelf-2", name: "Shelf B" });
+  await act(async () => root.render(<Harness shelfId="shelf-2" />));
+  expect(state.infoBusy).toBe(false);
+  act(() => state.editInfo());
+  let resolveNew!: (value: Shelf) => void;
+  api.update.mockReturnValueOnce(new Promise((done) => { resolveNew = done; }));
+  let newSave!: Promise<void>;
+  act(() => { newSave = state.saveInfo(); });
+  await act(async () => {
+    if (outcome === "success") resolveOld({ ...shelf, name: "Old update" }); else rejectOld(new Error("obsolete"));
+    await oldSave;
+  });
+  expect(state.shelf?.name).toBe("Shelf B");
+  expect(state.infoOpen).toBe(true);
+  expect(state.infoBusy).toBe(true);
+  expect(state.mutationError).toBeNull();
+  expect(api.update.mock.calls.map(([id]) => id)).toEqual(["shelf-1", "shelf-2"]);
+  await act(async () => { resolveNew({ ...shelf, id: "shelf-2" }); await newSave; });
+});
+
+it.each(["direction", "position", "remove"] as const)("does not refresh the new identity after an obsolete %s mutation", async (operation) => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  await act(async () => root.render(<Harness />));
+  let resolve!: () => void;
+  const mutation = new Promise<void>((done) => { resolve = done; });
+  api.updateItem.mockReturnValueOnce(mutation);
+  api.removeItem.mockReturnValueOnce(mutation);
+  let pending!: Promise<void>;
+  act(() => {
+    pending = operation === "direction" ? state.moveItem(item, "up")
+      : operation === "position" ? state.moveToPosition(item, 0) : state.removeItem(item);
+  });
+  api.get.mockResolvedValueOnce({ ...shelf, id: "shelf-2", name: "Shelf B" });
+  await act(async () => root.render(<Harness shelfId="shelf-2" />));
+  await act(async () => { resolve(); await pending; });
+  expect(state.shelf?.name).toBe("Shelf B");
+  expect(state.mutationBusyId).toBeNull();
+  expect(api.get.mock.calls).toEqual([["shelf-1"], ["shelf-2"]]);
+});
+
+it.each(["success", "failure"])("ignores an obsolete mutation refresh %s after switching to B", async (outcome) => {
+  await act(async () => root.render(<Harness />));
+  let resolve!: (value: typeof firstPage) => void;
+  let reject!: (error: Error) => void;
+  api.items.mockReturnValueOnce(new Promise((done, fail) => { resolve = done; reject = fail; }));
+  let pending!: Promise<void>;
+  await act(async () => { pending = state.moveItem(item, "up"); });
+  api.get.mockResolvedValueOnce({ ...shelf, id: "shelf-2", name: "Shelf B" });
+  api.items.mockResolvedValueOnce({ results: [{ ...item, id: "B" }], next: null });
+  await act(async () => root.render(<Harness shelfId="shelf-2" />));
+  await act(async () => {
+    if (outcome === "success") resolve(firstPage); else reject(new Error("obsolete"));
+    await pending;
+  });
+  expect(state.shelf?.name).toBe("Shelf B");
+  expect(state.items.map((entry) => entry.id)).toEqual(["B"]);
+  expect(state.error).toBeNull();
+  expect(state.mutationError).toBeNull();
+});
+
+it("rejects old pagination after a mutation refresh and leaves newer pagination busy", async () => {
+  await act(async () => root.render(<Harness />));
+  let resolveOld!: (value: typeof firstPage) => void;
+  api.items.mockReturnValueOnce(new Promise((done) => { resolveOld = done; }));
+  let oldPage!: Promise<void>;
+  act(() => { oldPage = state.loadMore(); });
+  await act(async () => state.moveItem(item, "up"));
+  expect(state.loadMoreBusy).toBe(false);
+  let resolveNew!: (value: typeof firstPage) => void;
+  api.items.mockReturnValueOnce(new Promise((done) => { resolveNew = done; }));
+  let newPage!: Promise<void>;
+  act(() => { newPage = state.loadMore(); });
+  await act(async () => { resolveOld(firstPage); await oldPage; });
+  expect(state.items).toHaveLength(2);
+  expect(state.loadMoreBusy).toBe(true);
+  await act(async () => { resolveNew(firstPage); await newPage; });
+  expect(state.loadMoreBusy).toBe(false);
+});
+
+it("does not let an obsolete item-mutation failure clear a new Shelf's action state", async () => {
+  await act(async () => root.render(<Harness />));
+  let rejectOld!: (error: Error) => void;
+  api.updateItem.mockReturnValueOnce(new Promise((_done, fail) => { rejectOld = fail; }));
+  let oldMutation!: Promise<void>;
+  act(() => { oldMutation = state.moveItem(item, "up"); });
+  await act(async () => root.render(<Harness shelfId="shelf-2" />));
+  let resolveNew!: (value: ShelfItem) => void;
+  api.updateItem.mockReturnValueOnce(new Promise((done) => { resolveNew = done; }));
+  let newMutation!: Promise<void>;
+  act(() => { newMutation = state.moveItem({ ...item, id: "B" }, "down"); });
+  await act(async () => { rejectOld(new Error("obsolete")); await oldMutation; });
+  expect(state.mutationBusyId).toBe("B");
+  expect(state.mutationError).toBeNull();
+  await act(async () => { resolveNew(item); await newMutation; });
+});

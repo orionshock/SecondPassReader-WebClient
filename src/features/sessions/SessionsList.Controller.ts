@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BoundedSessionBook, MarginaliaSessionListItem, MarginaliaSessionSummary, PaginatedResponse, SecondPassClient } from "@secondpass/client";
 import { loadSessionsPage } from "../reader/ReaderMarginalia.Queries";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
@@ -11,6 +11,7 @@ export function useSessionsList({ spl, bookId, searchQuery }: {
   searchQuery?: string | null;
 }) {
   const canLoad = Boolean(spl);
+  const loadRequestSeq = useRef(0);
   const bookFilter = typeof bookId === "string" && bookId.trim() ? bookId.trim() : null;
   const effectiveSearchQuery = typeof searchQuery === "string" ? searchQuery.trim() : "";
   const [filter, setFilter] = useState<Filter>("all");
@@ -25,6 +26,7 @@ export function useSessionsList({ spl, bookId, searchQuery }: {
   const load = useCallback(
     async (targetPage: number) => {
       if (!spl) return;
+      const requestSeq = ++loadRequestSeq.current;
       setBusy(true);
       setError(null);
       try {
@@ -36,9 +38,11 @@ export function useSessionsList({ spl, bookId, searchQuery }: {
           page: targetPage,
           pageSize,
         });
+        if (requestSeq !== loadRequestSeq.current) return;
         setData(r);
         setPage(targetPage);
       } catch (e) {
+        if (requestSeq !== loadRequestSeq.current) return;
         debugWarn("reader", "Reading Sessions could not be loaded", {
           bookId: bookFilter,
           page: targetPage,
@@ -47,7 +51,7 @@ export function useSessionsList({ spl, bookId, searchQuery }: {
         setError(e instanceof Error ? e : new Error("Could not load Reading Sessions."));
         setData(null);
       } finally {
-        setBusy(false);
+        if (requestSeq === loadRequestSeq.current) setBusy(false);
       }
     },
     [bookFilter, effectiveSearchQuery, filter, pageSize, spl],
@@ -62,8 +66,8 @@ export function useSessionsList({ spl, bookId, searchQuery }: {
     setError(null);
     setBusy(false);
     setPage(1);
-    if (!canLoad) return;
-    void load(1);
+    if (canLoad) void load(1);
+    return () => { loadRequestSeq.current += 1; };
   }, [bookFilter, canLoad, effectiveSearchQuery, filter, load, pageSize]);
 
   const contextBook = data?.context?.book ?? null;

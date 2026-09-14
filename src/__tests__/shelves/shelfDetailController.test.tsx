@@ -10,7 +10,7 @@ let root: Root;
 let state: ReturnType<typeof useShelfDetail>;
 let get: ReturnType<typeof vi.fn>;
 let items: ReturnType<typeof vi.fn>;
-let spl: SecondPassClient;
+let spl: SecondPassClient | null;
 const item: ShelfItem = { id: "item-1", shelf: "shelf-1", position: 0, book: { id: "book-1", title: "Book" } };
 const firstPage = { results: [item], next: "https://server/items/?page=2" };
 function Harness({ ordering = "position", page = 1 }: { ordering?: "position" | "title"; page?: number }) {
@@ -89,4 +89,45 @@ it("keeps pagination available after failure and appends on retry", async () => 
   await act(async () => state.loadMore());
   expect(state.error).toBeNull();
   expect(state.items).toHaveLength(2);
+});
+
+it.each(["success", "failure"])("settles invalidated load-more immediately and keeps a newer load-more busy when the old request ends in %s", async (outcome) => {
+  await act(async () => root.render(<Harness />));
+  let resolveOld!: (value: typeof firstPage) => void;
+  let rejectOld!: (error: Error) => void;
+  items.mockReturnValueOnce(new Promise((done, fail) => { resolveOld = done; rejectOld = fail; }));
+  let oldPage!: Promise<void>;
+  act(() => { oldPage = state.loadMore(); });
+  expect(state.loadMoreBusy).toBe(true);
+  await act(async () => root.render(<Harness ordering="title" />));
+  expect(state.loadMoreBusy).toBe(false);
+  let resolveNew!: (value: typeof firstPage) => void;
+  items.mockReturnValueOnce(new Promise((done) => { resolveNew = done; }));
+  let newPage!: Promise<void>;
+  act(() => { newPage = state.loadMore(); });
+  expect(state.loadMoreBusy).toBe(true);
+  await act(async () => {
+    if (outcome === "success") resolveOld(firstPage); else rejectOld(new Error("obsolete"));
+    await oldPage;
+  });
+  expect(state.items).toEqual([item]);
+  expect(state.error).toBeNull();
+  expect(state.loadMoreBusy).toBe(true);
+  await act(async () => { resolveNew({ ...firstPage, results: [{ ...item, id: "new-page" }] }); await newPage; });
+  expect(state.items.map((entry) => entry.id)).toEqual(["item-1", "new-page"]);
+  expect(state.loadMoreBusy).toBe(false);
+});
+
+it("invalidates pending requests and settles busy state on disconnect", async () => {
+  await act(async () => root.render(<Harness />));
+  let resolve!: (value: typeof firstPage) => void;
+  items.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  let pending!: Promise<void>;
+  act(() => { pending = state.loadMore(); });
+  spl = null;
+  await act(async () => root.render(<Harness />));
+  expect(state.loadMoreBusy).toBe(false);
+  await act(async () => { resolve(firstPage); await pending; });
+  expect(state.items).toEqual([item]);
+  expect(state.error).toBeNull();
 });

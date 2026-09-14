@@ -71,3 +71,45 @@ it("clears existing results while a changed filter loads", async () => {
   expect(state.page).toBe(1);
   expect(state.busy).toBe(true);
 });
+
+it.each(["success", "failure"])("ignores old query %s after a newer query succeeds", async (outcome) => {
+  let resolve!: (value: typeof page) => void;
+  let reject!: (error: Error) => void;
+  list.mockReturnValueOnce(new Promise((done, fail) => { resolve = done; reject = fail; }));
+  await act(async () => root.render(<Harness searchQuery="old" />));
+  const current = { ...page, results: [sessionListItemFixture({ name: "New query" })] };
+  list.mockResolvedValueOnce(current);
+  await act(async () => root.render(<Harness searchQuery="new" />));
+  await act(async () => { if (outcome === "success") resolve(page); else reject(new Error("obsolete")); });
+  expect(state.data).toEqual(current);
+  expect(state.error).toBeNull();
+  expect(state.busy).toBe(false);
+});
+
+it("invalidates pending pagination on filter change without settling the new filter's load", async () => {
+  await act(async () => root.render(<Harness />));
+  let resolveOld!: (value: typeof page) => void;
+  let resolveNew!: (value: typeof page) => void;
+  list.mockReturnValueOnce(new Promise((done) => { resolveOld = done; }));
+  let pending!: Promise<void>;
+  act(() => { pending = state.nextPage(); });
+  list.mockReturnValueOnce(new Promise((done) => { resolveNew = done; }));
+  await act(async () => state.changeFilter("closed"));
+  await act(async () => { resolveOld(page); await pending; });
+  expect(state.data).toBeNull();
+  expect(state.page).toBe(1);
+  expect(state.busy).toBe(true);
+  await act(async () => resolveNew(page));
+  expect(state.busy).toBe(false);
+});
+
+it("rejects the old client's result after a client replacement", async () => {
+  let resolve!: (value: typeof page) => void;
+  list.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  await act(async () => root.render(<Harness />));
+  const current = { ...page, results: [] };
+  spl = { marginalia: { sessions: { list: vi.fn().mockResolvedValue(current) } } } as unknown as SecondPassClient;
+  await act(async () => root.render(<Harness />));
+  await act(async () => resolve(page));
+  expect(state.data).toEqual(current);
+});

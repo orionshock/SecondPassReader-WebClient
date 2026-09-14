@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { SecondPassClient, Shelf, ShelfItem } from "@secondpass/client";
 import { updatePersonalShelfInput } from "./ShelfMetadata.Actions";
@@ -29,6 +29,11 @@ function parseNextPage(url: string | null): number | null {
 
 export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; shelfId: string }) {
   const canLoad = Boolean(spl);
+  const identityGeneration = useRef(0);
+  const loadFirstRequestSeq = useRef(0);
+  const loadMoreRequestSeq = useRef(0);
+  const infoRequestSeq = useRef(0);
+  const itemMutationSeq = useRef(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shelf, setShelf] = useState<Shelf | null>(null);
@@ -43,15 +48,20 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
 
   const loadFirst = useCallback(async () => {
     if (!spl) return;
+    const requestSeq = ++loadFirstRequestSeq.current;
+    loadMoreRequestSeq.current += 1;
+    setLoadMoreBusy(false);
     setBusy(true);
     setError(null);
     setMutationError(null);
     try {
       const s = await spl.shelves.get(shelfId);
+      if (requestSeq !== loadFirstRequestSeq.current) return;
       setShelf(s);
       setInfoDraft(shelfToFormValues(s));
       if (canEditShelf(s)) {
         const page = await spl.shelves.items(shelfId, { page: 1 });
+        if (requestSeq !== loadFirstRequestSeq.current) return;
         const results = page.results ?? [];
         setItems(results.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)));
         setNextUrl(page.next ?? null);
@@ -60,6 +70,7 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
         setNextUrl(null);
       }
     } catch (e) {
+      if (requestSeq !== loadFirstRequestSeq.current) return;
       debugWarn("reader", "shelf edit data could not be loaded", { shelfId, error: e });
       const message =
         e instanceof ApiError && (e.kind === "unauthorized" || e.kind === "forbidden")
@@ -72,7 +83,7 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
       setItems([]);
       setNextUrl(null);
     } finally {
-      setBusy(false);
+      if (requestSeq === loadFirstRequestSeq.current) setBusy(false);
     }
   }, [shelfId, spl]);
 
@@ -85,8 +96,16 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
     setInfoOpen(false);
     setBusy(false);
     setMutationBusyId(null);
-    if (!canLoad) return;
-    void loadFirst();
+    setLoadMoreBusy(false);
+    setInfoBusy(false);
+    if (canLoad) void loadFirst();
+    return () => {
+      identityGeneration.current += 1;
+      loadFirstRequestSeq.current += 1;
+      loadMoreRequestSeq.current += 1;
+      infoRequestSeq.current += 1;
+      itemMutationSeq.current += 1;
+    };
   }, [canLoad, loadFirst]);
 
   const loadMore = useCallback(async () => {
@@ -94,10 +113,12 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
     const nextPage = parseNextPage(nextUrl);
     if (!nextPage || loadMoreBusy) return;
 
+    const requestSeq = ++loadMoreRequestSeq.current;
     setLoadMoreBusy(true);
     setMutationError(null);
     try {
       const page = await spl.shelves.items(shelfId, { page: nextPage });
+      if (requestSeq !== loadMoreRequestSeq.current) return;
       const results = page.results ?? [];
       setItems((prev) => {
         const merged = [...prev, ...results];
@@ -105,10 +126,11 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
       });
       setNextUrl(page.next ?? null);
     } catch (e) {
+      if (requestSeq !== loadMoreRequestSeq.current) return;
       debugWarn("reader", "more shelf books could not be loaded", { shelfId, error: e });
       setMutationError("Couldn't load more books. Try again.");
     } finally {
-      setLoadMoreBusy(false);
+      if (requestSeq === loadMoreRequestSeq.current) setLoadMoreBusy(false);
     }
   }, [loadMoreBusy, nextUrl, shelfId, spl]);
 
@@ -117,50 +139,63 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
     if (!canEditShelf(shelf)) return;
     const name = infoDraft.name.trim();
     if (!name) return;
+    const requestSeq = ++infoRequestSeq.current;
     setInfoBusy(true);
     setMutationError(null);
     try {
       const updatedShelf = await spl.shelves.update(shelfId, updatePersonalShelfInput(infoDraft));
+      if (requestSeq !== infoRequestSeq.current) return;
       setShelf(updatedShelf);
       setInfoDraft(shelfToFormValues(updatedShelf));
       setInfoOpen(false);
     } catch (e) {
       debugWarn("reader", "shelf details were not saved", { shelfId, error: e });
+      if (requestSeq !== infoRequestSeq.current) return;
       setMutationError("Couldn't save the shelf. Try again.");
     } finally {
-      setInfoBusy(false);
+      if (requestSeq === infoRequestSeq.current) setInfoBusy(false);
     }
   }, [infoDraft, shelf, shelfId, spl]);
 
   const handleMoveToPosition = useCallback(async (item: ShelfItem, position: number) => {
     if (!spl) return;
     if (!canEditShelf(shelf)) return;
+    const generation = identityGeneration.current;
+    const requestSeq = ++itemMutationSeq.current;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
       await spl.shelves.updateItem(shelfId, item.id, { position });
+      // The mutation targeted the captured Shelf. Only refresh if that identity is still mounted.
+      if (generation !== identityGeneration.current) return;
       await loadFirst();
     } catch (e) {
       debugWarn("reader", "Book shelf position was not saved", { shelfId, bookId: item.book.id, error: e });
+      if (requestSeq !== itemMutationSeq.current) return;
       setMutationError("Couldn't move the Book. Try again.");
     } finally {
-      setMutationBusyId(null);
+      if (requestSeq === itemMutationSeq.current) setMutationBusyId(null);
     }
   }, [loadFirst, shelf, shelfId, spl]);
 
   const handleMoveItem = useCallback(async (item: ShelfItem, move: "up" | "down") => {
     if (!spl) return;
     if (!canEditShelf(shelf)) return;
+    const generation = identityGeneration.current;
+    const requestSeq = ++itemMutationSeq.current;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
       await spl.shelves.updateItem(shelfId, item.id, { move });
+      // The mutation targeted the captured Shelf. Only refresh if that identity is still mounted.
+      if (generation !== identityGeneration.current) return;
       await loadFirst();
     } catch (e) {
       debugWarn("reader", "Book shelf order was not saved", { shelfId, bookId: item.book.id, move, error: e });
+      if (requestSeq !== itemMutationSeq.current) return;
       setMutationError("Couldn't move the Book. Try again.");
     } finally {
-      setMutationBusyId(null);
+      if (requestSeq === itemMutationSeq.current) setMutationBusyId(null);
     }
   }, [loadFirst, shelf, shelfId, spl]);
 
@@ -168,16 +203,21 @@ export function useShelfEdit({ spl, shelfId }: { spl: SecondPassClient | null; s
     if (!spl) return;
     if (!canEditShelf(shelf)) return;
     if (!window.confirm("Remove this book from the shelf? The book will remain in Library.")) return;
+    const generation = identityGeneration.current;
+    const requestSeq = ++itemMutationSeq.current;
     setMutationBusyId(item.id);
     setMutationError(null);
     try {
       await spl.shelves.removeItem(shelfId, item.id);
+      // The mutation targeted the captured Shelf. Only refresh if that identity is still mounted.
+      if (generation !== identityGeneration.current) return;
       await loadFirst();
     } catch (e) {
       debugWarn("reader", "Book was not removed from shelf", { shelfId, bookId: item.book.id, error: e });
+      if (requestSeq !== itemMutationSeq.current) return;
       setMutationError("Couldn't remove the Book from the shelf. Try again.");
     } finally {
-      setMutationBusyId(null);
+      if (requestSeq === itemMutationSeq.current) setMutationBusyId(null);
     }
   }, [loadFirst, shelf, shelfId, spl]);
 

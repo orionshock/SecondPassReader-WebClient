@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { MarginaliaAnnotation, MarginaliaSessionDetail, SecondPassClient } from "@secondpass/client";
 import { navigateTo } from "../../app/AppNavigation.Router";
@@ -7,6 +7,9 @@ import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | null; sessionId: string }) {
   const canLoad = Boolean(spl);
+  const detailRequestSeq = useRef(0);
+  const annotationRequestSeq = useRef(0);
+  const mutationRequestSeq = useRef(0);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +32,12 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
 
   const load = useCallback(async () => {
     if (!spl) return;
+    const requestSeq = ++detailRequestSeq.current;
     setBusy(true);
     setError(null);
     try {
       const response = await spl.marginalia.sessions.get(sessionId);
+      if (requestSeq !== detailRequestSeq.current) return;
       const s = response.session;
       setDetail(response);
       setDraftName(typeof s.name === "string" ? s.name : "");
@@ -40,6 +45,7 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
       setEditingName(false);
       setEditingNotes(false);
     } catch (e) {
+      if (requestSeq !== detailRequestSeq.current) return;
       debugWarn("reader", "Reading Session detail could not be loaded", {
         sessionId,
         error: e,
@@ -53,19 +59,22 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
       setError(message);
       setDetail(null);
     } finally {
-      setBusy(false);
+      if (requestSeq === detailRequestSeq.current) setBusy(false);
     }
   }, [sessionId, spl]);
 
   const loadAnnotations = useCallback(
     async () => {
       if (!spl) return;
+      const requestSeq = ++annotationRequestSeq.current;
       setAnnoBusy(true);
       setAnnoError(null);
       try {
         const response = await spl.marginalia.sessions.getAnnotations(sessionId);
+        if (requestSeq !== annotationRequestSeq.current) return;
         setAnnotations(response.annotations);
       } catch (e) {
+        if (requestSeq !== annotationRequestSeq.current) return;
         debugWarn("reader", "Reading Session annotations could not be loaded", {
           sessionId,
           error: e,
@@ -73,7 +82,7 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
         setAnnoError("Couldn't load annotations. Reload the page to try again.");
         setAnnotations(null);
       } finally {
-        setAnnoBusy(false);
+        if (requestSeq === annotationRequestSeq.current) setAnnoBusy(false);
       }
     },
     [sessionId, spl],
@@ -84,13 +93,20 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
     setError(null);
     setBusy(false);
     setSaveError(null);
+    setSaveBusy(false);
     setCloseDialogOpen(false);
     setAnnotations(null);
     setAnnoError(null);
     setAnnoBusy(false);
-    if (!canLoad) return;
-    void load();
-    void loadAnnotations();
+    if (canLoad) {
+      void load();
+      void loadAnnotations();
+    }
+    return () => {
+      detailRequestSeq.current += 1;
+      annotationRequestSeq.current += 1;
+      mutationRequestSeq.current += 1;
+    };
   }, [canLoad, load, loadAnnotations]);
 
   const isActive = session?.status === "active";
@@ -98,10 +114,12 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
     if (!spl) return;
     if (!session) return;
     if (!isActive) return;
+    const requestSeq = ++mutationRequestSeq.current;
     setSaveBusy(true);
     setSaveError(null);
     try {
       const refreshed = await spl.marginalia.sessions.update(sessionId, { name: draftName });
+      if (requestSeq !== mutationRequestSeq.current) return;
       setDetail(refreshed);
       setEditingName(false);
     } catch (e) {
@@ -109,9 +127,10 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
         sessionId,
         error: e,
       });
+      if (requestSeq !== mutationRequestSeq.current) return;
       setSaveError("Couldn't save the Reading Session details. Try again.");
     } finally {
-      setSaveBusy(false);
+      if (requestSeq === mutationRequestSeq.current) setSaveBusy(false);
     }
   }, [draftName, isActive, session, sessionId, spl]);
 
@@ -119,10 +138,12 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
     if (!spl) return;
     if (!session) return;
     if (!isActive) return;
+    const requestSeq = ++mutationRequestSeq.current;
     setSaveBusy(true);
     setSaveError(null);
     try {
       const refreshed = await spl.marginalia.sessions.update(sessionId, { notes: draftNotes });
+      if (requestSeq !== mutationRequestSeq.current) return;
       setDetail(refreshed);
       setEditingNotes(false);
     } catch (e) {
@@ -130,9 +151,10 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
         sessionId,
         error: e,
       });
+      if (requestSeq !== mutationRequestSeq.current) return;
       setSaveError("Couldn't save the Reading Session details. Try again.");
     } finally {
-      setSaveBusy(false);
+      if (requestSeq === mutationRequestSeq.current) setSaveBusy(false);
     }
   }, [draftNotes, isActive, session, sessionId, spl]);
 
@@ -140,6 +162,8 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
     if (!spl) return;
     if (!sessionId) return;
     if (!session) return;
+    const requestSeq = ++mutationRequestSeq.current;
+    setSaveBusy(false);
 
     try {
       const savedName = typeof session.name === "string" ? session.name.trim() : "";
@@ -150,7 +174,9 @@ export function useSessionDetail({ spl, sessionId }: { spl: SecondPassClient | n
       if (Object.keys(payload).length > 0) {
         await spl.marginalia.sessions.update(sessionId, payload);
       }
+      // Finish the original remote operation; supersession only suppresses publication/navigation.
       const refreshed = await spl.marginalia.sessions.close(sessionId);
+      if (requestSeq !== mutationRequestSeq.current) return;
       setDetail(refreshed);
       setDraftName(refreshed.session.name);
       setDraftNotes(refreshed.session.notes);

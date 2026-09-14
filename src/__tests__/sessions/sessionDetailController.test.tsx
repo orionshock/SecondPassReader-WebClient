@@ -24,7 +24,7 @@ let root: Root;
 let container: HTMLDivElement;
 let state: ReturnType<typeof useSessionDetail>;
 let api: { get: ReturnType<typeof vi.fn>; getAnnotations: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> };
-let spl: SecondPassClient;
+let spl: SecondPassClient | null;
 function Harness({ sessionId = "session-1" }: { sessionId?: string }) {
   state = useSessionDetail({ spl, sessionId });
   return null;
@@ -189,4 +189,110 @@ it("binds editor commands and restores close-dialog focus without reloading the 
   expect(document.activeElement).toBe(opener);
   expect(api.get).toHaveBeenCalledTimes(1);
   expect(api.getAnnotations).toHaveBeenCalledTimes(1);
+});
+
+it.each(["success", "failure"])("ignores obsolete detail %s while preserving the newer session", async (outcome) => {
+  let resolve!: (value: MarginaliaSessionDetail) => void;
+  let reject!: (error: Error) => void;
+  api.get.mockReturnValueOnce(new Promise((done, fail) => { resolve = done; reject = fail; }));
+  await act(async () => root.render(<Harness />));
+  api.get.mockResolvedValueOnce(detail("Session B"));
+  await act(async () => root.render(<Harness sessionId="session-2" />));
+  await act(async () => {
+    if (outcome === "success") resolve(detail("Session A")); else reject(new Error("obsolete"));
+  });
+  expect(state.session?.name).toBe("Session B");
+  expect(state.error).toBeNull();
+  expect(state.busy).toBe(false);
+});
+
+it.each(["success", "failure"])("ignores obsolete annotation %s without settling B's annotation request", async (outcome) => {
+  let resolve!: (value: { annotations: [] }) => void;
+  let reject!: (error: Error) => void;
+  api.getAnnotations.mockReturnValueOnce(new Promise((done, fail) => { resolve = done; reject = fail; }));
+  await act(async () => root.render(<Harness />));
+  const current = deferred<{ annotations: [] }>();
+  api.getAnnotations.mockReturnValueOnce(current.promise);
+  await act(async () => root.render(<Harness sessionId="session-2" />));
+  await act(async () => {
+    if (outcome === "success") resolve({ annotations: [] }); else reject(new Error("obsolete"));
+  });
+  expect(state.annotations).toBeNull();
+  expect(state.annoError).toBeNull();
+  expect(state.annoBusy).toBe(true);
+  await act(async () => current.resolve({ annotations: [] }));
+  expect(state.annoBusy).toBe(false);
+});
+
+it.each(["success", "failure"])("ignores obsolete metadata %s without changing B's draft, error, or busy state", async (outcome) => {
+  await act(async () => root.render(<Harness />));
+  let resolve!: (value: MarginaliaSessionDetail) => void;
+  let reject!: (error: Error) => void;
+  api.update.mockReturnValueOnce(new Promise((done, fail) => { resolve = done; reject = fail; }));
+  let oldSave!: Promise<void>;
+  act(() => { oldSave = state.nameEditor.onSaveName(); });
+  api.get.mockResolvedValueOnce(detail("Session B"));
+  await act(async () => root.render(<Harness sessionId="session-2" />));
+  expect(state.nameEditor.saveBusy).toBe(false);
+  const current = deferred<MarginaliaSessionDetail>();
+  api.update.mockReturnValueOnce(current.promise);
+  act(() => { state.notesEditor.onBeginNotesEdit(); state.notesEditor.onChangeNotes("B draft"); });
+  let newSave!: Promise<void>;
+  act(() => { newSave = state.notesEditor.onSaveNotes(); });
+  await act(async () => {
+    if (outcome === "success") resolve(detail("Session A")); else reject(new Error("obsolete"));
+    await oldSave;
+  });
+  expect(state.session?.name).toBe("Session B");
+  expect(state.notesEditor.draftNotes).toBe("B draft");
+  expect(state.notesEditor.saveBusy).toBe(true);
+  expect(state.notesEditor.saveError).toBeNull();
+  expect(api.update.mock.calls.map(([id]) => id)).toEqual(["session-1", "session-2"]);
+  await act(async () => { current.resolve(detail("B updated")); await newSave; });
+});
+
+it("finishes the original update/close remotely after an identity change without publishing or navigating", async () => {
+  await act(async () => root.render(<Harness />));
+  const update = deferred<MarginaliaSessionDetail>();
+  const close = deferred<MarginaliaSessionDetail>();
+  api.update.mockReturnValueOnce(update.promise);
+  api.close.mockReturnValueOnce(close.promise);
+  let pending!: Promise<void>;
+  act(() => { pending = state.saveAndClose({ name: "Final A", notes: "Final notes", afterAction: "sessions" }); });
+  api.get.mockResolvedValueOnce(detail("Session B"));
+  await act(async () => root.render(<Harness sessionId="session-2" />));
+  act(() => state.openCloseDialog());
+  await act(async () => update.resolve(detail("Final A")));
+  expect(api.close).toHaveBeenCalledExactlyOnceWith("session-1");
+  await act(async () => { close.resolve(detail("Final A", "closed")); await pending; });
+  expect(state.session?.name).toBe("Session B");
+  expect(state.isActive).toBe(true);
+  expect(state.closeDialogOpen).toBe(true);
+  expect(navigateTo).not.toHaveBeenCalled();
+});
+
+it("does not navigate when a close finishes after the page unmounts", async () => {
+  await act(async () => root.render(<Harness />));
+  const close = deferred<MarginaliaSessionDetail>();
+  api.close.mockReturnValueOnce(close.promise);
+  let pending!: Promise<void>;
+  act(() => { pending = state.saveAndClose({ name: "Saved", notes: "Session note", afterAction: "sessions" }); });
+  act(() => root.render(null));
+  await act(async () => { close.resolve(detail("Closed", "closed")); await pending; });
+  expect(navigateTo).not.toHaveBeenCalled();
+});
+
+it("invalidates detail and annotations when the client disconnects", async () => {
+  const request = deferred<MarginaliaSessionDetail>();
+  const annotations = deferred<{ annotations: [] }>();
+  api.get.mockReturnValueOnce(request.promise);
+  api.getAnnotations.mockReturnValueOnce(annotations.promise);
+  await act(async () => root.render(<Harness />));
+  spl = null;
+  await act(async () => root.render(<Harness />));
+  await act(async () => { request.resolve(detail()); annotations.resolve({ annotations: [] }); });
+  expect(state.session).toBeNull();
+  expect(state.annotations).toBeNull();
+  expect(state.busy).toBe(false);
+  expect(state.annoBusy).toBe(false);
 });

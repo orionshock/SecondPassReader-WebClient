@@ -34,6 +34,7 @@ export function useShelfCollection({ spl, ordering, page, pageSize }: {
   const [mutationBusy, setMutationBusy] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const loadRequestSeq = useRef(0);
+  const mutationRequestSeq = useRef(0);
   const load = useCallback(async () => {
     if (!spl) return;
     const requestSeq = ++loadRequestSeq.current;
@@ -64,44 +65,54 @@ export function useShelfCollection({ spl, ordering, page, pageSize }: {
     setCreateOpen(false);
     setMenuShelfId(null);
     setMutationError(null);
-    if (!canLoad) return;
-    void load();
+    setMutationBusy(false);
+    if (canLoad) void load();
+    return () => {
+      loadRequestSeq.current += 1;
+      mutationRequestSeq.current += 1;
+    };
   }, [canLoad, load]);
 
   const handleCreate = useCallback(async () => {
     if (!spl) return;
     const name = createDraft.name.trim();
     if (!name) return;
+    const requestSeq = ++mutationRequestSeq.current;
     setMutationBusy(true);
     setMutationError(null);
     try {
       await spl.shelves.create(createPersonalShelfInput(createDraft));
+      if (requestSeq !== mutationRequestSeq.current) return;
       setCreateOpen(false);
       setCreateDraft(shelfToFormValues());
       setMenuShelfId(null);
       await load();
     } catch (e) {
       debugWarn("reader", "shelf creation did not complete", { error: e });
+      if (requestSeq !== mutationRequestSeq.current) return;
       setMutationError("Couldn't create the shelf. Try again.");
     } finally {
-      setMutationBusy(false);
+      if (requestSeq === mutationRequestSeq.current) setMutationBusy(false);
     }
   }, [createDraft, load, spl]);
 
   const handleDelete = useCallback(async (shelf: Shelf) => {
     if (!spl || !canEditShelf(shelf)) return;
     if (!window.confirm("Delete this shelf? The books on it will remain in Library.")) return;
+    const requestSeq = ++mutationRequestSeq.current;
     setMutationBusy(true);
     setMutationError(null);
     try {
       await spl.shelves.remove(shelf.id);
+      if (requestSeq !== mutationRequestSeq.current) return;
       setMenuShelfId(null);
       await load();
     } catch (e) {
       debugWarn("reader", "shelf deletion did not complete", { shelfId: shelf.id, error: e });
+      if (requestSeq !== mutationRequestSeq.current) return;
       setMutationError("Couldn't delete the shelf. Try again.");
     } finally {
-      setMutationBusy(false);
+      if (requestSeq === mutationRequestSeq.current) setMutationBusy(false);
     }
   }, [load, spl]);
 

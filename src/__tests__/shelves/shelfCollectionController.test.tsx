@@ -124,3 +124,47 @@ it("binds the create dialog focus and dismissal without reloading the collection
   expect(document.activeElement).toBe(opener);
   expect(list).toHaveBeenCalledTimes(2);
 });
+
+it.each([
+  ["create", "success"], ["create", "failure"],
+  ["delete", "success"], ["delete", "failure"],
+] as const)("ignores obsolete %s %s after the collection query changes", async (operation, outcome) => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  await act(async () => root.render(<Harness />));
+  act(() => state.changeCreateDraft({ name: "New", description: "", visibility: "private" }));
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const mutation = new Promise<void>((done, fail) => { resolve = done; reject = fail; });
+  (operation === "create" ? create : remove).mockReturnValueOnce(mutation);
+  let pending!: Promise<void>;
+  act(() => { pending = operation === "create" ? state.createShelf() : state.deleteShelf(shelf); });
+  await act(async () => root.render(<Harness ordering="-item_count" />));
+  expect(state.mutationBusy).toBe(false);
+  act(() => state.beginCreate());
+  act(() => state.changeCreateDraft({ name: "Current draft", description: "", visibility: "private" }));
+  await act(async () => {
+    if (outcome === "success") resolve(); else reject(new Error("obsolete"));
+    await pending;
+  });
+  expect(state.createOpen).toBe(true);
+  expect(state.createDraft.name).toBe("Current draft");
+  expect(state.mutationError).toBeNull();
+  expect(list).toHaveBeenCalledTimes(4);
+});
+
+it("does not refresh using the previous client after a pending delete finishes", async () => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  await act(async () => root.render(<Harness />));
+  let resolve!: () => void;
+  remove.mockReturnValueOnce(new Promise<void>((done) => { resolve = done; }));
+  let pending!: Promise<void>;
+  act(() => { pending = state.deleteShelf(shelf); });
+  const newList = vi.fn().mockResolvedValue({ ...result, results: [] });
+  spl = { shelves: { list: newList } } as unknown as SecondPassClient;
+  await act(async () => root.render(<Harness />));
+  await act(async () => { resolve(); await pending; });
+  expect(remove).toHaveBeenCalledExactlyOnceWith(shelf.id);
+  expect(list).toHaveBeenCalledTimes(2);
+  expect(newList).toHaveBeenCalledTimes(2);
+  expect(state.data?.personal).toEqual([]);
+});

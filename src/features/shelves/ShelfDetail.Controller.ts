@@ -24,6 +24,7 @@ export function useShelfDetail({ spl, shelfId, ordering, page: routePage, pageSi
     if (!spl) return;
     const requestSeq = ++loadFirstRequestSeq.current;
     loadMoreRequestSeq.current += 1;
+    setLoadMoreBusy(false);
     setBusy(true);
     setError(null);
     try {
@@ -54,8 +55,12 @@ export function useShelfDetail({ spl, shelfId, ordering, page: routePage, pageSi
   useEffect(() => {
     setError(null);
     setBusy(false);
-    if (!canLoad) return;
-    void loadFirst();
+    setLoadMoreBusy(false);
+    if (canLoad) void loadFirst();
+    return () => {
+      loadFirstRequestSeq.current += 1;
+      loadMoreRequestSeq.current += 1;
+    };
   }, [canLoad, loadFirst]);
 
   const parseNextPage = useCallback((url: string | null): number | null => {
