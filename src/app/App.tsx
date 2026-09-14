@@ -1,11 +1,10 @@
 import "./App.css";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { ClientApiLinking } from "../features/connection/ClientApiLinkingPanel.UI";
 import { ClientApiVerification } from "../features/connection/ClientApiVerificationPanel.UI";
 import { ConnectServerScreen } from "../features/connection/ConnectServerPage.UI";
 import { getAppWorkflowStep } from "./AppWorkflow.Policy";
-import type { AppRoute } from "./AppNavigation.Router";
-import { navigateTo, parseCurrentRoute } from "./AppNavigation.Router";
+import { navigateTo } from "./AppNavigation.Router";
 import {
   clearActiveConnection,
   getActiveConnection,
@@ -18,26 +17,22 @@ import type { SecondPassClient } from "@secondpass/client";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecovery.Context";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner.UI";
 import { ServerRichText } from "../components/ServerRichText.Renderer";
-import { debugLog } from "../lib/debug/DebugLogger.Diagnostics";
 import { AppBookDetailModalController } from "./routes/AppBookDetailModal.Controller";
 import { AppLibraryRouteRenderer } from "./routes/AppLibraryRoute.Orchestrator";
 import { useAppAuthenticatedContextController } from "./AppAuthenticatedContext.Controller";
 import { useAppReaderOpenController } from "./AppReaderOpen.Controller";
 import { useAppThemeLifecycle } from "./AppTheme.Lifecycle";
-import { buildOfflineCacheNamespace } from "./offline/namespace/OfflineCacheNamespace.Policy";
-import {
-  createOfflineReaderAuthenticatedSyncGeneration,
-  startOfflineReaderAuthenticatedSyncLifecycle,
-} from "./offline/reader/sync/OfflineReaderAuthenticatedSync.Lifecycle";
-import { showOfflineReaderSyncOutcome } from "./offline/reader/sync/notice/OfflineReaderSyncNotice.Controller";
 import { OfflineReaderSyncNoticePanel } from "./offline/reader/sync/notice/OfflineReaderSyncNoticePanel.UI";
-import { clearOfflineReaderSyncNotice } from "./offline/reader/sync/notice/OfflineReaderSyncNotice.State";
 import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
 import { removeConnectionAndOfflineData } from "../features/connection/ConnectionRemoval.Controller";
 import {
   getBrowserConnectivitySnapshot,
   subscribeToBrowserConnectivity,
 } from "./connectivity/BrowserConnectivity.State";
+import { useAppRouteWorkflowLifecycle } from "./AppRouteWorkflow.Lifecycle";
+import { useAppPagePresentationLifecycle } from "./AppPagePresentation.Lifecycle";
+import { useAppAuthenticatedOfflineSyncLifecycle } from "./AppAuthenticatedOfflineSync.Lifecycle";
+import { useAppConnectionRecoveryLifecycle } from "./AppConnectionRecovery.Lifecycle";
 
 const SettingsPanel = lazy(async () => {
   const module = await import("./SettingsPanel.UI");
@@ -48,8 +43,6 @@ const SettingsPanel = lazy(async () => {
 // Feature owners remain below this boundary.
 function AppShell() {
   const [profilesVersion, setProfilesVersion] = useState(0);
-  const [view, setView] = useState<"main" | "settings">("main");
-  const [route, setRoute] = useState<AppRoute | null>(() => parseCurrentRoute());
   const {
     authenticationRepairRequired,
     authorizationFailure,
@@ -74,74 +67,22 @@ function AppShell() {
   }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.authenticationState, selectedProfile?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
+  const route = useAppRouteWorkflowLifecycle(workflowStep);
   const browserConnectivity = useSyncExternalStore(
     subscribeToBrowserConnectivity,
     getBrowserConnectivitySnapshot,
     (): "unknown" => "unknown",
   );
-  const verifiedOfflineNamespaceKey = useMemo(() => {
-    if (!selectedProfile?.verifiedAt) return null;
-    return buildOfflineCacheNamespace({
-      serverBaseUrl: selectedProfile.serverBaseUrl,
-      accountProfileId: selectedProfile.verifiedUser?.profileId,
-    })?.key ?? null;
-  }, [selectedProfile?.serverBaseUrl, selectedProfile?.verifiedAt, selectedProfile?.verifiedUser?.profileId]);
-  const offlineNamespaceKey = workflowStep === "library_home" ? verifiedOfflineNamespaceKey : null;
-  const automaticSyncGenerationKey = offlineNamespaceKey && selectedProfile
-    ? JSON.stringify([offlineNamespaceKey, selectedProfile.id, selectedProfile.verifiedAt])
-    : null;
-  const automaticSyncGeneration = useMemo(
-    () => createOfflineReaderAuthenticatedSyncGeneration(),
-    [automaticSyncGenerationKey],
-  );
-
-  const connectionIdentityRef = useRef(`${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`);
-  const mainRef = useRef<HTMLElement | null>(null);
-  const pageFocusKey = view === "settings"
-    ? "settings"
-    : `${workflowStep}:${route?.kind ?? ""}:${route?.kind === "reader" ? route.bookId : route?.kind === "session" ? route.sessionId : route?.kind === "shelf" || route?.kind === "shelfEdit" ? route.shelfId : ""}`;
-  const previousPageFocusKeyRef = useRef(pageFocusKey);
-
-  useEffect(() => {
-    if (previousPageFocusKeyRef.current === pageFocusKey) return;
-    previousPageFocusKeyRef.current = pageFocusKey;
-    mainRef.current?.focus();
-  }, [pageFocusKey]);
-
-  useEffect(() => {
-    const nextIdentity = `${selectedProfileId ?? ""}:${selectedProfile?.accessToken ?? ""}`;
-    if (connectionIdentityRef.current !== nextIdentity) clearAuthorizationFailure();
-    connectionIdentityRef.current = nextIdentity;
-  }, [clearAuthorizationFailure, selectedProfile?.accessToken, selectedProfileId]);
-
-  useEffect(() => {
-    if (route?.kind === "settings" && route.tab === "library-server") {
-      clearAuthorizationFailure();
-    }
-  }, [clearAuthorizationFailure, route]);
-
-  useEffect(() => {
-    if (!authenticationRepairRequired || !selectedProfile) return;
-    if (selectedProfile.authenticationState === "repair-required") return;
-    saveConnectionProfile(markConnectionRepairRequired(selectedProfile));
-    refreshProfiles();
-    navigateTo({ kind: "pair" }, { replace: true });
-  }, [authenticationRepairRequired, refreshProfiles, selectedProfile]);
-
-  useEffect(() => {
-    const handler = () => setRoute(parseCurrentRoute());
-    window.addEventListener("hashchange", handler);
-    return () => window.removeEventListener("hashchange", handler);
-  }, []);
 
   const { appTheme, setAppTheme } = useAppThemeLifecycle();
 
-  useEffect(() => {
-    debugLog("reader", "route changed", {
-      kind: route?.kind ?? null,
-      bookId: route?.kind === "reader" ? route.bookId : undefined,
-    });
-  }, [route]);
+  useAppConnectionRecoveryLifecycle({
+    route,
+    profile: selectedProfile,
+    authenticationRepairRequired,
+    clearAuthorizationFailure,
+    onProfileChanged: refreshProfiles,
+  });
 
   useAppAuthenticatedContextController({
     workflowStep,
@@ -152,22 +93,12 @@ function AppShell() {
     onProfileChanged: refreshProfiles,
   });
 
-  useEffect(() => {
-    clearOfflineReaderSyncNotice();
-  }, [automaticSyncGenerationKey]);
-
-  useEffect(() => {
-    if (!automaticSyncGenerationKey || !offlineNamespaceKey || !splClient) return;
-    return startOfflineReaderAuthenticatedSyncLifecycle({
-      namespaceKey: offlineNamespaceKey,
-      client: splClient,
-      generation: automaticSyncGeneration,
-      onSweepCompleted: (result) => {
-        showOfflineReaderSyncOutcome(result);
-        if (result.outcome.reauthenticateBooks > 0) requireAuthenticationRepair();
-      },
-    });
-  }, [automaticSyncGeneration, automaticSyncGenerationKey, offlineNamespaceKey, requireAuthenticationRepair, splClient]);
+  const { verifiedOfflineNamespaceKey, offlineNamespaceKey } = useAppAuthenticatedOfflineSyncLifecycle({
+    workflowStep,
+    profile: selectedProfile,
+    spl: splClient,
+    requireAuthenticationRepair,
+  });
 
   const {
     openedBook,
@@ -182,92 +113,11 @@ function AppShell() {
     spl: splClient,
     reportAuthorizationFailure,
   });
-
-  useEffect(() => {
-    if (route?.kind === "settings") setView("settings");
-    else setView("main");
-  }, [route?.kind]);
-
-  useEffect(() => {
-    if (route) return;
-    if (workflowStep === "library_home") navigateTo({ kind: "home" }, { replace: true });
-    else navigateTo({ kind: "connect" }, { replace: true });
-  }, [route, workflowStep]);
-
-  useEffect(() => {
-    // Workflow still wins over invalid routes (never bypass auth/verification).
-    if (workflowStep === "connect_server") {
-      if (route?.kind !== "connect") navigateTo({ kind: "connect" }, { replace: true });
-      return;
-    }
-    if (workflowStep === "pair_device") {
-      if (route?.kind !== "pair") navigateTo({ kind: "pair" }, { replace: true });
-      return;
-    }
-    if (workflowStep === "verify_connection") {
-      if (route?.kind !== "verify") navigateTo({ kind: "verify" }, { replace: true });
-      return;
-    }
-
-    if (workflowStep === "library_home") {
-      if (!route || route.kind === "unknown") {
-        navigateTo({ kind: "home" }, { replace: true });
-        return;
-      }
-      if (route.kind === "connect" || route.kind === "pair" || route.kind === "verify") {
-        navigateTo({ kind: "home" }, { replace: true });
-      }
-    }
-  }, [route, workflowStep]);
-
-  useEffect(() => {
-    const base = "Second Pass Reader";
-    if (!route) {
-      document.title = base;
-      return;
-    }
-    switch (route.kind) {
-      case "home":
-        document.title = `${base} - Home`;
-        return;
-      case "library":
-        document.title = `${base} - Library`;
-        return;
-      case "shelves":
-        document.title = `${base} - Shelves`;
-        return;
-      case "shelf":
-        document.title = `${base} - Shelves`;
-        return;
-      case "shelfEdit":
-        document.title = `${base} - Edit shelf`;
-        return;
-      case "sessions":
-        document.title = `${base} - Reading Sessions`;
-        return;
-      case "session":
-        document.title = `${base} - Reading Sessions`;
-        return;
-      case "settings":
-        document.title = `${base} - Settings`;
-        return;
-      case "reader":
-        document.title = openedBook?.book?.title ? `${base} - ${openedBook.book.title}` : `${base} - Reader`;
-        return;
-      case "connect":
-        document.title = `${base} - Connect`;
-        return;
-      case "pair":
-        document.title = `${base} - Pair`;
-        return;
-      case "verify":
-        document.title = `${base} - Verify`;
-        return;
-      case "unknown":
-        document.title = base;
-        return;
-    }
-  }, [openedBook?.book?.title, route]);
+  const { view, mainRef } = useAppPagePresentationLifecycle({
+    route,
+    workflowStep,
+    readerBookTitle: openedBook?.book?.title,
+  });
 
   function handleConnectionChanged() {
     clearAuthorizationFailure();
@@ -279,7 +129,6 @@ function AppShell() {
     clearActiveConnection();
     closeReader();
     refreshProfiles();
-    setView("main");
     navigateTo({ kind: "connect" }, options);
   }
 

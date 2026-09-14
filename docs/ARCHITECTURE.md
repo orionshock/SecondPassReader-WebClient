@@ -14,8 +14,10 @@ templates, server-rendered routes, or Second Pass Library runtime code.
 
 ## Startup and routing
 
-`src/app/App.tsx` selects the connection workflow or authenticated application. Main routes do not
-mount until the active connection is authenticated and its account identity is verified.
+`src/app/App.tsx` composes the connection workflow or authenticated application. The app route
+lifecycle subscribes to the hash and resolves startup and workflow redirects through one policy.
+Main routes do not mount until the active connection is authenticated and its account identity is
+verified. Route-derived page metadata supplies the document title and main-landmark focus identity.
 
 `src/app/AppNavigation.Router.ts` parses and generates these hash-route families:
 
@@ -81,8 +83,15 @@ Folders represent product or subsystem ownership. Filename suffixes identify res
 ## Major owners
 
 `App.tsx`
-: Composes the connection workflow, authenticated lifecycle, routes, global notices, and top-level
-  online/offline route selection.
+: Composes connection, routing, authenticated sync, Reader opening, presentation, and route output
+  without implementing those lifecycles.
+
+`AppRouteWorkflow.Lifecycle.ts`
+: Owns hash subscription and the deterministic startup/workflow route replacement policy.
+
+`AppAuthenticatedOfflineSync.Lifecycle.ts`
+: Owns verified namespace generations, automatic sync activation and teardown, and sync-notice
+  scope for the authenticated application.
 
 `AppReaderOpen.Controller.ts`
 : Selects server-backed or retained-local Reader opening and owns publication object URL cleanup.
