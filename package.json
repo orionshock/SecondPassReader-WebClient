@@ -15,14 +15,13 @@
     "postinstall": "patch-package",
     "dev": "vite",
     "build": "npm run build -w @secondpass/client && tsc -b && vite build",
-    "hygiene": "node tools/static-hygiene.mjs",
+    "hygiene:touched": "node tools/static-hygiene.mjs",
     "hygiene:all": "node tools/static-hygiene.mjs --all",
-    "hygiene:fix": "node tools/static-hygiene.mjs --fix",
+    "hygiene:fix:touched": "node tools/static-hygiene.mjs --fix",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:coverage:client": "vitest run packages/secondpass-client/src/__tests__ --coverage --coverage.include=packages/secondpass-client/src/**/*.ts --coverage.exclude=packages/secondpass-client/src/__tests__/** --coverage.exclude=packages/secondpass-client/src/index.ts --coverage.exclude=packages/secondpass-client/src/schemas/**",
+    "test:coverage": "vitest run --coverage && node tools/coverage-universe.mjs",
     "preview": "vite preview",
-    "verify": "npm run hygiene && npm test -- --run && npm run build"
+    "verify": "npm run hygiene:all && npm test -- --run && npm run build"
   },
   "dependencies": {
     "@likecoin/epub-ts": "0.7.2",

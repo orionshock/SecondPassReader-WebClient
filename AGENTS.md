@@ -179,6 +179,12 @@ An explanation that only says the change makes the test pass is not sufficient.
 
 Run the smallest focused validation first, followed by broader project checks when the change reaches those boundaries. Report exact commands, results, skipped checks, and relevant pre-existing failures.
 
+For ordinary implementation work, run focused affected tests first and then `npm.cmd run verify`.
+`verify` is the authoritative repository gate: all-file hygiene, the complete noninteractive test
+suite, SDK and application type checking, and the production build. Use `npm.cmd run
+hygiene:touched` only for fast local feedback. Run coverage, dependency audits, and Docker checks
+selectively when the change or investigation makes them relevant.
+
 ## Logging and diagnostics
 
 - Use the project's existing logging system. Do not introduce a parallel logging mechanism.

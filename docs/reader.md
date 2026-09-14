@@ -221,8 +221,6 @@ Diagnostic owners:
 Run after Reader changes:
 
 ```powershell
-npm.cmd run hygiene
-npm.cmd test -- --run
-npm.cmd run build
-git diff --check
+npm.cmd test -- --run <focused Reader test paths>
+npm.cmd run verify
 ```

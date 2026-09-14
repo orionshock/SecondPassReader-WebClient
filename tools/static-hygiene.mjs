@@ -136,7 +136,7 @@ function usage() {
     "Usage: node tools/static-hygiene.mjs [options]",
     "",
     "Options:",
-    "  --all                       Scan all tracked text files instead of touched files.",
+    "  --all                       Scan all tracked and untracked text files instead of touched files.",
     "  --fix                       Fix trailing whitespace and line endings.",
     "  --fix-trailing-whitespace   Trim trailing spaces and tabs.",
     "  --fix-line-endings          Normalize CRLF/CR line endings to LF.",
@@ -213,7 +213,7 @@ function allTrackedFiles() {
   return existingTextPaths(result.stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean));
 }
 
-function architectureFiles() {
+function allRepositoryFiles() {
   const paths = new Map();
   for (const path of [...allTrackedFiles(), ...touchedFiles()]) paths.set(path, path);
   return [...paths.values()];
@@ -493,10 +493,10 @@ function main(argv) {
     return 0;
   }
 
-  const paths = args.all ? allTrackedFiles() : touchedFiles();
-  const seamPaths = architectureFiles();
+  const paths = args.all ? allRepositoryFiles() : touchedFiles();
+  const seamPaths = allRepositoryFiles();
   if (args.verbose) {
-    const mode = args.all ? "all tracked" : "touched";
+    const mode = args.all ? "all repository" : "touched";
     console.log(`Scanning ${paths.length} ${mode} text file(s).`);
     for (const path of paths) console.log(`  ${repoRelative(path)}`);
   }

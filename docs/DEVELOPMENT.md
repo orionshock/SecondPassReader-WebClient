@@ -57,28 +57,57 @@ tokens or other credentials in this file.
 
 ## Validation
 
-Run the repository verification gate:
+During development, run the smallest affected Vitest files first. Touched-file hygiene is available
+for a quick local loop:
+
+```powershell
+npm.cmd run hygiene:touched
+```
+
+Before completing an ordinary change, run the authoritative repository gate:
 
 ```powershell
 npm.cmd run verify
 ```
 
-It runs repository hygiene, Vitest in noninteractive mode, and the production build. The VS Code
-`Verify: all` task runs the same script.
+It always scans the complete repository with `hygiene:all`, runs the complete application and SDK
+Vitest suite noninteractively, builds SDK declarations, type-checks the application and Vite config,
+and creates the production Vite bundle. The VS Code `Verify: all` task runs the same script.
 
-Individual commands are available when a narrower check is appropriate:
+Individual commands remain useful for diagnosis:
 
 ```powershell
-npm.cmd run hygiene
-npm.cmd test -- --run
-npm.cmd run build
+npm.cmd run hygiene:all
 npm.cmd --prefix packages/secondpass-client test
 npm.cmd --prefix packages/secondpass-client run build
-git diff --check
 ```
 
-The application and SDK tests are discovered recursively under their respective `src/__tests__/`
-directories.
+Root Vitest discovers application and SDK tests recursively under their respective
+`src/__tests__/` directories. `verify` already includes `git diff --check` through all-file hygiene.
+
+### Coverage
+
+Run coverage selectively for test-strategy or substantial correctness work:
+
+```powershell
+npm.cmd run test:coverage
+```
+
+Coverage measures executable TypeScript and TSX under the application and SDK production roots.
+Tests, test fixtures, declarations, type-only modules, entry-only bootstrap code, and the SDK barrel
+are excluded. The report is an honest diagnostic rather than a release threshold; React rendering
+and browser lifecycle code often need integration or manual evidence that line coverage cannot
+provide. A denominator guard fails if either production root disappears or the measured file/line
+universe becomes implausibly small.
+
+### Specialized checks
+
+Run `npm.cmd audit` and `npm.cmd audit --omit=dev` during dependency updates or periodic dependency
+maintenance. They require registry access and do not belong in deterministic routine verification.
+
+Run the Docker build from [deployment.md](./deployment.md) after Docker, nginx, runtime preset,
+healthcheck, dependency-install, or deployment changes. Docker validation remains separate because
+it is substantially slower and requires a working Docker environment.
 
 ## Build and preview
 
