@@ -403,7 +403,8 @@ Sign out and Forget connection and local data use complete namespace cleanup:
 2. When online, attempt one waiting coordinated sync.
 3. Re-read durable pending state.
 4. Warn before discarding unsynced work.
-5. Remove projections, covers, publication assets, Reader state, and outbox records.
+5. Remove projections, covers, publication assets, Reader state, and outbox records in one
+   IndexedDB transaction. Any store failure aborts the complete namespace deletion.
 6. Remove the active connection only after local cleanup succeeds.
 
 If remote sign-out succeeds but cleanup fails, the client retains enough local connection context

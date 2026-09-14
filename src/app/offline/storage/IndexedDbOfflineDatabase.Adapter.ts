@@ -11,6 +11,7 @@ export const OFFLINE_STORE_NAMES = {
 
 const NAMESPACE_INDEX = "namespaceKey";
 const LEGACY_ASSET_STORE_NAME = "epubAssets";
+const NAMESPACE_STORE_NAMES = Object.values(OFFLINE_STORE_NAMES);
 
 export type OfflineDatabaseOptions = {
   databaseName?: string;
@@ -121,9 +122,32 @@ export async function deleteNamespaceRecords(
   namespaceKey: string,
 ): Promise<void> {
   const transaction = database.transaction(storeName, "readwrite");
-  const cursorRequest = transaction.objectStore(storeName).index(NAMESPACE_INDEX).openCursor(namespaceKey);
+  await runTransaction(transaction, () => deleteNamespaceRecordsFromStore(
+    transaction.objectStore(storeName),
+    namespaceKey,
+  ));
+}
 
-  await runTransaction(transaction, () => new Promise<void>((resolve, reject) => {
+export async function deleteOfflineNamespaceRecords(
+  database: IDBDatabase,
+  namespaceKey: string,
+): Promise<void> {
+  // Complete namespace removal is one transaction because partial account cleanup is not recoverable.
+  const transaction = database.transaction(NAMESPACE_STORE_NAMES, "readwrite");
+  await runTransaction(transaction, () => Promise.all(
+    NAMESPACE_STORE_NAMES.map((storeName) => deleteNamespaceRecordsFromStore(
+      transaction.objectStore(storeName),
+      namespaceKey,
+    )),
+  ).then(() => undefined));
+}
+
+function deleteNamespaceRecordsFromStore(
+  store: IDBObjectStore,
+  namespaceKey: string,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const cursorRequest = store.index(NAMESPACE_INDEX).openCursor(namespaceKey);
     cursorRequest.onerror = () => reject(cursorRequest.error ?? new Error("IndexedDB cursor failed."));
     cursorRequest.onsuccess = () => {
       const cursor = cursorRequest.result;
@@ -131,11 +155,23 @@ export async function deleteNamespaceRecords(
         resolve();
         return;
       }
-      cursor.delete();
-      cursor.continue();
+      let deleteRequest: IDBRequest<undefined>;
+      try {
+        deleteRequest = cursor.delete();
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      deleteRequest.onerror = () => reject(deleteRequest.error ?? new Error("IndexedDB delete failed."));
+      deleteRequest.onsuccess = () => {
+        try {
+          cursor.continue();
+        } catch (error) {
+          reject(error);
+        }
+      };
     };
-  }),
-  );
+  });
 }
 
 function createNamespaceStore(

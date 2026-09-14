@@ -38,24 +38,24 @@ describe("offline namespace retention", () => {
     expect(repositories.close).toHaveBeenCalledOnce();
   });
 
-  it("clears every account-owned store for only the requested namespace", async () => {
+  it("delegates complete cleanup to the storage-owned atomic namespace delete", async () => {
     const repositories = repositoryBundle();
 
     await expect(removeOfflineNamespace("account-a", async () => repositories)).resolves.toEqual({ status: "removed" });
-    expect(repositories.projections.deleteNamespace).toHaveBeenCalledWith("account-a");
-    expect(repositories.publicationCovers.deleteNamespace).toHaveBeenCalledWith("account-a");
-    expect(repositories.publicationAssets.deleteNamespace).toHaveBeenCalledWith("account-a");
-    expect(repositories.readerState.deleteNamespace).toHaveBeenCalledWith("account-a");
-    expect(repositories.readerOutbox.deleteNamespace).toHaveBeenCalledWith("account-a");
+    expect(repositories.deleteNamespace).toHaveBeenCalledWith("account-a");
+    expect(repositories.projections.deleteNamespace).not.toHaveBeenCalled();
+    expect(repositories.publicationCovers.deleteNamespace).not.toHaveBeenCalled();
+    expect(repositories.publicationAssets.deleteNamespace).not.toHaveBeenCalled();
+    expect(repositories.readerState.deleteNamespace).not.toHaveBeenCalled();
+    expect(repositories.readerOutbox.deleteNamespace).not.toHaveBeenCalled();
     expect(repositories.close).toHaveBeenCalledOnce();
   });
 
   it("normalizes cleanup failure and still closes storage", async () => {
     const repositories = repositoryBundle();
-    repositories.readerState.deleteNamespace = vi.fn(async () => { throw new Error("raw IndexedDB failure"); });
+    repositories.deleteNamespace = vi.fn(async () => { throw new Error("raw IndexedDB failure"); });
 
     await expect(removeOfflineNamespace("account-a", async () => repositories)).resolves.toEqual({ status: "failed" });
-    expect(repositories.readerOutbox.deleteNamespace).not.toHaveBeenCalled();
     expect(repositories.close).toHaveBeenCalledOnce();
   });
 });
@@ -95,6 +95,7 @@ function repositoryBundle(): IndexedDbOfflineRepositories<Blob> {
       list: vi.fn(async () => []), upsertIntent: vi.fn(), remove: vi.fn(), replace: vi.fn(), recordAttempt: vi.fn(), deleteNamespace: vi.fn(async () => undefined),
     },
     readerAnnotationCommit: { commit: vi.fn() },
+    deleteNamespace: vi.fn(async () => undefined),
     close: vi.fn(),
   };
 }
