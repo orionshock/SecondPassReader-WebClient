@@ -1,9 +1,10 @@
 import { useState } from "react";
 import {
   DEBUG_LOG_CATEGORIES,
-  DEBUG_IMPORT_VERBOSE_STORAGE_KEY,
   getEnabledDebugCategories,
+  isImportDebugVerbose,
   setEnabledDebugCategories,
+  setImportDebugVerbose,
   type DebugLogCategory,
 } from "../../lib/debug/DebugLogger.Diagnostics";
 
@@ -15,7 +16,7 @@ const CATEGORY_LABELS: Record<DebugLogCategory, string> = {
 
 export function DebugLoggingSettingsPanel() {
   const [enabledCategories, setEnabledCategories] = useState<DebugLogCategory[]>(getEnabledDebugCategories);
-  const [importVerbose, setImportVerbose] = useState(() => readLocalStorageFlag(DEBUG_IMPORT_VERBOSE_STORAGE_KEY));
+  const [importVerbose, setImportVerbose] = useState(isImportDebugVerbose);
 
   function updateCategory(category: DebugLogCategory, enabled: boolean) {
     const next = enabled
@@ -40,7 +41,7 @@ export function DebugLoggingSettingsPanel() {
 
   function updateImportVerbose(enabled: boolean) {
     setImportVerbose(enabled);
-    writeLocalStorageFlag(DEBUG_IMPORT_VERBOSE_STORAGE_KEY, enabled);
+    setImportDebugVerbose(enabled);
   }
 
   const importsEnabled = enabledCategories.includes("imports");
@@ -88,21 +89,4 @@ export function DebugLoggingSettingsPanel() {
       </div>
     </section>
   );
-}
-
-function readLocalStorageFlag(key: string): boolean {
-  try {
-    return window.localStorage.getItem(key) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeLocalStorageFlag(key: string, enabled: boolean): void {
-  try {
-    if (enabled) window.localStorage.setItem(key, "1");
-    else window.localStorage.removeItem(key);
-  } catch {
-    // Ignore unavailable browser storage.
-  }
 }

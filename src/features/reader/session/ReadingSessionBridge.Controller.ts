@@ -9,6 +9,7 @@ import type {
   ReadingShellCommandValue,
   ReadingShellEvent,
 } from "../shell/ReaderShell.Types";
+import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 export function useReadingSessionBridgeController(input: {
   activeBookKey: string;
@@ -112,8 +113,9 @@ export function useReadingSessionBridgeController(input: {
         }
         return;
       case "displayError":
-        // eslint-disable-next-line no-console
-        console.error("Reader error", event.error);
+        debugWarn("reader", "renderer display failed", {
+          errorType: event.error instanceof Error ? event.error.name : typeof event.error,
+        });
         return;
       case "tocReady":
         setToc(event.toc);

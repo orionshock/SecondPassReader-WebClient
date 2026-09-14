@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEBUG_LOG_STORAGE_KEY,
+  DEBUG_IMPORT_VERBOSE_STORAGE_KEY,
   debugLog,
   getEnabledDebugCategories,
+  isImportDebugVerbose,
   isDebugEnabled,
   setEnabledDebugCategories,
+  setImportDebugVerbose,
 } from "../../lib/debug/DebugLogger.Diagnostics";
 
 describe("DebugLogger", () => {
@@ -63,6 +66,17 @@ describe("DebugLogger", () => {
     setEnabledDebugCategories(["reader"]);
 
     expect(storage.getItem(DEBUG_LOG_STORAGE_KEY)).toBe("reader");
+  });
+
+  it("owns the verbose import diagnostic setting", () => {
+    const storage = installStorage();
+
+    expect(isImportDebugVerbose()).toBe(false);
+    setImportDebugVerbose(true);
+    expect(isImportDebugVerbose()).toBe(true);
+    expect(storage.getItem(DEBUG_IMPORT_VERBOSE_STORAGE_KEY)).toBe("1");
+    setImportDebugVerbose(false);
+    expect(storage.getItem(DEBUG_IMPORT_VERBOSE_STORAGE_KEY)).toBeNull();
   });
 });
 

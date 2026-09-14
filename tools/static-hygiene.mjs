@@ -40,6 +40,9 @@ const textExts = new Set([
 ]);
 
 const entityExts = new Set([".css", ".html", ".js", ".jsx", ".ts", ".tsx"]);
+const productionSourceExts = new Set([".js", ".jsx", ".ts", ".tsx"]);
+const directConsoleOwner = "src/lib/debug/DebugLogger.Diagnostics.ts";
+const readerEngineRoot = "src/features/reader/engine/";
 const forbiddenDecorativeEntities = [
   "&middot;",
   "&#183;",
@@ -210,6 +213,20 @@ function allTrackedFiles() {
   return existingTextPaths(result.stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean));
 }
 
+function architectureFiles() {
+  const paths = new Map();
+  for (const path of [...allTrackedFiles(), ...touchedFiles()]) paths.set(path, path);
+  return [...paths.values()];
+}
+
+function isProductionApplicationSource(path) {
+  const name = repoRelative(path);
+  return name.startsWith("src/")
+    && productionSourceExts.has(extname(path).toLowerCase())
+    && !name.includes("/__tests__/")
+    && !/\.test\.[jt]sx?$/u.test(name);
+}
+
 function decodeUtf8(path) {
   try {
     return { text: utf8Decoder.decode(readFileSync(path)) };
@@ -325,6 +342,62 @@ function checkLineEndings(paths) {
   return issues;
 }
 
+function checkApplicationFetch(paths) {
+  return checkProductionPattern(
+    paths,
+    /\bfetch\s*\(/gu,
+    "raw fetch belongs in @secondpass/client; use the SDK transport interface",
+  );
+}
+
+function checkDirectConsole(paths) {
+  return checkProductionPattern(
+    paths,
+    /\bconsole\.[A-Za-z_$][\w$]*\s*\(/gu,
+    "direct console use belongs in the canonical diagnostics owner",
+    (path) => repoRelative(path) === directConsoleOwner,
+  );
+}
+
+function checkEpubTsRuntimeImports(paths) {
+  const issues = [];
+  const patterns = [
+    /\bimport\s+(?!type\b)[^;]*?\bfrom\s*["']@likecoin\/epub-ts(?:\/[^"']*)?["']/gu,
+    /\bimport\s*["']@likecoin\/epub-ts(?:\/[^"']*)?["']/gu,
+    /\bimport\s*\(\s*["']@likecoin\/epub-ts(?:\/[^"']*)?["']\s*\)/gu,
+  ];
+  for (const path of paths) {
+    if (!isProductionApplicationSource(path) || repoRelative(path).startsWith(readerEngineRoot)) continue;
+    const result = decodeUtf8(path);
+    if (!result.text) continue;
+    for (const pattern of patterns) {
+      pattern.lastIndex = 0;
+      for (const match of result.text.matchAll(pattern)) {
+        issues.push(issue(
+          path,
+          lineForOffset(result.text, match.index),
+          "runtime @likecoin/epub-ts imports belong under the Reader engine root; use the Reader bridge interface",
+        ));
+      }
+    }
+  }
+  return issues;
+}
+
+function checkProductionPattern(paths, pattern, message, allow = () => false) {
+  const issues = [];
+  for (const path of paths) {
+    if (!isProductionApplicationSource(path) || allow(path)) continue;
+    const result = decodeUtf8(path);
+    if (!result.text) continue;
+    pattern.lastIndex = 0;
+    for (const match of result.text.matchAll(pattern)) {
+      issues.push(issue(path, lineForOffset(result.text, match.index), message));
+    }
+  }
+  return issues;
+}
+
 function fixLineEndings(paths) {
   let changed = 0;
   for (const path of paths) {
@@ -421,6 +494,7 @@ function main(argv) {
   }
 
   const paths = args.all ? allTrackedFiles() : touchedFiles();
+  const seamPaths = architectureFiles();
   if (args.verbose) {
     const mode = args.all ? "all tracked" : "touched";
     console.log(`Scanning ${paths.length} ${mode} text file(s).`);
@@ -444,6 +518,9 @@ function main(argv) {
     ["Decorative HTML entities", checkDecorativeEntities(paths)],
     ["Trailing whitespace", checkTrailingWhitespace(paths)],
     ["Line endings", checkLineEndings(paths)],
+    ["Application transport seam", checkApplicationFetch(seamPaths)],
+    ["Reader engine import seam", checkEpubTsRuntimeImports(seamPaths)],
+    ["Diagnostics seam", checkDirectConsole(seamPaths)],
   ];
 
   for (const [title, issues] of checks) printIssues(title, issues);

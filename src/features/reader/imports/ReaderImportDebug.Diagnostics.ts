@@ -1,6 +1,6 @@
 import {
-  DEBUG_IMPORT_VERBOSE_STORAGE_KEY,
   debugLog,
+  isImportDebugVerbose,
 } from "../../../lib/debug/DebugLogger.Diagnostics";
 
 const DEFAULT_PREVIEW_LENGTH = 120;
@@ -17,7 +17,7 @@ export function debugReaderImport(event: string, data?: Record<string, unknown>)
 }
 
 export function isReaderImportDebugVerbose(): boolean {
-  return readDebugFlag(DEBUG_IMPORT_VERBOSE_STORAGE_KEY);
+  return isImportDebugVerbose();
 }
 
 export function previewImportText(
@@ -30,12 +30,4 @@ export function previewImportText(
   if (!compact) return "";
   if (verbose || compact.length <= maxLength) return compact;
   return `${compact.slice(0, maxLength)}...`;
-}
-
-function readDebugFlag(key: string): boolean {
-  try {
-    return typeof window !== "undefined" && window.localStorage?.getItem(key) === "1";
-  } catch {
-    return false;
-  }
 }

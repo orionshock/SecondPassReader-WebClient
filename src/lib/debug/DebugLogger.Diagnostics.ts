@@ -33,6 +33,25 @@ export function setEnabledDebugCategories(categories: readonly DebugLogCategory[
   }
 }
 
+export function isImportDebugVerbose(): boolean {
+  try {
+    return getLocalStorage()?.getItem(DEBUG_IMPORT_VERBOSE_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setImportDebugVerbose(enabled: boolean): void {
+  try {
+    const storage = getLocalStorage();
+    if (!storage) return;
+    if (enabled) storage.setItem(DEBUG_IMPORT_VERBOSE_STORAGE_KEY, "1");
+    else storage.removeItem(DEBUG_IMPORT_VERBOSE_STORAGE_KEY);
+  } catch {
+    // Debug logging must never interfere with settings changes.
+  }
+}
+
 export function debugLog(
   category: DebugLogCategory,
   message: string,

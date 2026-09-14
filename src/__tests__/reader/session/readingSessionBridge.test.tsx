@@ -14,6 +14,7 @@ describe("Reading Session renderer bridge", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -38,6 +39,25 @@ describe("Reading Session renderer bridge", () => {
         <Harness activeBookKey={activeBookKey} onValue={(value) => { bridge = value; }} />,
       ));
     }
+  });
+
+  it("routes renderer failures through bounded Reader diagnostics", async () => {
+    window.localStorage.setItem("secondpass.debug.logs", "reader");
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let bridge!: ReturnType<typeof useReadingSessionBridgeController>;
+    await act(async () => root.render(
+      <Harness activeBookKey="book-a" onValue={(value) => { bridge = value; }} />,
+    ));
+
+    act(() => bridge.handleShellEvent({
+      type: "displayError",
+      error: new TypeError("private publication URL"),
+    }));
+
+    expect(consoleWarn).toHaveBeenCalledWith(
+      "[SPR reader] renderer display failed",
+      { errorType: "TypeError" },
+    );
   });
 });
 
