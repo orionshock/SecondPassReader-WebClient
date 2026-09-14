@@ -73,6 +73,7 @@ describe("destructive connection removal", () => {
   it("revokes the remote session before local cleanup and clears the connection only after both succeed", async () => {
     const order: string[] = [];
     const onRemoved = vi.fn(() => order.push("connection"));
+    const revokeClientSession = vi.fn(async () => { order.push("remote"); });
 
     await expect(removeConnectionAndOfflineData({
       intent: "sign-out",
@@ -82,7 +83,7 @@ describe("destructive connection removal", () => {
       confirm: () => true,
       onRemoved,
       inspectNamespace: async () => summary(),
-      removeRemoteConnection: async () => { order.push("remote"); },
+      remoteSession: { client: remoteClient(revokeClientSession), clientSessionId: "session-1" },
       removeNamespace: async () => {
         order.push("namespace");
         return { status: "removed" };
@@ -90,6 +91,36 @@ describe("destructive connection removal", () => {
     })).resolves.toEqual({ status: "removed" });
 
     expect(order).toEqual(["remote", "namespace", "connection"]);
+    expect(revokeClientSession).toHaveBeenCalledWith("session-1");
+  });
+
+  it("stops before local cleanup when remote revocation fails", async () => {
+    const remoteError = new Error("remote unavailable");
+    const removeNamespace = vi.fn();
+    const onRemoved = vi.fn();
+
+    await expect(removeConnectionAndOfflineData({
+      intent: "sign-out",
+      namespaceKey: "account-a",
+      client: null,
+      connectivity: "online",
+      confirm: () => true,
+      onRemoved,
+      inspectNamespace: async () => summary(),
+      remoteSession: {
+        client: remoteClient(vi.fn().mockRejectedValue(remoteError)),
+        clientSessionId: "session-1",
+      },
+      removeNamespace,
+    })).resolves.toEqual({
+      status: "failed",
+      stage: "remote",
+      remoteCompleted: false,
+      error: remoteError,
+    });
+
+    expect(removeNamespace).not.toHaveBeenCalled();
+    expect(onRemoved).not.toHaveBeenCalled();
   });
 
   it("retains connection context when cleanup fails after remote sign-out", async () => {
@@ -103,12 +134,16 @@ describe("destructive connection removal", () => {
       confirm: () => true,
       onRemoved,
       inspectNamespace: async () => summary(),
-      removeRemoteConnection: async () => undefined,
+      remoteSession: {
+        client: remoteClient(vi.fn().mockResolvedValue(undefined)),
+        clientSessionId: "session-1",
+      },
       removeNamespace: async () => ({ status: "failed" }),
     })).resolves.toEqual({ status: "failed", stage: "cleanup", remoteCompleted: true });
 
     expect(onRemoved).not.toHaveBeenCalled();
   });
+
 });
 
 function summary(overrides: Partial<{
@@ -122,6 +157,10 @@ function summary(overrides: Partial<{
 
 function clientStub() {
   return { marginalia: { books: {} } } as never;
+}
+
+function remoteClient(revokeClientSession: (clientSessionId: string) => Promise<void>) {
+  return { account: { revokeClientSession } } as never;
 }
 
 function outcome() {

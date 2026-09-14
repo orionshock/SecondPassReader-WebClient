@@ -1,7 +1,7 @@
 import type { SecondPassDiscovery } from "./schemas/ClientApiAuth.Types";
 import type { BookDetail, CompactBook } from "./schemas/Library.Types";
 import { consumeLoginRequest, createLoginRequest, discoverSecondPass, pollLoginRequest } from "./ClientApiAuth.Api";
-import { getCurrentUser } from "./Account.Api";
+import { getCurrentUser, revokeClientSession } from "./Account.Api";
 import { getServerInfo } from "./Server.Api";
 import {
   downloadBookFile,
@@ -95,6 +95,10 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       getCurrentUser: () => {
         const auth = requireAuth(ctx);
         return getCurrentUser(auth);
+      },
+      revokeClientSession: (clientSessionId) => {
+        const auth = requireAuth(ctx);
+        return revokeClientSession(auth, clientSessionId);
       },
     },
 

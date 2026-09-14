@@ -35,6 +35,8 @@ require an access token. Missing or rejected credentials produce
 ## Account
 
 - `spl.account.getCurrentUser()`
+- `spl.account.revokeClientSession(clientSessionId)`
+  - Revokes the authenticated browser client session with `DELETE`.
 
 ## Library
 

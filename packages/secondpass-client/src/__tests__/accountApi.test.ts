@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createSecondPassClient } from "../index";
-import { installMockFetch as asMockFetch, jsonResponse } from "./SdkTestTransport.Fixtures";
+import { ApiError, createSecondPassClient } from "../index";
+import { emptyResponse, installMockFetch as asMockFetch, jsonResponse } from "./SdkTestTransport.Fixtures";
 
 describe("SDK Account API", () => {
   beforeEach(() => {
@@ -85,5 +85,35 @@ describe("SDK Account API", () => {
     });
   });
 
-});
+  it("account.revokeClientSession sends an authenticated DELETE to the encoded session endpoint", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(emptyResponse());
 
+    const spl = createSecondPassClient({
+      apiBaseUrl: "https://api.example/api/v1",
+      accessToken: "secret",
+      tokenType: "Token",
+    });
+    await expect(spl.account.revokeClientSession("browser/session 1")).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toBe("https://api.example/api/v1/accounts/me/client-sessions/browser%2Fsession%201/");
+    expect(init?.method).toBe("DELETE");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Token secret");
+    expect(init?.body).toBeUndefined();
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [403, "forbidden"],
+    [500, "http_error"],
+  ] as const)("account.revokeClientSession maps HTTP %i through ApiError", async (status, kind) => {
+    asMockFetch().mockResolvedValueOnce(new Response("revoke failed", { status }));
+    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example/api/v1", accessToken: "secret" });
+
+    const error = await spl.account.revokeClientSession("session-1").catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ kind, status, message: `Logout failed with HTTP ${status}.` });
+  });
+
+});

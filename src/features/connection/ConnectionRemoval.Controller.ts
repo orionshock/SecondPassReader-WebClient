@@ -1,3 +1,4 @@
+import type { SecondPassClient } from "@secondpass/client";
 import type { OfflineReaderSyncClient } from "../../app/offline/reader/sync/OfflineReaderSync.Actions";
 import { syncPendingOfflineReaderWork } from "../../app/offline/reader/sync/OfflineReaderPendingSync.Actions";
 import type { BrowserConnectivityStatus } from "../../app/connectivity/BrowserConnectivity.State";
@@ -22,6 +23,11 @@ export type ConnectionRemovalResult =
       error?: unknown;
     };
 
+export type RemoteClientSession = {
+  client: Pick<SecondPassClient, "account">;
+  clientSessionId: string;
+};
+
 // Keeps the verified connection available until destructive local cleanup succeeds,
 // so a failed cleanup can be retried instead of leaving inaccessible personal data.
 export async function removeConnectionAndOfflineData(input: {
@@ -31,7 +37,7 @@ export async function removeConnectionAndOfflineData(input: {
   connectivity: BrowserConnectivityStatus;
   confirm(message: string): boolean;
   onRemoved(): void;
-  removeRemoteConnection?(): Promise<void>;
+  remoteSession?: RemoteClientSession;
   inspectNamespace?: typeof inspectOfflineNamespace;
   removeNamespace?: typeof removeOfflineNamespace;
   syncPending?: typeof syncPendingOfflineReaderWork;
@@ -40,9 +46,9 @@ export async function removeConnectionAndOfflineData(input: {
   if (!namespaceKey) {
     const question = input.intent === "sign-out" ? "Sign out of this browser?" : "Forget this connection?";
     if (!input.confirm(question)) return { status: "cancelled" };
-    if (input.removeRemoteConnection) {
+    if (input.remoteSession) {
       try {
-        await input.removeRemoteConnection();
+        await revokeRemoteSession(input.remoteSession);
       } catch (error) {
         return { status: "failed", stage: "remote", remoteCompleted: false, error };
       }
@@ -79,9 +85,9 @@ export async function removeConnectionAndOfflineData(input: {
   if (!input.confirm(offlineNamespaceRemovalConfirmation(summary, input.intent))) return { status: "cancelled" };
 
   let remoteCompleted = false;
-  if (input.removeRemoteConnection) {
+  if (input.remoteSession) {
     try {
-      await input.removeRemoteConnection();
+      await revokeRemoteSession(input.remoteSession);
       remoteCompleted = true;
     } catch (error) {
       return { status: "failed", stage: "remote", remoteCompleted: false, error };
@@ -94,4 +100,8 @@ export async function removeConnectionAndOfflineData(input: {
   }
   input.onRemoved();
   return { status: "removed" };
+}
+
+function revokeRemoteSession(session: RemoteClientSession): Promise<void> {
+  return session.client.account.revokeClientSession(session.clientSessionId);
 }

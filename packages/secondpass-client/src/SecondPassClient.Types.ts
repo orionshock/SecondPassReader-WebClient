@@ -121,6 +121,7 @@ export type SecondPassClient = {
 
   account: {
     getCurrentUser(): Promise<CurrentUser>;
+    revokeClientSession(clientSessionId: string): Promise<void>;
   };
 
   library: {

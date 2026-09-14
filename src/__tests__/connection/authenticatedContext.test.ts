@@ -53,7 +53,7 @@ describe("authenticated bootstrap context", () => {
       onAppThemeChange: vi.fn(),
       route: { kind: "settings", tab: "library-server" },
       offlineNamespaceKey: null,
-      offlineSyncClient: null,
+      client: null,
       connectivity: "online",
     }));
 

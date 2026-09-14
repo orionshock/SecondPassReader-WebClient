@@ -114,6 +114,28 @@ export async function requestJson<T>(input: {
   endpointOrUrl: string;
   options?: RequestOptions;
 }): Promise<T> {
+  const res = await request(input);
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export async function requestVoid(input: {
+  apiBaseUrl: string;
+  accessToken?: string;
+  tokenType?: string;
+  endpointOrUrl: string;
+  options?: Omit<RequestOptions, "body">;
+}): Promise<void> {
+  await request(input);
+}
+
+async function request(input: {
+  apiBaseUrl: string;
+  accessToken?: string;
+  tokenType?: string;
+  endpointOrUrl: string;
+  options?: RequestOptions;
+}): Promise<Response> {
   const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -137,9 +159,7 @@ export async function requestJson<T>(input: {
     const text = await res.text().catch(() => "");
     throw createApiError(res, text, input.options?.errorMessages?.[res.status]);
   }
-
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  return res;
 }
 
 export async function requestBlob(input: {

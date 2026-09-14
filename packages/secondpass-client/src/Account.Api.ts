@@ -1,4 +1,4 @@
-import { authErrorMessages, requestJson } from "./ApiHttp.Adapter";
+import { ApiError, authErrorMessages, requestJson, requestVoid } from "./ApiHttp.Adapter";
 import type { AuthenticatedClientContext } from "./ClientContext.Policy";
 import type { CurrentUser } from "./schemas/Account.Types";
 
@@ -53,4 +53,27 @@ export async function getCurrentUser(ctx: AuthenticatedClientContext): Promise<C
       isCurator: group.is_curator === true,
     })),
   };
+}
+
+export async function revokeClientSession(
+  ctx: AuthenticatedClientContext,
+  clientSessionId: string,
+): Promise<void> {
+  try {
+    await requestVoid({
+      apiBaseUrl: ctx.apiBaseUrl,
+      accessToken: ctx.accessToken,
+      tokenType: ctx.tokenType,
+      endpointOrUrl: `/accounts/me/client-sessions/${encodeURIComponent(clientSessionId)}/`,
+      options: { method: "DELETE" },
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+    throw new ApiError({
+      kind: error.kind,
+      status: error.status,
+      statusText: error.statusText,
+      message: `Logout failed with HTTP ${error.status}.`,
+    });
+  }
 }

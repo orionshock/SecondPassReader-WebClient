@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import { ApiError } from "@secondpass/client";
+import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
@@ -15,12 +15,12 @@ import {
   type SettingsLibraryServerActionState,
 } from "./settings/SettingsLibraryServerPanel.UI";
 import { SettingsToolsPanel } from "./settings/SettingsToolsPanel.UI";
-import type { OfflineReaderSyncClient } from "./offline/reader/sync/OfflineReaderSync.Actions";
 import { OfflineSettingsPanel } from "./settings/offline/OfflineSettingsPanel.UI";
 import type { BrowserConnectivityStatus } from "./connectivity/BrowserConnectivity.State";
 import {
   removeConnectionAndOfflineData,
   type ConnectionRemovalResult,
+  type RemoteClientSession,
 } from "../features/connection/ConnectionRemoval.Controller";
 
 type Props = {
@@ -32,7 +32,7 @@ type Props = {
   onAppThemeChange: (theme: AppTheme) => void;
   route: Extract<AppRoute, { kind: "settings" }>;
   offlineNamespaceKey: string | null;
-  offlineSyncClient: OfflineReaderSyncClient | null;
+  client: SecondPassClient | null;
   connectivity: BrowserConnectivityStatus;
 };
 
@@ -45,7 +45,7 @@ export function SettingsPanel({
   onAppThemeChange,
   route,
   offlineNamespaceKey,
-  offlineSyncClient,
+  client,
   connectivity,
 }: Props) {
   const [state, setState] = useState<SettingsLibraryServerActionState>({ phase: "idle" });
@@ -115,7 +115,7 @@ export function SettingsPanel({
   }
 
   async function logOut() {
-    if (!profile?.apiBaseUrl || !profile.accessToken || !profile.clientSessionId) {
+    if (!client || !profile?.clientSessionId) {
       setState({
         phase: "error",
         action: "logout",
@@ -123,28 +123,9 @@ export function SettingsPanel({
       });
       return;
     }
-    const { apiBaseUrl, accessToken, clientSessionId, tokenType } = profile;
-
-    await removeConnection("sign-out", "logging_out", async () => {
-      const endpoint = new URL(
-        `/api/v1/accounts/me/client-sessions/${encodeURIComponent(clientSessionId)}/`,
-        apiBaseUrl,
-      );
-      const response = await fetch(endpoint, {
-        method: "DELETE",
-        headers: {
-          Authorization: `${tokenType ?? "Bearer"} ${accessToken}`,
-        },
-      });
-      if (!response.ok) {
-        const kind = response.status === 401 ? "unauthorized" : response.status === 403 ? "forbidden" : "http_error";
-        throw new ApiError({
-          kind,
-          status: response.status,
-          statusText: response.statusText,
-          message: `Logout failed with HTTP ${response.status}.`,
-        });
-      }
+    await removeConnection("sign-out", "logging_out", {
+      client,
+      clientSessionId: profile.clientSessionId,
     });
   }
 
@@ -159,18 +140,18 @@ export function SettingsPanel({
   async function removeConnection(
     intent: "sign-out" | "forget",
     phase: "logging_out" | "signing_out_locally" | "forgetting",
-    removeRemoteConnection?: () => Promise<void>,
+    remoteSession?: RemoteClientSession,
   ) {
     if (!profile || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting") return;
     setState({ phase });
     const result = await removeConnectionAndOfflineData({
       intent,
       namespaceKey: offlineNamespaceKey,
-      client: offlineSyncClient,
+      client,
       connectivity,
       confirm: (message) => window.confirm(message),
       onRemoved: onDisconnect,
-      removeRemoteConnection,
+      remoteSession,
     });
     if (result.status === "cancelled") {
       setState({ phase: "idle" });
@@ -247,7 +228,7 @@ export function SettingsPanel({
         {activeTab === "offline" ? (
           <OfflineSettingsPanel
             namespaceKey={offlineNamespaceKey}
-            client={offlineSyncClient}
+            client={client}
             selectedBookId={route.bookId ?? null}
             onSelectBook={(bookId) => navigateTo({ kind: "settings", tab: "offline", bookId })}
             onOpenReader={(bookId) => navigateTo({ kind: "reader", bookId })}

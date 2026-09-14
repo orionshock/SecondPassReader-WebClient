@@ -222,7 +222,7 @@ function AppShell() {
               onAppThemeChange={setAppTheme}
               route={route?.kind === "settings" ? route : { kind: "settings" }}
               offlineNamespaceKey={offlineNamespaceKey}
-              offlineSyncClient={splClient}
+              client={splClient}
               connectivity={browserConnectivity}
             />
           </Suspense>
