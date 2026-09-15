@@ -12,10 +12,17 @@ import {
   type OfflineNamespaceRemovalIntent,
 } from "../../app/offline/namespace/OfflineNamespaceRetention.Presenter";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
+import {
+  beginActiveConnectionPublication,
+  isActiveConnectionPublicationCurrent,
+  publishActiveConnectionResult,
+  type ConnectionProfile,
+} from "../../storage/ConnectionProfiles.Store";
 
 export type ConnectionRemovalResult =
   | { status: "removed" }
   | { status: "cancelled" }
+  | { status: "superseded" }
   | {
       status: "failed";
       stage: "inspect" | "remote" | "cleanup";
@@ -31,6 +38,7 @@ export type RemoteClientSession = {
 // Keeps the verified connection available until destructive local cleanup succeeds,
 // so a failed cleanup can be retried instead of leaving inaccessible personal data.
 export async function removeConnectionAndOfflineData(input: {
+  expectedConnection: ConnectionProfile;
   intent: OfflineNamespaceRemovalIntent;
   namespaceKey: string | null;
   client: OfflineReaderSyncClient | null;
@@ -42,6 +50,8 @@ export async function removeConnectionAndOfflineData(input: {
   removeNamespace?: typeof removeOfflineNamespace;
   syncPending?: typeof syncPendingOfflineReaderWork;
 }): Promise<ConnectionRemovalResult> {
+  const publication = beginActiveConnectionPublication(input.expectedConnection);
+  if (!publication) return { status: "superseded" };
   const namespaceKey = input.namespaceKey?.trim() ?? "";
   if (!namespaceKey) {
     const question = input.intent === "sign-out" ? "Sign out of this browser?" : "Forget this connection?";
@@ -50,11 +60,13 @@ export async function removeConnectionAndOfflineData(input: {
       try {
         await revokeRemoteSession(input.remoteSession);
       } catch (error) {
+        if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
         return { status: "failed", stage: "remote", remoteCompleted: false, error };
       }
     }
-    input.onRemoved();
-    return { status: "removed" };
+    return publishActiveConnectionResult(publication, input.onRemoved)
+      ? { status: "removed" }
+      : { status: "superseded" };
   }
 
   const inspect = input.inspectNamespace ?? inspectOfflineNamespace;
@@ -62,8 +74,10 @@ export async function removeConnectionAndOfflineData(input: {
   try {
     summary = await inspect(namespaceKey);
   } catch (error) {
+    if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
     return { status: "failed", stage: "inspect", remoteCompleted: false, error };
   }
+  if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
   if (!summary) return { status: "failed", stage: "inspect", remoteCompleted: false };
 
   if (summary.pendingIntents > 0 && input.connectivity === "online" && input.client) {
@@ -77,8 +91,10 @@ export async function removeConnectionAndOfflineData(input: {
     try {
       summary = await inspect(namespaceKey);
     } catch (error) {
+      if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
       return { status: "failed", stage: "inspect", remoteCompleted: false, error };
     }
+    if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
     if (!summary) return { status: "failed", stage: "inspect", remoteCompleted: false };
   }
 
@@ -90,16 +106,19 @@ export async function removeConnectionAndOfflineData(input: {
       await revokeRemoteSession(input.remoteSession);
       remoteCompleted = true;
     } catch (error) {
+      if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
       return { status: "failed", stage: "remote", remoteCompleted: false, error };
     }
   }
 
   const result = await (input.removeNamespace ?? removeOfflineNamespace)(namespaceKey);
+  if (!isActiveConnectionPublicationCurrent(publication)) return { status: "superseded" };
   if (result.status !== "removed") {
     return { status: "failed", stage: "cleanup", remoteCompleted };
   }
-  input.onRemoved();
-  return { status: "removed" };
+  return publishActiveConnectionResult(publication, input.onRemoved)
+    ? { status: "removed" }
+    : { status: "superseded" };
 }
 
 function revokeRemoteSession(session: RemoteClientSession): Promise<void> {

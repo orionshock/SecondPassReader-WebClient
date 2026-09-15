@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import type { SecondPassDiscovery } from "@secondpass/client";
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import {
+  beginActiveConnectionPublication,
   getActiveConnection,
+  publishActiveConnectionResult,
   saveConnectionProfile,
   touchConnectionProfileLastUsed,
   type ConnectionProfile,
@@ -90,6 +92,9 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
   }, []);
 
   async function handleConnect() {
+    const existing = getActiveConnection();
+    const publication = beginActiveConnectionPublication(existing);
+    if (!publication) return;
     setError(null);
     setBusy(true);
     try {
@@ -97,8 +102,6 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
       const summary = formatDiscoverySummary(discovery);
 
       const now = new Date().toISOString();
-      const existing = getActiveConnection();
-
       const label = summary.serverName || serverBaseUrl;
 
       const updated: ConnectionProfile = {
@@ -116,19 +119,23 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
         lastUsedAt: now,
       };
 
-      saveConnectionProfile(updated);
-      touchConnectionProfileLastUsed(updated.id, now);
-      onProfilesChanged();
-      onSelectedProfileIdChange(updated.id);
+      publishActiveConnectionResult(publication, () => {
+        saveConnectionProfile(updated);
+        touchConnectionProfileLastUsed(updated.id, now);
+        onProfilesChanged();
+        onSelectedProfileIdChange(updated.id);
+        setBusy(false);
+      });
     } catch (e) {
-      if (!(e instanceof ConnectionSetupError)) {
-        debugWarn("reader", "Second Pass Library connection was not saved", { error: e });
-      }
-      setError(e instanceof ConnectionSetupError
-        ? e.message
-        : "Couldn't connect to Second Pass Library. Check the address and try again.");
-    } finally {
-      setBusy(false);
+      publishActiveConnectionResult(publication, () => {
+        if (!(e instanceof ConnectionSetupError)) {
+          debugWarn("reader", "Second Pass Library connection was not saved", { error: e });
+        }
+        setError(e instanceof ConnectionSetupError
+          ? e.message
+          : "Couldn't connect to Second Pass Library. Check the address and try again.");
+        setBusy(false);
+      });
     }
   }
 

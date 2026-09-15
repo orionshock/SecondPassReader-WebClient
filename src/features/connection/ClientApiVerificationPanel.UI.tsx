@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CurrentUser } from "@secondpass/client";
-import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
-import { createSplClientFromProfile } from "../../app/AppSplClient.Factory";
-import { applyAuthenticatedContextToProfile } from "./ConnectionAccountProfile.Mapper";
-import { finalizeConnectionRepair } from "./ConnectionRepair.Controller";
-import { loadAuthenticatedContext } from "./AuthenticatedContext.Queries";
-import { isAuthenticationRepairError, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
+import { getConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
+import { verifyConnection } from "./ConnectionVerification.Controller";
 
 type Props = {
   selectedProfileId?: string | null;
@@ -23,13 +19,16 @@ type State =
 
 export function ClientApiVerification({ selectedProfileId, profilesVersion, onProfilesChanged, autoVerify }: Props) {
   const [state, setState] = useState<State>({ phase: "idle" });
-  const autoVerifyAttemptedRef = useRef(false);
+  const autoVerifyAttemptedRef = useRef<string | null>(null);
 
   const profile = useMemo(() => {
     if (!selectedProfileId) return null;
     void profilesVersion;
     return getConnectionProfile(selectedProfileId) ?? null;
   }, [selectedProfileId, profilesVersion]);
+  const verificationIdentity = profile
+    ? JSON.stringify([profile.id, profile.serverBaseUrl, profile.accessToken, profile.authenticationState])
+    : null;
 
   useEffect(() => {
     if (!autoVerify) return;
@@ -37,11 +36,11 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     if (!profile.accessToken) return;
     if (!profile.apiBaseUrl) return;
     if (profile.verifiedAt && profile.authenticationState !== "verifying-repair") return;
-    if (autoVerifyAttemptedRef.current) return;
-    autoVerifyAttemptedRef.current = true;
+    if (autoVerifyAttemptedRef.current === verificationIdentity) return;
+    autoVerifyAttemptedRef.current = verificationIdentity;
     void verify();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoVerify, profile?.authenticationState, profile?.id]);
+  }, [autoVerify, verificationIdentity]);
 
   async function verify() {
     if (!profile) return;
@@ -55,53 +54,38 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     }
 
     setState({ phase: "verifying" });
-    try {
-      const spl = createSplClientFromProfile(profile);
-      const { currentUser, serverInfo } = await loadAuthenticatedContext(spl);
-
-      const now = new Date().toISOString();
-      const updated: ConnectionProfile = applyAuthenticatedContextToProfile(profile, currentUser, serverInfo, now);
-
-      if (profile.authenticationState === "verifying-repair") {
-        const result = await finalizeConnectionRepair({
-          previous: profile,
-          verified: updated,
-          save: saveConnectionProfile,
-        });
-        if (result.status === "failed") {
-          debugWarn("reader", "previous account data could not be removed after connection repair", {
-            previousProfileId: profile.verifiedUser?.profileId,
-            verifiedProfileId: updated.verifiedUser?.profileId,
-          });
-          setState({
-            phase: "error",
-            message: "The connection was verified, but the previous account's offline data couldn't be removed. Try again.",
-          });
-          return;
-        }
-      } else {
-        saveConnectionProfile(updated);
-      }
+    const result = await verifyConnection({ profile });
+    if (result.status === "stale") return;
+    if (result.status === "verified") {
       onProfilesChanged?.();
-      setState({ phase: "success", me: currentUser });
-    } catch (e) {
-      if (isAuthorizationError(e)) {
-        const authenticationRejected = isAuthenticationRepairError(e);
-        if (profile.authenticationState === "verifying-repair" && authenticationRejected) {
-          saveConnectionProfile({ ...profile, authenticationState: "repair-required" });
-          onProfilesChanged?.();
-        }
-        setState({
-          phase: "error",
-          message: authenticationRejected
-            ? "Second Pass Library rejected this connection. Repair it and try again."
-            : "Second Pass Library did not allow this account to connect.",
-        });
-        return;
-      }
-      debugWarn("reader", "connection verification did not complete", { error: e });
-      setState({ phase: "error", message: "Couldn't verify the connection. Try again." });
+      setState({ phase: "success", me: result.currentUser });
+      return;
     }
+    if (result.status === "repair-cleanup-failed") {
+      debugWarn("reader", "previous account data could not be removed after connection repair", {
+        previousProfileId: result.previousProfileId,
+        verifiedProfileId: result.verifiedProfileId,
+      });
+      setState({
+        phase: "error",
+        message: "The connection was verified, but the previous account's offline data couldn't be removed. Try again.",
+      });
+      return;
+    }
+    if (result.status === "authorization-failed") {
+      if (profile.authenticationState === "verifying-repair" && result.authenticationRejected) {
+        onProfilesChanged?.();
+      }
+      setState({
+        phase: "error",
+        message: result.authenticationRejected
+          ? "Second Pass Library rejected this connection. Repair it and try again."
+          : "Second Pass Library did not allow this account to connect.",
+      });
+      return;
+    }
+    debugWarn("reader", "connection verification did not complete", { error: result.error });
+    setState({ phase: "error", message: "Couldn't verify the connection. Try again." });
   }
 
   if (!selectedProfileId) {

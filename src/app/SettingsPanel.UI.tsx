@@ -1,7 +1,12 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
-import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import {
+  beginActiveConnectionPublication,
+  isActiveConnectionPublicationCurrent,
+  publishActiveConnectionResult,
+  saveConnectionProfile,
+} from "../storage/ConnectionProfiles.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
 import { discoverSecondPass } from "../features/connection/ConnectionServer.Queries";
 import { applyAuthenticatedContextToProfile } from "../features/connection/ConnectionAccountProfile.Mapper";
@@ -79,10 +84,13 @@ export function SettingsPanel({
       setState({ phase: "error", action: "check", message: "This connection isn't authorized yet." });
       return;
     }
+    const publication = beginActiveConnectionPublication(profile);
+    if (!publication) return;
 
     setState({ phase: "checking" });
     try {
       const discovery = await discoverSecondPass(profile.serverBaseUrl);
+      if (!isActiveConnectionPublicationCurrent(publication)) return;
       const now = new Date().toISOString();
       const discoveredProfile: ConnectionProfile = {
         ...profile,
@@ -96,20 +104,24 @@ export function SettingsPanel({
       };
 
       const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromProfile(discoveredProfile));
-      saveConnectionProfile(applyAuthenticatedContextToProfile(discoveredProfile, currentUser, serverInfo, now));
-      onProfilesChanged();
-      setState({ phase: "success", message: "Connection checked." });
+      publishActiveConnectionResult(publication, () => {
+        saveConnectionProfile(applyAuthenticatedContextToProfile(discoveredProfile, currentUser, serverInfo, now));
+        onProfilesChanged();
+        setState({ phase: "success", message: "Connection checked." });
+      });
     } catch (e) {
-      if (isAuthenticationRepairError(e)) onRepairConnection();
-      setState({
-        phase: "error",
-        action: "check",
-        message: isAuthenticationRepairError(e)
-          ? "This connection needs repair."
-          : isAuthorizationError(e)
-            ? "Second Pass Library denied the connection check."
-            : "Couldn't check the connection.",
-        technicalDetail: getTechnicalErrorDetail(e),
+      publishActiveConnectionResult(publication, () => {
+        if (isAuthenticationRepairError(e)) onRepairConnection();
+        setState({
+          phase: "error",
+          action: "check",
+          message: isAuthenticationRepairError(e)
+            ? "This connection needs repair."
+            : isAuthorizationError(e)
+              ? "Second Pass Library denied the connection check."
+              : "Couldn't check the connection.",
+          technicalDetail: getTechnicalErrorDetail(e),
+        });
       });
     }
   }
@@ -145,6 +157,7 @@ export function SettingsPanel({
     if (!profile || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting") return;
     setState({ phase });
     const result = await removeConnectionAndOfflineData({
+      expectedConnection: profile,
       intent,
       namespaceKey: offlineNamespaceKey,
       client,

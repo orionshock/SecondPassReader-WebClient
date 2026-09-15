@@ -63,6 +63,14 @@ const OLD_SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export type ActiveConnection = ConnectionProfile;
 
+export type ActiveConnectionPublication = Readonly<{ token: symbol }>;
+
+let publicationGeneration = 0;
+const publicationOwnership = new WeakMap<ActiveConnectionPublication, {
+  generation: number;
+  expectedRecord: string | null;
+}>();
+
 function readActive(): ActiveConnection | null {
   const raw = localStorage.getItem(ACTIVE_CONNECTION_KEY);
   if (!raw) return null;
@@ -78,11 +86,50 @@ function readActive(): ActiveConnection | null {
 }
 
 function writeActive(connection: ActiveConnection) {
+  invalidateActiveConnectionPublications();
   localStorage.setItem(ACTIVE_CONNECTION_KEY, JSON.stringify(connection));
+}
+
+function serializedConnection(connection: ActiveConnection | null): string | null {
+  return connection ? JSON.stringify(connection) : null;
 }
 
 export function getActiveConnection(): ActiveConnection | null {
   return readActive();
+}
+
+export function beginActiveConnectionPublication(
+  expected: ActiveConnection | null,
+): ActiveConnectionPublication | null {
+  const expectedRecord = serializedConnection(expected);
+  if (serializedConnection(readActive()) !== expectedRecord) return null;
+  publicationGeneration += 1;
+  const publication = Object.freeze({ token: Symbol("active-connection-publication") });
+  publicationOwnership.set(publication, { generation: publicationGeneration, expectedRecord });
+  return publication;
+}
+
+export function isActiveConnectionPublicationCurrent(
+  publication: ActiveConnectionPublication,
+): boolean {
+  const ownership = publicationOwnership.get(publication);
+  return ownership?.generation === publicationGeneration
+    && serializedConnection(readActive()) === ownership.expectedRecord;
+}
+
+export function publishActiveConnectionResult(
+  publication: ActiveConnectionPublication,
+  publish: () => void,
+): boolean {
+  // Async verification/refresh may outlive its connection. Results publish only while both the
+  // operation generation and the exact active connection record that started it remain current.
+  if (!isActiveConnectionPublicationCurrent(publication)) return false;
+  publish();
+  return true;
+}
+
+function invalidateActiveConnectionPublications(): void {
+  publicationGeneration += 1;
 }
 
 export function saveActiveConnection(connection: ActiveConnection): void {
@@ -96,6 +143,7 @@ export function saveActiveConnection(connection: ActiveConnection): void {
 }
 
 export function clearActiveConnection(): void {
+  invalidateActiveConnectionPublications();
   localStorage.removeItem(ACTIVE_CONNECTION_KEY);
   try {
     localStorage.removeItem(OLD_PROFILES_KEY);

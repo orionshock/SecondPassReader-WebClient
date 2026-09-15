@@ -25,7 +25,7 @@ export function useAppAuthenticatedOfflineSyncLifecycle(input: {
   }, [input.profile?.serverBaseUrl, input.profile?.verifiedAt, input.profile?.verifiedUser?.profileId]);
   const offlineNamespaceKey = input.workflowStep === "library_home" ? verifiedOfflineNamespaceKey : null;
   const generationKey = offlineNamespaceKey && input.profile
-    ? JSON.stringify([offlineNamespaceKey, input.profile.id, input.profile.verifiedAt])
+    ? JSON.stringify([offlineNamespaceKey, input.profile.id, input.profile.verifiedAt, input.profile.accessToken])
     : null;
   const generation = useMemo(
     () => createOfflineReaderAuthenticatedSyncGeneration(),

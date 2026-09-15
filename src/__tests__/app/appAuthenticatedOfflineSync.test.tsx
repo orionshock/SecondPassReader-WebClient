@@ -99,6 +99,22 @@ describe("App authenticated offline sync lifecycle", () => {
     expect(clearNoticeMock).toHaveBeenCalledTimes(2);
   });
 
+  it("invalidates the sync generation when repaired credentials replace the token", () => {
+    const stopFirst = vi.fn();
+    startSyncMock.mockReturnValueOnce(stopFirst).mockReturnValueOnce(vi.fn());
+
+    act(() => root.render(
+      <Harness workflowStep="library_home" profile={profile("connection-a", "profile-a", "old-token")} spl={spl} />,
+    ));
+    act(() => root.render(
+      <Harness workflowStep="library_home" profile={profile("connection-a", "profile-a", "repaired-token")} spl={spl} />,
+    ));
+
+    expect(stopFirst).toHaveBeenCalledOnce();
+    expect(createGenerationMock).toHaveBeenCalledTimes(2);
+    expect(startSyncMock).toHaveBeenCalledTimes(2);
+  });
+
   function Harness({
     workflowStep,
     profile: selectedProfile,
@@ -118,13 +134,13 @@ describe("App authenticated offline sync lifecycle", () => {
   }
 });
 
-function profile(id: string, profileId: string): ConnectionProfile {
+function profile(id: string, profileId: string, accessToken = "token"): ConnectionProfile {
   return {
     id,
     label: "Library",
     serverBaseUrl: "https://library.example",
     apiBaseUrl: "https://library.example/api/v1",
-    accessToken: "token",
+    accessToken,
     verifiedAt: "2026-09-13T00:00:00.000Z",
     verifiedUser: { profileId, username: "reader" },
     createdAt: "2026-09-13T00:00:00.000Z",

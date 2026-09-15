@@ -1,7 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { removeConnectionAndOfflineData } from "../../features/connection/ConnectionRemoval.Controller";
+import { clearActiveConnection, saveConnectionProfile, type ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 
 describe("destructive connection removal", () => {
+  beforeEach(() => {
+    clearActiveConnection();
+    saveConnectionProfile(connection());
+  });
+
   it("syncs pending work with waiting coordination, rechecks it, then removes after confirmation", async () => {
     const inspectNamespace = vi.fn()
       .mockResolvedValueOnce(summary({ pendingIntents: 2 }))
@@ -11,6 +18,7 @@ describe("destructive connection removal", () => {
     const onRemoved = vi.fn();
 
     await expect(removeConnectionAndOfflineData({
+      expectedConnection: connection(),
       intent: "forget",
       namespaceKey: "account-a",
       client: clientStub(),
@@ -38,6 +46,7 @@ describe("destructive connection removal", () => {
     const removeNamespace = vi.fn();
 
     await expect(removeConnectionAndOfflineData({
+      expectedConnection: connection(),
       intent: "sign-out",
       namespaceKey: "account-a",
       client: clientStub(),
@@ -58,6 +67,7 @@ describe("destructive connection removal", () => {
   it("keeps the saved connection when namespace cleanup fails", async () => {
     const onRemoved = vi.fn();
     await expect(removeConnectionAndOfflineData({
+      expectedConnection: connection(),
       intent: "forget",
       namespaceKey: "account-a",
       client: null,
@@ -76,6 +86,7 @@ describe("destructive connection removal", () => {
     const revokeClientSession = vi.fn(async () => { order.push("remote"); });
 
     await expect(removeConnectionAndOfflineData({
+      expectedConnection: connection(),
       intent: "sign-out",
       namespaceKey: "account-a",
       client: null,
@@ -100,6 +111,7 @@ describe("destructive connection removal", () => {
     const onRemoved = vi.fn();
 
     await expect(removeConnectionAndOfflineData({
+      expectedConnection: connection(),
       intent: "sign-out",
       namespaceKey: "account-a",
       client: null,
@@ -127,6 +139,7 @@ describe("destructive connection removal", () => {
     const onRemoved = vi.fn();
 
     await expect(removeConnectionAndOfflineData({
+      expectedConnection: connection(),
       intent: "sign-out",
       namespaceKey: "account-a",
       client: null,
@@ -144,6 +157,28 @@ describe("destructive connection removal", () => {
     expect(onRemoved).not.toHaveBeenCalled();
   });
 
+  it("does not clear a replacement connection when an older removal completes late", async () => {
+    const inspection = deferred<ReturnType<typeof summary>>();
+    const onRemoved = vi.fn();
+    const removal = removeConnectionAndOfflineData({
+      expectedConnection: connection(),
+      intent: "forget",
+      namespaceKey: "account-a",
+      client: null,
+      connectivity: "unknown",
+      confirm: () => true,
+      onRemoved,
+      inspectNamespace: () => inspection.promise,
+      removeNamespace: async () => ({ status: "removed" }),
+    });
+    const replacement = { ...connection(), id: "connection-b" };
+    saveConnectionProfile(replacement);
+    inspection.resolve(summary());
+
+    await expect(removal).resolves.toEqual({ status: "superseded" });
+    expect(onRemoved).not.toHaveBeenCalled();
+  });
+
 });
 
 function summary(overrides: Partial<{
@@ -153,6 +188,15 @@ function summary(overrides: Partial<{
   offlineAssetBytes: number;
 }> = {}) {
   return { pendingBooks: 1, pendingIntents: 0, offlineAssetCount: 0, offlineAssetBytes: 0, ...overrides };
+}
+
+function connection(): ConnectionProfile {
+  return {
+    id: "connection-a",
+    label: "Library",
+    serverBaseUrl: "https://library.example",
+    createdAt: "2026-09-15T00:00:00.000Z",
+  };
 }
 
 function clientStub() {
@@ -179,4 +223,10 @@ function outcome() {
     droppedConfirmedDeletes: 0,
     continuedLocalUpserts: 0,
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((next) => { resolve = next; });
+  return { promise, resolve };
 }

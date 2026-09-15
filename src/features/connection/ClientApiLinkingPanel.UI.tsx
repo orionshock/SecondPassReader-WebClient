@@ -3,7 +3,13 @@ import { createSecondPassClient } from "@secondpass/client";
 import type { ClientApiLoginRequestResponse, SecondPassDiscovery } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
-import { getConnectionProfile, saveConnectionProfile, type ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import {
+  beginActiveConnectionPublication,
+  getConnectionProfile,
+  publishActiveConnectionResult,
+  saveConnectionProfile,
+  type ConnectionProfile,
+} from "../../storage/ConnectionProfiles.Store";
 import { isProfileLinked } from "./ConnectionStatus.Presenter";
 import { buildDefaultDeviceName } from "./DefaultDeviceName.Presenter";
 import { getPairingErrorMessage, runPairingAttempt } from "./PairingFlow.Controller";
@@ -83,12 +89,14 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
       return;
     }
 
-    setNextPollAt(null);
-    setState({ phase: "starting" });
-
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
+    const publication = beginActiveConnectionPublication(profile);
+    if (!publication) return;
+
+    setNextPollAt(null);
+    setState({ phase: "starting" });
 
     try {
       const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "" });
@@ -97,32 +105,38 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         discovery,
         clientName: clientName.trim(),
         signal: abort.signal,
-        onLoginRequest: (loginRequest) => setState({ phase: "waiting", loginRequest }),
+        onLoginRequest: (loginRequest) => {
+          publishActiveConnectionResult(publication, () => setState({ phase: "waiting", loginRequest }));
+        },
         onPollScheduled: (nextAt) => {
-          setNextPollAt(nextAt);
+          publishActiveConnectionResult(publication, () => setNextPollAt(nextAt));
         },
         onConsumed: (consumed) => {
-          const now = new Date().toISOString();
-          const updated: ConnectionProfile = {
-            ...profile,
-            accessToken: consumed.accessToken,
-            tokenType: consumed.tokenType,
-            clientSessionId: consumed.clientSession.id,
-            clientSessionName: consumed.clientSession.name || clientName.trim() || profile.clientSessionName,
-            linkedAt: now,
-            lastUsedAt: now,
-            authenticationState: profile.authenticationState === "repair-required" ? "verifying-repair" : profile.authenticationState,
-          };
-          saveConnectionProfile(updated);
-          onProfilesChanged?.();
-          setNextPollAt(null);
-          setState({ phase: "success" });
+          publishActiveConnectionResult(publication, () => {
+            const now = new Date().toISOString();
+            const updated: ConnectionProfile = {
+              ...profile,
+              accessToken: consumed.accessToken,
+              tokenType: consumed.tokenType,
+              clientSessionId: consumed.clientSession.id,
+              clientSessionName: consumed.clientSession.name || clientName.trim() || profile.clientSessionName,
+              linkedAt: now,
+              lastUsedAt: now,
+              authenticationState: profile.authenticationState === "repair-required" ? "verifying-repair" : profile.authenticationState,
+            };
+            saveConnectionProfile(updated);
+            onProfilesChanged?.();
+            setNextPollAt(null);
+            setState({ phase: "success" });
+          });
         },
       });
     } catch (e) {
       if (abort.signal.aborted) return;
-      setNextPollAt(null);
-      setState({ phase: "error", message: getPairingErrorMessage(e) });
+      publishActiveConnectionResult(publication, () => {
+        setNextPollAt(null);
+        setState({ phase: "error", message: getPairingErrorMessage(e) });
+      });
     }
   }
 

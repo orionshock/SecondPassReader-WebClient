@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
-import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import {
+  beginActiveConnectionPublication,
+  publishActiveConnectionResult,
+  saveConnectionProfile,
+} from "../storage/ConnectionProfiles.Store";
 import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
@@ -30,14 +34,16 @@ export function useAppAuthenticatedContextController({
     if (!profile.apiBaseUrl || !profile.accessToken || !spl) return;
 
     const profileId = profile.id;
+    const refreshIdentity = JSON.stringify([profileId, profile.accessToken]);
     const now = Date.now();
-    const last = lastCheckRef.current[profileId] ?? 0;
+    const last = lastCheckRef.current[refreshIdentity] ?? 0;
     if (now - last < 60_000) return; // throttle (avoid spamming)
-    lastCheckRef.current[profileId] = now;
+    lastCheckRef.current[refreshIdentity] = now;
+    const publication = beginActiveConnectionPublication(profile);
+    if (!publication) return;
 
     try {
       const { currentUser, serverInfo } = await loadAuthenticatedContext(spl);
-      clearAuthorizationFailure();
       const nextProfile = applyAuthenticatedContextToProfile(
         profile,
         currentUser,
@@ -46,13 +52,14 @@ export function useAppAuthenticatedContextController({
         { markVerified: false },
       );
       const changed = hasCurrentAccountProfileChanged(profile, nextProfile);
-
-      if (!changed) return;
-
-      saveConnectionProfile(nextProfile);
-      onProfileChanged();
+      publishActiveConnectionResult(publication, () => {
+        clearAuthorizationFailure();
+        if (!changed) return;
+        saveConnectionProfile(nextProfile);
+        onProfileChanged();
+      });
     } catch (error) {
-      reportAuthorizationFailure(error);
+      publishActiveConnectionResult(publication, () => reportAuthorizationFailure(error));
       // Auth failure enters repair without destroying the last verified namespace.
     }
   }, [clearAuthorizationFailure, onProfileChanged, profile, reportAuthorizationFailure, spl, workflowStep]);

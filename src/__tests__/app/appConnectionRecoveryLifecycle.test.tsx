@@ -7,7 +7,14 @@ import { saveConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 import type { AppRoute } from "../../app/AppNavigation.Router";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 
-vi.mock("../../storage/ConnectionProfiles.Store", () => ({ saveConnectionProfile: vi.fn() }));
+vi.mock("../../storage/ConnectionProfiles.Store", () => ({
+  saveConnectionProfile: vi.fn(),
+  beginActiveConnectionPublication: vi.fn(() => ({ generation: 1, expectedRecord: "connection" })),
+  publishActiveConnectionResult: vi.fn((_publication: unknown, publish: () => void) => {
+    publish();
+    return true;
+  }),
+}));
 
 const saveProfileMock = vi.mocked(saveConnectionProfile);
 

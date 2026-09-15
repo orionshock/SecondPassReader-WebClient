@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { AppRoute } from "./AppNavigation.Router";
 import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
-import { saveConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import {
+  beginActiveConnectionPublication,
+  publishActiveConnectionResult,
+  saveConnectionProfile,
+} from "../storage/ConnectionProfiles.Store";
 import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
 
 export function useAppConnectionRecoveryLifecycle(input: {
@@ -29,7 +33,12 @@ export function useAppConnectionRecoveryLifecycle(input: {
   useEffect(() => {
     if (!input.authenticationRepairRequired || !input.profile) return;
     if (input.profile.authenticationState === "repair-required") return;
-    saveConnectionProfile(markConnectionRepairRequired(input.profile));
-    input.onProfileChanged();
+    const profile = input.profile;
+    const publication = beginActiveConnectionPublication(profile);
+    if (!publication) return;
+    publishActiveConnectionResult(publication, () => {
+      saveConnectionProfile(markConnectionRepairRequired(profile));
+      input.onProfileChanged();
+    });
   }, [input.authenticationRepairRequired, input.onProfileChanged, input.profile]);
 }

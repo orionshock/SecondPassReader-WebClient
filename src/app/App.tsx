@@ -6,8 +6,10 @@ import { ConnectServerScreen } from "../features/connection/ConnectServerPage.UI
 import { getAppWorkflowStep } from "./AppWorkflow.Policy";
 import { navigateTo } from "./AppNavigation.Router";
 import {
+  beginActiveConnectionPublication,
   clearActiveConnection,
   getActiveConnection,
+  publishActiveConnectionResult,
   saveConnectionProfile,
   type ConnectionProfile,
 } from "../storage/ConnectionProfiles.Store";
@@ -125,11 +127,15 @@ function AppShell() {
   }
 
   function returnToConnect(options?: { replace?: boolean }) {
-    clearAuthorizationFailure();
-    clearActiveConnection();
-    closeReader();
-    refreshProfiles();
-    navigateTo({ kind: "connect" }, options);
+    const publication = beginActiveConnectionPublication(selectedProfile);
+    if (!publication) return;
+    publishActiveConnectionResult(publication, () => {
+      clearAuthorizationFailure();
+      clearActiveConnection();
+      closeReader();
+      refreshProfiles();
+      navigateTo({ kind: "connect" }, options);
+    });
   }
 
   function handleDisconnect() {
@@ -138,9 +144,13 @@ function AppShell() {
 
   function handleRepairConnection() {
     if (!selectedProfile) return;
-    saveConnectionProfile(markConnectionRepairRequired(selectedProfile));
-    refreshProfiles();
-    navigateTo({ kind: "pair" });
+    const publication = beginActiveConnectionPublication(selectedProfile);
+    if (!publication) return;
+    publishActiveConnectionResult(publication, () => {
+      saveConnectionProfile(markConnectionRepairRequired(selectedProfile));
+      refreshProfiles();
+      navigateTo({ kind: "pair" });
+    });
   }
 
   async function handleCancelPairing(): Promise<"completed" | "cancelled" | "failed"> {
@@ -150,6 +160,7 @@ function AppShell() {
     }
 
     const result = await removeConnectionAndOfflineData({
+      expectedConnection: selectedProfile,
       intent: "sign-out",
       namespaceKey: verifiedOfflineNamespaceKey,
       client: null,
@@ -157,7 +168,9 @@ function AppShell() {
       confirm: (message) => window.confirm(message),
       onRemoved: () => returnToConnect({ replace: true }),
     });
-    return result.status === "removed" ? "completed" : result.status;
+    return result.status === "removed" ? "completed"
+      : result.status === "superseded" ? "cancelled"
+        : result.status;
   }
 
   return (

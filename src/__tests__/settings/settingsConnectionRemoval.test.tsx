@@ -5,6 +5,7 @@ import { ApiError, type SecondPassClient } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPanel } from "../../app/SettingsPanel.UI";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { saveConnectionProfile } from "../../storage/ConnectionProfiles.Store";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -65,6 +66,7 @@ describe("Settings connection removal", () => {
 });
 
 function renderSettings(input: { client: SecondPassClient; onDisconnect(): void }) {
+  saveConnectionProfile(profile());
   act(() => root.render(
     <SettingsPanel
       profile={profile()}
