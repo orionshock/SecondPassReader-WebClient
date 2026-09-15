@@ -136,6 +136,23 @@ class InMemoryOfflineReaderStateRepository implements OfflineReaderStateReposito
     this.storage.states.set(scopedKey(state.namespaceKey, state.bookId), clone(state));
   }
 
+  async updateBookState(
+    namespaceKey: string,
+    bookId: string,
+    mutation: (current: OfflineReaderBookState) => OfflineReaderBookState,
+  ) {
+    const key = scopedKey(namespaceKey, bookId);
+    const current = this.storage.states.get(key);
+    if (!current) return { status: "missing" } as const;
+    const next = mutation(clone(current));
+    if (next.namespaceKey !== namespaceKey || next.bookId !== bookId) {
+      throw new Error("Reader state mutation cannot change record identity.");
+    }
+    const state = clone(next);
+    this.storage.states.set(key, state);
+    return { status: "committed", state: clone(state) } as const;
+  }
+
   async deleteBookState(namespaceKey: string, bookId: string): Promise<void> {
     this.storage.states.delete(scopedKey(namespaceKey, bookId));
   }

@@ -89,7 +89,7 @@ function repositoryBundle(): IndexedDbOfflineRepositories<Blob> {
       get: vi.fn(), put: vi.fn(), delete: vi.fn(), deleteNamespace: vi.fn(async () => undefined),
     },
     readerState: {
-      getBookState: vi.fn(), putBookState: vi.fn(), deleteBookState: vi.fn(), deleteNamespace: vi.fn(async () => undefined),
+      getBookState: vi.fn(), putBookState: vi.fn(), updateBookState: vi.fn(), deleteBookState: vi.fn(), deleteNamespace: vi.fn(async () => undefined),
     },
     readerOutbox: {
       list: vi.fn(async () => []), upsertIntent: vi.fn(), remove: vi.fn(), replace: vi.fn(), recordAttempt: vi.fn(), deleteNamespace: vi.fn(async () => undefined),

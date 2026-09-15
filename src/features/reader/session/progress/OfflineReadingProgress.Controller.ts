@@ -8,7 +8,6 @@ import {
   type ReplaceReaderProgressIntent,
 } from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
 import { canWriteLocalReaderState } from "../../../../app/offline/reader/continuity/OfflineReaderSession.Policy";
-import { updateOfflineReaderBookState } from "../../../../app/offline/reader/continuity/OfflineReaderStateWrite.Coordinator";
 import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import { buildSavedReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
 
@@ -115,18 +114,18 @@ export class OfflineReadingProgressController {
 
       try {
         // State precedes intent: an outbox write must never refer to progress that was not made durable.
-        const nextState = await updateOfflineReaderBookState({
-          namespaceKey: this.input.initialState.namespaceKey,
-          bookId: this.input.initialState.bookId,
-          fallbackState: this.input.initialState,
-          repository: this.input.stateRepository,
-          update: (currentState) => {
+        const update = await this.input.stateRepository.updateBookState(
+          this.input.initialState.namespaceKey,
+          this.input.initialState.bookId,
+          (currentState) => {
             if (!canWriteLocalReaderState(currentState.session)) {
               throw new Error("Offline Reader Session is not writable.");
             }
             return { ...currentState, progress };
           },
-        });
+        );
+        if (update.status === "missing") throw new Error("Offline Reader state no longer exists.");
+        const nextState = update.state;
         if (generation !== this.generation) return;
 
         const serverSessionId = nextState.session.kind === "server-confirmed"

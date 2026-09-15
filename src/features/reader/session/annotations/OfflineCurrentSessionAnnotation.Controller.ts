@@ -8,7 +8,6 @@ import type {
   OfflineReaderBookState,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
 import { canWriteLocalReaderState } from "../../../../app/offline/reader/continuity/OfflineReaderSession.Policy";
-import { coordinateOfflineReaderBookStateWrite } from "../../../../app/offline/reader/continuity/OfflineReaderStateWrite.Coordinator";
 import type { LocalReaderAnnotationCommitRepository } from "../../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 import { applyAnnotationMutation, projectionClientId } from "../../../../app/offline/reader/annotations/ReaderAnnotationDesiredState.Policy";
 import type { CurrentSessionAnnotationMutation } from "./CurrentSessionAnnotation.Types";
@@ -160,17 +159,13 @@ export class OfflineCurrentSessionAnnotationController {
       this.assertWritable();
       while (this.pendingMutations.length > 0) {
         const pending = this.pendingMutations[0];
-        const result = await coordinateOfflineReaderBookStateWrite({
+        const result = await this.input.annotationCommitRepository.commit({
+          kind: "author",
           namespaceKey: this.input.initialState.namespaceKey,
           bookId: this.input.initialState.bookId,
-          write: () => this.input.annotationCommitRepository.commit({
-            kind: "author",
-            namespaceKey: this.input.initialState.namespaceKey,
-            bookId: this.input.initialState.bookId,
-            authority: this.input.initialState.session,
-            expectedRevision: this.revision,
-            ...pending,
-          }),
+          authority: this.input.initialState.session,
+          expectedRevision: this.revision,
+          ...pending,
         });
         if (result.status !== "committed") throw new Error(`Local annotation commit: ${result.status}`);
         this.revision = result.state.annotationRevision;

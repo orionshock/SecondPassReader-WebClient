@@ -36,11 +36,13 @@ describe("offline reading progress lifecycle", () => {
     const factories = createInMemoryOfflineRepositoryFactories();
     const readerState = await factories.createReaderStateRepository();
     const readerOutbox = await factories.createReaderOutboxRepository();
+    const localBootstrap = bootstrap();
+    await readerState.putBookState(localBootstrap.continuity);
     const close = vi.fn();
     const openRepositories = vi.fn(async () => ({ readerState, readerOutbox, close }));
 
     await act(async () => root.render(
-      <Harness bootstrap={bootstrap()} openRepositories={openRepositories} />,
+      <Harness bootstrap={localBootstrap} openRepositories={openRepositories} />,
     ));
     await act(async () => Promise.resolve());
     act(() => root.unmount());

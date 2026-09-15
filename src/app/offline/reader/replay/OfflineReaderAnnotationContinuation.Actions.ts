@@ -6,7 +6,6 @@ import type {
   ReaderOutboxRepository,
 } from "../../storage/OfflineRepositories.Types";
 
-import { coordinateOfflineReaderBookStateWrite } from "../continuity/OfflineReaderStateWrite.Coordinator";
 import type { ReaderOutboxIntent } from "../outbox/ReaderOutbox.Policy";
 import { sortReaderIntentsForReplay } from "./ReaderReplay.Policy";
 
@@ -59,16 +58,12 @@ export async function prepareOfflineReaderAnnotationContinuation(input: {
   try {
     // Projection and intent identity are one continuation invariant. The IndexedDB implementation
     // commits both stores together; exact intent revisions make stale transforms no-ops.
-    const committed = await coordinateOfflineReaderBookStateWrite({
+    const committed = await input.annotationCommitRepository.commit({
       namespaceKey: input.namespaceKey,
       bookId: input.bookId,
-      write: () => input.annotationCommitRepository.commit({
-        namespaceKey: input.namespaceKey,
-        bookId: input.bookId,
-        kind: "continue",
-        targetSessionId: input.toSessionId,
-        transforms,
-      }),
+      kind: "continue",
+      targetSessionId: input.toSessionId,
+      transforms,
     });
     if (committed.status === "no-local-state") return { status: "no-local-state" };
     if (committed.status === "conflict" || committed.status === "not-writable") return { status: "failed" };

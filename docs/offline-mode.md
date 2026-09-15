@@ -62,6 +62,11 @@ namespace-indexed stores:
 Repositories return detached values and expose namespace-scoped deletion. Persistence failures do
 not fall back silently to `localStorage` or memory.
 
+Reader continuity is one shared record with independent progress, annotation, and Session writers.
+Existing-record mutations reread and write that record in one IndexedDB transaction, preserving
+sibling fields committed by another tab. A mutation that finds no current record reports it missing
+instead of recreating continuity from a stale snapshot.
+
 Small synchronous preferences remain in browser storage outside this database. See
 [DEVELOPMENT.md](./DEVELOPMENT.md) for the local-data summary.
 
@@ -248,6 +253,8 @@ Provisional IDs are never sent as server IDs, and `start-over` is never automati
 Settled offline movement persists the latest CFI, integer percentage, and stable location label.
 Writes are debounced. Reader hide, page exit, or close requests a bounded local-only flush.
 Reader state is written before its coalesced `replace-progress` intent.
+These are intentionally separate durability steps: resume progress may survive an outbox failure,
+and later retry can restore delivery work. They are not one atomic progress-plus-outbox commit.
 
 Offline reopen uses durable local progress. CFI strings are never compared for recency. Exact
 revision acknowledgement prevents a stale response from clearing newer movement.

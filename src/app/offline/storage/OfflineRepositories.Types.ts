@@ -85,10 +85,19 @@ export type OfflineReaderBookState = {
   annotationRevision: number;
 };
 
+export type OfflineReaderStateUpdateResult =
+  | { status: "committed"; state: OfflineReaderBookState }
+  | { status: "missing" };
+
 // Reader continuity is local desired state; it is not an authoritative server projection.
 export interface OfflineReaderStateRepository {
   getBookState(namespaceKey: string, bookId: string): Promise<OfflineReaderBookState | null>;
   putBookState(state: OfflineReaderBookState): Promise<void>;
+  updateBookState(
+    namespaceKey: string,
+    bookId: string,
+    mutation: (current: OfflineReaderBookState) => OfflineReaderBookState,
+  ): Promise<OfflineReaderStateUpdateResult>;
   deleteBookState(namespaceKey: string, bookId: string): Promise<void>;
   deleteNamespace(namespaceKey: string): Promise<void>;
 }

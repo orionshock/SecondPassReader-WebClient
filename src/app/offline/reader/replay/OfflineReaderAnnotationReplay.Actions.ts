@@ -20,7 +20,6 @@ import {
   isOfflineReaderIntentEligible,
   type OfflineReaderAttemptMode,
 } from "../retry/OfflineReaderRetryEligibility.Policy";
-import { updateOfflineReaderBookState } from "../continuity/OfflineReaderStateWrite.Coordinator";
 import {
   readerIntentResourceKey,
   type ReaderOutboxIntent,
@@ -188,27 +187,20 @@ async function deliver(
 
   if (!Array.isArray(response.annotations)) return { status: "failed" };
   let currentIntents: ReaderOutboxIntent[];
-  let fallbackState: Awaited<ReturnType<OfflineReaderStateRepository["getBookState"]>>;
   try {
-    [currentIntents, fallbackState] = await Promise.all([
-      input.outboxRepository.list(input.namespaceKey),
-      input.stateRepository.getBookState(input.namespaceKey, input.bookId),
-    ]);
+    currentIntents = await input.outboxRepository.list(input.namespaceKey);
   } catch {
     return { status: "failed" };
   }
-  if (!fallbackState) return { status: "no-local-state" };
 
   const pending = annotationIntents(currentIntents, input.bookId).filter((candidate) => (
     !intents.some((delivered) => sameIntentRevision(candidate, delivered))
   ));
   try {
-    await updateOfflineReaderBookState({
-      namespaceKey: input.namespaceKey,
-      bookId: input.bookId,
-      fallbackState,
-      repository: input.stateRepository,
-      update: (current) => ({
+    const update = await input.stateRepository.updateBookState(
+      input.namespaceKey,
+      input.bookId,
+      (current) => ({
         ...current,
         annotations: mergeAuthoritativeReaderAnnotations({
           authoritative: response.annotations,
@@ -219,7 +211,8 @@ async function deliver(
           pending,
         }),
       }),
-    });
+    );
+    if (update.status === "missing") return { status: "no-local-state" };
   } catch {
     return { status: "failed" };
   }

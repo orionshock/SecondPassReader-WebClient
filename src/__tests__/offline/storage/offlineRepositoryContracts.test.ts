@@ -240,6 +240,30 @@ function defineOfflineRepositoryContractTests(
       expect(await repository.getBookState("account-b", "book-1")).toEqual(otherAccount);
     });
 
+    it("updates an existing Reader record without exposing stored state", async () => {
+      const repository = await factories.createReaderStateRepository();
+      await repository.putBookState(readerState("account-a", "book-1", "epubcfi(/6/2)"));
+
+      const result = await repository.updateBookState("account-a", "book-1", (current) => ({
+        ...current,
+        progress: { ...current.progress!, cfi: "epubcfi(/6/8)" },
+      }));
+      expect(result.status).toBe("committed");
+      if (result.status !== "committed") throw new Error("Reader state update failed");
+      result.state.progress!.cfi = "changed-after-update";
+
+      expect((await repository.getBookState("account-a", "book-1"))?.progress?.cfi)
+        .toBe("epubcfi(/6/8)");
+    });
+
+    it("reports missing instead of creating Reader state during an update", async () => {
+      const repository = await factories.createReaderStateRepository();
+
+      await expect(repository.updateBookState("account-a", "book-1", (current) => current))
+        .resolves.toEqual({ status: "missing" });
+      expect(await repository.getBookState("account-a", "book-1")).toBeNull();
+    });
+
     it("isolates targeted Reader-state deletion and namespace purge", async () => {
       const repository = await factories.createReaderStateRepository();
       const retainedBook = readerState("account-a", "book-2", "epubcfi(/6/4)");

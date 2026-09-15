@@ -43,7 +43,7 @@ describe("offline reading progress durability", () => {
     controller.update(progress("epubcfi(/6/4)", 20));
     controller.update(progress("epubcfi(/6/8)", 30));
     await vi.advanceTimersByTimeAsync(749);
-    expect(await repositories.stateRepository.getBookState("account-a", "book-1")).toBeNull();
+    expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.progress).toBeNull();
     await vi.advanceTimersByTimeAsync(1);
 
     expect((await repositories.stateRepository.getBookState("account-a", "book-1"))?.progress)
@@ -98,7 +98,7 @@ describe("offline reading progress durability", () => {
 
   it("does not create delivery intent when the durable state write fails", async () => {
     const repositories = await inMemoryRepositories();
-    repositories.stateRepository.putBookState = vi.fn(async () => {
+    repositories.stateRepository.updateBookState = vi.fn(async () => {
       throw new Error("quota detail");
     });
     const controller = controllerFor(repositories);
@@ -106,6 +106,19 @@ describe("offline reading progress durability", () => {
     controller.update(progress("epubcfi(/6/8)", 30));
     await expect(controller.flushNow()).resolves.toBeUndefined();
 
+    expect(await repositories.outboxRepository.list("account-a")).toEqual([]);
+    expect(controller.getState()).toEqual({ status: "error", dirty: true });
+  });
+
+  it("does not recreate Reader state removed before a progress update", async () => {
+    const repositories = await inMemoryRepositories();
+    const controller = controllerFor(repositories);
+    await repositories.stateRepository.deleteBookState("account-a", "book-1");
+
+    controller.update(progress("epubcfi(/6/8)", 30));
+    await controller.flushNow();
+
+    expect(await repositories.stateRepository.getBookState("account-a", "book-1")).toBeNull();
     expect(await repositories.outboxRepository.list("account-a")).toEqual([]);
     expect(controller.getState()).toEqual({ status: "error", dirty: true });
   });
@@ -179,6 +192,7 @@ describe("offline reading progress durability", () => {
     const indexedDb = new IDBFactory();
     const options = { indexedDb, databaseName: "offline-progress-reopen" };
     const first = await openIndexedDbOfflineRepositories(options);
+    await first.readerState.putBookState(initialState());
     const controller = new OfflineReadingProgressController({
       initialState: initialState(),
       stateRepository: first.readerState,
@@ -205,10 +219,12 @@ type Repositories = {
 
 async function inMemoryRepositories(): Promise<Repositories> {
   const factories = createInMemoryOfflineRepositoryFactories();
-  return {
+  const repositories = {
     stateRepository: await factories.createReaderStateRepository(),
     outboxRepository: await factories.createReaderOutboxRepository(),
   };
+  await repositories.stateRepository.putBookState(initialState());
+  return repositories;
 }
 
 function controllerFor(repositories: Repositories) {

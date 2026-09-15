@@ -5,7 +5,6 @@ import type {
   ReaderOutboxRepository,
 } from "../../storage/OfflineRepositories.Types";
 import { classifyOfflineDeliveryFailure } from "../retry/OfflineRetry.Policy";
-import { updateOfflineReaderBookState } from "../continuity/OfflineReaderStateWrite.Coordinator";
 import { readerIntentResourceKey } from "../outbox/ReaderOutbox.Policy";
 
 export type ReaderSessionAuthority = {
@@ -82,14 +81,12 @@ async function reconcile(
     return mapAuthorityFailure(error);
   }
 
-  let state: OfflineReaderBookState;
+  let update: Awaited<ReturnType<OfflineReaderStateRepository["updateBookState"]>>;
   try {
-    state = await updateOfflineReaderBookState({
-      namespaceKey: input.namespaceKey,
-      bookId: input.bookId,
-      fallbackState: existing,
-      repository: input.stateRepository,
-      update: (current) => ({
+    update = await input.stateRepository.updateBookState(
+      input.namespaceKey,
+      input.bookId,
+      (current) => ({
         ...current,
         session: {
           kind: "server-confirmed",
@@ -98,10 +95,12 @@ async function reconcile(
           lastKnownServerStatus: "active",
         },
       }),
-    });
+    );
   } catch {
     return { status: "failed" };
   }
+  if (update.status === "missing") return { status: "no-local-state" };
+  const state = update.state;
 
   let establishIntentRemoved = false;
   try {

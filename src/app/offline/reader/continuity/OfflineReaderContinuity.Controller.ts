@@ -47,26 +47,30 @@ export async function loadOrCreateOfflineReaderContinuity(
 async function loadOrCreate(input: OfflineReaderContinuityInput): Promise<OfflineReaderContinuityResult> {
   const { namespaceKey, bookId } = input;
   const existing = await input.stateRepository.getBookState(namespaceKey, bookId);
+  if (!existing) return createContinuity(input);
+
   const selected = selectOfflineReaderSession({
-    existingSession: existing?.session,
+    existingSession: existing.session,
     generateLocalId: input.generateLocalId,
   });
-  const state = selected.source === "created-provisional"
-    ? {
-        namespaceKey,
-        bookId,
-        schemaVersion: 1,
-        session: selected.session,
-        progress: existing?.progress ?? null,
-        annotations: existing?.annotations ?? [],
-        annotationRevision: existing ? existing.annotationRevision : 0,
-      }
-    : existing!;
-
+  let state = existing;
+  let selection = selected.source;
   if (selected.source === "created-provisional") {
-    await input.stateRepository.putBookState(state);
+    let currentSelection = selected;
+    const update = await input.stateRepository.updateBookState(namespaceKey, bookId, (current) => {
+      currentSelection = selectOfflineReaderSession({
+        existingSession: current.session,
+        generateLocalId: input.generateLocalId,
+      });
+      return currentSelection.source === "created-provisional"
+        ? { ...current, session: currentSelection.session }
+        : current;
+    });
+    if (update.status === "missing") return createContinuity(input);
+    state = update.state;
+    selection = currentSelection.source;
   }
-  if (isProvisionalReaderSession(selected.session)) {
+  if (isProvisionalReaderSession(state.session)) {
     await input.outboxRepository.upsertIntent({
       type: "establish-session",
       namespaceKey,
@@ -74,5 +78,27 @@ async function loadOrCreate(input: OfflineReaderContinuityInput): Promise<Offlin
     });
   }
 
+  return { state, selection };
+}
+
+async function createContinuity(
+  input: OfflineReaderContinuityInput,
+): Promise<OfflineReaderContinuityResult> {
+  const selected = selectOfflineReaderSession({ generateLocalId: input.generateLocalId });
+  const state: OfflineReaderBookState = {
+    namespaceKey: input.namespaceKey,
+    bookId: input.bookId,
+    schemaVersion: 1,
+    session: selected.session,
+    progress: null,
+    annotations: [],
+    annotationRevision: 0,
+  };
+  await input.stateRepository.putBookState(state);
+  await input.outboxRepository.upsertIntent({
+    type: "establish-session",
+    namespaceKey: input.namespaceKey,
+    bookId: input.bookId,
+  });
   return { state, selection: selected.source };
 }

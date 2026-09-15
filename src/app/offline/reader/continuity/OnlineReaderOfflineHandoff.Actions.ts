@@ -11,7 +11,6 @@ import type {
   OfflineReaderStateRepository,
   ReaderOutboxRepository,
 } from "../../storage/OfflineRepositories.Types";
-import { updateOfflineReaderBookState } from "./OfflineReaderStateWrite.Coordinator";
 import { selectOfflineReaderSession } from "./OfflineReaderSession.Policy";
 
 export type OnlineReaderOfflineHandoffResult = {
@@ -43,28 +42,34 @@ export async function establishOnlineReaderOfflineHandoff(input: {
     existing?.progress
       && pendingForBook.some((intent) => intent.type === "replace-progress"),
   );
-  const fallbackState = buildFallbackState({
-    namespaceKey,
-    bookId,
-    existing,
-    session: input.session,
-    annotations: input.annotations,
-    progress: preserveExistingProgress ? existing?.progress ?? null : input.progress ?? existing?.progress ?? null,
-    generateLocalId: input.generateLocalId,
-  });
-  const state = await updateOfflineReaderBookState({
-    namespaceKey,
-    bookId,
-    fallbackState,
-    repository: input.stateRepository,
-    update: (current) => mergeHandoffState({
-      current,
+  let state: OfflineReaderBookState;
+  if (!existing) {
+    state = buildInitialHandoffState({
+      namespaceKey,
+      bookId,
       session: input.session,
       annotations: input.annotations,
-      progress: preserveExistingProgress ? current.progress : input.progress ?? current.progress,
+      progress: input.progress,
       generateLocalId: input.generateLocalId,
-    }),
-  });
+    });
+    await input.stateRepository.putBookState(state);
+  } else {
+    const update = await input.stateRepository.updateBookState(
+      namespaceKey,
+      bookId,
+      (current) => mergeHandoffState({
+        current,
+        session: input.session,
+        annotations: input.annotations,
+        progress: preserveExistingProgress ? current.progress : input.progress ?? current.progress,
+        generateLocalId: input.generateLocalId,
+      }),
+    );
+    if (update.status === "missing") {
+      throw new Error("Offline Reader state was removed during handoff.");
+    }
+    state = update.state;
+  }
 
   if (state.session.kind === "provisional") {
     await input.outboxRepository.upsertIntent({ type: "establish-session", namespaceKey, bookId });
@@ -76,24 +81,14 @@ export async function establishOnlineReaderOfflineHandoff(input: {
   };
 }
 
-function buildFallbackState(input: {
+function buildInitialHandoffState(input: {
   namespaceKey: string;
   bookId: string;
-  existing: OfflineReaderBookState | null;
   session: MarginaliaSession | null;
   annotations: readonly MarginaliaAnnotation[];
   progress: OfflineReaderBookState["progress"];
   generateLocalId?: () => string;
 }): OfflineReaderBookState {
-  if (input.existing) {
-    return mergeHandoffState({
-      current: input.existing,
-      session: input.session,
-      annotations: input.annotations,
-      progress: input.progress,
-      generateLocalId: input.generateLocalId,
-    });
-  }
   return {
     namespaceKey: input.namespaceKey,
     bookId: input.bookId,

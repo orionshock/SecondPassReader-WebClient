@@ -178,7 +178,7 @@ describe("offline Reader Session authority reconciliation", () => {
 
   it("leaves establishment intent intact when binding persistence fails", async () => {
     const repositories = await repositoriesWith(state("provisional"), true);
-    repositories.stateRepository.putBookState = vi.fn(async () => {
+    repositories.stateRepository.updateBookState = vi.fn(async () => {
       throw new Error("private IndexedDB failure");
     });
 

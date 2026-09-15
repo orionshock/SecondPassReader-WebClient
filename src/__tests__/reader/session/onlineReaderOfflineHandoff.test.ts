@@ -142,6 +142,28 @@ describe("online Reader offline handoff", () => {
     expect(result.suppressInitialProgressWrite).toBe(true);
     expect(await outboxRepository.list("account-a")).toEqual([]);
   });
+
+  it("does not recreate continuity removed while an existing handoff is updating", async () => {
+    const { stateRepository, outboxRepository } = await repositories();
+    await stateRepository.putBookState(existingState());
+    const updateBookState = stateRepository.updateBookState.bind(stateRepository);
+    stateRepository.updateBookState = async (...args) => {
+      await stateRepository.deleteBookState("account-a", "book-1");
+      return updateBookState(...args);
+    };
+
+    await expect(establishOnlineReaderOfflineHandoff({
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      session: activeSession(),
+      annotations: [bookmark("bookmark-server")],
+      progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
+      stateRepository,
+      outboxRepository,
+    })).rejects.toThrow("removed during handoff");
+
+    expect(await stateRepository.getBookState("account-a", "book-1")).toBeNull();
+  });
 });
 
 async function repositories() {

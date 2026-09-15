@@ -14,7 +14,6 @@ import {
   isOfflineReaderIntentEligible,
   type OfflineReaderAttemptMode,
 } from "../retry/OfflineReaderRetryEligibility.Policy";
-import { updateOfflineReaderBookState } from "../continuity/OfflineReaderStateWrite.Coordinator";
 import {
   readerIntentResourceKey,
   type ReaderOutboxIntent,
@@ -171,12 +170,10 @@ async function deliver(
   }
 
   try {
-    await updateOfflineReaderBookState({
-      namespaceKey: input.namespaceKey,
-      bookId: input.bookId,
-      fallbackState: state,
-      repository: input.stateRepository,
-      update: (current) => sameProgress(current.progress, deliveredProgress)
+    const update = await input.stateRepository.updateBookState(
+      input.namespaceKey,
+      input.bookId,
+      (current) => sameProgress(current.progress, deliveredProgress)
         ? {
             ...current,
             progress: {
@@ -186,7 +183,8 @@ async function deliver(
             },
           }
         : current,
-    });
+    );
+    if (update.status === "missing") return { status: "no-local-state" };
   } catch {
     return { status: "failed" };
   }

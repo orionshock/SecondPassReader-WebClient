@@ -4,6 +4,7 @@ import type { OfflineReaderBookState } from "../../../app/offline/storage/Offlin
 import { openIndexedDbOfflineRepositories } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import type { ReplaceReaderProgressIntent } from "../../../app/offline/reader/outbox/ReaderOutbox.Policy";
 import { subscribeToOfflinePublicationAssetChange } from "../../../app/offline/publication/OfflinePublicationAssetChange.State";
+import type { LocalReaderAnnotationCommit } from "../../../app/offline/reader/annotations/LocalReaderAnnotationCommit.Repository";
 
 describe("IndexedDB offline repository lifecycle", () => {
   it("creates every repository from an empty database", async () => {
@@ -172,6 +173,111 @@ describe("IndexedDB offline repository lifecycle", () => {
     repositories.close();
   });
 
+  it("preserves an annotation committed after another connection captured stale Reader state", async () => {
+    const { first, second } = await twoReaderConnections("reader-state-progress-annotation-race");
+    const stale = await first.readerState.getBookState("account-a", "book-1");
+    await second.readerState.updateBookState("account-a", "book-1", (current) => ({
+      ...current,
+      annotationRevision: 1,
+      annotations: [bookmarkProjection("annotation-new")],
+    }));
+
+    expect(stale?.annotationRevision).toBe(0);
+    await expect(first.readerState.updateBookState("account-a", "book-1", (current) => ({
+      ...current,
+      progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Location" },
+    }))).resolves.toMatchObject({ status: "committed" });
+
+    expect(await second.readerState.getBookState("account-a", "book-1")).toMatchObject({
+      annotationRevision: 1,
+      annotations: [bookmarkProjection("annotation-new")],
+      progress: { cfi: "epubcfi(/6/8)" },
+    });
+    first.close();
+    second.close();
+  });
+
+  it("preserves newer progress and annotations when another connection updates Session authority", async () => {
+    const { first, second } = await twoReaderConnections("reader-state-session-sibling-race");
+    const stale = await first.readerState.getBookState("account-a", "book-1");
+    await second.readerState.updateBookState("account-a", "book-1", (current) => ({
+      ...current,
+      progress: { cfi: "epubcfi(/6/12)", percentage: 60, locationLabel: "060% - Location" },
+      annotationRevision: 1,
+      annotations: [bookmarkProjection("annotation-new")],
+    }));
+
+    expect(stale?.progress?.cfi).toBe("epubcfi(/6/2)");
+    await first.readerState.updateBookState("account-a", "book-1", (current) => ({
+      ...current,
+      session: {
+        kind: "server-confirmed",
+        localSessionId: current.session.localSessionId,
+        serverSessionId: "session-2",
+        lastKnownServerStatus: "active",
+      },
+    }));
+
+    expect(await second.readerState.getBookState("account-a", "book-1")).toMatchObject({
+      session: { serverSessionId: "session-2" },
+      progress: { cfi: "epubcfi(/6/12)" },
+      annotationRevision: 1,
+      annotations: [bookmarkProjection("annotation-new")],
+    });
+    first.close();
+    second.close();
+  });
+
+  it("keeps newer progress when the specialized annotation transaction commits", async () => {
+    const { first, second } = await twoReaderConnections("reader-state-annotation-progress-race");
+    const stale = (await first.readerState.getBookState("account-a", "book-1"))!;
+    await second.readerState.updateBookState("account-a", "book-1", (current) => ({
+      ...current,
+      progress: { cfi: "epubcfi(/6/14)", percentage: 70, locationLabel: "070% - Location" },
+    }));
+
+    const commit: LocalReaderAnnotationCommit = {
+      kind: "author",
+      namespaceKey: "account-a",
+      bookId: "book-1",
+      authority: stale.session,
+      expectedRevision: stale.annotationRevision,
+      expectedProjection: undefined,
+      mutation: {
+        action: "upsert",
+        annotation: {
+          clientId: "annotation-atomic",
+          kind: "bookmark",
+          location: { cfi: "epubcfi(/6/4)", locationLabel: "Bookmark" },
+        },
+      },
+    };
+    await expect(first.readerAnnotationCommit.commit(commit)).resolves.toMatchObject({ status: "committed" });
+
+    expect(await second.readerState.getBookState("account-a", "book-1")).toMatchObject({
+      progress: { cfi: "epubcfi(/6/14)" },
+      annotationRevision: 1,
+    });
+    expect(await second.readerOutbox.list("account-a")).toHaveLength(1);
+    first.close();
+    second.close();
+  });
+
+  it("returns missing without recreating stale state after namespace cleanup", async () => {
+    const { first, second } = await twoReaderConnections("reader-state-cleanup-race");
+    const stale = await first.readerState.getBookState("account-a", "book-1");
+    await second.deleteNamespace("account-a");
+
+    expect(stale).not.toBeNull();
+    await expect(first.readerState.updateBookState("account-a", "book-1", (current) => ({
+      ...current,
+      progress: { cfi: "epubcfi(/6/20)", percentage: 100, locationLabel: "100% - Location" },
+    }))).resolves.toEqual({ status: "missing" });
+    expect(await second.readerState.getBookState("account-a", "book-1")).toBeNull();
+    first.close();
+    second.close();
+  });
+
   it("fails clearly when IndexedDB is unavailable", async () => {
     await expect(openIndexedDbOfflineRepositories({ indexedDb: null })).rejects.toThrow(
       "IndexedDB is unavailable.",
@@ -197,6 +303,27 @@ function readerState(): OfflineReaderBookState {
       locationLabel: "010% - Location",
     },
     annotations: [],
+  };
+}
+
+async function twoReaderConnections(databaseName: string) {
+  const indexedDb = new IDBFactory();
+  const options = { indexedDb, databaseName };
+  const first = await openIndexedDbOfflineRepositories(options);
+  const second = await openIndexedDbOfflineRepositories(options);
+  await first.readerState.putBookState(readerState());
+  return { first, second };
+}
+
+function bookmarkProjection(clientId: string): OfflineReaderBookState["annotations"][number] {
+  return {
+    status: "present",
+    origin: { kind: "server-confirmed", serverSessionId: "session-1" },
+    annotation: {
+      clientId,
+      kind: "bookmark",
+      location: { cfi: "epubcfi(/6/4)", locationLabel: "Bookmark" },
+    },
   };
 }
 
