@@ -1,28 +1,19 @@
-import type {
-  OfflineReaderBookState,
-  OfflineReaderStateRepository,
-  ReaderOutboxRepository,
-} from "../../../../app/offline/storage/OfflineRepositories.Types";
 import {
-  readerIntentResourceKey,
-  type ReplaceReaderProgressIntent,
-} from "../../../../app/offline/reader/outbox/ReaderOutbox.Policy";
-import { canWriteLocalReaderState } from "../../../../app/offline/reader/continuity/OfflineReaderSession.Policy";
+  type OfflineReaderProgressPersistence,
+  type OfflineReadingProgress,
+} from "../../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
 import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import { buildSavedReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
 
 export const OFFLINE_READING_PROGRESS_DELAY_MS = 750;
 
-export type OfflineReadingProgress = ReplaceReaderProgressIntent["progress"];
 export type OfflineReadingProgressState = {
   status: "idle" | "pending" | "saving" | "saved" | "error";
   dirty: boolean;
 };
 
 type ControllerInput = {
-  initialState: OfflineReaderBookState;
-  stateRepository: OfflineReaderStateRepository;
-  outboxRepository: ReaderOutboxRepository;
+  persistence: OfflineReaderProgressPersistence;
   delayMs?: number;
   onStateChange?: (state: OfflineReadingProgressState) => void;
 };
@@ -113,48 +104,12 @@ export class OfflineReadingProgressController {
       this.publish({ status: "saving", dirty: true });
 
       try {
-        // State precedes intent: an outbox write must never refer to progress that was not made durable.
-        const update = await this.input.stateRepository.updateBookState(
-          this.input.initialState.namespaceKey,
-          this.input.initialState.bookId,
-          (currentState) => {
-            if (!canWriteLocalReaderState(currentState.session)) {
-              throw new Error("Offline Reader Session is not writable.");
-            }
-            return { ...currentState, progress };
-          },
-        );
-        if (update.status === "missing") throw new Error("Offline Reader state no longer exists.");
-        const nextState = update.state;
+        const result = await this.input.persistence.persist(progress);
         if (generation !== this.generation) return;
-
-        const serverSessionId = nextState.session.kind === "server-confirmed"
-          ? nextState.session.serverSessionId
-          : null;
-        const intents = await this.input.outboxRepository.list(nextState.namespaceKey);
-        if (generation !== this.generation) return;
-        const resourceKey = readerIntentResourceKey({
-          type: "replace-progress",
-          namespaceKey: nextState.namespaceKey,
-          bookId: nextState.bookId,
-          serverSessionId,
-          intentRevision: 0,
-          progress,
-        });
-        const currentRevision = intents.reduce((revision, intent) => (
-          intent.type === "replace-progress" && readerIntentResourceKey(intent) === resourceKey
-            ? Math.max(revision, intent.intentRevision)
-            : revision
-        ), 0);
-        await this.input.outboxRepository.upsertIntent({
-          type: "replace-progress",
-          namespaceKey: nextState.namespaceKey,
-          bookId: nextState.bookId,
-          serverSessionId,
-          intentRevision: currentRevision + 1,
-          progress,
-        });
-        if (generation !== this.generation) return;
+        if (result.status !== "persisted") {
+          this.publish({ status: "error", dirty: true });
+          return;
+        }
 
         this.committedKey = attemptedKey;
         const hasNewerCandidate = progressKey(this.candidate) !== attemptedKey;

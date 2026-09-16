@@ -11,6 +11,7 @@ import {
   OfflineReadingProgressController,
 } from "../../../features/reader/session/progress/OfflineReadingProgress.Controller";
 import { settleOfflineProgressExit } from "../../../features/reader/session/progress/OfflineReadingProgress.Lifecycle";
+import { createOfflineReaderProgressPersistence } from "../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
 import { createInMemoryOfflineRepositoryFactories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
 
 describe("offline reading progress shape", () => {
@@ -134,9 +135,7 @@ describe("offline reading progress durability", () => {
     };
     await repositories.stateRepository.putBookState(closedState);
     const controller = new OfflineReadingProgressController({
-      initialState: closedState,
-      stateRepository: repositories.stateRepository,
-      outboxRepository: repositories.outboxRepository,
+      persistence: persistenceFor(repositories, closedState),
     });
 
     controller.update(progress("epubcfi(/6/8)", 30));
@@ -157,9 +156,7 @@ describe("offline reading progress durability", () => {
     };
     await repositories.stateRepository.putBookState(activeState);
     const controller = new OfflineReadingProgressController({
-      initialState: activeState,
-      stateRepository: repositories.stateRepository,
-      outboxRepository: repositories.outboxRepository,
+      persistence: persistenceFor(repositories, activeState),
     });
 
     controller.update(progress("epubcfi(/6/8)", 30));
@@ -194,9 +191,12 @@ describe("offline reading progress durability", () => {
     const first = await openIndexedDbOfflineRepositories(options);
     await first.readerState.putBookState(initialState());
     const controller = new OfflineReadingProgressController({
-      initialState: initialState(),
-      stateRepository: first.readerState,
-      outboxRepository: first.readerOutbox,
+      persistence: createOfflineReaderProgressPersistence({
+        namespaceKey: "account-a",
+        bookId: "book-1",
+        stateRepository: first.readerState,
+        outboxRepository: first.readerOutbox,
+      }),
     });
     controller.update(progress("epubcfi(/6/12)", 60));
     await controller.flushNow();
@@ -229,7 +229,14 @@ async function inMemoryRepositories(): Promise<Repositories> {
 
 function controllerFor(repositories: Repositories) {
   return new OfflineReadingProgressController({
-    initialState: initialState(),
+    persistence: persistenceFor(repositories, initialState()),
+  });
+}
+
+function persistenceFor(repositories: Repositories, state: OfflineReaderBookState) {
+  return createOfflineReaderProgressPersistence({
+    namespaceKey: state.namespaceKey,
+    bookId: state.bookId,
     stateRepository: repositories.stateRepository,
     outboxRepository: repositories.outboxRepository,
   });

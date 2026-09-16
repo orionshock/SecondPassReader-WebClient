@@ -6,9 +6,12 @@ import {
 import type { OfflineReaderBootstrap } from "../../Reader.Types";
 import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import {
+  createOfflineReaderProgressPersistence,
+  type OfflineReadingProgress,
+} from "../../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
+import {
   buildOfflineReadingProgress,
   OfflineReadingProgressController,
-  type OfflineReadingProgress,
   type OfflineReadingProgressState,
 } from "./OfflineReadingProgress.Controller";
 
@@ -68,9 +71,12 @@ export function useOfflineReadingProgress(input: {
           return;
         }
         controller = new OfflineReadingProgressController({
-          initialState: bootstrap.continuity,
-          stateRepository: repositories.readerState,
-          outboxRepository: repositories.readerOutbox,
+          persistence: createOfflineReaderProgressPersistence({
+            namespaceKey,
+            bookId,
+            stateRepository: repositories.readerState,
+            outboxRepository: repositories.readerOutbox,
+          }),
           onStateChange: (nextState) => {
             if (!cancelled) setState(nextState);
           },

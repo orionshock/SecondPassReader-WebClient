@@ -4,6 +4,7 @@ import { establishOnlineReaderOfflineHandoff } from "../../../app/offline/reader
 import type { OfflineReaderBookState } from "../../../app/offline/storage/OfflineRepositories.Types";
 import { OfflineCurrentSessionAnnotationController } from "../../../features/reader/session/annotations/OfflineCurrentSessionAnnotation.Controller";
 import { OfflineReadingProgressController } from "../../../features/reader/session/progress/OfflineReadingProgress.Controller";
+import { createOfflineReaderProgressPersistence } from "../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
 import { createInMemoryOfflineRepositoryFactories, createInMemoryReaderRepositories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
 
 describe("online Reader offline handoff", () => {
@@ -34,9 +35,12 @@ describe("online Reader offline handoff", () => {
     expect(await outboxRepository.list("account-a")).toEqual([]);
 
     const progress = new OfflineReadingProgressController({
-      initialState: result.state,
-      stateRepository,
-      outboxRepository,
+      persistence: createOfflineReaderProgressPersistence({
+        namespaceKey: result.state.namespaceKey,
+        bookId: result.state.bookId,
+        stateRepository,
+        outboxRepository,
+      }),
       delayMs: 0,
     });
     progress.update({ cfi: "epubcfi(/6/10)", percentage: 50, locationLabel: "050% - Chapter" });

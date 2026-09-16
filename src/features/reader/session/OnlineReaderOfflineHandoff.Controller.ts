@@ -10,7 +10,7 @@ import {
 } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 import type { OfflineReaderBootstrap } from "../Reader.Types";
-import type { OfflineReadingProgress } from "./progress/OfflineReadingProgress.Controller";
+import type { OfflineReadingProgress } from "../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
 
 type HandoffRepositories = Pick<
   IndexedDbOfflineRepositories<Blob>,

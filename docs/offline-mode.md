@@ -254,7 +254,8 @@ Provisional IDs are never sent as server IDs, and `start-over` is never automati
 
 Settled offline movement persists the latest CFI, integer percentage, and stable location label.
 Writes are debounced. Reader hide, page exit, or close requests a bounded local-only flush.
-Reader state is written before its coalesced `replace-progress` intent.
+The interaction controller owns that timing; one progress persistence action owns revision
+allocation and writes Reader state before its coalesced `replace-progress` intent.
 These are intentionally separate durability steps: resume progress may survive an outbox failure,
 and later retry can restore delivery work. They are not one atomic progress-plus-outbox commit.
 

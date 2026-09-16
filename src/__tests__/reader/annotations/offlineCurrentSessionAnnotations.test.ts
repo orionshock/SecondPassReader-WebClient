@@ -10,6 +10,7 @@ import type {
 } from "../../../app/offline/storage/OfflineRepositories.Types";
 import { OfflineCurrentSessionAnnotationController } from "../../../features/reader/session/annotations/OfflineCurrentSessionAnnotation.Controller";
 import { OfflineReadingProgressController } from "../../../features/reader/session/progress/OfflineReadingProgress.Controller";
+import { createOfflineReaderProgressPersistence } from "../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
 import { createInMemoryReaderRepositories } from "../../offline/storage/OfflineRepositoryTest.Fixtures";
 
 describe("offline current-session annotations", () => {
@@ -214,9 +215,12 @@ describe("offline current-session annotations", () => {
     const state = initialState();
     const annotations = controllerFor(repositories, state);
     const progress = new OfflineReadingProgressController({
-      initialState: state,
-      stateRepository: repositories.stateRepository,
-      outboxRepository: repositories.outboxRepository,
+      persistence: createOfflineReaderProgressPersistence({
+        namespaceKey: state.namespaceKey,
+        bookId: state.bookId,
+        stateRepository: repositories.stateRepository,
+        outboxRepository: repositories.outboxRepository,
+      }),
     });
     progress.update({ cfi: "epubcfi(/6/10)", percentage: 40, locationLabel: "040% - Chapter" });
 
