@@ -66,8 +66,6 @@ export type ReadingShellProps = {
 export function ReadingShell(props: ReadingShellProps) {
   const engineRef = useRef<EpubTsBookEngine | null>(null);
   const runtimeControllerRef = useRef<ReaderRuntimeController | null>(null);
-  if (!runtimeControllerRef.current) runtimeControllerRef.current = new ReaderRuntimeController();
-  const runtimeController = runtimeControllerRef.current;
   const mountWrapperRef = useRef<HTMLDivElement | null>(null);
   const engineGenerationRef = useRef(0);
   const hasReadableViewportRef = useRef(false);
@@ -152,6 +150,15 @@ export function ReadingShell(props: ReadingShellProps) {
     onSelectionStarted: closeDurableToolbar,
   });
   cancelStagedForDurableToolbarRef.current = cancelStaged;
+  if (!runtimeControllerRef.current) {
+    runtimeControllerRef.current = new ReaderRuntimeController({
+      getProtectedRestoreCfi: (generation) => bootstrapProgressGuard.getProtectedRestoreCfi(generation),
+      runProtectedLayoutMutation: (operation) => stagedLifecycle.runNavigation("layout-reflow", operation),
+      reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+      waitForLayout: waitForReaderLayout,
+    });
+  }
+  const runtimeController = runtimeControllerRef.current;
 
   const rendererCapability = useMemo<ReaderRendererCapability | null>(() => {
     if (!engineCapability || !stagedSelectionCapability) return null;
@@ -203,7 +210,6 @@ export function ReadingShell(props: ReadingShellProps) {
     stagedSelectionLifecycle: stagedLifecycle,
     markReadableViewport,
     reportOperationError,
-    waitForLayout: waitForReaderLayout,
   });
 
   useReaderEngineBootstrapLifecycle({
@@ -238,37 +244,25 @@ export function ReadingShell(props: ReadingShellProps) {
     readiness,
     engineRef,
     engineGenerationRef,
-    reanchorStagedToolbarRef,
-    bootstrapProgressGuard,
     runtimeController,
-    stagedSelectionLifecycle: stagedLifecycle,
     reportOperationError,
-    waitForLayout: waitForReaderLayout,
   });
 
   useEffect(() => {
     if (!mountEl || !isReaderFullyReady(readiness)) return;
     const generation = engineGenerationRef.current;
     return observeReaderMountResize(mountEl, () => {
-      void runtimeController.stabilizeReflow("resize", {
-        reflow: (activeEngine) => stagedLifecycle.runNavigation(
-          "layout-reflow",
-          () => activeEngine.resizeToMount({
-            preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
-          }),
-        ),
-        refreshMarks: (activeEngine) => activeEngine.refreshHighlightMarks(),
-        reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+      void runtimeController.reflow({
+        type: "resize-to-mount",
+        timing: "current-layout",
       }).catch((err) => reportOperationError(err, "Reader resize failed.", generation, "reflow"));
     });
   }, [
-    bootstrapProgressGuard,
     mountEl,
     props.blob,
     readiness,
     reportOperationError,
     runtimeController,
-    stagedLifecycle,
   ]);
 
   const goPrev = async () => {

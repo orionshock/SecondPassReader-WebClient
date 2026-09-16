@@ -1,5 +1,5 @@
+import type { ReaderSettings } from "../../../storage/ReaderSettings.Store";
 import type { EpubTsBookEngine } from "../engine/EpubTsBook.Engine";
-import { stabilizeReaderReflow } from "./ReaderReflow.Coordinator";
 
 export type ReaderRuntimeOperationContext = {
   engine: EpubTsBookEngine;
@@ -15,10 +15,16 @@ export type ReaderRuntimeOperation<T> = {
 
 export type ReaderRuntimeReflowKind = "resize" | "settings";
 
-export type ReaderRuntimeReflowOperation = {
-  reflow: (engine: EpubTsBookEngine) => Promise<void>;
-  refreshMarks: (engine: EpubTsBookEngine) => void;
-  reanchorStagedToolbar: () => Promise<void>;
+export type ReaderRuntimeReflowIntent =
+  | { type: "apply-settings"; settings: ReaderSettings }
+  | { type: "resize-to-mount"; timing: "current-layout" }
+  | { type: "resize-to-mount"; timing: "after-layout"; isRequested?: () => boolean };
+
+export type ReaderRuntimeReflowDependencies = {
+  getProtectedRestoreCfi(generation: number): string | null;
+  runProtectedLayoutMutation<T>(operation: () => Promise<T>): Promise<T>;
+  reanchorStagedToolbar(): Promise<void>;
+  waitForLayout(): Promise<void>;
 };
 
 type ActiveRuntime = {
@@ -59,6 +65,8 @@ export class ReaderRuntimeController {
   private queue: QueuedOperation[] = [];
   private running = false;
 
+  constructor(private readonly reflowDependencies: ReaderRuntimeReflowDependencies) {}
+
   attach(engine: EpubTsBookEngine, generation: number): void {
     if (this.active?.engine === engine && this.active.generation === generation) return;
     this.rejectPendingAsStale();
@@ -77,24 +85,49 @@ export class ReaderRuntimeController {
     return this.enqueue(active.generation, operation);
   }
 
-  stabilizeReflow(kind: ReaderRuntimeReflowKind, operation: ReaderRuntimeReflowOperation): Promise<void> {
+  reflow(intent: ReaderRuntimeReflowIntent): Promise<void> {
     const active = this.active;
     if (!active) return Promise.reject(new ReaderRuntimeUnavailableError());
+    const kind = reflowKind(intent);
 
     return this.enqueue(active.generation, {
       kind,
-      run: async (context) => {
-        await stabilizeReaderReflow({
-          reflow: () => operation.reflow(context.engine),
-          refreshMarks: () => {
-            if (context.isCurrent()) operation.refreshMarks(context.engine);
-          },
-          reanchorStagedToolbar: () => context.isCurrent()
-            ? operation.reanchorStagedToolbar()
-            : Promise.resolve(),
-        });
-      },
+      run: (context) => this.runReflow(context, intent),
     }, kind);
+  }
+
+  private async runReflow(
+    context: ReaderRuntimeOperationContext,
+    intent: ReaderRuntimeReflowIntent,
+  ): Promise<void> {
+    let mutationApplied = true;
+    await this.reflowDependencies.runProtectedLayoutMutation(async () => {
+      if (intent.type === "resize-to-mount" && intent.timing === "after-layout") {
+        await this.reflowDependencies.waitForLayout();
+        if (!context.isCurrent()
+          || intent.isRequested?.() === false) {
+          mutationApplied = false;
+          return;
+        }
+      }
+
+      const preserveCfi = this.reflowDependencies.getProtectedRestoreCfi(context.generation);
+      if (intent.type === "apply-settings") {
+        await context.engine.applyDisplaySettings(intent.settings, { preserveCfi });
+      } else {
+        await context.engine.resizeToMount({ preserveCfi });
+      }
+    });
+
+    if (!mutationApplied || !context.isCurrent()) return;
+    // Reflow is one viewport mutation protocol: preserve the anchor, serialize the mutation,
+    // refresh durable marks, then re-anchor staged UI.
+    context.engine.refreshHighlightMarks();
+    try {
+      await this.reflowDependencies.reanchorStagedToolbar();
+    } catch {
+      // Geometry measurement is best-effort. Keep the staged selection and fallback position.
+    }
   }
 
   private enqueue<T>(
@@ -175,6 +208,10 @@ export class ReaderRuntimeController {
       rejectWaiters(queued.waiters, new ReaderRuntimeStaleGenerationError());
     }
   }
+}
+
+function reflowKind(intent: ReaderRuntimeReflowIntent): ReaderRuntimeReflowKind {
+  return intent.type === "apply-settings" ? "settings" : "resize";
 }
 
 function resolveWaiters(waiters: QueueWaiter[], value: unknown): void {

@@ -202,7 +202,6 @@ Client references:
 
 - `src/features/reader/shell/StagedSelection.Lifecycle.ts`
 - `src/features/reader/shell/ReaderRuntime.Controller.ts`
-- `src/features/reader/shell/ReaderReflow.Coordinator.ts`
 
 ### Suggested upstream fix
 

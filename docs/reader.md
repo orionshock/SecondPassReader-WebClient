@@ -118,9 +118,8 @@ modules own the behavior below.
 | `ReaderCapabilityPublication.Lifecycle.ts` | Generation-safe publication of one renderer-neutral describe, probe, display, and search capability |
 | `ReaderCommandRouting.Lifecycle.ts` | Pre-ready deferral, command routing, navigation classification, and failure reporting |
 | `ReaderLocationPublication.Lifecycle.ts` | Viewport location, progress events, staged-selection decisions, toolbar close, and re-anchor requests |
-| `ReaderSettingsReflow.Lifecycle.ts` | Serialized settings and Reader-width reflow without engine recreation |
-| `ReaderRuntime.Controller.ts` | Viewport mutation serialization, stale-generation rejection, and adjacent reflow coalescing |
-| `ReaderReflow.Coordinator.ts` | Reflow, durable-mark refresh, and staged-toolbar re-anchor ordering |
+| `ReaderSettingsReflow.Lifecycle.ts` | Settings and Reader-width reflow triggers without engine recreation |
+| `ReaderRuntime.Controller.ts` | Generation-safe viewport serialization and the protected-anchor, durable-mark, and staged-toolbar reflow protocol |
 | `ReaderStagedToolbar.Controller.ts` | Staged-selection behavior and toolbar rendering |
 | `ReaderStagedSelection.Controller.ts` | Staged state, mark handoff, commit, cancel, and keyboard cleanup |
 | `ReaderStagedSelectionReanchor.Controller.ts` | Staged-toolbar measurement and latest-request positioning |
@@ -166,7 +165,8 @@ Known library defects and limits belong in the
   relocations from overwriting the restored CFI.
 - Unrelated navigation cancels staged selection. Import staging and layout reflow protect their own
   relocations and request toolbar re-anchoring.
-- Reflow applies settings or size, refreshes marks, then re-anchors the staged toolbar.
+- Post-ready reflow intent goes through the runtime, which preserves the protected/current anchor,
+  applies settings or size, refreshes marks, then re-anchors the staged toolbar.
 - Temporary search marks clear before staged or durable handoff. Staged marks clear before commit or
   cancel completes. Canonical annotation state restores durable marks.
 - epub-ts identifies marks by CFI and renderer type. A same-CFI staged preview temporarily replaces

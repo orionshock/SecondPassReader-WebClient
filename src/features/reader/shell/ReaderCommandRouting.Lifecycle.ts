@@ -37,7 +37,6 @@ export function useReaderCommandRoutingLifecycle(input: {
   stagedSelectionLifecycle: StagedSelectionLifecycle;
   markReadableViewport: (generation: number) => void;
   reportOperationError: ReportReaderOperationError;
-  waitForLayout: () => Promise<void>;
 }): ReaderCommandRoutingLifecycle {
   const {
     bootstrapProgressGuard,
@@ -51,7 +50,6 @@ export function useReaderCommandRoutingLifecycle(input: {
     reportOperationError,
     runtimeController,
     stagedSelectionLifecycle,
-    waitForLayout,
   } = input;
   const lastHandledCommandSeqRef = useRef<number | null>(null);
   const deferredCommandRef = useRef<ReadingShellCommand | null>(null);
@@ -116,22 +114,14 @@ export function useReaderCommandRoutingLifecycle(input: {
           markReadableViewport(generation);
           return;
         case "resize":
-          await runtimeController.stabilizeReflow("resize", {
-            reflow: async (engine) => {
-              await stagedSelectionLifecycle.runNavigation("layout-reflow", async () => {
-                await waitForLayout();
-                await engine.resizeToMount({
-                  preserveCfi: bootstrapProgressGuard.getProtectedRestoreCfi(generation),
-                });
-              });
-            },
-            refreshMarks: (engine) => engine.refreshHighlightMarks(),
-            reanchorStagedToolbar: () => reanchorStagedToolbarRef.current(),
+          await runtimeController.reflow({
+            type: "resize-to-mount",
+            timing: "after-layout",
           });
           return;
       }
     },
-    [bootstrapProgressGuard, markReadableViewport, runtimeController, stagedSelectionLifecycle, waitForLayout],
+    [bootstrapProgressGuard, markReadableViewport, runtimeController, stagedSelectionLifecycle],
   );
 
   const clearDeferredCommand = useCallback(() => {

@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReaderRendererCapability } from "../../../features/reader/domain/ReaderBridge.Types";
+import { normalizeReaderSettings } from "../../../storage/ReaderSettings.Store";
 
 const engineFactory = vi.hoisted(() => vi.fn());
 
@@ -73,11 +74,52 @@ describe("Reading Shell renderer capability", () => {
     expect(publications.at(-1)).not.toBe(firstCapability);
     expect(firstEngine.destroy).toHaveBeenCalledOnce();
   });
+
+  it("applies post-ready settings without recreating the engine and preserves the restore CFI", async () => {
+    const display = deferred<void>();
+    const engine = rendererEngine(display.promise);
+    const blob = new Blob(["book"]);
+    const restoreCfi = "epubcfi(/6/8)";
+    engineFactory.mockResolvedValueOnce(engine);
+
+    await act(async () => root.render(
+      <ReadingShell
+        blob={blob}
+        initialDisplayTarget={{ type: "cfi", cfi: restoreCfi }}
+        settings={normalizeReaderSettings({ theme: "light" })}
+      />,
+    ));
+    await waitFor(() => engineFactory.mock.calls.length === 1);
+    await act(async () => display.resolve());
+    await waitFor(() => engine.applyDisplaySettings.mock.calls.length > 0);
+    engine.applyDisplaySettings.mockClear();
+    engine.refreshHighlightMarks.mockClear();
+
+    await act(async () => root.render(
+      <ReadingShell
+        blob={blob}
+        initialDisplayTarget={{ type: "cfi", cfi: restoreCfi }}
+        settings={normalizeReaderSettings({ theme: "dark" })}
+      />,
+    ));
+    await waitFor(() => engine.applyDisplaySettings.mock.calls.length === 1);
+
+    expect(engineFactory).toHaveBeenCalledOnce();
+    expect(engine.destroy).not.toHaveBeenCalled();
+    expect(engine.applyDisplaySettings).toHaveBeenCalledWith(
+      expect.objectContaining({ theme: "dark" }),
+      { preserveCfi: restoreCfi },
+    );
+    expect(engine.refreshHighlightMarks).toHaveBeenCalledOnce();
+  });
 });
 
 function rendererEngine(display: Promise<void>) {
   return {
     display: vi.fn(() => display),
+    applyDisplaySettings: vi.fn(async () => undefined),
+    resizeToMount: vi.fn(async () => undefined),
+    refreshHighlightMarks: vi.fn(),
     destroy: vi.fn(),
     setHighlightMarks: vi.fn(),
     setTemporarySearchHighlight: vi.fn(),
