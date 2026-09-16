@@ -1,4 +1,5 @@
 import type { OfflineCacheNamespace } from "../namespace/OfflineCacheNamespace.Policy";
+import type { OfflinePublicationAssetCompleteRecord } from "../storage/OfflineRepositories.Types";
 
 export type OfflinePublicationFileMetadata = {
   format?: string | null;
@@ -56,6 +57,18 @@ export function isVerifiedOfflinePublicationAsset(
   availability: OfflinePublicationAssetAvailability,
 ): boolean {
   return availability.status === "available";
+}
+
+export function getOfflinePublicationPayloadBytes(
+  asset: OfflinePublicationAssetCompleteRecord<Blob>,
+): number {
+  return asset.payload instanceof Blob ? asset.payload.size : 0;
+}
+
+export function hasCompleteOfflinePublicationPayload(
+  asset: OfflinePublicationAssetCompleteRecord<Blob>,
+): boolean {
+  return asset.payload instanceof Blob && asset.payload.size === asset.byteLength;
 }
 
 export function buildOfflinePublicationAssetKey(input: {

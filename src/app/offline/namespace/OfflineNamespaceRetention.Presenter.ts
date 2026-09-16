@@ -1,4 +1,5 @@
 import type { OfflinePublicationAssetCompleteRecord } from "../storage/OfflineRepositories.Types";
+import { getOfflinePublicationPayloadBytes } from "../publication/OfflinePublicationAsset.Policy";
 import type { ReaderOutboxIntent } from "../reader/outbox/ReaderOutbox.Policy";
 
 export type OfflineNamespaceRetentionSummary = {
@@ -10,13 +11,13 @@ export type OfflineNamespaceRetentionSummary = {
 
 export function summarizeOfflineNamespaceRetention(
   intents: readonly ReaderOutboxIntent[],
-  assets: readonly OfflinePublicationAssetCompleteRecord<unknown>[],
+  assets: readonly OfflinePublicationAssetCompleteRecord<Blob>[],
 ): OfflineNamespaceRetentionSummary {
   return {
     pendingBooks: new Set(intents.map((intent) => intent.bookId)).size,
     pendingIntents: intents.length,
     offlineAssetCount: assets.length,
-    offlineAssetBytes: assets.reduce((total, asset) => total + asset.byteLength, 0),
+    offlineAssetBytes: assets.reduce((total, asset) => total + getOfflinePublicationPayloadBytes(asset), 0),
   };
 }
 

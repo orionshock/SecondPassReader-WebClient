@@ -73,7 +73,7 @@ function asset(bookId: string, byteLength: number) {
     checksum: "a".repeat(64),
     byteLength,
     schemaVersion: 1,
-    payload: new Blob(["x"]),
+    payload: new Blob(["x".repeat(byteLength)]),
   };
 }
 

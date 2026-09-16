@@ -3,6 +3,10 @@ import { getReaderReturnTarget } from "../../../../features/reader/ReaderReturnT
 import type { OfflineOpenedBook, ReaderReturnTarget } from "../../../../features/reader/Reader.Types";
 import type { OfflineCacheNamespace } from "../../namespace/OfflineCacheNamespace.Policy";
 import type { OfflineClock } from "../../OfflineClock.Types";
+import {
+  publishOfflineProjection,
+  type OfflineProjectionPublicationLease,
+} from "../../namespace/OfflineProjectionPublication.Lifecycle";
 import { loadOrCreateOfflineReaderContinuity } from "./OfflineReaderContinuity.Controller";
 import {
   classifyOfflinePublicationAssetAvailability,
@@ -32,17 +36,21 @@ export function offlineReaderBookProjectionKey(bookId: string | number): string 
 }
 
 export async function retainOfflineReaderBookMetadata(input: {
-  namespaceKey: string;
   book: BookDetail;
   repository: OfflineProjectionRepository;
+  publication: OfflineProjectionPublicationLease;
   clock?: OfflineClock;
-}): Promise<void> {
-  await input.repository.put({
-    namespaceKey: input.namespaceKey,
-    projectionKey: offlineReaderBookProjectionKey(input.book.id),
-    value: input.book,
-    fetchedAt: input.clock?.now() ?? Date.now(),
-    schemaVersion: BOOK_DETAIL_PROJECTION_SCHEMA_VERSION,
+}): Promise<boolean> {
+  return publishOfflineProjection({
+    lease: input.publication,
+    repository: input.repository,
+    record: {
+      namespaceKey: input.publication.namespaceKey,
+      projectionKey: offlineReaderBookProjectionKey(input.book.id),
+      value: input.book,
+      fetchedAt: input.clock?.now() ?? Date.now(),
+      schemaVersion: BOOK_DETAIL_PROJECTION_SCHEMA_VERSION,
+    },
   });
 }
 

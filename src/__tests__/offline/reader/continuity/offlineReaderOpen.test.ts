@@ -6,7 +6,13 @@ import {
   openOfflineBookForReader,
   retainOfflineReaderBookMetadata,
 } from "../../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
+import {
+  cleanupOfflineProjectionNamespace,
+  createOfflineProjectionPublicationLease,
+} from "../../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
 import type {
+  OfflineProjectionRepository,
+  OfflineProjectionRecord,
   OfflinePublicationAssetCompleteRecord,
   OfflinePublicationAssetRepository,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
@@ -134,9 +140,9 @@ describe("offline Reader admission", () => {
     const value = book(CHECKSUM);
 
     await retainOfflineReaderBookMetadata({
-      namespaceKey: namespace.key,
       book: value,
       repository,
+      publication: createOfflineProjectionPublicationLease(namespace.key, () => true)!,
       clock: { now: () => 123 },
     });
 
@@ -152,6 +158,73 @@ describe("offline Reader admission", () => {
     })).toBeNull();
   });
 
+  it("does not recreate retained metadata when namespace cleanup starts during publication", async () => {
+    const namespaceKey = "projection-cleanup-race";
+    const putStarted = deferred<void>();
+    const releasePut = deferred<void>();
+    let projection: OfflineProjectionRecord<BookDetail> | null = null;
+    const repository = {
+      get: vi.fn(async () => projection),
+      put: vi.fn(async (record: OfflineProjectionRecord<BookDetail>) => {
+        putStarted.resolve();
+        await releasePut.promise;
+        projection = record;
+      }),
+      delete: vi.fn(async () => { projection = null; }),
+      deleteNamespace: vi.fn(async () => { projection = null; }),
+    } as unknown as OfflineProjectionRepository;
+    const publication = createOfflineProjectionPublicationLease(namespaceKey, () => true)!;
+    const write = retainOfflineReaderBookMetadata({ book: book(CHECKSUM), repository, publication });
+    await putStarted.promise;
+    const cleanup = cleanupOfflineProjectionNamespace(namespaceKey, () => repository.deleteNamespace(namespaceKey));
+
+    releasePut.resolve();
+    await Promise.all([write, cleanup]);
+
+    expect(projection).toBeNull();
+  });
+
+  it("does not let an older retained metadata publication overwrite a newer refresh", async () => {
+    const namespaceKey = "projection-refresh-race";
+    const oldPutStarted = deferred<void>();
+    const releaseOldPut = deferred<void>();
+    let projection: OfflineProjectionRecord<BookDetail> | null = null;
+    let putCount = 0;
+    const repository = {
+      get: vi.fn(async () => projection),
+      put: vi.fn(async (record: OfflineProjectionRecord<BookDetail>) => {
+        putCount += 1;
+        if (putCount === 1) {
+          oldPutStarted.resolve();
+          await releaseOldPut.promise;
+        }
+        projection = record;
+      }),
+      delete: vi.fn(async () => { projection = null; }),
+      deleteNamespace: vi.fn(async () => { projection = null; }),
+    } as unknown as OfflineProjectionRepository;
+    let revision = 1;
+    const oldPublication = createOfflineProjectionPublicationLease(namespaceKey, () => revision === 1)!;
+    const oldWrite = retainOfflineReaderBookMetadata({
+      book: { ...book(CHECKSUM), title: "Old title" },
+      repository,
+      publication: oldPublication,
+    });
+    await oldPutStarted.promise;
+    revision = 2;
+    const newWrite = retainOfflineReaderBookMetadata({
+      book: { ...book(CHECKSUM), title: "New title" },
+      repository,
+      publication: createOfflineProjectionPublicationLease(namespaceKey, () => revision === 2)!,
+    });
+
+    releaseOldPut.resolve();
+    await Promise.all([oldWrite, newWrite]);
+
+    const committed = await repository.get<BookDetail>(namespaceKey, "reader-book:book-1");
+    expect(committed?.value).toMatchObject({ title: "New title" });
+  });
+
   it("uses the existing Reader lifecycle to revoke an offline object URL", async () => {
     const repositories = await repositoriesWithAsset(asset(CHECKSUM));
     const result = await open(repositories, book(CHECKSUM));
@@ -165,6 +238,12 @@ describe("offline Reader admission", () => {
     revokeObjectURL.mockRestore();
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
 
 async function repositoriesWithAsset(storedAsset: OfflinePublicationAssetCompleteRecord<Blob> | null) {
   const factories = createInMemoryOfflineRepositoryFactories();

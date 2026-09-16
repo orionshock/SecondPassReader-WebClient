@@ -45,6 +45,21 @@ describe("Offline Settings controller", () => {
     stop();
   });
 
+  it("uses actual retained Blob bytes consistently for asset and pending-Book totals", async () => {
+    const damaged = asset("account-a", "book-1", 4);
+    damaged.byteLength = 99;
+    const harness = createHarness({ intents: [progress("book-1")], assets: [damaged] });
+    const stop = harness.controller.start();
+    await harness.ready();
+
+    expect(harness.controller.getSnapshot()).toMatchObject({
+      totalAssetBytes: 4,
+      assets: [expect.objectContaining({ bookId: "book-1", byteLength: 4 })],
+      pendingBooks: [expect.objectContaining({ bookId: "book-1", assetBytes: 4 })],
+    });
+    stop();
+  });
+
   it("does no repository work without a verified namespace", () => {
     const harness = createHarness({ namespaceKey: null });
     const stop = harness.controller.start();

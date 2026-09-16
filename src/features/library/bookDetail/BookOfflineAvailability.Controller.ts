@@ -13,6 +13,7 @@ import {
 } from "../../../app/offline/publication/OfflinePublicationAcquisition.Actions";
 import { acquireOfflinePublicationCover } from "../../../app/offline/publication/OfflinePublicationCover.Actions";
 import { removeOfflinePublicationAsset } from "../../../app/offline/publication/OfflinePublicationRemoval.Actions";
+import { createOfflineProjectionPublicationLease } from "../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
@@ -58,6 +59,7 @@ export function useBookOfflineAvailabilityController({
   const stateRef = useRef(state);
   const repositoriesRef = useRef<IndexedDbOfflineRepositories<Blob> | null>(null);
   const generationRef = useRef(0);
+  const retentionRevisionRef = useRef(0);
   const operationRunningRef = useRef(false);
 
   const updateState = useCallback((next: BookOfflineAvailabilityState) => {
@@ -71,6 +73,12 @@ export function useBookOfflineAvailabilityController({
     message: string | null = null,
   ) => {
     if (!book || !namespace) return;
+    const retentionRevision = ++retentionRevisionRef.current;
+    const publication = createOfflineProjectionPublicationLease(
+      namespace.key,
+      () => generation === generationRef.current && retentionRevision === retentionRevisionRef.current,
+    );
+    if (!publication) return;
     const asset = await repositories.publicationAssets.get(
       namespace.key,
       String(book.id),
@@ -79,12 +87,12 @@ export function useBookOfflineAvailabilityController({
     if (generation !== generationRef.current) return;
     const nextState = classifyStoredAsset(book, asset, message);
     if (nextState.status === "available") {
-      await retainOfflineReaderBookMetadata({
-        namespaceKey: namespace.key,
+      const retained = await retainOfflineReaderBookMetadata({
         book,
         repository: repositories.projections,
+        publication,
       });
-      if (generation !== generationRef.current) return;
+      if (!retained || generation !== generationRef.current) return;
     }
     updateState(nextState);
   }, [book, namespace, updateState]);
@@ -140,6 +148,7 @@ export function useBookOfflineAvailabilityController({
     return () => {
       cancelled = true;
       generationRef.current += 1;
+      retentionRevisionRef.current += 1;
       operationRunningRef.current = false;
       if (repositoriesRef.current === repositories) repositoriesRef.current = null;
       repositories?.close();
@@ -151,6 +160,7 @@ export function useBookOfflineAvailabilityController({
     if (operationRunningRef.current || !repositories || !book || !namespace || !spl) return;
 
     operationRunningRef.current = true;
+    retentionRevisionRef.current += 1;
     const generation = generationRef.current;
     const previousState = stateRef.current;
     updateState({ status: "working", operation: "acquire" });
@@ -190,6 +200,7 @@ export function useBookOfflineAvailabilityController({
     if (operationRunningRef.current || !repositories || !book || !namespace) return;
 
     operationRunningRef.current = true;
+    retentionRevisionRef.current += 1;
     const generation = generationRef.current;
     const previousState = stateRef.current;
     updateState({ status: "working", operation: "remove" });

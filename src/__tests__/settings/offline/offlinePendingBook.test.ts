@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildOfflinePendingWorkPresentation } from "../../../app/settings/offline/OfflinePendingWork.Presenter";
 import type { OfflinePublicationAssetCompleteRecord } from "../../../app/offline/storage/OfflineRepositories.Types";
+import { buildOfflineSavedPublications } from "../../../app/offline/publication/OfflineSavedPublication.Queries";
 import type { ReaderOutboxIntent } from "../../../app/offline/reader/outbox/ReaderOutbox.Policy";
 
 describe("offline pending Book presentation", () => {
@@ -8,7 +9,7 @@ describe("offline pending Book presentation", () => {
     const { summary, books } = buildOfflinePendingWorkPresentation({
       intents: [progress("book-z"), establish("book-a"), upsert("book-a"), removeAnnotation("book-a")],
       titles: new Map([["book-z", "A Known Title"], ["book-a", null]]),
-      assets: [asset("book-a")],
+      savedPublications: [publication("book-a")],
       now: 2_000,
     });
 
@@ -53,7 +54,7 @@ describe("offline pending Book presentation", () => {
     };
 
     const { books } = buildOfflinePendingWorkPresentation({
-      intents: [terminal, deferred], titles: new Map(), assets: [], now: 2_000,
+      intents: [terminal, deferred], titles: new Map(), savedPublications: [], now: 2_000,
     });
 
     expect(books.find((book) => book.bookId === "book-terminal")).toMatchObject({
@@ -74,7 +75,7 @@ describe("offline pending Book presentation", () => {
     const presentation = buildOfflinePendingWorkPresentation({
       intents: [future, exact, overdue],
       titles: new Map(),
-      assets: [],
+      savedPublications: [],
       now: 3_000,
     });
 
@@ -100,7 +101,7 @@ describe("offline pending Book presentation", () => {
         withAttempt(upsert("book-deferred"), "retry-later", 4_000),
       ],
       titles: new Map(),
-      assets: [],
+      savedPublications: [],
       now: 3_000,
     });
 
@@ -122,7 +123,7 @@ describe("offline pending Book presentation", () => {
     const presentation = buildOfflinePendingWorkPresentation({
       intents: [eligibleProgress, deferredAnnotation, eligibleProgressWithAttention, manualAnnotation],
       titles: new Map(),
-      assets: [],
+      savedPublications: [],
       now: 3_000,
     });
 
@@ -151,7 +152,7 @@ describe("offline pending Book presentation", () => {
     const presentation = buildOfflinePendingWorkPresentation({
       intents: [auth, authority, authWithManual, authDeferred, authorityDeferred],
       titles: new Map(),
-      assets: [],
+      savedPublications: [],
       now: 3_000,
     });
 
@@ -176,7 +177,7 @@ describe("offline pending Book presentation", () => {
     const presentation = buildOfflinePendingWorkPresentation({
       intents: [establish("book-chain"), pendingProgress, manualAnnotation],
       titles: new Map([["book-chain", "  Chain Book  "]]),
-      assets: [asset("book-chain")],
+      savedPublications: [publication("book-chain")],
       now: 3_000,
     });
 
@@ -250,6 +251,10 @@ function asset(bookId: string): OfflinePublicationAssetCompleteRecord<Blob> {
     schemaVersion: 1,
     payload: new Blob(["book"]),
   };
+}
+
+function publication(bookId: string) {
+  return buildOfflineSavedPublications({ assets: [asset(bookId)], metadata: new Map() })[0];
 }
 
 function withAttempt<T extends ReaderOutboxIntent>(

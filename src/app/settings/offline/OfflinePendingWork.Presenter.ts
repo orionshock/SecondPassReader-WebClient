@@ -1,4 +1,5 @@
-import type { OfflinePublicationAssetCompleteRecord } from "../../offline/storage/OfflineRepositories.Types";
+import type { OfflineSavedPublication } from "../../offline/publication/OfflineSavedPublication.Queries";
+import { offlineSavedBookTitle } from "../../offline/publication/OfflineSavedPublication.Queries";
 import type { ReaderOutboxIntent } from "../../offline/reader/outbox/ReaderOutbox.Policy";
 import {
   offlineReaderRetryEligibility,
@@ -52,7 +53,7 @@ type ClassifiedIntent = {
 export function buildOfflinePendingWorkPresentation(input: {
   intents: readonly ReaderOutboxIntent[];
   titles: ReadonlyMap<string, string | null>;
-  assets: readonly OfflinePublicationAssetCompleteRecord<Blob>[];
+  savedPublications: readonly OfflineSavedPublication[];
   now: number;
 }): OfflinePendingWorkPresentation {
   const grouped = new Map<string, ClassifiedIntent[]>();
@@ -66,11 +67,11 @@ export function buildOfflinePendingWorkPresentation(input: {
     grouped.set(intent.bookId, current);
   }
 
-  const assetsByBook = new Map<string, OfflinePublicationAssetCompleteRecord<Blob>[]>();
-  for (const asset of input.assets) {
-    const current = assetsByBook.get(asset.bookId) ?? [];
-    current.push(asset);
-    assetsByBook.set(asset.bookId, current);
+  const assetsByBook = new Map<string, OfflineSavedPublication[]>();
+  for (const publication of input.savedPublications) {
+    const current = assetsByBook.get(publication.bookId) ?? [];
+    current.push(publication);
+    assetsByBook.set(publication.bookId, current);
   }
 
   const books = [...grouped].map(([bookId, classified]) => presentBook(
@@ -107,7 +108,7 @@ function presentBook(
   bookId: string,
   classified: readonly ClassifiedIntent[],
   storedTitle: string | null,
-  assets: readonly OfflinePublicationAssetCompleteRecord<Blob>[],
+  assets: readonly OfflineSavedPublication[],
 ): OfflinePendingBook {
   const intents = classified.map((value) => value.intent);
   const title = presentOfflineBookTitle(bookId, storedTitle);
@@ -125,7 +126,7 @@ function presentBook(
     annotationDeleteCount: intents.filter((intent) => intent.type === "delete-annotation").length,
     hasOfflineAsset: assets.length > 0,
     assetFormats: [...new Set(assets.map((asset) => asset.format.toUpperCase()))].sort(),
-    assetBytes: assets.reduce((total, asset) => total + asset.byteLength, 0),
+    assetBytes: assets.reduce((total, asset) => total + asset.assetBytes, 0),
     status: statusFor(classified.map((value) => value.eligibility)) ?? "waiting",
     attentionIntentCount: classified.filter((value) => value.eligibility === "manual-only").length,
     deferredIntentCount: classified.filter((value) => value.eligibility === "deferred").length,
@@ -154,13 +155,5 @@ export function presentOfflineBookTitle(bookId: string, storedTitle: string | nu
   text: string;
   available: boolean;
 } {
-  const title = storedTitle?.trim();
-  return {
-    text: title || `Book ${shortBookId(bookId)}`,
-    available: Boolean(title),
-  };
-}
-
-function shortBookId(bookId: string): string {
-  return bookId.length <= 12 ? bookId : `${bookId.slice(0, 8)}...`;
+  return offlineSavedBookTitle(bookId, storedTitle);
 }

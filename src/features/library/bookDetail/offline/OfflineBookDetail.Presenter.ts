@@ -1,15 +1,16 @@
 import type { BookDetail } from "@secondpass/client";
 import {
-  classifyOfflinePublicationAssetAvailability,
   normalizePublicationFormat,
 } from "../../../../app/offline/publication/OfflinePublicationAsset.Policy";
+import {
+  buildOfflineSavedPublications,
+  offlineSavedBookTitle,
+  selectOfflineSavedPublication,
+} from "../../../../app/offline/publication/OfflineSavedPublication.Queries";
 import type {
   OfflinePublicationAssetCompleteRecord,
   OfflinePublicationCoverRecord,
 } from "../../../../app/offline/storage/OfflineRepositories.Types";
-import { isUsableOfflinePublicationCover } from "../../../../app/offline/publication/OfflinePublicationCover.Policy";
-
-const CURRENT_READER_FORMAT = "epub";
 
 export type OfflineBookDetail = {
   bookId: string;
@@ -39,41 +40,39 @@ export function presentOfflineBookDetail(input: {
 }): OfflineBookDetail {
   const bookId = input.bookId.trim();
   const expectedFormat = normalizePublicationFormat(input.book?.file?.format);
-  const asset = selectAsset(input.assets.filter((candidate) => candidate.bookId === bookId), expectedFormat);
-  const assetFormat = normalizePublicationFormat(asset?.format);
-  const format = assetFormat ?? expectedFormat;
-  const payloadComplete = Boolean(asset?.payload instanceof Blob && asset.payload.size === asset.byteLength);
-  const policyAvailability = input.book && asset
-    ? classifyOfflinePublicationAssetAvailability({ fileMetadata: input.book.file, assetRecord: asset })
-    : null;
-  const availability = input.assetReadFailed && !asset
+  const metadata = new Map([[bookId, input.book]]);
+  const covers = new Map([[bookId, input.cover ?? null]]);
+  const saved = selectOfflineSavedPublication(
+    buildOfflineSavedPublications({ assets: input.assets, metadata, covers }),
+    bookId,
+    expectedFormat,
+  );
+  const availability = input.assetReadFailed && !saved
     ? "unknown"
-    : !asset
+    : !saved
       ? "not-available"
-      : assetFormat !== CURRENT_READER_FORMAT
+      : saved.admission === "unsupported-format"
         ? "unsupported-format"
-        : policyAvailability?.status === "available" && payloadComplete
+        : saved.admission === "available"
           ? "available"
           : "needs-attention";
-  const title = input.book?.title?.trim();
+  const title = offlineSavedBookTitle(bookId, input.book?.title ?? null);
 
   return {
     bookId,
     book: input.book,
-    title: title || fallbackBookTitle(bookId),
-    titleAvailable: Boolean(title),
+    title: title.text,
+    titleAvailable: title.available,
     subtitle: input.book?.subtitle?.trim() || null,
     authors: input.book?.authors?.map((author) => author.name.trim()).filter(Boolean).join(", ") || null,
     series: formatSeries(input.book),
     description: input.book?.description?.trim() || null,
     publisher: input.book?.publisher?.trim() || null,
     language: input.book?.language?.trim() || null,
-    format,
-    assetBytes: asset?.payload.size ?? null,
-    asset,
-    coverBlob: asset && isUsableOfflinePublicationCover(input.cover)
-      ? input.cover.payload
-      : null,
+    format: saved?.format ?? expectedFormat,
+    assetBytes: saved?.assetBytes ?? null,
+    asset: saved?.asset ?? null,
+    coverBlob: saved?.coverBlob ?? null,
     availability,
     canOpenReader: availability === "available" && Boolean(input.book),
   };
@@ -89,14 +88,6 @@ export function formatOfflineBookAssetBytes(bytes: number | null): string | null
   return `${(megabytes / 1024).toFixed(1)} GB`;
 }
 
-function selectAsset(
-  assets: OfflinePublicationAssetCompleteRecord<Blob>[],
-  expectedFormat: string | null,
-): OfflinePublicationAssetCompleteRecord<Blob> | null {
-  const ordered = [...assets].sort((left, right) => left.format.localeCompare(right.format));
-  return ordered.find((asset) => normalizePublicationFormat(asset.format) === expectedFormat) ?? ordered[0] ?? null;
-}
-
 function formatSeries(book: BookDetail | null): string | null {
   const series = book?.series;
   const name = series?.name?.trim();
@@ -104,9 +95,4 @@ function formatSeries(book: BookDetail | null): string | null {
   return series.seriesIndex === null || series.seriesIndex === undefined
     ? name
     : `${name} #${series.seriesIndex}`;
-}
-
-function fallbackBookTitle(bookId: string): string {
-  const shortId = bookId.length > 12 ? `${bookId.slice(0, 8)}...` : bookId;
-  return `Book ${shortId || "unknown"}`;
 }

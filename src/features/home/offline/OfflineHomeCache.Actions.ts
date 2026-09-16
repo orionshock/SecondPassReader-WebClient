@@ -1,11 +1,10 @@
 import type { MarginaliaRecentSession, Shelf } from "@secondpass/client";
 import type { OfflineClock } from "../../../app/offline/OfflineClock.Types";
 import type { IndexedDbOfflineRepositories } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
-import type { OfflineProjectionRecord } from "../../../app/offline/storage/OfflineRepositories.Types";
 import {
-  publishOfflineHomeProjection,
-  type OfflineHomeProjectionPublicationLease,
-} from "../../../app/offline/namespace/OfflineHomeProjectionPublication.Lifecycle";
+  publishOfflineProjection,
+  type OfflineProjectionPublicationLease,
+} from "../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
 import {
   OFFLINE_HOME_PROJECTION_SCHEMA_VERSION,
   OFFLINE_HOME_RECENT_PROJECTION_KEY,
@@ -20,7 +19,7 @@ type CacheDependencies = {
 export function cacheOfflineHomeRecent(input: {
   namespaceKey: string;
   items: MarginaliaRecentSession[];
-}, publication: OfflineHomeProjectionPublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
+}, publication: OfflineProjectionPublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
   return cacheProjection({
     namespaceKey: input.namespaceKey,
     projectionKey: OFFLINE_HOME_RECENT_PROJECTION_KEY,
@@ -31,7 +30,7 @@ export function cacheOfflineHomeRecent(input: {
 export function cacheOfflineHomeShelves(input: {
   namespaceKey: string;
   items: Shelf[];
-}, publication: OfflineHomeProjectionPublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
+}, publication: OfflineProjectionPublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
   return cacheProjection({
     namespaceKey: input.namespaceKey,
     projectionKey: OFFLINE_HOME_SHELVES_PROJECTION_KEY,
@@ -41,7 +40,7 @@ export function cacheOfflineHomeShelves(input: {
 
 async function cacheProjection<T>(
   input: { namespaceKey: string; projectionKey: string; value: T },
-  publication: OfflineHomeProjectionPublicationLease,
+  publication: OfflineProjectionPublicationLease,
   overrides: Partial<CacheDependencies>,
 ): Promise<void> {
   const namespaceKey = input.namespaceKey.trim();
@@ -54,27 +53,21 @@ async function cacheProjection<T>(
     clock: { now: () => Date.now() },
     ...overrides,
   };
-  await publishOfflineHomeProjection(publication, async () => {
-    const repositories = await dependencies.openRepositories();
-    try {
-      const previous = await repositories.projections.get<T>(namespaceKey, input.projectionKey);
-      if (!publication.isCurrent()) return;
-      const next: OfflineProjectionRecord<T> = {
+  if (!publication.isCurrent()) return;
+  const repositories = await dependencies.openRepositories();
+  try {
+    await publishOfflineProjection({
+      lease: publication,
+      repository: repositories.projections,
+      record: {
         namespaceKey,
         projectionKey: input.projectionKey,
         value: input.value,
         fetchedAt: dependencies.clock.now(),
         schemaVersion: OFFLINE_HOME_PROJECTION_SCHEMA_VERSION,
-      };
-      await repositories.projections.put(next);
-      if (!publication.isCurrent()) {
-        // Invalidation can occur while IndexedDB is committing. Restore the prior projection so
-        // obsolete Home work cannot recreate or replace cache state after its lifetime ends.
-        if (previous) await repositories.projections.put(previous);
-        else await repositories.projections.delete(namespaceKey, input.projectionKey);
-      }
-    } finally {
-      repositories.close();
-    }
-  });
+      },
+    });
+  } finally {
+    repositories.close();
+  }
 }

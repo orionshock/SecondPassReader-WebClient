@@ -8,7 +8,8 @@ import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
 } from "../../offline/storage/IndexedDbOfflineRepositories.Factory";
-import type { OfflinePublicationAssetCompleteRecord } from "../../offline/storage/OfflineRepositories.Types";
+import type { OfflineSavedPublication } from "../../offline/publication/OfflineSavedPublication.Queries";
+import { buildOfflineSavedPublications } from "../../offline/publication/OfflineSavedPublication.Queries";
 import type { BrowserConnectivityStatus } from "../../connectivity/BrowserConnectivity.State";
 import type {
   OfflineReaderCoordinatedSyncInput,
@@ -20,7 +21,6 @@ import {
 } from "../../offline/reader/sync/notice/OfflineReaderSyncOutcome.State";
 import {
   buildOfflinePendingWorkPresentation,
-  presentOfflineBookTitle,
   type OfflinePendingBook,
   type OfflineSettingsPendingSummary,
 } from "./OfflinePendingWork.Presenter";
@@ -125,17 +125,18 @@ export function createOfflineSettingsController(
         currentRepositories.publicationAssets.list(namespaceKey),
       ]);
       const bookIds = [...new Set([...intents.map((intent) => intent.bookId), ...records.map((record) => record.bookId)])];
-      const titles = new Map(await Promise.all(bookIds.map(async (bookId) => [
+      const metadata = new Map(await Promise.all(bookIds.map(async (bookId) => [
         bookId,
-        await loadBookTitle(namespaceKey, bookId, currentRepositories),
+        await loadBook(namespaceKey, bookId, currentRepositories),
       ] as const)));
-      const assets = records.map((record) => assetView(record, titles.get(record.bookId) ?? null));
+      const savedPublications = buildOfflineSavedPublications({ assets: records, metadata });
+      const assets = savedPublications.map(assetView);
       if (!isCurrent(expected)) return;
       assets.sort(compareAssets);
       const pending = buildOfflinePendingWorkPresentation({
         intents,
-        titles,
-        assets: records,
+        titles: new Map([...metadata].map(([bookId, book]) => [bookId, book?.title ?? null])),
+        savedPublications,
         now: dependencies.now(),
       });
       publish({
@@ -337,31 +338,28 @@ function initialState(connectivity: BrowserConnectivityStatus): OfflineSettingsS
 }
 
 function assetView(
-  record: OfflinePublicationAssetCompleteRecord<Blob>,
-  title: string | null,
+  publication: OfflineSavedPublication,
 ): OfflineSettingsAsset {
-  const presentedTitle = presentOfflineBookTitle(record.bookId, title);
   return {
-    key: JSON.stringify([record.bookId, record.format]),
-    bookId: record.bookId,
-    format: record.format,
-    byteLength: record.payload.size,
-    title: presentedTitle.text,
-    titleAvailable: presentedTitle.available,
+    key: JSON.stringify([publication.bookId, publication.format]),
+    bookId: publication.bookId,
+    format: publication.format,
+    byteLength: publication.assetBytes,
+    title: publication.title,
+    titleAvailable: publication.titleAvailable,
   };
 }
 
-async function loadBookTitle(
+async function loadBook(
   namespaceKey: string,
   bookId: string,
   repositories: Repositories,
-): Promise<string | null> {
-  const book = await loadOfflineReaderBookMetadata({
+): ReturnType<typeof loadOfflineReaderBookMetadata> {
+  return loadOfflineReaderBookMetadata({
     namespaceKey,
     bookId,
     repository: repositories.projections,
   });
-  return book?.title?.trim() || null;
 }
 
 async function syncProductionBook(
