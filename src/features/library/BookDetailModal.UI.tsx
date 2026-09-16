@@ -66,10 +66,9 @@ export function BookDetailModal({
   const canFetch = Boolean(spl);
 
   useEffect(() => {
-    if (!canFetch || !spl) return;
-
     fetchSeqRef.current += 1;
     const seq = fetchSeqRef.current;
+    if (!canFetch || !spl) return;
 
     setBusy(true);
     setError(null);
@@ -91,6 +90,10 @@ export function BookDetailModal({
         setBusy(false);
       }
     })();
+
+    return () => {
+      if (seq === fetchSeqRef.current) fetchSeqRef.current += 1;
+    };
   }, [bookId, canFetch, spl]);
 
   useEffect(() => {

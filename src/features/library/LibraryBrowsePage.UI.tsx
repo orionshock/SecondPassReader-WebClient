@@ -104,7 +104,6 @@ export function LibraryBrowsePage({
     [advancedGroupsEnabled, route.authorId, route.browse, route.groupId, route.ordering, route.page, route.pageSize, route.q, route.searchMode, route.seriesId, route.tag],
   );
   const { axis: browseMode, effectiveGroupId, pageSize, q: qFromRoute = "", tag: tagSlug } = routeState;
-  const showBookList = routeState.resultKind === "books";
   const bookOrderingOptions = routeState.selectedSeriesId ? SERIES_BOOK_ORDERING_OPTIONS : BOOK_ORDERING_OPTIONS;
   const bookOrdering = routeState.resultKind === "books" ? routeState.ordering as BookOrdering : "title";
   const seriesOrdering = routeState.resultKind === "series" ? routeState.ordering as EntityOrdering : "name";
@@ -114,7 +113,8 @@ export function LibraryBrowsePage({
   const [scopeName, setScopeName] = useState<string | undefined>();
   const [bookViewMode, setBookViewMode] = useState<LibraryBooksView>(() => normalizeLibraryBooksView(route.view) ?? getLibraryBooksView());
 
-  const axisResults = useLibraryAxisResults({ spl, state: routeState, canLoad: status === "verified" && apiReady });
+  const activeResult = useLibraryAxisResults({ spl, state: routeState, canLoad: status === "verified" && apiReady });
+  const showBookList = activeResult.kind === "books";
   const selectedEntity = useSelectedLibraryEntity({
     spl,
     selectedAuthorId: routeState.selectedAuthorId,
@@ -122,14 +122,11 @@ export function LibraryBrowsePage({
     canLoad: status === "verified" && apiReady,
   });
   const { selectedAuthorData: selectedAuthor, selectedSeriesData: selectedSeries } = selectedEntity;
-  const { data: booksData, busy: booksBusy, error: booksError, page: booksPage } = axisResults.books;
-  const { data: seriesData, busy: seriesBusy, error: seriesError, page: seriesPage } = axisResults.series;
-  const { data: authorsData, busy: authorsBusy, error: authorsError, page: authorsPage } = axisResults.authors;
 
   useEffect(() => {
     setQDraft(qFromRoute);
   }, [qFromRoute]);
-  const catalogResult = showBookList ? booksData : browseMode === "series" ? seriesData : authorsData;
+  const catalogResult = activeResult.data;
 
   useEffect(() => {
     if (!advancedGroupsEnabled && route.groupId) onRemoveUnavailableGroup?.();
@@ -249,30 +246,28 @@ export function LibraryBrowsePage({
               role="tabpanel"
               aria-labelledby={`library-axis-${browseMode}-tab`}
             >
-              {booksError ? (
-                <LibraryResultsLoadErrorNotice error={booksError} />
-              ) : null}
-              {showBookList ? (
+              {activeResult.kind === "books" ? (
                 <>
+                  {activeResult.error ? <LibraryResultsLoadErrorNotice error={activeResult.error} /> : null}
                   {browseMode === "series" && selectedSeries ? <LibrarySelectedAxisHeader kind="series" series={selectedSeries} /> : null}
                   {browseMode === "authors" && selectedAuthor ? <LibrarySelectedAxisHeader kind="author" author={selectedAuthor} /> : null}
                   <LibraryBooksResults
-                    data={booksData}
-                    busy={booksBusy}
-                    page={booksPage}
+                    data={activeResult.data}
+                    busy={activeResult.busy}
+                    page={activeResult.page}
                     pageSize={pageSize}
                     viewMode={bookViewMode}
                     serverBaseUrl={profile?.serverBaseUrl}
                     selectedBookId={selectedBookId ? String(selectedBookId) : null}
                     onViewBook={(book) => onViewBook?.(String(book.id))}
                     onPageChange={handlePageChange}
-                    hasError={Boolean(booksError)}
+                    hasError={Boolean(activeResult.error)}
                   />
                 </>
-              ) : browseMode === "series" ? (
-                <LibrarySeriesRows data={seriesData} busy={seriesBusy} error={seriesError} page={seriesPage} profile={profile} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
+              ) : activeResult.kind === "series" ? (
+                <LibrarySeriesRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} profile={profile} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
               ) : (
-                <LibraryAuthorRows data={authorsData} busy={authorsBusy} error={authorsError} page={authorsPage} profile={profile} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
+                <LibraryAuthorRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} profile={profile} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
               )}
             </div>
           </div>
