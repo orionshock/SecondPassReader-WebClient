@@ -30,6 +30,7 @@ export function useReaderSettingsReflowLifecycle(input: {
     runtimeController,
     settings,
   } = input;
+  const lastHandledRendererSettingsRef = useRef<ReaderSettings | null>(settings ?? null);
   const lastHandledReaderWidthRef = useRef<ReaderSettings["readerWidth"] | null>(
     settings?.readerWidth ?? null,
   );
@@ -38,6 +39,11 @@ export function useReaderSettingsReflowLifecycle(input: {
     if (!settings) return;
     if (!isReaderFullyReady(readiness)) return;
     if (!engineRef.current) return;
+    const previous = lastHandledRendererSettingsRef.current;
+    lastHandledRendererSettingsRef.current = settings;
+    if (!previous) return;
+    if (sameRendererSettings(previous, settings)) return;
+
     const generation = engineGenerationRef.current;
 
     void (async () => {
@@ -90,4 +96,11 @@ export function useReaderSettingsReflowLifecycle(input: {
     runtimeController,
     settings?.readerWidth,
   ]);
+}
+
+function sameRendererSettings(left: ReaderSettings, right: ReaderSettings): boolean {
+  return left.theme === right.theme
+    && left.fontFamily === right.fontFamily
+    && left.fontSizePercent === right.fontSizePercent
+    && left.lineHeight === right.lineHeight;
 }

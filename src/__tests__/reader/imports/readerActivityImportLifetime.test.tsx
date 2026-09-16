@@ -68,6 +68,15 @@ describe("reader activity import lifetime", () => {
     expect(harness.displayCfi).not.toHaveBeenCalled();
     expect(harness.stageSelection).not.toHaveBeenCalled();
   });
+
+  it("delegates drawer layout settling to one semantic runtime resize", async () => {
+    const harness = await mountHarness(root);
+
+    await harness.setDrawerLayout(false);
+
+    expect(harness.sendCommand).toHaveBeenCalledOnce();
+    expect(harness.sendCommand).toHaveBeenCalledWith({ type: "resize" });
+  });
 });
 
 type Controller = ReturnType<typeof useReaderActivityImportController>;
@@ -99,6 +108,7 @@ async function mountHarness(root: Root) {
     markRowManuallyCompleted: vi.fn(),
     startImport,
   } as unknown as ReturnType<typeof useReaderImportJob>;
+  const sendCommand = vi.fn();
   const renderer = {
     capability: {
       searchBook: (_query: string, options?: { signal?: AbortSignal }) => {
@@ -114,7 +124,7 @@ async function mountHarness(root: Root) {
       },
     },
     clearTemporaryHighlight: vi.fn(),
-    sendCommand: vi.fn(),
+    sendCommand,
   } as unknown as ReaderActivityRenderState["renderer"];
 
   function Harness() {
@@ -132,6 +142,11 @@ async function mountHarness(root: Root) {
     setRowActivationState,
     setDrawerOpen,
     startImport,
+    sendCommand,
+    setDrawerLayout: async (open: boolean) => {
+      readerImport.drawerOpen = open;
+      await act(async () => root.render(<Harness />));
+    },
     get signal() { return signal; },
     resolveSearch,
   };

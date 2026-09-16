@@ -91,8 +91,6 @@ describe("Reading Shell renderer capability", () => {
     ));
     await waitFor(() => engineFactory.mock.calls.length === 1);
     await act(async () => display.resolve());
-    await waitFor(() => engine.applyDisplaySettings.mock.calls.length > 0);
-    engine.applyDisplaySettings.mockClear();
     engine.refreshHighlightMarks.mockClear();
 
     await act(async () => root.render(

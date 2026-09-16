@@ -119,6 +119,7 @@ export function buildSessionHighlightViewModels(input: {
     return {
       kind: "highlight" as const,
       id: highlight.id,
+      clientId: rawAnnotation?.clientId?.trim() || highlight.id,
       cfiRange: highlight.cfiRange,
       text: highlight.text,
       note: note ?? undefined,

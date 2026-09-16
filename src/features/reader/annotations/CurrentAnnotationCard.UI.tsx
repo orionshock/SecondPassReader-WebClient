@@ -7,7 +7,7 @@ import { CurrentAnnotationCardBookmarkView } from "./CurrentAnnotationCardBookma
 import { CurrentAnnotationCardHighlightEditor } from "./CurrentAnnotationCardHighlightEditor.UI";
 import { CurrentAnnotationCardHighlightView } from "./CurrentAnnotationCardHighlightView.UI";
 import type { CurrentSessionAnnotationViewModel, HighlightViewModel } from "./ReaderAnnotationViewModels.Types";
-import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
+import type { CurrentAnnotationEditingState } from "./CurrentAnnotationEditing.Controller";
 
 function normalizeQuoteTextForDisplay(text: string): string {
   // Preserve stored text; normalize whitespace only for the single-line card preview.
@@ -31,39 +31,29 @@ export function CurrentAnnotationCard({
   busy,
   readOnly = false,
   currentCfi,
-  draftColor,
-  draftNote,
-  editingId,
-  editError,
-  editStatus,
+  editing,
   onJumpToCfi,
   onJumpToCfiRange,
   onRemoveAnnotation,
-  onUpdateHighlight,
-  setDraftColor,
-  setDraftNote,
-  setEditingId,
-  setEditError,
-  setEditStatus,
+  onBeginEdit,
+  onCancelEdit,
+  onChangeDraftColor,
+  onChangeDraftNote,
+  onSaveEdit,
 }: {
   annotation: CurrentSessionAnnotationViewModel;
   busy: boolean;
   readOnly?: boolean;
   currentCfi?: string | null;
-  draftColor: string;
-  draftNote: string;
-  editingId: string | null;
-  editError: string | null;
-  editStatus: "idle" | "saving" | "error";
+  editing: CurrentAnnotationEditingState | null;
   onJumpToCfi: (cfi: string) => void;
   onJumpToCfiRange: (cfiRange: string) => void;
   onRemoveAnnotation: (annotationId: string) => void;
-  onUpdateHighlight: (annotationId: string, update: { note: string; color: string }) => Promise<void>;
-  setDraftColor: (value: string) => void;
-  setDraftNote: (value: string) => void;
-  setEditingId: (value: string | null) => void;
-  setEditError: (value: string | null) => void;
-  setEditStatus: (value: "idle" | "saving" | "error") => void;
+  onBeginEdit: (annotation: { clientId: string; annotationId: string; note?: string; color?: string }) => void;
+  onCancelEdit: () => void;
+  onChangeDraftColor: (value: string) => void;
+  onChangeDraftNote: (value: string) => void;
+  onSaveEdit: () => Promise<void>;
 }) {
   if ("cfi" in annotation) {
     const b = annotation;
@@ -92,8 +82,9 @@ export function CurrentAnnotationCard({
   const quoteText = h.text ? normalizeQuoteTextForDisplay(h.text) : "";
   const when = formatWhen(h.timestamp);
   const locationMetaParts = toLocationMetaParts(h.labelParts);
-  const isEditing = editingId === h.id;
-  const canSave = editStatus !== "saving" && !busy;
+  const activeEditing = editing?.clientId === h.clientId ? editing : null;
+  const isEditing = Boolean(activeEditing);
+  const canSave = activeEditing?.status !== "saving" && !busy;
   const display = getHighlightAnnotationDisplay(h.note);
   return (
     <article
@@ -125,40 +116,21 @@ export function CurrentAnnotationCard({
             annotationId={h.id}
             canSave={canSave}
             descriptionStatus={h.descriptionStatus}
-            draftColor={draftColor}
-            draftNote={draftNote}
-            editError={editError}
-            editStatus={editStatus}
+            draftColor={activeEditing!.draftColor}
+            draftNote={activeEditing!.draftNote}
+            editError={activeEditing!.error}
+            editStatus={activeEditing!.status}
             label={h.label}
             locationMetaParts={locationMetaParts}
             when={when}
             onSubmit={(event) => {
               event.preventDefault();
               if (!canSave) return;
-              setEditStatus("saving");
-              setEditError(null);
-              void (async () => {
-                try {
-                  await onUpdateHighlight(h.id, { note: draftNote, color: draftColor });
-                  setEditStatus("idle");
-                  setEditingId(null);
-                } catch (err) {
-                  debugWarn("reader", "highlight update did not complete", {
-                    annotationId: h.id,
-                    error: err,
-                  });
-                  setEditStatus("error");
-                  setEditError("Couldn't update the highlight. Try again.");
-                }
-              })();
+              void onSaveEdit();
             }}
-            onCancel={() => {
-              setEditingId(null);
-              setEditStatus("idle");
-              setEditError(null);
-            }}
-            onColorChange={setDraftColor}
-            onNoteChange={setDraftNote}
+            onCancel={onCancelEdit}
+            onColorChange={onChangeDraftColor}
+            onNoteChange={onChangeDraftNote}
           />
         ) : null}
       </div>
@@ -169,15 +141,16 @@ export function CurrentAnnotationCard({
             type="button"
             className="button buttonCompact spIconButton"
             onClick={() => {
-              setEditingId(h.id);
-              setDraftNote(h.note ?? "");
-              setDraftColor(h.color ?? "yellow");
-              setEditStatus("idle");
-              setEditError(null);
+              onBeginEdit({
+                clientId: h.clientId,
+                annotationId: h.id,
+                note: h.note,
+                color: h.color,
+              });
             }}
             aria-label="Edit highlight"
             title="Edit highlight"
-            disabled={editStatus === "saving"}
+            disabled={editing?.status === "saving"}
           >
             <MaterialIcon name="edit_note" />
           </button>
@@ -188,7 +161,7 @@ export function CurrentAnnotationCard({
           onClick={() => onJumpToCfiRange(h.cfiRange)}
           aria-label="Go to highlight"
           title="Go to highlight"
-          disabled={editStatus === "saving"}
+          disabled={editing?.status === "saving"}
         >
           <MaterialIcon name="my_location" />
         </button>
@@ -202,7 +175,7 @@ export function CurrentAnnotationCard({
             }}
             aria-label="Delete highlight"
             title="Delete highlight"
-            disabled={editStatus === "saving"}
+            disabled={editing?.status === "saving"}
           >
             <MaterialIcon name="delete" />
           </button>

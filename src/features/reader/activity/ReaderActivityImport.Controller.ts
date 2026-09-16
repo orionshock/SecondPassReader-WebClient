@@ -44,15 +44,8 @@ export function useReaderActivityImportController({
   useEffect(() => {
     if (lastDrawerLayoutRef.current === drawerInLayout) return;
     lastDrawerLayoutRef.current = drawerInLayout;
-    let cancelled = false;
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        if (!cancelled) renderer.sendCommand({ type: "resize" });
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
+    // The runtime that measures the Reader mount owns layout settling and stale-request checks.
+    renderer.sendCommand({ type: "resize" });
   }, [drawerInLayout, renderer.sendCommand]);
 
   const cleanupTemporaryState = useCallback(() => {

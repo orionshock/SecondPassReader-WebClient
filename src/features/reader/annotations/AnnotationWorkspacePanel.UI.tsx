@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { CurrentSessionAnnotationViewModel } from "./ReaderAnnotationViewModels.Types";
 import { PreviousSessionAnnotationsPanel } from "./PreviousSessionAnnotationsPanel.UI";
 import type { PreviousSessionAnnotationGroup } from "../session/previousSession/PreviousSessionViewModels.Presenter";
@@ -6,6 +6,7 @@ import { CurrentSessionMetadataEditor } from "./CurrentSessionMetadataEditor.UI"
 import { CurrentAnnotationCard } from "./CurrentAnnotationCard.UI";
 import { AnnotationWorkspaceTabs, type AnnotationWorkspaceTabKey } from "./AnnotationWorkspaceTabs.UI";
 import { useAnnotationWorkspaceFocus, type AnnotationWorkspaceFocusRequest } from "./ReaderAnnotationWorkspaceFocus.Lifecycle";
+import { useCurrentAnnotationEditingController } from "./CurrentAnnotationEditing.Controller";
 
 export function AnnotationWorkspace({
   annotations,
@@ -46,11 +47,16 @@ export function AnnotationWorkspace({
 }) {
   const rootRef = useRef<HTMLElement | null>(null);
   const [tab, setTab] = useState<AnnotationWorkspaceTabKey>("current");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draftNote, setDraftNote] = useState<string>("");
-  const [draftColor, setDraftColor] = useState<string>("yellow");
-  const [editStatus, setEditStatus] = useState<"idle" | "saving" | "error">("idle");
-  const [editError, setEditError] = useState<string | null>(null);
+  const currentHighlights = useMemo(
+    () => annotations.flatMap((annotation) => "cfiRange" in annotation
+      ? [{ clientId: annotation.clientId, annotationId: annotation.id }]
+      : []),
+    [annotations],
+  );
+  const editing = useCurrentAnnotationEditingController({
+    currentHighlights,
+    onUpdateHighlight,
+  });
 
   useAnnotationWorkspaceFocus({ focusRequest, rootRef, setTab });
 
@@ -94,20 +100,15 @@ export function AnnotationWorkspace({
                     busy={busy}
                     readOnly={!canMutateAnnotations}
                     currentCfi={currentCfi}
-                    draftColor={draftColor}
-                    draftNote={draftNote}
-                    editingId={editingId}
-                    editError={editError}
-                    editStatus={editStatus}
+                    editing={editing.state}
                     onJumpToCfi={onJumpToCfi}
                     onJumpToCfiRange={onJumpToCfiRange}
                     onRemoveAnnotation={onRemoveAnnotation}
-                    onUpdateHighlight={onUpdateHighlight}
-                    setDraftColor={setDraftColor}
-                    setDraftNote={setDraftNote}
-                    setEditingId={setEditingId}
-                    setEditError={setEditError}
-                    setEditStatus={setEditStatus}
+                    onBeginEdit={editing.begin}
+                    onCancelEdit={editing.cancel}
+                    onChangeDraftColor={editing.changeColor}
+                    onChangeDraftNote={editing.changeNote}
+                    onSaveEdit={editing.save}
                   />
                 );
               })}
