@@ -73,6 +73,7 @@ describe("Offline Settings controller", () => {
     expect(harness.dependencies.syncPending.mock.calls[0][0]).toMatchObject({
       namespaceKey: "account-a",
       mode: "wait",
+      attemptMode: "manual",
     });
     gate.resolve();
     await Promise.all([first, duplicate]);
@@ -118,6 +119,7 @@ describe("Offline Settings controller", () => {
       namespaceKey: "account-a",
       bookId: "book-1",
       mode: "wait",
+      attemptMode: "manual",
     }));
     expect(harness.dependencies.showSyncOutcome).toHaveBeenCalledOnce();
     expect(harness.controller.getSnapshot().pendingBooks.map((book) => book.bookId)).toEqual(["book-2"]);
@@ -270,6 +272,36 @@ describe("Offline Settings controller", () => {
     expect(harness.repositories.readerOutbox.list).toHaveBeenCalledTimes(2);
     stop();
   });
+
+  it("uses one clock snapshot for summary and rows, then reclassifies on refresh", async () => {
+    let now = 2_999;
+    const deferredProgress = progress("book-1");
+    deferredProgress.attempt = {
+      revision: 1,
+      classification: "retry-later",
+      attemptCount: 1,
+      attemptedAt: 1_000,
+      retryEligibleAt: 3_000,
+    };
+    const harness = createHarness({ intents: [deferredProgress], now: () => now });
+    const stop = harness.controller.start();
+    await harness.ready();
+
+    expect(harness.dependencies.now).toHaveBeenCalledOnce();
+    expect(harness.controller.getSnapshot()).toMatchObject({
+      pending: { deferredBooks: 1 },
+      pendingBooks: [{ status: "deferred", progressStatus: "deferred" }],
+    });
+
+    now = 3_000;
+    await harness.controller.refresh();
+    expect(harness.dependencies.now).toHaveBeenCalledTimes(2);
+    expect(harness.controller.getSnapshot()).toMatchObject({
+      pending: { deferredBooks: 0 },
+      pendingBooks: [{ status: "waiting", progressStatus: "waiting" }],
+    });
+    stop();
+  });
 });
 
 function createHarness(options: {
@@ -278,6 +310,7 @@ function createHarness(options: {
   assets?: OfflinePublicationAssetCompleteRecord<Blob>[];
   titles?: Map<string, string>;
   connectivity?: "online" | "offline" | "unknown";
+  now?: () => number;
 } = {}) {
   let intents = options.intents ?? [];
   let assets = options.assets ?? [];
@@ -350,6 +383,7 @@ function createHarness(options: {
     })),
     discardProgress: vi.fn<OfflineSettingsDependencies["discardProgress"]>(discardPendingReaderProgress),
     showSyncOutcome: vi.fn(),
+    now: vi.fn(options.now ?? (() => 2_000)),
   } satisfies OfflineSettingsDependencies;
   const controller = createOfflineSettingsController({
     namespaceKey: options.namespaceKey === undefined ? "account-a" : options.namespaceKey,

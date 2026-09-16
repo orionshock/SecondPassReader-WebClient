@@ -9,7 +9,6 @@ import {
   type IndexedDbOfflineRepositories,
 } from "../../offline/storage/IndexedDbOfflineRepositories.Factory";
 import type { OfflinePublicationAssetCompleteRecord } from "../../offline/storage/OfflineRepositories.Types";
-import type { ReaderOutboxIntent } from "../../offline/reader/outbox/ReaderOutbox.Policy";
 import type { BrowserConnectivityStatus } from "../../connectivity/BrowserConnectivity.State";
 import type {
   OfflineReaderCoordinatedSyncInput,
@@ -19,10 +18,14 @@ import {
   addOfflineReaderSyncBookOutcome,
   createOfflineReaderSyncOutcome,
 } from "../../offline/reader/sync/notice/OfflineReaderSyncOutcome.State";
-import { presentOfflinePendingBooks, type OfflinePendingBook } from "./OfflinePendingBook.Presenter";
+import {
+  buildOfflinePendingWorkPresentation,
+  presentOfflineBookTitle,
+  type OfflinePendingBook,
+  type OfflineSettingsPendingSummary,
+} from "./OfflinePendingWork.Presenter";
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
 import { discardPendingReaderProgress } from "../../offline/reader/outbox/OfflineReaderPendingRepair.Actions";
-import { offlineReaderRetryEligibility } from "../../offline/reader/retry/OfflineReaderRetryEligibility.Policy";
 import {
   removeAllOfflinePublicationAssets,
   removeOfflinePublicationAsset,
@@ -35,16 +38,6 @@ export type OfflineSettingsAsset = {
   byteLength: number;
   title: string;
   titleAvailable: boolean;
-};
-
-export type OfflineSettingsPendingSummary = {
-  books: number;
-  intents: number;
-  sessionEstablishment: number;
-  progress: number;
-  annotations: number;
-  attentionBooks: number;
-  deferredBooks: number;
 };
 
 export type OfflineSettingsState = {
@@ -78,6 +71,7 @@ export type OfflineSettingsDependencies = {
   showSyncOutcome(result: OfflineReaderPendingSyncResult): void;
   syncBook(input: OfflineReaderCoordinatedSyncInput): Promise<OfflineReaderCoordinatedSyncResult>;
   discardProgress: typeof discardPendingReaderProgress;
+  now(): number;
 };
 
 export type OfflineSettingsController = {
@@ -106,6 +100,7 @@ export function createOfflineSettingsController(
     showSyncOutcome: showOfflineReaderSyncOutcome,
     syncBook: syncProductionBook,
     discardProgress: discardPendingReaderProgress,
+    now: Date.now,
     ...dependencyOverrides,
   };
   const namespaceKey = input.namespaceKey?.trim() ?? "";
@@ -137,11 +132,17 @@ export function createOfflineSettingsController(
       const assets = records.map((record) => assetView(record, titles.get(record.bookId) ?? null));
       if (!isCurrent(expected)) return;
       assets.sort(compareAssets);
+      const pending = buildOfflinePendingWorkPresentation({
+        intents,
+        titles,
+        assets: records,
+        now: dependencies.now(),
+      });
       publish({
         status: "ready",
         connectivity: dependencies.getConnectivitySnapshot(),
-        pending: summarizePending(intents),
-        pendingBooks: presentOfflinePendingBooks({ intents, titles, assets: records }),
+        pending: pending.summary,
+        pendingBooks: pending.books,
         assets,
         totalAssetBytes: assets.reduce((total, asset) => total + asset.byteLength, 0),
         action: "idle",
@@ -335,35 +336,18 @@ function initialState(connectivity: BrowserConnectivityStatus): OfflineSettingsS
   };
 }
 
-function summarizePending(intents: readonly ReaderOutboxIntent[]): OfflineSettingsPendingSummary {
-  const grouped = new Map<string, ReaderOutboxIntent[]>();
-  for (const intent of intents) grouped.set(intent.bookId, [...(grouped.get(intent.bookId) ?? []), intent]);
-  const statuses = [...grouped.values()].map((bookIntents) => bookIntents.map((intent) => (
-    offlineReaderRetryEligibility({ intent, mode: "automatic", now: Date.now() })
-  )));
-  return {
-    books: new Set(intents.map((intent) => intent.bookId)).size,
-    intents: intents.length,
-    sessionEstablishment: intents.filter((intent) => intent.type === "establish-session").length,
-    progress: intents.filter((intent) => intent.type === "replace-progress").length,
-    annotations: intents.filter((intent) => intent.type === "upsert-annotation" || intent.type === "delete-annotation").length,
-    attentionBooks: statuses.filter((values) => values.includes("manual-only")).length,
-    deferredBooks: statuses.filter((values) => values.includes("deferred") && !values.includes("manual-only")).length,
-  };
-}
-
 function assetView(
   record: OfflinePublicationAssetCompleteRecord<Blob>,
   title: string | null,
 ): OfflineSettingsAsset {
-  const normalizedTitle = title?.trim();
+  const presentedTitle = presentOfflineBookTitle(record.bookId, title);
   return {
     key: JSON.stringify([record.bookId, record.format]),
     bookId: record.bookId,
     format: record.format,
     byteLength: record.payload.size,
-    title: normalizedTitle || `Book ${shortBookId(record.bookId)}`,
-    titleAvailable: Boolean(normalizedTitle),
+    title: presentedTitle.text,
+    titleAvailable: presentedTitle.available,
   };
 }
 
@@ -390,10 +374,6 @@ async function syncProductionBook(
 function compareAssets(left: OfflineSettingsAsset, right: OfflineSettingsAsset): number {
   if (left.titleAvailable !== right.titleAvailable) return left.titleAvailable ? -1 : 1;
   return left.title.localeCompare(right.title) || left.bookId.localeCompare(right.bookId) || left.format.localeCompare(right.format);
-}
-
-function shortBookId(bookId: string): string {
-  return bookId.length <= 12 ? bookId : `${bookId.slice(0, 8)}...`;
 }
 
 function subscribeWindowFocus(listener: () => void): () => void {

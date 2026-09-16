@@ -7,7 +7,7 @@ import {
   type OfflineSettingsState,
 } from "./OfflineSettings.Controller";
 import { formatOfflineAssetBytes } from "./OfflineSettings.Presenter";
-import type { OfflinePendingBook } from "./OfflinePendingBook.Presenter";
+import type { OfflinePendingBook } from "./OfflinePendingWork.Presenter";
 
 export function OfflineSettingsPanel({
   namespaceKey,
