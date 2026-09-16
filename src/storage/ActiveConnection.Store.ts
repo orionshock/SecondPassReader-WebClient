@@ -74,13 +74,127 @@ function readActive(): ActiveConnection | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return null;
-    const connection = parsed as Partial<ActiveConnection>;
-    if (!connection.id || !connection.serverBaseUrl || !connection.createdAt) return null;
-    return connection as ActiveConnection;
+    return isActiveConnection(parsed) ? parsed : null;
   } catch {
     return null;
   }
+}
+
+type UnknownRecord = Record<string, unknown>;
+
+function isActiveConnection(value: unknown): value is ActiveConnection {
+  if (!isRecord(value)) return false;
+  if (!isNonEmptyString(value.id)
+    || typeof value.label !== "string"
+    || !isNonEmptyString(value.serverBaseUrl)
+    || !isTimestamp(value.createdAt)) return false;
+
+  if (!optionalFieldsMatch(value, [
+    "apiBaseUrl",
+    "serverName",
+    "serverDescription",
+    "serverVersion",
+    "serverRelease",
+    "serverReleaseDate",
+    "readingClientBaseUrl",
+    "marginaliaProfileUri",
+    "clientSessionName",
+  ], isString)) return false;
+  if (!optionalFieldsMatch(value, [
+    "accessToken",
+    "tokenType",
+    "clientSessionId",
+  ], isNonEmptyString)) return false;
+  if (!optionalFieldsMatch(value, [
+    "linkedAt",
+    "verifiedAt",
+    "lastUsedAt",
+    "lastCheckedAt",
+  ], isTimestamp)) return false;
+  if (!optionalFieldsMatch(value, [
+    "advancedLibraryGroupsEnabled",
+    "mustChangePassword",
+  ], isBoolean)) return false;
+  if (value.bannerText !== undefined && value.bannerText !== null && typeof value.bannerText !== "string") return false;
+  if (value.authenticationState !== undefined
+    && value.authenticationState !== "repair-required"
+    && value.authenticationState !== "verifying-repair") return false;
+  if (value.publicGroup !== undefined && !isPublicGroup(value.publicGroup)) return false;
+  if (value.verifiedUser !== undefined && !isVerifiedUser(value.verifiedUser)) return false;
+  return value.clientApi === undefined || isClientApi(value.clientApi);
+}
+
+function isVerifiedUser(value: unknown): value is NonNullable<ActiveConnection["verifiedUser"]> {
+  if (!isRecord(value) || !isNonEmptyString(value.username)) return false;
+  if (!optionalFieldsMatch(value, [
+    "profileId",
+    "displayName",
+    "firstName",
+    "lastName",
+    "email",
+    "role",
+  ], isString)) return false;
+  if (!optionalFieldsMatch(value, [
+    "isOwner",
+    "isManager",
+    "isLibrarian",
+    "isReader",
+    "canAccessDjangoAdmin",
+  ], isBoolean)) return false;
+  return value.groups === undefined
+    || (Array.isArray(value.groups) && value.groups.every(isVerifiedUserGroup));
+}
+
+function isVerifiedUserGroup(value: unknown): value is NonNullable<NonNullable<ActiveConnection["verifiedUser"]>["groups"]>[number] {
+  return isRecord(value)
+    && isNonEmptyString(value.id)
+    && typeof value.name === "string"
+    && typeof value.isPublicGroup === "boolean"
+    && typeof value.isCurator === "boolean";
+}
+
+function isPublicGroup(value: unknown): value is NonNullable<ActiveConnection["publicGroup"]> {
+  return isRecord(value)
+    && isNonEmptyString(value.id)
+    && typeof value.name === "string"
+    && typeof value.description === "string";
+}
+
+function isClientApi(value: unknown): value is NonNullable<ActiveConnection["clientApi"]> {
+  return isRecord(value)
+    && isNonEmptyString(value.discoveryVersion)
+    && isNonEmptyString(value.loginRequestEndpoint)
+    && isNonEmptyString(value.pollEndpointTemplate)
+    && isNonEmptyString(value.consumeEndpointTemplate)
+    && isNonEmptyString(value.tokenType);
+}
+
+function optionalFieldsMatch(
+  value: UnknownRecord,
+  fields: readonly string[],
+  validate: (candidate: unknown) => boolean,
+): boolean {
+  return fields.every((field) => value[field] === undefined || validate(value[field]));
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isTimestamp(value: unknown): value is string {
+  return isNonEmptyString(value) && Number.isFinite(Date.parse(value));
 }
 
 function writeActive(connection: ActiveConnection) {

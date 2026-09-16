@@ -1,6 +1,9 @@
 import type { MarginaliaRecentSession, Shelf } from "@secondpass/client";
 import type { OfflineClock } from "../../../app/offline/OfflineClock.Types";
-import type { IndexedDbOfflineRepositories } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
+import {
+  openIndexedDbOfflineRepositories,
+  type IndexedDbOfflineRepositories,
+} from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import {
   publishOfflineProjection,
   type OfflineProjectionPublicationLease,
@@ -47,8 +50,7 @@ async function cacheProjection<T>(
   if (!namespaceKey || publication.namespaceKey !== namespaceKey) return;
   const dependencies: CacheDependencies = {
     openRepositories: async () => {
-      const module = await import("../../../app/offline/storage/IndexedDbOfflineRepositories.Factory");
-      return module.openIndexedDbOfflineRepositories<Blob>();
+      return openIndexedDbOfflineRepositories<Blob>();
     },
     clock: { now: () => Date.now() },
     ...overrides,

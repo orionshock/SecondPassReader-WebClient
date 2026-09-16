@@ -400,7 +400,10 @@ large queue operation. Percentage metadata then becomes unavailable and mutable 
 remain live longer than expected.
 
 **Second Pass mitigation:** Location generation failure is non-fatal; reading continues without
-whole-book percentage metadata.
+whole-book percentage metadata. The Section ownership controller prevents a failed generation load
+from clearing another active consumer, but it cannot safely attribute an unmatched library-owned
+load when search, probing, or rendition work overlaps. The residual loaded Section is bounded to
+the current engine lifetime: Reader teardown destroys the epub-ts Book, spine, and Sections.
 
 ### Evidence
 

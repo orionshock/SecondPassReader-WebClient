@@ -182,8 +182,8 @@ Known library defects and limits belong in the
 - In-book search runs on explicit submission or an initial Reader search route, not every keystroke.
 - Search uses epub-ts section traversal. There is no general fuzzy-search engine, and import range
   repair does not cross spine sections.
-- Glasp CSV is the only import format. Import jobs stay in memory, are reviewed row by row, and do
-  not survive reload.
+- Import accepts Glasp CSV and a single-Reading-Session Second Pass Marginalia JSON export. Import
+  jobs stay in memory, are reviewed row by row, and do not survive reload.
 - Import does not persist provenance or perform import-level duplicate detection. Confirmed rows use
   the normal annotation path and same-CFI update policy.
 - Highlight CFIs are immutable after creation. Changing an anchor requires deleting and recreating
