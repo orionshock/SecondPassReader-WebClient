@@ -3,7 +3,14 @@ import type {
   LibraryGroup, Series, PaginatedResponse, PreviewBook,
 } from "./schemas/Library.Types";
 import type { AuthenticatedClientContext } from "./ClientContext.Policy";
-import { authErrorMessages, requestBlob, requestJson, resolveUrl, tryParseFilename } from "./ApiHttp.Adapter";
+import {
+  authErrorMessages,
+  requestAuthenticatedBlob,
+  requestJson,
+  requestPublicBlob,
+  resolveUrl,
+  tryParseFilename,
+} from "./ApiHttp.Adapter";
 
 const LIBRARY_FORBIDDEN_403 = "Token is not allowed to access the library (403).";
 const LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 = "Token is not allowed to download files (403).";
@@ -168,7 +175,7 @@ export const listGroupSeries = (ctx: AuthenticatedClientContext, groupId: string
 export const listGroupTags = (ctx: AuthenticatedClientContext, groupId: string, params: TagListParams = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/tags/`, (url) => addTagParams(url, params), tag);
 
 export async function downloadBookFile(ctx: AuthenticatedClientContext, bookId: string): Promise<BookFileDownloadResult> {
-  const { blob, response } = await requestBlob({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: resolveUrl(ctx.apiBaseUrl, `/library/books/${encodeURIComponent(bookId)}/download/`), options: { accept: "application/epub+zip, application/octet-stream, */*", errorMessages: authErrorMessages({ forbidden: LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 }) } });
+  const { blob, response } = await requestAuthenticatedBlob({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: resolveUrl(ctx.apiBaseUrl, `/library/books/${encodeURIComponent(bookId)}/download/`), options: { accept: "application/epub+zip, application/octet-stream, */*", errorMessages: authErrorMessages({ forbidden: LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 }) } });
   const contentType = response.headers.get("content-type") ?? undefined;
   const contentDisposition = response.headers.get("content-disposition") ?? undefined;
   const contentLengthRaw = response.headers.get("content-length");
@@ -185,10 +192,9 @@ export async function downloadBookCover(
     throw new Error("Book cover URL must use HTTP or HTTPS.");
   }
   // Covers are public even when hosted by the configured Library; never pass bearer credentials here.
-  const { blob, response } = await requestBlob({
-    apiBaseUrl,
-    endpointOrUrl: url.toString(),
-    options: { accept: "image/avif, image/webp, image/png, image/jpeg, image/gif, image/*" },
+  const { blob, response } = await requestPublicBlob({
+    url: url.toString(),
+    accept: "image/avif, image/webp, image/png, image/jpeg, image/gif, image/*",
   });
   return {
     blob,

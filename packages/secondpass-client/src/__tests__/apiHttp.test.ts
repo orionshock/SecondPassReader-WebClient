@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { ApiError, createSecondPassClient } from "../index";
 import type { CompactBook } from "../index";
 import {
-  buildAuthHeaders,
-  requestBlob,
+  requestAnonymousJsonUrl,
+  requestAuthenticatedBlob,
   requestJson,
-  requestJsonUrl,
+  requestPublicBlob,
   resolveUrl,
   tryParseFilename,
 } from "../ApiHttp.Adapter";
@@ -21,16 +21,15 @@ describe("SDK HTTP contracts", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
 
-    expect(buildAuthHeaders({ accessToken: undefined })).toEqual({});
-    expect(buildAuthHeaders({ accessToken: "token" })).toEqual({ Authorization: "Bearer token" });
     expect(resolveUrl("https://api.example/root/", "relative/path")).toBe("https://api.example/root/relative/path");
     expect(resolveUrl("https://api.example/root/", "https://files.example/book.epub")).toBe("https://files.example/book.epub");
 
-    await requestJsonUrl({
-      url: "https://api.example/direct/",
-      method: "POST",
-      defaultAccessToken: "token",
-      body: { hello: "world" },
+    await requestJson({
+      apiBaseUrl: "https://api.example",
+      accessToken: "token",
+      tokenType: "Bearer",
+      endpointOrUrl: "/direct/",
+      options: { method: "POST", body: { hello: "world" } },
     });
 
     const [, init] = fetchMock.mock.calls[0]!;
@@ -41,24 +40,12 @@ describe("SDK HTTP contracts", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ hello: "world" });
   });
 
-  it("preserves purpose-specific header precedence while forcing JSON content type", async () => {
+  it("keeps authenticated credentials authoritative while preserving non-auth headers", async () => {
     const fetchMock = asMockFetch();
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ public: true }))
       .mockResolvedValueOnce(jsonResponse({ authenticated: true }))
       .mockResolvedValueOnce(blobResponse(new Blob(["x"])));
 
-    await requestJsonUrl({
-      url: "https://api.example/link/",
-      method: "POST",
-      defaultAccessToken: "link-token",
-      headers: {
-        Accept: "application/vnd.link+json",
-        Authorization: "Caller link auth",
-        "Content-Type": "text/plain",
-      },
-      body: { link: true },
-    });
     await requestJson({
       apiBaseUrl: "https://api.example",
       accessToken: "configured-token",
@@ -68,13 +55,14 @@ describe("SDK HTTP contracts", () => {
         method: "POST",
         headers: {
           Accept: "application/vnd.authenticated+json",
-          Authorization: "Caller authenticated auth",
+          Authorization: "Evil json auth",
+          "X-Resource-Header": "kept",
           "Content-Type": "text/plain",
         },
         body: { authenticated: true },
       },
     });
-    await requestBlob({
+    await requestAuthenticatedBlob({
       apiBaseUrl: "https://api.example",
       accessToken: "configured-token",
       tokenType: "Token",
@@ -83,28 +71,26 @@ describe("SDK HTTP contracts", () => {
         accept: "application/epub+zip",
         headers: {
           Accept: "application/custom-binary",
-          Authorization: "Caller blob auth",
+          authorization: "Evil blob auth",
+          "X-Blob-Header": "kept",
         },
       },
     });
 
-    const directUrlHeaders = fetchMock.mock.calls[0]![1]?.headers as Record<string, string>;
-    expect(directUrlHeaders).toMatchObject({
-      Accept: "application/vnd.link+json",
-      Authorization: "Bearer link-token",
-      "Content-Type": "application/json",
-    });
-    const authenticatedHeaders = fetchMock.mock.calls[1]![1]?.headers as Record<string, string>;
+    const authenticatedHeaders = fetchMock.mock.calls[0]![1]?.headers as Record<string, string>;
     expect(authenticatedHeaders).toMatchObject({
       Accept: "application/vnd.authenticated+json",
-      Authorization: "Caller authenticated auth",
+      Authorization: "Token configured-token",
+      "X-Resource-Header": "kept",
       "Content-Type": "application/json",
     });
-    const blobHeaders = fetchMock.mock.calls[2]![1]?.headers as Record<string, string>;
+    const blobHeaders = fetchMock.mock.calls[1]![1]?.headers as Record<string, string>;
     expect(blobHeaders).toMatchObject({
       Accept: "application/custom-binary",
-      Authorization: "Caller blob auth",
+      Authorization: "Token configured-token",
+      "X-Blob-Header": "kept",
     });
+    expect(blobHeaders.authorization).toBeUndefined();
   });
 
   it("returns undefined for authenticated 204 JSON success", async () => {
@@ -113,6 +99,7 @@ describe("SDK HTTP contracts", () => {
     await expect(requestJson({
       apiBaseUrl: "https://api.example",
       accessToken: "token",
+      tokenType: "Bearer",
       endpointOrUrl: "/empty/",
     })).resolves.toBeUndefined();
   });
@@ -121,7 +108,7 @@ describe("SDK HTTP contracts", () => {
     const networkFailure = new TypeError("Network unavailable");
     asMockFetch().mockRejectedValueOnce(networkFailure);
 
-    await expect(requestJsonUrl({ url: "https://api.example/unavailable/" }))
+    await expect(requestAnonymousJsonUrl({ url: "https://api.example/unavailable/" }))
       .rejects.toBe(networkFailure);
   });
 
@@ -132,7 +119,7 @@ describe("SDK HTTP contracts", () => {
       .mockResolvedValueOnce(new Response("nope", { status: 403, statusText: "Forbidden" }));
 
     await expect(
-      requestJsonUrl({ url: "https://api.example/missing/", errorMessages: { 404: "Custom not found." } }),
+      requestAnonymousJsonUrl({ url: "https://api.example/missing/", errorMessages: { 404: "Custom not found." } }),
     ).rejects.toMatchObject({ kind: "http_error", status: 404, message: "Custom not found." });
 
     const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
@@ -164,14 +151,13 @@ describe("SDK HTTP contracts", () => {
         statusText: "Not Found",
       }));
 
-    await expect(requestJsonUrl({ url: "https://api.example/missing/" })).rejects.toMatchObject({
+    await expect(requestAnonymousJsonUrl({ url: "https://api.example/missing/" })).rejects.toMatchObject({
       status: 404,
       statusText: "Not Found",
       message: "Request failed: 404 Not Found",
     });
-    await expect(requestBlob({
-      apiBaseUrl: "https://api.example",
-      endpointOrUrl: "/broken-download/",
+    await expect(requestPublicBlob({
+      url: "https://api.example/broken-download/",
     })).rejects.toMatchObject({
       status: 502,
       statusText: "Bad Gateway",
@@ -191,19 +177,20 @@ describe("SDK HTTP contracts", () => {
       statusText: "Service Unavailable",
     }));
 
-    await expect(requestJsonUrl({ url: "https://api.example/unavailable/" })).rejects.toMatchObject({
+    await expect(requestAnonymousJsonUrl({ url: "https://api.example/unavailable/" })).rejects.toMatchObject({
       message: "Request failed: 503 Service Unavailable - Service unavailable",
     });
   });
 
-  it("client config requires apiBaseUrl and requestBlob uses the default accept header", async () => {
+  it("client config requires apiBaseUrl and authenticated Blob uses the default accept header", async () => {
     const fetchMock = asMockFetch();
     expect(() => createSecondPassClient({ apiBaseUrl: "" })).toThrowError(/apiBaseUrl is required/i);
 
     fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["x"])));
-    const result = await requestBlob({
+    const result = await requestAuthenticatedBlob({
       apiBaseUrl: "https://api.example",
       accessToken: "token",
+      tokenType: "Bearer",
       endpointOrUrl: "/files/book.epub",
     });
 

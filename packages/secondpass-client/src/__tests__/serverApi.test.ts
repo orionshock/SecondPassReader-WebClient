@@ -116,7 +116,15 @@ describe("SDK Server API", () => {
     const consumeInit = transport.request("consume login request").init;
     expect(consumeInit?.method).toBe("POST");
     expect(consumeInit?.body).toBeUndefined();
-    expect(consumeInit?.credentials).toBe("omit");
+    for (const name of [
+      "public discovery",
+      "client API discovery",
+      "create login request",
+      "poll login request",
+      "consume login request",
+    ]) {
+      expect(transport.request(name).init?.credentials).toBe("omit");
+    }
     transport.assertComplete();
   });
 

@@ -1,9 +1,6 @@
-export type RequestUrlOptions = {
+export type AnonymousJsonUrlOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  accessToken?: string | null;
-  defaultAccessToken?: string | null;
   body?: unknown;
-  headers?: Record<string, string>;
   credentials?: RequestCredentials;
   url: string;
   /** Status-specific user messages that do not change response classification. */
@@ -62,15 +59,8 @@ export function resolveUrl(baseUrl: string, endpointOrUrl: string): string {
   return `${base}${path}`;
 }
 
-export async function requestJsonUrl<T>(options: RequestUrlOptions): Promise<T> {
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    ...options.headers,
-  };
-
-  const token = options.accessToken ?? options.defaultAccessToken;
-  if (token) headers.Authorization = `Bearer ${token}`;
-
+export async function requestAnonymousJsonUrl<T>(options: AnonymousJsonUrlOptions): Promise<T> {
+  const headers = { Accept: "application/json" };
   const res = await executeRequest(options.url, prepareJsonRequest({
     method: options.method,
     headers,
@@ -90,16 +80,14 @@ export type RequestOptions = {
   errorMessages?: Partial<Record<number, string>>;
 };
 
-export function buildAuthHeaders(input: { accessToken?: string; tokenType?: string }): Record<string, string> {
-  if (!input.accessToken) return {};
-  const tokenType = input.tokenType ?? "Bearer";
-  return { Authorization: `${tokenType} ${input.accessToken}` };
+function buildAuthHeaders(input: { accessToken: string; tokenType: string }): Record<string, string> {
+  return { Authorization: `${input.tokenType} ${input.accessToken}` };
 }
 
 export async function requestJson<T>(input: {
   apiBaseUrl: string;
-  accessToken?: string;
-  tokenType?: string;
+  accessToken: string;
+  tokenType: string;
   endpointOrUrl: string;
   options?: RequestOptions;
 }): Promise<T> {
@@ -110,8 +98,8 @@ export async function requestJson<T>(input: {
 
 export async function requestVoid(input: {
   apiBaseUrl: string;
-  accessToken?: string;
-  tokenType?: string;
+  accessToken: string;
+  tokenType: string;
   endpointOrUrl: string;
   options?: Omit<RequestOptions, "body">;
 }): Promise<void> {
@@ -120,16 +108,16 @@ export async function requestVoid(input: {
 
 async function request(input: {
   apiBaseUrl: string;
-  accessToken?: string;
-  tokenType?: string;
+  accessToken: string;
+  tokenType: string;
   endpointOrUrl: string;
   options?: RequestOptions;
 }): Promise<Response> {
   const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
   const headers: Record<string, string> = {
     Accept: "application/json",
+    ...withoutAuthorization(input.options?.headers),
     ...buildAuthHeaders({ accessToken: input.accessToken, tokenType: input.tokenType }),
-    ...input.options?.headers,
   };
 
   return executeRequest(url, prepareJsonRequest({
@@ -139,27 +127,52 @@ async function request(input: {
   }), input.options?.errorMessages);
 }
 
-export async function requestBlob(input: {
+export async function requestAuthenticatedBlob(input: {
   apiBaseUrl: string;
-  accessToken?: string;
-  tokenType?: string;
+  accessToken: string;
+  tokenType: string;
   endpointOrUrl: string;
   options?: Omit<RequestOptions, "body"> & { accept?: string };
 }): Promise<{ blob: Blob; response: Response }> {
   const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
   const headers: Record<string, string> = {
     Accept: input.options?.accept ?? "application/octet-stream, */*",
+    ...withoutAuthorization(input.options?.headers),
     ...buildAuthHeaders({ accessToken: input.accessToken, tokenType: input.tokenType }),
-    ...input.options?.headers,
   };
 
-  const res = await executeRequest(url, {
+  return requestBlobResponse(url, {
     method: input.options?.method ?? "GET",
     headers,
   }, input.options?.errorMessages);
+}
+
+export async function requestPublicBlob(input: {
+  url: string;
+  accept?: string;
+}): Promise<{ blob: Blob; response: Response }> {
+  return requestBlobResponse(input.url, {
+    method: "GET",
+    headers: { Accept: input.accept ?? "application/octet-stream, */*" },
+  });
+}
+
+async function requestBlobResponse(
+  url: string,
+  init: RequestInit,
+  errorMessages?: Partial<Record<number, string>>,
+): Promise<{ blob: Blob; response: Response }> {
+  const res = await executeRequest(url, init, errorMessages);
 
   const blob = await res.blob();
   return { blob, response: res };
+}
+
+function withoutAuthorization(headers?: Record<string, string>): Record<string, string> {
+  if (!headers) return {};
+  return Object.fromEntries(
+    Object.entries(headers).filter(([name]) => name.toLowerCase() !== "authorization"),
+  );
 }
 
 function prepareJsonRequest(input: {

@@ -5,7 +5,7 @@ import type {
   SecondPassDiscovery,
   SecondPassWellKnown,
 } from "./schemas/ClientApiAuth.Types";
-import { requestJsonUrl, resolveUrl } from "./ApiHttp.Adapter";
+import { requestAnonymousJsonUrl, resolveUrl } from "./ApiHttp.Adapter";
 
 type JsonRecord = Record<string, unknown>;
 const CLIENT_API_DISCOVERY_ENDPOINT = "/client-api/discovery/";
@@ -106,9 +106,9 @@ function parseConsumeResponse(value: unknown): ClientApiConsumeResponse {
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   const wellKnownUrl = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
-  const wellKnown = parseWellKnown(await requestJsonUrl<unknown>({ url: wellKnownUrl, method: "GET", credentials: "omit" }));
+  const wellKnown = parseWellKnown(await requestAnonymousJsonUrl<unknown>({ url: wellKnownUrl, method: "GET", credentials: "omit" }));
   const discoveryUrl = resolveUrl(wellKnown.api_base_url, CLIENT_API_DISCOVERY_ENDPOINT);
-  const clientApi = await requestJsonUrl<unknown>({ url: discoveryUrl, method: "GET", credentials: "omit" });
+  const clientApi = await requestAnonymousJsonUrl<unknown>({ url: discoveryUrl, method: "GET", credentials: "omit" });
   return parseClientApiDiscovery(clientApi, wellKnown);
 }
 
@@ -119,7 +119,7 @@ export async function createLoginRequest(
   const endpoint = discovery.client_api?.login_request_endpoint;
   if (!endpoint) throw new Error("Invalid client API discovery response.");
   const url = resolveUrl(discovery.api_base_url, endpoint);
-  const wire = await requestJsonUrl<unknown>({
+  const wire = await requestAnonymousJsonUrl<unknown>({
     url,
     method: "POST",
     body: {
@@ -132,11 +132,11 @@ export async function createLoginRequest(
 }
 
 export async function pollLoginRequest(pollUrl: string): Promise<ClientApiPollResponse> {
-  const wire = await requestJsonUrl<unknown>({ url: pollUrl, method: "GET", credentials: "omit" });
+  const wire = await requestAnonymousJsonUrl<unknown>({ url: pollUrl, method: "GET", credentials: "omit" });
   return parsePollResponse(wire);
 }
 
 export async function consumeLoginRequest(consumeUrl: string): Promise<ClientApiConsumeResponse> {
-  const wire = await requestJsonUrl<unknown>({ url: consumeUrl, method: "POST", credentials: "omit" });
+  const wire = await requestAnonymousJsonUrl<unknown>({ url: consumeUrl, method: "POST", credentials: "omit" });
   return parseConsumeResponse(wire);
 }
