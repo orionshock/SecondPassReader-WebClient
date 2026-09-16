@@ -1,5 +1,5 @@
 diff --git a/node_modules/@likecoin/epub-ts/dist/epub.js b/node_modules/@likecoin/epub-ts/dist/epub.js
-index cf07877..a53d221 100644
+index cf07877..29fec32 100644
 --- a/node_modules/@likecoin/epub-ts/dist/epub.js
 +++ b/node_modules/@likecoin/epub-ts/dist/epub.js
 @@ -1329,7 +1329,9 @@ class De {
@@ -13,3 +13,48 @@ index cf07877..a53d221 100644
    }
    /**
    * Reconciles the current chapters layout properties with
+@@ -1775,8 +1777,14 @@ class le {
+     };
+   }
+   async process(t) {
+-    const e = await t.load(this.request), i = this.parse(e, t.cfiBase);
+-    return this._locations = this._locations.concat(i), t.unload(), new Promise((s) => {
++    const e = await t.load(this.request);
++    let i;
++    try {
++      i = this.parse(e, t.cfiBase), this._locations = this._locations.concat(i);
++    } finally {
++      t.unload();
++    }
++    return new Promise((s) => {
+       const n = () => s(i);
+       pt ? this.processingTimeout = requestIdleCallback(n, { timeout: (this.pause ?? 0) + 50 }) : this.processingTimeout = setTimeout(n, this.pause);
+     });
+@@ -1824,8 +1832,16 @@ class le {
+   async processWords(t, e, i, s) {
+     if (s && this._locationsWords.length >= s)
+       return [];
+-    const n = await t.load(this.request), r = this.parseWords(n, t, e, i), o = s - this._locationsWords.length;
+-    return this._locationsWords = this._locationsWords.concat(r.length >= s ? r.slice(0, o) : r), t.unload(), new Promise((h) => {
++    const n = await t.load(this.request);
++    let r;
++    try {
++      r = this.parseWords(n, t, e, i);
++      const o = s - this._locationsWords.length;
++      this._locationsWords = this._locationsWords.concat(r.length >= s ? r.slice(0, o) : r);
++    } finally {
++      t.unload();
++    }
++    return new Promise((h) => {
+       const l = () => h(r);
+       pt ? this.processingTimeout = requestIdleCallback(l, { timeout: (this.pause ?? 0) + 50 }) : this.processingTimeout = setTimeout(l, this.pause);
+     });
+@@ -4496,7 +4512,7 @@ function Ge(a, t) {
+   else
+     i = a;
+   for (const s of ["mouseup", "mousedown", "click", "touchstart"])
+-    i.addEventListener(s, (n) => e(n), !1);
++    i.addEventListener(s, (n) => e(n), s === "touchstart" ? { passive: !0 } : !1);
+ }
+ function $e(a) {
+   const t = Object.assign({}, a, { bubbles: !1 });

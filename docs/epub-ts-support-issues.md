@@ -8,9 +8,9 @@ Audit baseline:
 
 - Package: `@likecoin/epub-ts`
 - Installed version: `0.7.2`
-- Audit date: 2026-09-12
+- Audit date: 2026-09-15
 - Upstream 0.7.2 strips ASCII controls and spaces before link-scheme checks and blocks
-  `vbscript:` URLs. This security change is upstream and separate from the local search patch.
+  `vbscript:` URLs. This security change is upstream and separate from the local patches.
 - Canonical package integration: `src/features/reader/engine/EpubTsBook.Engine.ts`
 - Upstream source references below use the TypeScript paths and line numbers embedded in
   `node_modules/@likecoin/epub-ts/dist/epub.js.map`. Line numbers are version-specific.
@@ -34,12 +34,39 @@ Audit baseline:
 | EPUBTS-004 | Initial resize/reflow can report or redisplay an earlier page-start CFI | Observed; partly addressed in 0.7.1 | High | Bootstrap restore CFI preservation and progress quarantine |
 | EPUBTS-005 | `Rendition.getRange()` resolves only against currently visible views | Confirmed API limitation | Medium | Separate visible and book-level CFI probing |
 | EPUBTS-006 | Renderer annotations collide at identical CFI plus annotation type | Confirmed design limitation | High | Strict temporary-mark cleanup and same-session exact-CFI deduplication |
-| EPUBTS-007 | Location generation failures can leave section cleanup incomplete | Confirmed defect | Medium | Treat location generation as non-fatal |
-| EPUBTS-008 | Marks pane installs a non-passive `touchstart` listener | Confirmed defect | Low | None |
+| EPUBTS-007 | Location generation failures can leave section cleanup incomplete | Confirmed defect; locally patched | Medium | `patch-package` guarantees post-load cleanup; failures remain non-fatal |
+| EPUBTS-008 | Marks pane installs a non-passive `touchstart` listener | Confirmed defect; locally patched | Low | `patch-package` makes the root proxy listener passive |
 | EPUBTS-009 | Search is literal, window-limited, and section-local | Confirmed API limitation | Medium | Query fragments and serialized traversal |
 | EPUBTS-010 | No first-class range endpoint editing or visible range-bounds API | Feature gap | Medium | Range editing is not implemented |
 | EPUBTS-011 | Highlight style behavior varies between SVG and DOM render paths | Observed; upstream reproduction needed | Medium | Supply both SVG and CSS color properties |
 | EPUBTS-012 | Percentage rendition dimensions cross a number-typed manager boundary | Observed contract mismatch | Medium | Measure the mount and pass pixel dimensions |
+
+## Patchability Audit
+
+The 0.7.2 package was audited from a pristine npm tarball and the TypeScript sources embedded in
+its browser ESM source map. Class A is a good local patch candidate, B is possible but needs more
+proof, C is a poor local patch candidate, and D is not patch-worthy.
+
+| ID | Class | Source owner | Estimated patch | Regression feasibility | Risk | Recommendation |
+| --- | --- | --- | --- | --- | --- | --- |
+| EPUBTS-001 | A | `src/section.ts`, `Section.search()` | Existing three-line ESM hunk | High; package-level runtime fixture exists | Low | Keep the current tail-window patch. |
+| EPUBTS-002 | D | `src/rendition.ts`, `_display()` and `reportLocation()`; default manager display | Multi-function lifecycle contract | A fixture is possible, but a correct settled contract is not local | High | Do not patch; keep client re-anchoring. |
+| EPUBTS-003 | D | Rendition and manager display/reflow/resize events | Cross-cutting event metadata and state | Not meaningful without defining operation semantics | High | Do not invent operation identity through `patch-package`. |
+| EPUBTS-004 | C | `src/rendition.ts`, re-anchor, content-reflow, and resize paths | Likely multi-function lifecycle change | Low without a delayed-layout EPUB fixture | High | Do not patch without an isolated defect; keep restore/progress protection. |
+| EPUBTS-005 | D | `src/rendition.ts`, `getRange()` | New asynchronous book-level behavior | High for the current visible-only behavior, not a replacement contract | High | Treat as intentional API scope; keep separate app probing. |
+| EPUBTS-006 | D | `src/annotations.ts` and `src/managers/views/iframe.ts` | Structural store/view changes and new APIs | Requires first defining identity semantics | High | Do not patch; correct repair needs first-class annotation identity. |
+| EPUBTS-007 | A | `src/locations.ts`, `process()` and `processWords()` | Two small generated `try/finally` hunks | High; both failure paths reproduce directly | Low | Locally patch both generation paths. |
+| EPUBTS-008 | A | `src/marks-pane/index.ts`, `proxyMouse()` | One generated line | High; listener options are directly observable | Low | Locally mark only the root proxy `touchstart` listener passive. |
+| EPUBTS-009 | D | `src/section.ts`, `Section.search()` | Search normalization and policy work | Individual cases are testable, but no small complete contract exists | High | Do not extend the tail fix into a search framework. |
+| EPUBTS-010 | D | No single owning API | New public range-editing and geometry API | Not meaningful before semantics are defined | High | Keep as a feature gap. |
+| EPUBTS-011 | B | Iframe highlight and marks-pane rendering | Potentially small only after isolating an ignored property | Low without a visual fixture | Medium | No local patch; retain dual SVG/CSS attributes and obtain a reproduction. |
+| EPUBTS-012 | C | `src/rendition.ts`, `attachTo()`; stage `create()` and `size()` | Small syntax change could impose the wrong contract | Medium for examples, low for defining string semantics | Medium-high | Keep measured pixel dimensions; do not choose ambiguous public semantics locally. |
+| Section concurrency | D | `Section.load()` / `unload()` and all temporary consumers | Reference counting or leases across the library | Requires a library-wide ownership contract | High | Keep the app ownership controller; do not redesign Section lifecycle in a patch. |
+
+The published package contains generated bundles and declarations rather than TypeScript source.
+Second Pass imports the root browser ESM export, `dist/epub.js`; the CommonJS, Node, and UMD builds
+are unused and remain unpatched. Before this audit, the installed ESM differed from the pristine
+tarball only at EPUBTS-001, and neither new hunk was adjacent to that search code.
 
 ## EPUBTS-001: Section Search Misses Final Tail Windows
 
@@ -393,7 +420,9 @@ Upstream regression tests should cover:
 
 **Classification:** Confirmed defect
 
-**Current status:** Unpatched in the support library.
+**Current status:** Locally patched for the browser ESM entry point in
+`patches/@likecoin+epub-ts+0.7.2.patch`. Regression coverage is in
+`src/__tests__/reader/engine/epubTsLocationsCleanupPatch.test.ts`.
 
 **Impact:** A section can remain loaded when location parsing throws, and generation rejects as one
 large queue operation. Percentage metadata then becomes unavailable and mutable section state may
@@ -414,23 +443,31 @@ loads a section, parses it, concatenates locations, and only then calls `section
 Client reference: `src/features/reader/engine/EpubTsBook.Engine.ts`, `startLocationsGeneration()`.
 Generation is treated as non-fatal; the reader continues without book-level percentage metadata.
 
-### Suggested upstream fix
+### Local patch and suggested upstream fix
 
-Use `try/finally` around every temporary section load, preserve whether the section was already
-loaded by another owner, and support cancellation. Decide whether one malformed section should fail
-all generation or produce partial locations plus structured per-section errors.
+Both generation functions already unconditionally unload after a successful parse, so they already
+assume ownership of a successful `load()`. The local patch leaves `load()` outside the `try` and
+moves that existing cleanup into `finally`. A rejected load is not unloaded; a successful load is
+released when either parsing path throws. Both character- and word-location generation are patched.
+
+An upstream fix should make the same cleanup guarantee in `src/locations.ts`. Broader decisions such
+as cancellation or partial generation with per-section errors remain upstream API work and are not
+part of the local patch. The app still treats location generation as non-fatal and retains its
+Section ownership controller.
 
 ## EPUBTS-008: Non-Passive touchstart Listener
 
 **Classification:** Confirmed defect
 
-**Current status:** Unpatched; retained as a low-impact upstream issue.
+**Current status:** Locally patched for the browser ESM entry point in
+`patches/@likecoin+epub-ts+0.7.2.patch`. Regression coverage is in
+`src/__tests__/reader/engine/epubTsPassiveTouchPatch.test.ts`.
 
 **Impact:** Chrome reports a scroll-blocking listener whenever highlights are painted. This can hurt
 touch scrolling responsiveness.
 
-**Second Pass mitigation:** None. Highlight behavior is retained because disabling marks would cause
-greater product impact than the warning.
+**Second Pass mitigation:** The package patch marks only the marks-pane root proxy listener passive.
+Highlight behavior and application callbacks are unchanged.
 
 ### Evidence
 
@@ -439,11 +476,14 @@ the same loop as mouse events with the third argument `false`, producing a non-p
 
 The warning is visible from `EpubTsHighlightRenderer.Engine.ts` call stacks when epub-ts attaches a highlight.
 
-### Suggested upstream fix
+### Local patch and suggested upstream fix
 
-Register `touchstart` with `{ passive: true }` if the handler never calls `preventDefault()`. If
-preventing default is conditionally required, split mouse/touch registration and document that path.
-Pointer events may simplify this code, but are not required for the small fix.
+The proxy handler only hit-tests and dispatches a cloned event. It never calls `preventDefault()`,
+and a callback handling the clone cannot cancel the source touch event. The local patch registers
+only the root `touchstart` proxy with `{ passive: true }`; mouse listener options and element-level
+annotation callbacks are unchanged. The proxy has no listener-removal path, so there is no removal-
+option match to update. Upstream should make the equivalent one-line source change. Pointer events
+are unnecessary for this defect fix.
 
 ## EPUBTS-009: Search Is Literal, Window-Limited, and Section-Local
 
@@ -581,6 +621,24 @@ generation.
 Upstream should document section concurrency or provide reference-counted leases for temporary
 section access. This constraint has not been isolated as an independent
 epub-ts defect, so it does not have a separate issue ID.
+
+The patchability audit found no safe local concurrency patch. An unconditional ownership change in
+one consumer would not coordinate the other consumers; a correct library repair requires leases or
+reference counting. The app controller remains the narrower and safer mitigation.
+
+## Patch and Backlog Disposition
+
+- **Locally patched defects:** EPUBTS-001, EPUBTS-007, and EPUBTS-008. Each patch changes only the
+  0.7.2 browser ESM bundle and has a focused regression.
+- **Good upstream issue or PR candidates:** the three locally patched defects are suitable for
+  source-level upstream fixes. EPUBTS-011 should not be filed as a definite defect until a minimal
+  visual reproduction identifies an ignored documented style property.
+- **App-mitigated limitations:** EPUBTS-002, EPUBTS-003, EPUBTS-004, EPUBTS-005, EPUBTS-006,
+  EPUBTS-009, EPUBTS-012, and Section concurrency remain app-owned mitigations because local patches
+  would impose new lifecycle, identity, search, sizing, or ownership contracts.
+- **Feature gaps:** EPUBTS-010 remains upstream product/API design work.
+- **Observational items needing reproduction:** EPUBTS-004 and EPUBTS-011. Neither has enough
+  isolated evidence for a local patch.
 
 ## Findings That Are Not epub-ts Defects
 
