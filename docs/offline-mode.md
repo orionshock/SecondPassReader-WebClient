@@ -373,6 +373,9 @@ Automatic delivery runs after authenticated startup when connectivity is `online
 `offline` to `online` transition, and when the foreground retry scheduler reaches durable
 eligibility.
 
+One authenticated namespace generation owns the startup decision and connectivity-transition
+subscription. The retry scheduler remains a separate durable-state lifecycle.
+
 The namespace sweep lists the outbox once, derives eligible Books, and uses at most three workers.
 Each Book sync obtains an exclusive Web Lock scoped by namespace and Book. Automatic callers use
 non-waiting `if-available` coordination; Settings and connection removal use waiting coordination.
