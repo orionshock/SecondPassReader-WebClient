@@ -71,23 +71,12 @@ export async function requestJsonUrl<T>(options: RequestUrlOptions): Promise<T> 
   const token = options.accessToken ?? options.defaultAccessToken;
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  let body: BodyInit | undefined;
-  if (options.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    body = JSON.stringify(options.body);
-  }
-
-  const res = await fetch(options.url, {
-    method: options.method ?? "GET",
+  const res = await executeRequest(options.url, prepareJsonRequest({
+    method: options.method,
     headers,
-    body,
+    body: options.body,
     credentials: options.credentials,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw createApiError(res, text, options.errorMessages?.[res.status]);
-  }
+  }), options.errorMessages);
 
   return (await res.json()) as T;
 }
@@ -143,23 +132,11 @@ async function request(input: {
     ...input.options?.headers,
   };
 
-  let body: BodyInit | undefined;
-  if (input.options?.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    body = JSON.stringify(input.options.body);
-  }
-
-  const res = await fetch(url, {
-    method: input.options?.method ?? "GET",
+  return executeRequest(url, prepareJsonRequest({
+    method: input.options?.method,
     headers,
-    body,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw createApiError(res, text, input.options?.errorMessages?.[res.status]);
-  }
-  return res;
+    body: input.options?.body,
+  }), input.options?.errorMessages);
 }
 
 export async function requestBlob(input: {
@@ -176,18 +153,44 @@ export async function requestBlob(input: {
     ...input.options?.headers,
   };
 
-  const res = await fetch(url, {
+  const res = await executeRequest(url, {
     method: input.options?.method ?? "GET",
     headers,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw createApiError(res, text, input.options?.errorMessages?.[res.status]);
-  }
+  }, input.options?.errorMessages);
 
   const blob = await res.blob();
   return { blob, response: res };
+}
+
+function prepareJsonRequest(input: {
+  method?: HttpMethod;
+  headers: Record<string, string>;
+  body?: unknown;
+  credentials?: RequestCredentials;
+}): RequestInit {
+  let body: BodyInit | undefined;
+  if (input.body !== undefined) {
+    input.headers["Content-Type"] = "application/json";
+    body = JSON.stringify(input.body);
+  }
+  return {
+    method: input.method ?? "GET",
+    headers: input.headers,
+    body,
+    credentials: input.credentials,
+  };
+}
+
+async function executeRequest(
+  url: string,
+  init: RequestInit,
+  errorMessages?: Partial<Record<number, string>>,
+): Promise<Response> {
+  const response = await fetch(url, init);
+  if (response.ok) return response;
+
+  const responseBody = await response.text().catch(() => "");
+  throw createApiError(response, responseBody, errorMessages?.[response.status]);
 }
 
 export function tryParseFilename(contentDisposition: string): string | undefined {

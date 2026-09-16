@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { ApiError, createSecondPassClient } from "../index";
 import type { CompactBook } from "../index";
-import { buildAuthHeaders, requestBlob, requestJsonUrl, resolveUrl, tryParseFilename } from "../ApiHttp.Adapter";
+import {
+  buildAuthHeaders,
+  requestBlob,
+  requestJson,
+  requestJsonUrl,
+  resolveUrl,
+  tryParseFilename,
+} from "../ApiHttp.Adapter";
 import { blobResponse, installMockFetch as asMockFetch, jsonResponse } from "./SdkTestTransport.Fixtures";
 
 describe("SDK HTTP contracts", () => {
@@ -32,6 +39,90 @@ describe("SDK HTTP contracts", () => {
     expect(headers.Authorization).not.toMatch(/^Basic /i);
     expect(headers["Content-Type"]).toBe("application/json");
     expect(JSON.parse(String(init?.body))).toEqual({ hello: "world" });
+  });
+
+  it("preserves purpose-specific header precedence while forcing JSON content type", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ public: true }))
+      .mockResolvedValueOnce(jsonResponse({ authenticated: true }))
+      .mockResolvedValueOnce(blobResponse(new Blob(["x"])));
+
+    await requestJsonUrl({
+      url: "https://api.example/link/",
+      method: "POST",
+      defaultAccessToken: "link-token",
+      headers: {
+        Accept: "application/vnd.link+json",
+        Authorization: "Caller link auth",
+        "Content-Type": "text/plain",
+      },
+      body: { link: true },
+    });
+    await requestJson({
+      apiBaseUrl: "https://api.example",
+      accessToken: "configured-token",
+      tokenType: "Token",
+      endpointOrUrl: "/authenticated/",
+      options: {
+        method: "POST",
+        headers: {
+          Accept: "application/vnd.authenticated+json",
+          Authorization: "Caller authenticated auth",
+          "Content-Type": "text/plain",
+        },
+        body: { authenticated: true },
+      },
+    });
+    await requestBlob({
+      apiBaseUrl: "https://api.example",
+      accessToken: "configured-token",
+      tokenType: "Token",
+      endpointOrUrl: "/file/",
+      options: {
+        accept: "application/epub+zip",
+        headers: {
+          Accept: "application/custom-binary",
+          Authorization: "Caller blob auth",
+        },
+      },
+    });
+
+    const directUrlHeaders = fetchMock.mock.calls[0]![1]?.headers as Record<string, string>;
+    expect(directUrlHeaders).toMatchObject({
+      Accept: "application/vnd.link+json",
+      Authorization: "Bearer link-token",
+      "Content-Type": "application/json",
+    });
+    const authenticatedHeaders = fetchMock.mock.calls[1]![1]?.headers as Record<string, string>;
+    expect(authenticatedHeaders).toMatchObject({
+      Accept: "application/vnd.authenticated+json",
+      Authorization: "Caller authenticated auth",
+      "Content-Type": "application/json",
+    });
+    const blobHeaders = fetchMock.mock.calls[2]![1]?.headers as Record<string, string>;
+    expect(blobHeaders).toMatchObject({
+      Accept: "application/custom-binary",
+      Authorization: "Caller blob auth",
+    });
+  });
+
+  it("returns undefined for authenticated 204 JSON success", async () => {
+    asMockFetch().mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(requestJson({
+      apiBaseUrl: "https://api.example",
+      accessToken: "token",
+      endpointOrUrl: "/empty/",
+    })).resolves.toBeUndefined();
+  });
+
+  it("preserves network failures without wrapping them as ApiError", async () => {
+    const networkFailure = new TypeError("Network unavailable");
+    asMockFetch().mockRejectedValueOnce(networkFailure);
+
+    await expect(requestJsonUrl({ url: "https://api.example/unavailable/" }))
+      .rejects.toBe(networkFailure);
   });
 
   it("api HTTP helpers surface specific error kinds and parse download filenames", async () => {
@@ -133,4 +224,3 @@ describe("SDK HTTP contracts", () => {
     await expect(spl.marginalia.sessions.list()).rejects.toMatchObject({ kind: "unauthorized", status: 401 });
   });
 });
-
