@@ -219,17 +219,13 @@ async function recordAuthorityFailure(
   const classification = result.status === "unavailable" ? "terminal-request"
     : result.status === "no-local-state" || result.status === "failed" ? "failed"
       : result.status;
-  try {
-    await recordOfflineReaderAttemptFailure({
-      repository,
-      intents,
-      classification,
-      retryAfterMs: result.status === "retry-later" ? result.retryAfterMs : null,
-      now,
-    });
-  } catch {
-    // Preserve the normalized authority result when local attempt bookkeeping fails.
-  }
+  await recordOfflineReaderAttemptFailure({
+    repository,
+    intents,
+    classification,
+    retryAfterMs: result.status === "retry-later" ? result.retryAfterMs : null,
+    now,
+  });
 }
 
 function bookIntents(intents: readonly ReaderOutboxIntent[], bookId: string): ReaderOutboxIntent[] {

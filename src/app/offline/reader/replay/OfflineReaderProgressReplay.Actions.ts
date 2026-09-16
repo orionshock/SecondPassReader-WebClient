@@ -8,8 +8,11 @@ import {
   reconcileOfflineReaderSessionAuthority,
   type ReaderSessionAuthority,
 } from "../sync/OfflineReaderSessionReconciliation.Actions";
-import { classifyOfflineDeliveryFailure } from "../retry/OfflineRetry.Policy";
-import { recordOfflineReaderAttemptFailure } from "../retry/OfflineReaderAttempt.Actions";
+import {
+  classifyOfflineReaderReplayFailure,
+  recordOfflineReaderReplayFailure,
+  type OfflineReaderReplayFailure,
+} from "../retry/OfflineReaderAttempt.Actions";
 import {
   isOfflineReaderIntentEligible,
   type OfflineReaderAttemptMode,
@@ -50,9 +53,7 @@ export type OfflineReaderProgressReplayResult =
   | { status: "terminal-request" }
   | { status: "failed" };
 
-type ProgressReplayFailure =
-  | { status: "retry-later"; retryAfterMs: number | null }
-  | { status: "reauthenticate" | "refresh-authority" | "terminal-request" | "failed" };
+type ProgressReplayFailure = Exclude<OfflineReaderReplayFailure, { status: "session-closed" }>;
 
 type ReplayInput = {
   namespaceKey: string;
@@ -147,9 +148,14 @@ async function deliver(
     }
     confirmed = response.progress;
   } catch (error) {
-    const failure = classifyReplayFailure(error);
+    const failure = classifyOfflineReaderReplayFailure(error);
     if (failure.status !== "session-closed") {
-      await recordReplayFailure(input, intent, failure);
+      await recordOfflineReaderReplayFailure({
+        repository: input.outboxRepository,
+        intents: [intent],
+        failure,
+        now: (input.now ?? Date.now)(),
+      });
       return failure;
     }
     if (!mayContinue) return { status: "refresh-authority" };
@@ -157,13 +163,25 @@ async function deliver(
     const reconciliation = await reconcile(input);
     if (reconciliation.status !== "resolved") {
       const mapped = mapReconciliationFailure(reconciliation);
-      if (mapped.status !== "no-local-state") await recordReplayFailure(input, intent, mapped);
+      if (mapped.status !== "no-local-state") {
+        await recordOfflineReaderReplayFailure({
+          repository: input.outboxRepository,
+          intents: [intent],
+          failure: mapped,
+          now: (input.now ?? Date.now)(),
+        });
+      }
       return mapped;
     }
     const nextSessionId = authoritativeSessionId(reconciliation.state);
     if (!nextSessionId || nextSessionId === serverSessionId) {
       const failure = { status: "refresh-authority" } as const;
-      await recordReplayFailure(input, intent, failure);
+      await recordOfflineReaderReplayFailure({
+        repository: input.outboxRepository,
+        intents: [intent],
+        failure,
+        now: (input.now ?? Date.now)(),
+      });
       return failure;
     }
     return deliver(input, nextSessionId, serverSessionId, false);
@@ -276,37 +294,6 @@ function reconcile(input: ReplayInput) {
     stateRepository: input.stateRepository,
     outboxRepository: input.outboxRepository,
   });
-}
-
-function classifyReplayFailure(error: unknown): ProgressReplayFailure | { status: "session-closed" } {
-  const failure = classifyOfflineDeliveryFailure(error instanceof TypeError ? { kind: "network" } : error);
-  switch (failure.classification) {
-    case "retry-later": return { status: "retry-later", retryAfterMs: failure.retryAfterMs };
-    case "reauthenticate": return { status: "reauthenticate" };
-    case "refresh-authority": return { status: "refresh-authority" };
-    case "session-closed": return { status: "session-closed" };
-    case "terminal-request": return { status: "terminal-request" };
-    case "unknown": return { status: "failed" };
-  }
-}
-
-async function recordReplayFailure(
-  input: ReplayInput,
-  intent: ReplaceReaderProgressIntent,
-  failure: ProgressReplayFailure,
-): Promise<void> {
-  const classification = failure.status === "terminal-request" ? "terminal-request" : failure.status;
-  try {
-    await recordOfflineReaderAttemptFailure({
-      repository: input.outboxRepository,
-      intents: [intent],
-      classification,
-      retryAfterMs: failure.status === "retry-later" ? failure.retryAfterMs : null,
-      now: (input.now ?? Date.now)(),
-    });
-  } catch {
-    // Keep the normalized delivery result; a later repository read remains the source of truth.
-  }
 }
 
 function mapReconciliationFailure(

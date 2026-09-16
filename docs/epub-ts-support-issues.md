@@ -567,9 +567,13 @@ next/previous behavior.
 ## Related Concurrency Constraint
 
 `Section.load()` stores mutable `document`/`contents` state and `Section.unload()` clears it. Concurrent
-full-book consumers can therefore interfere when one owner unloads a section still being used by
-another owner. Second Pass serializes EPUB search traversal in
-`src/features/reader/engine/ReaderSearch.Controller.ts`.
+consumers can therefore interfere when one owner unloads a section still being used by another
+owner. This is reachable between full-Book search, book-level CFI probing, rendition work, and
+background location generation. Search-to-search traversal remains serialized by
+`ReaderSearch.Controller.ts`; `EpubTsSectionLoad.Controller.ts` additionally reference-counts each
+Section's existing load/unload calls so cleanup occurs only after the final active owner releases it.
+The mitigation does not serialize unrelated engine work or make search wait for whole-Book location
+generation.
 
 Upstream should document section concurrency or provide reference-counted leases for temporary
 section access. This constraint has not been isolated as an independent

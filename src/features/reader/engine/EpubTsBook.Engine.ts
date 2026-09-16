@@ -17,6 +17,7 @@ import {
 } from "./ReaderReflowTarget.Policy";
 import { getVisibleCfiRangeAnchor } from "./EpubVisibleCfiRangeAnchor.Placement";
 import { createEpubTsRenditionSettingsEngine } from "./EpubTsRenditionSettings.Engine";
+import { createEpubTsSectionLoadController } from "./EpubTsSectionLoad.Controller";
 
 export type EpubTsBookEngineSource = string | ArrayBuffer | Blob;
 
@@ -62,6 +63,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
   // Replacements must settle before rendition creation or resource URLs can change underneath the first display.
   await book.opened;
   if (book.replacementsReady) await book.replacementsReady;
+  const sectionLoads = createEpubTsSectionLoadController(book.spine.spineItems ?? []);
 
   const measureMount = (): { width: number; height: number } => {
     const rect = init.mountEl.getBoundingClientRect();
@@ -402,27 +404,27 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         return { ok: false, code: "missing-target", error: "CFI spine target was not found in this book." };
       }
 
-      const wasLoaded = Boolean(section.document);
       try {
-        await section.load(createSectionRequest(book));
-        // Resolve range CFIs as one DOM Range. This validates both endpoints
-        // together and avoids lossy start/end CFI decomposition.
-        const range = parsed.toRange(section.document);
-        if (!isUsableRange(range)) {
+        return await sectionLoads.withSection(section, createSectionRequest(book), () => {
+          // Resolve range CFIs as one DOM Range. This validates both endpoints
+          // together and avoids lossy start/end CFI decomposition.
+          const range = parsed.toRange(section.document);
+          if (!isUsableRange(range)) {
+            return {
+              ok: false as const,
+              code: "missing-target" as const,
+              error: "CFI target was not found in the target section.",
+              description: describeCfiSection(section, spineIndex),
+            };
+          }
           return {
-            ok: false,
-            code: "missing-target",
-            error: "CFI target was not found in the target section.",
+            ok: true as const,
+            code: "exists-in-book" as const,
             description: describeCfiSection(section, spineIndex),
+            cfiKind: parsed.range ? "range" as const : "point" as const,
+            rangeText: parsed.range ? range?.toString().trim() || undefined : undefined,
           };
-        }
-        return {
-          ok: true,
-          code: "exists-in-book",
-          description: describeCfiSection(section, spineIndex),
-          cfiKind: parsed.range ? "range" : "point",
-          rangeText: parsed.range ? range?.toString().trim() || undefined : undefined,
-        };
+        });
       } catch (error) {
         return {
           ok: false,
@@ -430,8 +432,6 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
           error: error instanceof Error ? error.message : "CFI resolution failed.",
           description: describeCfiSection(section, spineIndex),
         };
-      } finally {
-        if (!wasLoaded) section.unload();
       }
     },
     async displayCfiSafely(cfi: string): Promise<ReaderCfiDisplayResult> {
@@ -470,7 +470,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
       if (destroyed) throw new Error("Engine is destroyed.");
       return searchController.search(() => {
         if (destroyed) throw new Error("Engine is destroyed.");
-        return searchEpubTsBook(book, query, readerToc, options);
+        return searchEpubTsBook(book, query, readerToc, sectionLoads, options);
       }, options?.signal);
     },
     destroy() {
@@ -487,6 +487,7 @@ export async function createEpubTsBookEngine(init: EpubTsBookEngineInit): Promis
         rendition.destroy();
       } catch {}
       highlightRenderer.clear();
+      sectionLoads.destroy();
       try {
         // epubjs-style API (Book#destroy exists in upstream; keep defensive).
         (book as any).destroy?.();

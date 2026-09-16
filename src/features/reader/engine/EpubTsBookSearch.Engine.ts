@@ -3,6 +3,7 @@ import type { ReaderSearchOptions, ReaderSearchResult, ReaderTocItem } from "../
 import { buildQuoteContext } from "../selection/ReaderQuoteContext.Policy";
 import { findTocLabelForHref } from "../display/ReaderLocation.Presenter";
 import { repairImportedHighlightRangeInSection } from "./EpubTsImportRangeRepair.Engine";
+import type { EpubTsSectionLoadController } from "./EpubTsSectionLoad.Controller";
 
 type SectionRequest = (
   url: string,
@@ -16,6 +17,7 @@ export async function searchEpubTsBook(
   book: Book,
   query: string,
   toc: ReaderTocItem[],
+  sectionLoads: EpubTsSectionLoadController,
   options?: ReaderSearchOptions,
 ): Promise<ReaderSearchResult[]> {
   const trimmed = query.trim();
@@ -33,11 +35,8 @@ export async function searchEpubTsBook(
     if (section.linear === false) continue;
     linearIndex += 1;
 
-    const wasLoaded = Boolean(section.document);
-    await section.load(loadSectionResource, options?.signal);
-    throwIfAborted(options?.signal);
-
-    try {
+    const reachedLimit = await sectionLoads.withSection(section, loadSectionResource, () => {
+      throwIfAborted(options?.signal);
       const matches = section.search(trimmed, maxSeqEle);
       for (const match of matches) {
         if (!match?.cfi) continue;
@@ -73,12 +72,12 @@ export async function searchEpubTsBook(
           sectionLabel: deriveSectionLabel({ toc, href: sectionHref, section, linearIndex, sectionIndex }),
         });
         if (out.length % 25 === 0) options?.onProgress?.([...out]);
-        if (out.length >= maxResults) return out;
+        if (out.length >= maxResults) return true;
       }
       // Section search preserves epub-ts CFIs. Cross-node phrase matching would require a separate offset-to-CFI map.
-    } finally {
-      if (!wasLoaded) section.unload();
-    }
+      return false;
+    }, options?.signal);
+    if (reachedLimit) return out;
     options?.onProgress?.([...out]);
     await yieldToBrowser();
   }
