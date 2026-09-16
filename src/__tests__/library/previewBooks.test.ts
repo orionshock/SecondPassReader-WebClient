@@ -7,7 +7,7 @@ import {
   normalizePreviewBooks,
 } from "../../features/library/display/PreviewBooks.Mapper";
 import { LibraryAuthorRows } from "../../features/library/results/LibraryAuthorRows.UI";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 describe("preview books", () => {
   it("normalizes wire, null, and already-normalized cover URLs", () => {
@@ -67,7 +67,7 @@ describe("preview books", () => {
       busy: false,
       error: null,
       page: 1,
-      profile: profile(),
+      connection: profile(),
       onSelectAuthor: vi.fn(),
       onViewBook: vi.fn(),
       onPageChange: vi.fn(),
@@ -77,7 +77,7 @@ describe("preview books", () => {
   });
 });
 
-function profile(): ConnectionProfile {
+function profile(): ActiveConnection {
   return {
     id: "profile-1",
     label: "Library",

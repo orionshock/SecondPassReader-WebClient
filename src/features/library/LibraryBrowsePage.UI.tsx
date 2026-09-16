@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { getConnectionStatus } from "../connection/ConnectionStatus.Presenter";
 import type { OrderingOption } from "../../components/OrderingControl.UI";
 import { getLibraryBooksView, normalizeLibraryBooksView, saveLibraryBooksView, type LibraryBooksView } from "../../storage/LibraryBooksView.Store";
@@ -46,7 +46,7 @@ const SERIES_ORDERING_OPTIONS: Array<OrderingOption<EntityOrdering>> = [
 ];
 
 type Props = {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   route: {
     q?: string;
@@ -78,7 +78,7 @@ type Props = {
 };
 
 export function LibraryBrowsePage({
-  profile,
+  connection,
   spl,
   route,
   selectedBookId,
@@ -96,9 +96,9 @@ export function LibraryBrowsePage({
   onChangePageSize,
   onChangePage,
 }: Props) {
-  const status = useMemo(() => getConnectionStatus(profile), [profile]);
+  const status = useMemo(() => getConnectionStatus(connection), [connection]);
   const apiReady = Boolean(spl);
-  const advancedGroupsEnabled = profile?.advancedLibraryGroupsEnabled === true;
+  const advancedGroupsEnabled = connection?.advancedLibraryGroupsEnabled === true;
   const routeState = useMemo(
     () => deriveLibraryRouteState(route, advancedGroupsEnabled),
     [advancedGroupsEnabled, route.authorId, route.browse, route.groupId, route.ordering, route.page, route.pageSize, route.q, route.searchMode, route.seriesId, route.tag],
@@ -257,7 +257,7 @@ export function LibraryBrowsePage({
                     page={activeResult.page}
                     pageSize={pageSize}
                     viewMode={bookViewMode}
-                    serverBaseUrl={profile?.serverBaseUrl}
+                    serverBaseUrl={connection?.serverBaseUrl}
                     selectedBookId={selectedBookId ? String(selectedBookId) : null}
                     onViewBook={(book) => onViewBook?.(String(book.id))}
                     onPageChange={handlePageChange}
@@ -265,9 +265,9 @@ export function LibraryBrowsePage({
                   />
                 </>
               ) : activeResult.kind === "series" ? (
-                <LibrarySeriesRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} profile={profile} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
+                <LibrarySeriesRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} connection={connection} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
               ) : (
-                <LibraryAuthorRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} profile={profile} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
+                <LibraryAuthorRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} connection={connection} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
               )}
             </div>
           </div>

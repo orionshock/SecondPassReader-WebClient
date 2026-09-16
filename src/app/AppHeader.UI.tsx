@@ -1,11 +1,11 @@
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import type { AppRoute } from "./AppNavigation.Router";
 import { MaterialIcon } from "../components/MaterialIcon.UI";
 import { MetaSeparator } from "../components/Metadata.UI";
 import type { BrowserConnectivityStatus } from "./connectivity/BrowserConnectivity.State";
 
 export function AppHeader({
-  profile,
+  connection,
   view,
   route,
   canNavigate,
@@ -16,7 +16,7 @@ export function AppHeader({
   onShowShelves,
   onShowSettings,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   view: "main" | "settings";
   route: AppRoute | null;
   canNavigate: boolean;
@@ -27,9 +27,9 @@ export function AppHeader({
   onShowShelves: () => void;
   onShowSettings: () => void;
 }) {
-  const serverName = profile?.serverName ?? null;
+  const serverName = connection?.serverName ?? null;
   const userLabel = (() => {
-    const vu = profile?.verifiedUser;
+    const vu = connection?.verifiedUser;
     if (!vu) return null;
     const first = typeof vu.firstName === "string" ? vu.firstName.trim() : "";
     const last = typeof vu.lastName === "string" ? vu.lastName.trim() : "";

@@ -1,5 +1,5 @@
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
-export function markConnectionRepairRequired(profile: ConnectionProfile): ConnectionProfile {
-  return { ...profile, authenticationState: "repair-required" };
+export function markConnectionRepairRequired(connection: ActiveConnection): ActiveConnection {
+  return { ...connection, authenticationState: "repair-required" };
 }

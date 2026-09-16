@@ -10,11 +10,11 @@ import {
   clearActiveConnection,
   getActiveConnection,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-  type ConnectionProfile,
-} from "../storage/ConnectionProfiles.Store";
+  saveActiveConnection,
+  type ActiveConnection,
+} from "../storage/ActiveConnection.Store";
 import { AppHeader } from "./AppHeader.UI";
-import { createSplClientFromProfile } from "./AppSplClient.Factory";
+import { createSplClientFromConnection } from "./AppSplClient.Factory";
 import type { SecondPassClient } from "@secondpass/client";
 import { ConnectionRecoveryProvider, useConnectionRecovery } from "./ConnectionRecovery.Context";
 import { ConnectionRecoveryBannerForState } from "./ConnectionRecoveryBanner.UI";
@@ -44,7 +44,7 @@ const SettingsPanel = lazy(async () => {
 // Root composition for connection workflow, route gating, and global sync lifecycles.
 // Feature owners remain below this boundary.
 function AppShell() {
-  const [profilesVersion, setProfilesVersion] = useState(0);
+  const [connectionVersion, setConnectionVersion] = useState(0);
   const {
     authenticationRepairRequired,
     authorizationFailure,
@@ -53,22 +53,21 @@ function AppShell() {
     requireAuthenticationRepair,
   } = useConnectionRecovery();
 
-  const selectedProfile = useMemo(() => {
-    void profilesVersion;
+  const activeConnection = useMemo(() => {
+    void connectionVersion;
     return getActiveConnection();
-  }, [profilesVersion]);
-  const selectedProfileId = selectedProfile?.id ?? null;
-  const refreshProfiles = useCallback(() => {
-    setProfilesVersion((version) => version + 1);
+  }, [connectionVersion]);
+  const refreshActiveConnection = useCallback(() => {
+    setConnectionVersion((version) => version + 1);
   }, []);
 
   const splClient: SecondPassClient | null = useMemo(() => {
-    if (selectedProfile?.authenticationState === "repair-required") return null;
-    if (!selectedProfile?.apiBaseUrl || !selectedProfile?.accessToken) return null;
-    return createSplClientFromProfile(selectedProfile);
-  }, [selectedProfile?.apiBaseUrl, selectedProfile?.accessToken, selectedProfile?.authenticationState, selectedProfile?.tokenType]);
+    if (activeConnection?.authenticationState === "repair-required") return null;
+    if (!activeConnection?.apiBaseUrl || !activeConnection?.accessToken) return null;
+    return createSplClientFromConnection(activeConnection);
+  }, [activeConnection?.apiBaseUrl, activeConnection?.accessToken, activeConnection?.authenticationState, activeConnection?.tokenType]);
 
-  const workflowStep = useMemo(() => getAppWorkflowStep(selectedProfile), [selectedProfile]);
+  const workflowStep = useMemo(() => getAppWorkflowStep(activeConnection), [activeConnection]);
   const route = useAppRouteWorkflowLifecycle(workflowStep);
   const browserConnectivity = useSyncExternalStore(
     subscribeToBrowserConnectivity,
@@ -80,24 +79,24 @@ function AppShell() {
 
   useAppConnectionRecoveryLifecycle({
     route,
-    profile: selectedProfile,
+    connection: activeConnection,
     authenticationRepairRequired,
     clearAuthorizationFailure,
-    onProfileChanged: refreshProfiles,
+    onConnectionChanged: refreshActiveConnection,
   });
 
   useAppAuthenticatedContextController({
     workflowStep,
-    profile: selectedProfile,
+    connection: activeConnection,
     spl: splClient,
     clearAuthorizationFailure,
     reportAuthorizationFailure,
-    onProfileChanged: refreshProfiles,
+    onConnectionChanged: refreshActiveConnection,
   });
 
   const { verifiedOfflineNamespaceKey, offlineNamespaceKey } = useAppAuthenticatedOfflineSyncLifecycle({
     workflowStep,
-    profile: selectedProfile,
+    connection: activeConnection,
     spl: splClient,
     requireAuthenticationRepair,
   });
@@ -111,7 +110,7 @@ function AppShell() {
   } = useAppReaderOpenController({
     route,
     workflowStep,
-    profile: selectedProfile,
+    connection: activeConnection,
     spl: splClient,
     reportAuthorizationFailure,
   });
@@ -123,17 +122,17 @@ function AppShell() {
 
   function handleConnectionChanged() {
     clearAuthorizationFailure();
-    refreshProfiles();
+    refreshActiveConnection();
   }
 
   function returnToConnect(options?: { replace?: boolean }) {
-    const publication = beginActiveConnectionPublication(selectedProfile);
+    const publication = beginActiveConnectionPublication(activeConnection);
     if (!publication) return;
     publishActiveConnectionResult(publication, () => {
       clearAuthorizationFailure();
       clearActiveConnection();
       closeReader();
-      refreshProfiles();
+      refreshActiveConnection();
       navigateTo({ kind: "connect" }, options);
     });
   }
@@ -143,24 +142,24 @@ function AppShell() {
   }
 
   function handleRepairConnection() {
-    if (!selectedProfile) return;
-    const publication = beginActiveConnectionPublication(selectedProfile);
+    if (!activeConnection) return;
+    const publication = beginActiveConnectionPublication(activeConnection);
     if (!publication) return;
     publishActiveConnectionResult(publication, () => {
-      saveConnectionProfile(markConnectionRepairRequired(selectedProfile));
-      refreshProfiles();
+      saveActiveConnection(markConnectionRepairRequired(activeConnection));
+      refreshActiveConnection();
       navigateTo({ kind: "pair" });
     });
   }
 
   async function handleCancelPairing(): Promise<"completed" | "cancelled" | "failed"> {
-    if (selectedProfile?.authenticationState !== "repair-required") {
+    if (activeConnection?.authenticationState !== "repair-required") {
       returnToConnect({ replace: true });
       return "completed";
     }
 
     const result = await removeConnectionAndOfflineData({
-      expectedConnection: selectedProfile,
+      expectedConnection: activeConnection,
       intent: "sign-out",
       namespaceKey: verifiedOfflineNamespaceKey,
       client: null,
@@ -177,7 +176,7 @@ function AppShell() {
     <div className={`appShell ${openedBook && route?.kind === "reader" ? "appShellReader" : ""}`}>
       {openedBook && route?.kind === "reader" ? null : (
         <AppHeader
-          profile={selectedProfile}
+          connection={activeConnection}
           view={view}
           route={route}
           canNavigate={workflowStep === "library_home"}
@@ -208,7 +207,7 @@ function AppShell() {
       <ConnectionRecoveryBannerForState
         authorizationFailure={authorizationFailure}
         authenticationRepairRequired={authenticationRepairRequired}
-        hasConnection={Boolean(selectedProfile)}
+        hasConnection={Boolean(activeConnection)}
         route={route}
       />
 
@@ -227,8 +226,8 @@ function AppShell() {
             )}
           >
             <SettingsPanel
-              profile={selectedProfile}
-              onProfilesChanged={handleConnectionChanged}
+              connection={activeConnection}
+              onConnectionChanged={handleConnectionChanged}
               onDisconnect={handleDisconnect}
               onRepairConnection={handleRepairConnection}
               appTheme={appTheme}
@@ -243,17 +242,14 @@ function AppShell() {
           <>
             {workflowStep === "connect_server" ? (
               <ConnectServerScreen
-                selectedProfileId={selectedProfileId}
-                onSelectedProfileIdChange={() => undefined}
-                onProfilesChanged={handleConnectionChanged}
+                onConnectionChanged={handleConnectionChanged}
               />
             ) : null}
 
             {workflowStep === "pair_device" ? (
               <ClientApiLinking
-                selectedProfileId={selectedProfileId}
-                onProfilesChanged={handleConnectionChanged}
-                profilesVersion={profilesVersion}
+                connection={activeConnection}
+                onConnectionChanged={handleConnectionChanged}
                 onCancel={handleCancelPairing}
               />
             ) : null}
@@ -261,11 +257,10 @@ function AppShell() {
             {workflowStep === "verify_connection" ? (
               <section className="panel workflowPanel">
                 <h1 className="panelTitle">Verify connection</h1>
-                <ServerSummary profile={selectedProfile} />
+                <ServerSummary connection={activeConnection} />
                 <ClientApiVerification
-                  selectedProfileId={selectedProfileId}
-                  profilesVersion={profilesVersion}
-                  onProfilesChanged={handleConnectionChanged}
+                  connection={activeConnection}
+                  onConnectionChanged={handleConnectionChanged}
                   autoVerify
                 />
               </section>
@@ -274,7 +269,7 @@ function AppShell() {
             {workflowStep === "library_home" ? (
               <AppLibraryRouteRenderer
                 route={route}
-                profile={selectedProfile}
+                connection={activeConnection}
                 spl={splClient}
                 connectivity={browserConnectivity}
                 offlineNamespaceKey={offlineNamespaceKey}
@@ -291,7 +286,7 @@ function AppShell() {
       {workflowStep === "library_home" && route?.kind !== "reader" ? (
         <AppBookDetailModalController
           route={route}
-          profile={selectedProfile}
+          connection={activeConnection}
           spl={splClient}
           connectivity={browserConnectivity}
           offlineNamespaceKey={offlineNamespaceKey}
@@ -302,30 +297,30 @@ function AppShell() {
   );
 }
 
-function ServerSummary({ profile }: { profile: ConnectionProfile | null }) {
-  if (!profile) return <p className="muted">No library connected.</p>;
+function ServerSummary({ connection }: { connection: ActiveConnection | null }) {
+  if (!connection) return <p className="muted">No library connected.</p>;
   return (
     <div className="serverSummary">
       <div className="detailRow">
-        <span className="muted">Library:</span> {profile.serverName ?? profile.label}
+        <span className="muted">Library:</span> {connection.serverName ?? connection.label}
       </div>
       <div className="detailRow">
-        <span className="muted">Server URL:</span> <span className="mono">{profile.serverBaseUrl}</span>
+        <span className="muted">Server URL:</span> <span className="mono">{connection.serverBaseUrl}</span>
       </div>
-      {profile.serverName ? (
+      {connection.serverName ? (
         <div className="detailRow">
-          <span className="muted">Name:</span> {profile.serverName}
+          <span className="muted">Name:</span> {connection.serverName}
         </div>
       ) : null}
-      {profile.serverDescription ? (
+      {connection.serverDescription ? (
         <div className="detailRow">
           <span className="muted">Description:</span>
-          <ServerRichText value={profile.serverDescription} />
+          <ServerRichText value={connection.serverDescription} />
         </div>
       ) : null}
-      {profile.apiBaseUrl ? (
+      {connection.apiBaseUrl ? (
         <div className="detailRow">
-          <span className="muted">API base:</span> <span className="mono">{profile.apiBaseUrl}</span>
+          <span className="muted">API base:</span> <span className="mono">{connection.apiBaseUrl}</span>
         </div>
       ) : null}
     </div>

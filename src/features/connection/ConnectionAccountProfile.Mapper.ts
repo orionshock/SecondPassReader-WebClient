@@ -1,30 +1,30 @@
 import type { CurrentUser, ServerInfo } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
-type VerifiedUser = NonNullable<ConnectionProfile["verifiedUser"]>;
+type VerifiedUser = NonNullable<ActiveConnection["verifiedUser"]>;
 
-export function applyCurrentAccountToProfile(
-  profile: ConnectionProfile,
+export function applyCurrentAccountToConnection(
+  connection: ActiveConnection,
   me: CurrentUser,
   isoNow: string,
   options: { markVerified?: boolean } = {},
-): ConnectionProfile {
+): ActiveConnection {
   return {
-    ...profile,
-    verifiedAt: options.markVerified === false ? profile.verifiedAt : isoNow,
+    ...connection,
+    verifiedAt: options.markVerified === false ? connection.verifiedAt : isoNow,
     verifiedUser: pickVerifiedUser(me),
     mustChangePassword: me.mustChangePassword,
     lastUsedAt: isoNow,
   };
 }
 
-export function applyServerInfoToProfile(
-  profile: ConnectionProfile,
+export function applyServerInfoToConnection(
+  connection: ActiveConnection,
   serverInfo: ServerInfo,
   isoNow: string,
-): ConnectionProfile {
+): ActiveConnection {
   return {
-    ...profile,
+    ...connection,
     serverName: serverInfo.name,
     serverDescription: serverInfo.description,
     serverVersion: serverInfo.version,
@@ -39,36 +39,36 @@ export function applyServerInfoToProfile(
   };
 }
 
-export function applyAuthenticatedContextToProfile(
-  profile: ConnectionProfile,
+export function applyAuthenticatedContextToConnection(
+  connection: ActiveConnection,
   currentUser: CurrentUser,
   serverInfo: ServerInfo,
   isoNow: string,
   options: { markVerified?: boolean } = {},
-): ConnectionProfile {
-  const authenticated = applyServerInfoToProfile(
-    applyCurrentAccountToProfile(profile, currentUser, isoNow, options),
+): ActiveConnection {
+  const authenticated = applyServerInfoToConnection(
+    applyCurrentAccountToConnection(connection, currentUser, isoNow, options),
     serverInfo,
     isoNow,
   );
-  const { authenticationState: _authenticationState, ...readyProfile } = authenticated;
-  return readyProfile;
+  const { authenticationState: _authenticationState, ...readyConnection } = authenticated;
+  return readyConnection;
 }
 
-export function hasCurrentAccountProfileChanged(profile: ConnectionProfile, next: ConnectionProfile): boolean {
+export function hasCurrentAccountChanged(connection: ActiveConnection, next: ActiveConnection): boolean {
   return (
-    profile.verifiedAt !== next.verifiedAt ||
-    profile.mustChangePassword !== next.mustChangePassword ||
-    profile.advancedLibraryGroupsEnabled !== next.advancedLibraryGroupsEnabled ||
-    profile.bannerText !== next.bannerText ||
-    profile.serverName !== next.serverName ||
-    profile.serverDescription !== next.serverDescription ||
-    profile.serverVersion !== next.serverVersion ||
-    profile.serverReleaseDate !== next.serverReleaseDate ||
-    profile.readingClientBaseUrl !== next.readingClientBaseUrl ||
-    profile.marginaliaProfileUri !== next.marginaliaProfileUri ||
-    JSON.stringify(profile.publicGroup ?? null) !== JSON.stringify(next.publicGroup ?? null) ||
-    !verifiedUsersEqual(profile.verifiedUser, next.verifiedUser)
+    connection.verifiedAt !== next.verifiedAt ||
+    connection.mustChangePassword !== next.mustChangePassword ||
+    connection.advancedLibraryGroupsEnabled !== next.advancedLibraryGroupsEnabled ||
+    connection.bannerText !== next.bannerText ||
+    connection.serverName !== next.serverName ||
+    connection.serverDescription !== next.serverDescription ||
+    connection.serverVersion !== next.serverVersion ||
+    connection.serverReleaseDate !== next.serverReleaseDate ||
+    connection.readingClientBaseUrl !== next.readingClientBaseUrl ||
+    connection.marginaliaProfileUri !== next.marginaliaProfileUri ||
+    JSON.stringify(connection.publicGroup ?? null) !== JSON.stringify(next.publicGroup ?? null) ||
+    !verifiedUsersEqual(connection.verifiedUser, next.verifiedUser)
   );
 }
 
@@ -89,7 +89,7 @@ function pickVerifiedUser(me: CurrentUser): VerifiedUser {
   };
 }
 
-function verifiedUsersEqual(a: ConnectionProfile["verifiedUser"], b: ConnectionProfile["verifiedUser"]): boolean {
+function verifiedUsersEqual(a: ActiveConnection["verifiedUser"], b: ActiveConnection["verifiedUser"]): boolean {
   if (!a || !b) return a === b;
   return (
     a.profileId === b.profileId &&

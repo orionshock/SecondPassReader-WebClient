@@ -4,8 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { ApiError, type SecondPassClient } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPanel } from "../../app/SettingsPanel.UI";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
-import { saveConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
+import { saveActiveConnection } from "../../storage/ActiveConnection.Store";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -66,11 +66,11 @@ describe("Settings connection removal", () => {
 });
 
 function renderSettings(input: { client: SecondPassClient; onDisconnect(): void }) {
-  saveConnectionProfile(profile());
+  saveActiveConnection(profile());
   act(() => root.render(
     <SettingsPanel
-      profile={profile()}
-      onProfilesChanged={vi.fn()}
+      connection={profile()}
+      onConnectionChanged={vi.fn()}
       onDisconnect={input.onDisconnect}
       onRepairConnection={vi.fn()}
       appTheme="light"
@@ -94,7 +94,7 @@ function client(account: Pick<SecondPassClient["account"], "revokeClientSession"
   return { account } as SecondPassClient;
 }
 
-function profile(): ConnectionProfile {
+function profile(): ActiveConnection {
   return {
     id: "connection-1",
     label: "Library",

@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@secondpass/client";
 import type { BookDetail, CompactBook, MarginaliaBookSummary, SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { BookDetailPanel } from "./BookDetailPanel.UI";
 import { useBookOfflineAvailabilityController } from "./bookDetail/BookOfflineAvailability.Controller";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export function BookDetailModal({
-  profile,
+  connection,
   spl,
   bookId,
   initialBook,
@@ -23,7 +23,7 @@ export function BookDetailModal({
   launchMessage,
   downloadState,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   bookId: string;
   initialBook: CompactBook | null;
@@ -52,7 +52,7 @@ export function BookDetailModal({
   const fetchSeqRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const offlineAvailability = useBookOfflineAvailabilityController({ profile, book, spl });
+  const offlineAvailability = useBookOfflineAvailabilityController({ connection, book, spl });
 
   useModalDialogFocus({ active: true, dialogRef, initialFocusRef: closeButtonRef, onDismiss: onClose });
 
@@ -148,7 +148,7 @@ export function BookDetailModal({
           {book ? (
             <BookDetailPanel
               book={book}
-              serverBaseUrl={profile?.serverBaseUrl}
+              serverBaseUrl={connection?.serverBaseUrl}
               launchMessage={launchMessage}
               onOpenReader={onOpenReader}
               onViewSessions={onViewSessions}

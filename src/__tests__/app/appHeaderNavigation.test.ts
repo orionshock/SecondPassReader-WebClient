@@ -12,7 +12,7 @@ describe("App header navigation", () => {
     const root = createRoot(container);
 
     act(() => root.render(createElement(AppHeader, {
-      profile: null,
+      connection: null,
       view: "main",
       route: { kind: "library" },
       canNavigate: true,
@@ -37,7 +37,7 @@ describe("App header navigation", () => {
     const root = createRoot(container);
 
     act(() => root.render(createElement(AppHeader, {
-      profile: null,
+      connection: null,
       view: "main",
       route: { kind: "home" },
       canNavigate: true,

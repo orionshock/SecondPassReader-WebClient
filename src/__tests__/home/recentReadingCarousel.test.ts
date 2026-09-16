@@ -9,7 +9,7 @@ import { rawSessionId, recentSessionFixture } from "../sessions/SessionTest.Fixt
 describe("Home recent reading carousel", () => {
   it("renders View all as a Sessions link", () => {
     const html = renderToStaticMarkup(createElement(RecentReadingSection, {
-      profile: null,
+      connection: null,
       preview: {
         busy: false,
         error: null,
@@ -57,7 +57,7 @@ describe("Home recent reading carousel", () => {
 function renderCarousel(items: MarginaliaRecentSession[]): string {
   return renderToStaticMarkup(createElement(RecentReadingCarousel, {
     items,
-    profile: null,
+    connection: null,
     disabled: false,
     onResume: vi.fn(),
   }));

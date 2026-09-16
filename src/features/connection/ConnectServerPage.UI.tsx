@@ -5,18 +5,15 @@ import {
   beginActiveConnectionPublication,
   getActiveConnection,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-  touchConnectionProfileLastUsed,
-  type ConnectionProfile,
-} from "../../storage/ConnectionProfiles.Store";
+  saveActiveConnection,
+  type ActiveConnection,
+} from "../../storage/ActiveConnection.Store";
 import { ConnectionSetupError, verifySecondPassServer } from "./ConnectionServer.Queries";
 import { loadServerPresets, type ServerPreset } from "./ServerPresets.Queries";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 type Props = {
-  selectedProfileId: string | null;
-  onSelectedProfileIdChange: (profileId: string | null) => void;
-  onProfilesChanged: () => void;
+  onConnectionChanged: () => void;
 };
 
 type PresetIdentity =
@@ -24,7 +21,7 @@ type PresetIdentity =
   | { status: "loaded"; serverName: string; serverDescription?: string }
   | { status: "unavailable" };
 
-function newProfileId() {
+function newConnectionId() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyCrypto = crypto as any;
@@ -52,7 +49,7 @@ function formatDiscoverySummary(discovery: SecondPassDiscovery) {
   };
 }
 
-export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChange, onProfilesChanged }: Props) {
+export function ConnectServerScreen({ onConnectionChanged }: Props) {
   const [serverUrlInput, setServerUrlInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +101,8 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
       const now = new Date().toISOString();
       const label = summary.serverName || serverBaseUrl;
 
-      const updated: ConnectionProfile = {
-        id: existing?.id ?? selectedProfileId ?? newProfileId(),
+      const updated: ActiveConnection = {
+        id: existing?.id ?? newConnectionId(),
         createdAt: existing?.createdAt ?? now,
         label,
         serverBaseUrl,
@@ -120,10 +117,8 @@ export function ConnectServerScreen({ selectedProfileId, onSelectedProfileIdChan
       };
 
       publishActiveConnectionResult(publication, () => {
-        saveConnectionProfile(updated);
-        touchConnectionProfileLastUsed(updated.id, now);
-        onProfilesChanged();
-        onSelectedProfileIdChange(updated.id);
+        saveActiveConnection(updated);
+        onConnectionChanged();
         setBusy(false);
       });
     } catch (e) {

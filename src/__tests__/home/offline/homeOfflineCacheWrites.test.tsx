@@ -130,7 +130,7 @@ function HomePreviewHarness({ spl, namespaceKey }: { spl: SecondPassClient; name
   const shelves = useHomeShelvesPreview(lifetime);
   return (
     <>
-      <RecentReadingSection profile={null} preview={recent} />
+      <RecentReadingSection connection={null} preview={recent} />
       <ShelvesPreviewSection preview={shelves} />
     </>
   );
@@ -139,7 +139,7 @@ function HomePreviewHarness({ spl, namespaceKey }: { spl: SecondPassClient; name
 function RecentPreviewHarness({ spl, namespaceKey }: { spl: SecondPassClient; namespaceKey: string }) {
   const lifetime = useHomePreviewLifetime(spl, namespaceKey);
   const recent = useHomeRecentPreview(lifetime);
-  return <RecentReadingSection profile={null} preview={recent} />;
+  return <RecentReadingSection connection={null} preview={recent} />;
 }
 
 function ShelvesPreviewHarness({ spl, namespaceKey }: { spl: SecondPassClient; namespaceKey: string }) {

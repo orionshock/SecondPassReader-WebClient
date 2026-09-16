@@ -1,15 +1,15 @@
 import type { CurrentUser, SecondPassClient } from "@secondpass/client";
-import { createSplClientFromProfile } from "../../app/AppSplClient.Factory";
+import { createSplClientFromConnection } from "../../app/AppSplClient.Factory";
 import { isAuthenticationRepairError, isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
 import {
   beginActiveConnectionPublication,
   isActiveConnectionPublicationCurrent,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-  type ConnectionProfile,
-} from "../../storage/ConnectionProfiles.Store";
+  saveActiveConnection,
+  type ActiveConnection,
+} from "../../storage/ActiveConnection.Store";
 import { loadAuthenticatedContext } from "./AuthenticatedContext.Queries";
-import { applyAuthenticatedContextToProfile } from "./ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection } from "./ConnectionAccountProfile.Mapper";
 import { finalizeConnectionRepair } from "./ConnectionRepair.Controller";
 
 export type ConnectionVerificationResult =
@@ -20,36 +20,36 @@ export type ConnectionVerificationResult =
   | { status: "failed"; error: unknown };
 
 export async function verifyConnection(input: {
-  profile: ConnectionProfile;
-  createClient?: (profile: ConnectionProfile) => SecondPassClient;
+  connection: ActiveConnection;
+  createClient?: (connection: ActiveConnection) => SecondPassClient;
   loadContext?: typeof loadAuthenticatedContext;
   finalizeRepair?: typeof finalizeConnectionRepair;
-  save?: (profile: ConnectionProfile) => void;
+  save?: (connection: ActiveConnection) => void;
   now?: () => string;
 }): Promise<ConnectionVerificationResult> {
-  const publication = beginActiveConnectionPublication(input.profile);
+  const publication = beginActiveConnectionPublication(input.connection);
   if (!publication) return { status: "stale" };
 
-  const save = input.save ?? saveConnectionProfile;
+  const save = input.save ?? saveActiveConnection;
   try {
-    const spl = (input.createClient ?? createSplClientFromProfile)(input.profile);
+    const spl = (input.createClient ?? createSplClientFromConnection)(input.connection);
     const { currentUser, serverInfo } = await (input.loadContext ?? loadAuthenticatedContext)(spl);
     if (!isActiveConnectionPublicationCurrent(publication)) return { status: "stale" };
 
-    const updated = applyAuthenticatedContextToProfile(
-      input.profile,
+    const updated = applyAuthenticatedContextToConnection(
+      input.connection,
       currentUser,
       serverInfo,
       (input.now ?? (() => new Date().toISOString()))(),
     );
-    if (input.profile.authenticationState !== "verifying-repair") {
+    if (input.connection.authenticationState !== "verifying-repair") {
       const published = publishActiveConnectionResult(publication, () => save(updated));
       return published ? { status: "verified", currentUser } : { status: "stale" };
     }
 
     let saved = false;
     const repair = await (input.finalizeRepair ?? finalizeConnectionRepair)({
-      previous: input.profile,
+      previous: input.connection,
       verified: updated,
       save: (verified) => {
         saved = publishActiveConnectionResult(publication, () => save(verified));
@@ -59,7 +59,7 @@ export async function verifyConnection(input: {
       if (!isActiveConnectionPublicationCurrent(publication)) return { status: "stale" };
       return {
         status: "repair-cleanup-failed",
-        previousProfileId: input.profile.verifiedUser?.profileId,
+        previousProfileId: input.connection.verifiedUser?.profileId,
         verifiedProfileId: updated.verifiedUser?.profileId,
       };
     }
@@ -68,8 +68,8 @@ export async function verifyConnection(input: {
     const authenticationRejected = isAuthenticationRepairError(error);
     if (isAuthorizationError(error)) {
       const published = publishActiveConnectionResult(publication, () => {
-        if (input.profile.authenticationState === "verifying-repair" && authenticationRejected) {
-          save({ ...input.profile, authenticationState: "repair-required" });
+        if (input.connection.authenticationState === "verifying-repair" && authenticationRejected) {
+          save({ ...input.connection, authenticationState: "repair-required" });
         }
       });
       return published

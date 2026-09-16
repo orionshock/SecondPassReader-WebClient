@@ -1,13 +1,13 @@
 import { createSecondPassClient, type SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 
-export function createSplClientFromProfile(profile: ConnectionProfile): SecondPassClient {
-  if (!profile.apiBaseUrl) throw new Error("Library connection is missing apiBaseUrl. Connect again.");
-  if (!profile.accessToken) throw new Error("Library is not linked.");
+export function createSplClientFromConnection(connection: ActiveConnection): SecondPassClient {
+  if (!connection.apiBaseUrl) throw new Error("Library connection is missing apiBaseUrl. Connect again.");
+  if (!connection.accessToken) throw new Error("Library is not linked.");
 
   return createSecondPassClient({
-    apiBaseUrl: profile.apiBaseUrl,
-    accessToken: profile.accessToken,
-    tokenType: profile.tokenType ?? "Bearer",
+    apiBaseUrl: connection.apiBaseUrl,
+    accessToken: connection.accessToken,
+    tokenType: connection.tokenType ?? "Bearer",
   });
 }

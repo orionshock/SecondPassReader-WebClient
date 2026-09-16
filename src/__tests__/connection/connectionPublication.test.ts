@@ -7,16 +7,16 @@ import {
   clearActiveConnection,
   getActiveConnection,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-  type ConnectionProfile,
-} from "../../storage/ConnectionProfiles.Store";
+  saveActiveConnection,
+  type ActiveConnection,
+} from "../../storage/ActiveConnection.Store";
 
 describe("active connection publication ownership", () => {
   beforeEach(() => clearActiveConnection());
 
   it("lets a newer operation supersede older work for the same connection record", () => {
     const connection = profile("connection-a", "token-a");
-    saveConnectionProfile(connection);
+    saveActiveConnection(connection);
     const older = beginActiveConnectionPublication(connection)!;
     const newer = beginActiveConnectionPublication(connection)!;
     const olderPublish = vi.fn();
@@ -30,9 +30,9 @@ describe("active connection publication ownership", () => {
 
   it("rejects publication after a different active connection replaces the captured record", () => {
     const first = profile("connection-a", "token-a");
-    saveConnectionProfile(first);
+    saveActiveConnection(first);
     const publication = beginActiveConnectionPublication(first)!;
-    saveConnectionProfile(profile("connection-b", "token-b"));
+    saveActiveConnection(profile("connection-b", "token-b"));
 
     expect(publishActiveConnectionResult(publication, vi.fn())).toBe(false);
     expect(getActiveConnection()?.id).toBe("connection-b");
@@ -44,10 +44,10 @@ describe("connection verification publication", () => {
 
   it("publishes an ordinary current verification", async () => {
     const connection = profile("connection-a", "token-a");
-    saveConnectionProfile(connection);
+    saveActiveConnection(connection);
 
     await expect(verifyConnection({
-      profile: connection,
+      connection,
       createClient: () => ({}) as never,
       loadContext: async () => context("profile-a"),
       now: () => "2026-09-15T01:00:00.000Z",
@@ -63,9 +63,9 @@ describe("connection verification publication", () => {
   it("does not restore a connection removed while verification is pending", async () => {
     const connection = profile("connection-a", "token-a");
     const pending = deferred<ReturnType<typeof context>>();
-    saveConnectionProfile(connection);
+    saveActiveConnection(connection);
     const verification = verifyConnection({
-      profile: connection,
+      connection,
       createClient: () => ({}) as never,
       loadContext: () => pending.promise,
     });
@@ -81,14 +81,14 @@ describe("connection verification publication", () => {
     const connection = profile("connection-a", "token-a");
     const olderContext = deferred<ReturnType<typeof context>>();
     const newerContext = deferred<ReturnType<typeof context>>();
-    saveConnectionProfile(connection);
+    saveActiveConnection(connection);
     const older = verifyConnection({
-      profile: connection,
+      connection,
       createClient: () => ({}) as never,
       loadContext: () => olderContext.promise,
     });
     const newer = verifyConnection({
-      profile: connection,
+      connection,
       createClient: () => ({}) as never,
       loadContext: () => newerContext.promise,
     });
@@ -104,14 +104,14 @@ describe("connection verification publication", () => {
     const first = profile("connection-a", "token-a");
     const replacement = profile("connection-b", "token-b");
     const pending = deferred<ReturnType<typeof context>>();
-    saveConnectionProfile(first);
+    saveActiveConnection(first);
     const verification = verifyConnection({
-      profile: first,
+      connection: first,
       createClient: () => ({}) as never,
       loadContext: () => pending.promise,
     });
 
-    saveConnectionProfile(replacement);
+    saveActiveConnection(replacement);
     pending.reject(new ApiError({ kind: "unauthorized", status: 401, message: "Rejected" }));
 
     await expect(verification).resolves.toEqual({ status: "stale" });
@@ -128,9 +128,9 @@ describe("connection verification publication", () => {
     const replacement = profile("connection-b", "token-b");
     const cleanup = deferred<void>();
     const finalizeStarted = vi.fn();
-    saveConnectionProfile(repairing);
+    saveActiveConnection(repairing);
     const verification = verifyConnection({
-      profile: repairing,
+      connection: repairing,
       createClient: () => ({}) as never,
       loadContext: async () => context("profile-new"),
       finalizeRepair: async (input) => {
@@ -142,7 +142,7 @@ describe("connection verification publication", () => {
     });
     await vi.waitFor(() => expect(finalizeStarted).toHaveBeenCalledOnce());
 
-    saveConnectionProfile(replacement);
+    saveActiveConnection(replacement);
     cleanup.resolve();
 
     await expect(verification).resolves.toEqual({ status: "stale" });
@@ -154,10 +154,10 @@ describe("connection verification publication", () => {
       ...profile("connection-a", "replacement-token"),
       authenticationState: "verifying-repair" as const,
     };
-    saveConnectionProfile(repairing);
+    saveActiveConnection(repairing);
 
     await expect(verifyConnection({
-      profile: repairing,
+      connection: repairing,
       createClient: () => ({}) as never,
       loadContext: async () => {
         throw new ApiError({ kind: "unauthorized", status: 401, message: "Rejected" });
@@ -167,7 +167,7 @@ describe("connection verification publication", () => {
   });
 });
 
-function profile(id: string, accessToken: string): ConnectionProfile {
+function profile(id: string, accessToken: string): ActiveConnection {
   return {
     id,
     label: "Library",

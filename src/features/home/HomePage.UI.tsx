@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import { RecentReadingSection } from "../library/RecentReadingPanel.UI";
 import { getConnectionStatus } from "../connection/ConnectionStatus.Presenter";
@@ -16,15 +16,15 @@ const HOME_LIBRARY_SEARCH_LABEL = "Search Library";
 const HOME_LIBRARY_SEARCH_PLACEHOLDER = "Search books, authors, series, and publishers...";
 
 export function HomePage({
-  profile,
+  connection,
   spl,
   offlineNamespaceKey = null,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   offlineNamespaceKey?: string | null;
 }) {
-  const status = useMemo(() => getConnectionStatus(profile), [profile]);
+  const status = useMemo(() => getConnectionStatus(connection), [connection]);
   const [homeSearch, setHomeSearch] = useState("");
   const previewLifetime = useHomePreviewLifetime(status === "verified" ? spl : null, offlineNamespaceKey);
   const recentPreview = useHomeRecentPreview(previewLifetime);
@@ -70,11 +70,11 @@ export function HomePage({
             </form>
           </div>
 
-          <RecentReadingSection profile={profile} preview={recentPreview} />
+          <RecentReadingSection connection={connection} preview={recentPreview} />
 
           <ShelvesPreviewSection
             preview={shelvesPreview}
-            serverBaseUrl={profile?.serverBaseUrl}
+            serverBaseUrl={connection?.serverBaseUrl}
           />
         </>
       ) : null}

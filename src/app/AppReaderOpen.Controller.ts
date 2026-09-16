@@ -4,7 +4,7 @@ import { openBookForReader } from "../features/library/LibraryBookOpen.Actions";
 import { releaseOpenedBook, resolveReaderOpenCompletion } from "../features/reader/ReaderOpen.Lifecycle";
 import { saveReaderReturnTarget } from "../features/reader/ReaderReturnTarget.Store";
 import type { OpenedBook, ReaderReturnTarget } from "../features/reader/Reader.Types";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 import type { AppRoute } from "./AppNavigation.Router";
 import { navigateTo } from "./AppNavigation.Router";
@@ -23,13 +23,13 @@ import { openIndexedDbOfflineRepositories } from "./offline/storage/IndexedDbOff
 export function useAppReaderOpenController({
   route,
   workflowStep,
-  profile,
+  connection,
   spl,
   reportAuthorizationFailure,
 }: {
   route: AppRoute | null;
   workflowStep: AppWorkflowStep;
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   reportAuthorizationFailure: (error: unknown) => void;
 }) {
@@ -86,8 +86,8 @@ export function useAppReaderOpenController({
   useEffect(() => {
     if (workflowStep !== "library_home") return;
     if (!route || route.kind !== "reader") return;
-    if (!profile) return;
-    if (connectivity !== "offline" && (!profile.apiBaseUrl || !profile.accessToken || !spl)) return;
+    if (!connection) return;
+    if (connectivity !== "offline" && (!connection.apiBaseUrl || !connection.accessToken || !spl)) return;
 
     const requestedBookId = route.bookId;
     if (openedBook?.book?.id === requestedBookId) return;
@@ -119,8 +119,8 @@ export function useAppReaderOpenController({
         if (connectivity === "offline") {
           try {
             const namespace = buildOfflineCacheNamespace({
-              serverBaseUrl: profile.serverBaseUrl,
-              accountProfileId: profile.verifiedUser?.profileId,
+              serverBaseUrl: connection.serverBaseUrl,
+              accountProfileId: connection.verifiedUser?.profileId,
             });
             if (!namespace) throw new OfflineReaderAdmissionError();
 
@@ -211,7 +211,7 @@ export function useAppReaderOpenController({
   }, [
     openedBook?.book?.id,
     connectivity,
-    profile,
+    connection,
     readerRestoreAttempt,
     reportAuthorizationFailure,
     route,

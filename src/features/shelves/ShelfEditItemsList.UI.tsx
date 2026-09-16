@@ -1,5 +1,5 @@
 import type { ShelfItem } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { resolveCoverUrl } from "../library/BookCover.Mapper";
 
@@ -10,7 +10,7 @@ function formatAuthors(item: ShelfItem): string {
 
 export function ShelfEditItemsList({
   items,
-  profile,
+  connection,
   itemCount,
   positionOptions,
   mutationBusyId,
@@ -19,7 +19,7 @@ export function ShelfEditItemsList({
   onRemove,
 }: {
   items: ShelfItem[];
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   itemCount: number;
   positionOptions: number[];
   mutationBusyId: string | null;
@@ -32,7 +32,7 @@ export function ShelfEditItemsList({
       <div className="shelfEditHint">Use the arrows or choose a position to reorder books.</div>
       <div className="shelfBookList">
         {items.map((it, index) => {
-          const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, profile);
+          const coverSrc = resolveCoverUrl(it.book.cover_url ?? null, connection);
           const authors = formatAuthors(it);
           const series = it.book.series?.name && it.book.series ? it.book.series.name : null;
           const itemBusy = mutationBusyId === it.id;

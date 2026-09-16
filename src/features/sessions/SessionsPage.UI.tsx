@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { ApiError } from "@secondpass/client";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "../library/BookCover.Mapper";
 import { InlineMeta, MetaSeparator } from "../../components/Metadata.UI";
@@ -58,12 +58,12 @@ export function SessionsNoDataState({ busy, hasError }: { busy: boolean; hasErro
 }
 
 export function SessionsPage({
-  profile,
+  connection,
   spl,
   bookId,
   searchQuery = "",
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   bookId?: string | null;
   searchQuery?: string | null;
@@ -190,7 +190,7 @@ export function SessionsPage({
             <div className="sessionsList">
               {sessions.map((s) => {
                 const sessionBook = "book" in s ? s.book : contextBook;
-                const coverSrc = resolveCoverUrl(sessionBook?.coverUrl ?? null, profile);
+                const coverSrc = resolveCoverUrl(sessionBook?.coverUrl ?? null, connection);
                 const updated = formatIso(s.updatedAt);
                 const statusLine = s.status;
                 const sessionName = getSessionDisplayName(s.name, s.id);

@@ -1,4 +1,4 @@
-export type ConnectionProfile = {
+export type ActiveConnection = {
   id: string;
   label: string;
   serverBaseUrl: string;
@@ -58,10 +58,8 @@ export type ConnectionProfile = {
 };
 
 const ACTIVE_CONNECTION_KEY = "secondpass.activeConnection.v1";
-const OLD_PROFILES_KEY = "secondpass.connectionProfiles.v1";
-const OLD_SELECTED_PROFILE_KEY = "secondpass.selectedConnectionProfileId.v1";
-
-export type ActiveConnection = ConnectionProfile;
+const LEGACY_CONNECTIONS_KEY = "secondpass.connectionProfiles.v1";
+const LEGACY_SELECTED_CONNECTION_KEY = "secondpass.selectedConnectionProfileId.v1";
 
 export type ActiveConnectionPublication = Readonly<{ token: symbol }>;
 
@@ -135,8 +133,8 @@ function invalidateActiveConnectionPublications(): void {
 export function saveActiveConnection(connection: ActiveConnection): void {
   writeActive(connection);
   try {
-    localStorage.removeItem(OLD_PROFILES_KEY);
-    localStorage.removeItem(OLD_SELECTED_PROFILE_KEY);
+    localStorage.removeItem(LEGACY_CONNECTIONS_KEY);
+    localStorage.removeItem(LEGACY_SELECTED_CONNECTION_KEY);
   } catch {
     // Legacy-key cleanup must not block the active single-connection record.
   }
@@ -146,41 +144,9 @@ export function clearActiveConnection(): void {
   invalidateActiveConnectionPublications();
   localStorage.removeItem(ACTIVE_CONNECTION_KEY);
   try {
-    localStorage.removeItem(OLD_PROFILES_KEY);
-    localStorage.removeItem(OLD_SELECTED_PROFILE_KEY);
+    localStorage.removeItem(LEGACY_CONNECTIONS_KEY);
+    localStorage.removeItem(LEGACY_SELECTED_CONNECTION_KEY);
   } catch {
     // The active connection is already gone; legacy residue is inert.
   }
-}
-
-export function touchActiveConnectionLastUsed(isoNow = new Date().toISOString()): void {
-  const connection = readActive();
-  if (!connection) return;
-  writeActive({ ...connection, lastUsedAt: isoNow });
-}
-
-export function listConnectionProfiles(): ConnectionProfile[] {
-  const active = readActive();
-  return active ? [active] : [];
-}
-
-export function getConnectionProfile(profileId: string): ConnectionProfile | undefined {
-  const active = readActive();
-  if (!active) return undefined;
-  return active.id === profileId ? active : undefined;
-}
-
-export function saveConnectionProfile(profile: ConnectionProfile): void {
-  saveActiveConnection(profile);
-}
-
-export function deleteConnectionProfile(profileId: string): void {
-  const active = readActive();
-  if (active?.id === profileId) clearActiveConnection();
-}
-
-export function touchConnectionProfileLastUsed(profileId: string, isoNow = new Date().toISOString()): void {
-  const active = readActive();
-  if (active?.id !== profileId) return;
-  writeActive({ ...active, lastUsedAt: isoNow });
 }

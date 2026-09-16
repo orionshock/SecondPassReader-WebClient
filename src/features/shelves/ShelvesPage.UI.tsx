@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl.UI";
 import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack.UI";
@@ -44,14 +44,14 @@ export function ShelvesLoadErrorNotice({
 }
 
 export function ShelvesPage({
-  profile,
+  connection,
   spl,
   ordering: routeOrdering,
   page = 1,
   pageSize = 20,
   onUpdateRoute,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   ordering?: string;
   page?: number;
@@ -91,7 +91,7 @@ export function ShelvesPage({
         <div className="shelfCardRight">
           <PreviewBookCoverStack
             previewBooks={normalizePreviewBooks(shelf.preview_books)}
-            baseUrl={profile}
+            baseUrl={connection}
             onBookClick={(bookId) => navigateTo({ kind: "shelves", bookId })}
           />
           {canEdit ? (
@@ -143,7 +143,7 @@ export function ShelvesPage({
         </div>
       </div>
     );
-  }, [deleteShelf, dismissMenu, menuShelfId, mutationBusy, profile, toggleMenu]);
+  }, [deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, toggleMenu]);
 
   const formOpen = createOpen;
 

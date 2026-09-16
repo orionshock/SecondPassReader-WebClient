@@ -6,9 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "../../app/AppHeader.UI";
 import { SettingsPanel } from "../../app/SettingsPanel.UI";
 import { isAuthorizationError } from "../../app/AppUserFacingErrors.Mapper";
-import { applyAuthenticatedContextToProfile } from "../../features/connection/ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection } from "../../features/connection/ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "../../features/connection/AuthenticatedContext.Queries";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 describe("authenticated bootstrap context", () => {
   it("loads current user and server info concurrently", async () => {
@@ -25,7 +25,7 @@ describe("authenticated bootstrap context", () => {
   });
 
   it("uses server.info display/config and /me identity in header and Settings", () => {
-    const profile = applyAuthenticatedContextToProfile(
+    const connection = applyAuthenticatedContextToConnection(
       baseProfile(),
       currentUser(),
       serverInfo(),
@@ -33,7 +33,7 @@ describe("authenticated bootstrap context", () => {
     );
 
     const header = renderToStaticMarkup(createElement(AppHeader, {
-      profile,
+      connection,
       view: "main",
       route: { kind: "home" },
       canNavigate: true,
@@ -45,8 +45,8 @@ describe("authenticated bootstrap context", () => {
       onShowSettings: vi.fn(),
     }));
     const settings = renderToStaticMarkup(createElement(SettingsPanel, {
-      profile,
-      onProfilesChanged: vi.fn(),
+      connection,
+      onConnectionChanged: vi.fn(),
       onDisconnect: vi.fn(),
       onRepairConnection: vi.fn(),
       appTheme: "light",
@@ -62,7 +62,7 @@ describe("authenticated bootstrap context", () => {
     expect(settings).toContain("Authenticated Server Name");
     expect(settings).toContain("Authenticated server description");
     expect(settings).toContain("&lt;Read Er&gt;@reader-user");
-    expect(profile.advancedLibraryGroupsEnabled).toBe(true);
+    expect(connection.advancedLibraryGroupsEnabled).toBe(true);
   });
 
   it("preserves authorization classification when server.info rejects bootstrap", async () => {
@@ -90,7 +90,7 @@ describe("authenticated bootstrap context", () => {
   });
 });
 
-function baseProfile(): ConnectionProfile {
+function baseProfile(): ActiveConnection {
   return {
     id: "local-1",
     label: "Discovery Server Name",

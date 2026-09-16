@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "../library/BookCover.Mapper";
 import { CloseSessionDialog } from "./CloseSessionDialog.UI";
@@ -13,14 +13,14 @@ import { formatAnnotationCount, formatIso } from "./SessionDetail.Presenter";
 import { getSessionDisplayName } from "./SessionDisplayName.Presenter";
 import { useSessionDetail } from "./SessionDetail.Controller";
 
-export function SessionDetailPage({ profile, spl, sessionId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; sessionId: string }) {
+export function SessionDetailPage({ connection, spl, sessionId }: { connection: ActiveConnection | null; spl: SecondPassClient | null; sessionId: string }) {
   const {
     canLoad, busy, error, session, book, isActive, nameEditor, notesEditor,
     annotations, annoBusy, annoError, closeDialogOpen, openCloseDialog,
     dismissCloseDialog, saveAndClose,
   } = useSessionDetail({ spl, sessionId });
   const progressText = session?.progress?.locationLabel || null;
-  const coverSrc = resolveCoverUrl(book?.coverUrl ?? null, profile) ?? null;
+  const coverSrc = resolveCoverUrl(book?.coverUrl ?? null, connection) ?? null;
   const statusText = session?.status === "active" ? "Active" : "Closed";
   const annoText = formatAnnotationCount(session?.annotationCount ?? null);
 

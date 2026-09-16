@@ -7,9 +7,9 @@ import { useAppAuthenticatedContextController } from "../../app/AppAuthenticated
 import {
   clearActiveConnection,
   getActiveConnection,
-  saveConnectionProfile,
-  type ConnectionProfile,
-} from "../../storage/ConnectionProfiles.Store";
+  saveActiveConnection,
+  type ActiveConnection,
+} from "../../storage/ActiveConnection.Store";
 
 describe("authenticated context publication ownership", () => {
   let container: HTMLDivElement;
@@ -40,7 +40,7 @@ describe("authenticated context publication ownership", () => {
 
     expect(getActiveConnection()).toBeNull();
     expect(callbacks.clearAuthorizationFailure).not.toHaveBeenCalled();
-    expect(callbacks.onProfileChanged).not.toHaveBeenCalled();
+    expect(callbacks.onConnectionChanged).not.toHaveBeenCalled();
   });
 
   it("does not report a stale failure against a replacement connection", async () => {
@@ -50,7 +50,7 @@ describe("authenticated context publication ownership", () => {
     await vi.waitFor(() => expect(callbacks.getCurrentUser).toHaveBeenCalledOnce());
     const replacement = profile("connection-b", "token-b");
 
-    saveConnectionProfile(replacement);
+    saveActiveConnection(replacement);
     user.reject(new ApiError({ kind: "unauthorized", status: 401, message: "Rejected" }));
     await act(async () => user.promise.catch(() => undefined));
 
@@ -65,19 +65,19 @@ describe("authenticated context publication ownership", () => {
     await vi.waitFor(() => expect(callbacks.getCurrentUser).toHaveBeenCalledOnce());
     const repaired = { ...connection, accessToken: "repaired-token" };
 
-    saveConnectionProfile(repaired);
+    saveActiveConnection(repaired);
     user.resolve(currentUser("profile-a"));
     await act(async () => user.promise);
 
     expect(getActiveConnection()).toEqual(repaired);
     expect(callbacks.clearAuthorizationFailure).not.toHaveBeenCalled();
-    expect(callbacks.onProfileChanged).not.toHaveBeenCalled();
+    expect(callbacks.onConnectionChanged).not.toHaveBeenCalled();
   });
 
   it("still publishes current success and current authorization failure", async () => {
     const success = profile("connection-a", "token-a");
     const successCallbacks = render(success, client(Promise.resolve(currentUser("profile-a"))));
-    await vi.waitFor(() => expect(successCallbacks.onProfileChanged).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(successCallbacks.onConnectionChanged).toHaveBeenCalledOnce());
     expect(successCallbacks.clearAuthorizationFailure).toHaveBeenCalledOnce();
     expect(getActiveConnection()?.verifiedUser?.profileId).toBe("profile-a");
 
@@ -90,35 +90,35 @@ describe("authenticated context publication ownership", () => {
     expect(failureCallbacks.reportAuthorizationFailure).toHaveBeenCalledWith(expect.objectContaining({ cause: failure }));
   });
 
-  function render(connection: ConnectionProfile, spl: SecondPassClient) {
-    saveConnectionProfile(connection);
+  function render(connection: ActiveConnection, spl: SecondPassClient) {
+    saveActiveConnection(connection);
     const clearAuthorizationFailure = vi.fn();
     const reportAuthorizationFailure = vi.fn();
-    const onProfileChanged = vi.fn();
+    const onConnectionChanged = vi.fn();
     act(() => root.render(
       <Harness
-        profile={connection}
+        connection={connection}
         spl={spl}
         clearAuthorizationFailure={clearAuthorizationFailure}
         reportAuthorizationFailure={reportAuthorizationFailure}
-        onProfileChanged={onProfileChanged}
+        onConnectionChanged={onConnectionChanged}
       />,
     ));
     return {
       clearAuthorizationFailure,
       reportAuthorizationFailure,
-      onProfileChanged,
+      onConnectionChanged,
       getCurrentUser: spl.account.getCurrentUser,
     };
   }
 });
 
 function Harness(input: {
-  profile: ConnectionProfile;
+  connection: ActiveConnection;
   spl: SecondPassClient;
   clearAuthorizationFailure(): void;
   reportAuthorizationFailure(error: unknown): void;
-  onProfileChanged(): void;
+  onConnectionChanged(): void;
 }) {
   useAppAuthenticatedContextController({
     workflowStep: "library_home",
@@ -134,7 +134,7 @@ function client(user: Promise<CurrentUser>): SecondPassClient {
   } as unknown as SecondPassClient;
 }
 
-function profile(id: string, accessToken: string): ConnectionProfile {
+function profile(id: string, accessToken: string): ActiveConnection {
   return {
     id,
     label: "Library",

@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsLibraryServerPanel } from "../../../app/settings/SettingsLibraryServerPanel.UI";
-import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../../storage/ActiveConnection.Store";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -24,7 +24,7 @@ describe("offline Second Pass Library settings", () => {
   it("disables server calls while leaving local retention actions available", () => {
     act(() => root.render(
       <SettingsLibraryServerPanel
-        profile={profile()}
+        connection={profile()}
         state={{ phase: "idle" }}
         busy={false}
         serverActionsAvailable={false}
@@ -52,7 +52,7 @@ function button(label: string): HTMLButtonElement {
   return found;
 }
 
-function profile(): ConnectionProfile {
+function profile(): ActiveConnection {
   return {
     id: "connection-1",
     label: "Library",

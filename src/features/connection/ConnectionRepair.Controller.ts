@@ -1,4 +1,4 @@
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { buildOfflineCacheNamespace } from "../../app/offline/namespace/OfflineCacheNamespace.Policy";
 import { removeOfflineNamespace } from "../../app/offline/namespace/OfflineNamespaceCleanup.Actions";
 
@@ -7,9 +7,9 @@ export type FinalizeConnectionRepairResult =
   | { status: "failed" };
 
 export async function finalizeConnectionRepair(input: {
-  previous: ConnectionProfile;
-  verified: ConnectionProfile;
-  save(profile: ConnectionProfile): void;
+  previous: ActiveConnection;
+  verified: ActiveConnection;
+  save(connection: ActiveConnection): void;
   removeNamespace?: typeof removeOfflineNamespace;
 }): Promise<FinalizeConnectionRepairResult> {
   const previousNamespace = namespaceKey(input.previous);
@@ -27,10 +27,10 @@ export async function finalizeConnectionRepair(input: {
   return { status: "saved", identity };
 }
 
-function namespaceKey(profile: ConnectionProfile): string | null {
-  if (!profile.verifiedAt || !profile.verifiedUser?.profileId) return null;
+function namespaceKey(connection: ActiveConnection): string | null {
+  if (!connection.verifiedAt || !connection.verifiedUser?.profileId) return null;
   return buildOfflineCacheNamespace({
-    serverBaseUrl: profile.serverBaseUrl,
-    accountProfileId: profile.verifiedUser.profileId,
+    serverBaseUrl: connection.serverBaseUrl,
+    accountProfileId: connection.verifiedUser.profileId,
   })?.key ?? null;
 }

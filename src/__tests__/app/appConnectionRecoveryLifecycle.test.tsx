@@ -3,12 +3,12 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppConnectionRecoveryLifecycle } from "../../app/AppConnectionRecovery.Lifecycle";
-import { saveConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { saveActiveConnection } from "../../storage/ActiveConnection.Store";
 import type { AppRoute } from "../../app/AppNavigation.Router";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
-vi.mock("../../storage/ConnectionProfiles.Store", () => ({
-  saveConnectionProfile: vi.fn(),
+vi.mock("../../storage/ActiveConnection.Store", () => ({
+  saveActiveConnection: vi.fn(),
   beginActiveConnectionPublication: vi.fn(() => ({ generation: 1, expectedRecord: "connection" })),
   publishActiveConnectionResult: vi.fn((_publication: unknown, publish: () => void) => {
     publish();
@@ -16,13 +16,13 @@ vi.mock("../../storage/ConnectionProfiles.Store", () => ({
   }),
 }));
 
-const saveProfileMock = vi.mocked(saveConnectionProfile);
+const saveConnectionMock = vi.mocked(saveActiveConnection);
 
 describe("App connection recovery lifecycle", () => {
   let container: HTMLDivElement;
   let root: Root;
   const clearAuthorizationFailure = vi.fn();
-  const onProfileChanged = vi.fn();
+  const onConnectionChanged = vi.fn();
 
   beforeEach(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -38,54 +38,54 @@ describe("App connection recovery lifecycle", () => {
   });
 
   it("invalidates recovery state when connection identity changes", () => {
-    act(() => root.render(<Harness profile={profile("connection-a", "token-a")} route={{ kind: "home" }} />));
+    act(() => root.render(<Harness connection={profile("connection-a", "token-a")} route={{ kind: "home" }} />));
     expect(clearAuthorizationFailure).not.toHaveBeenCalled();
 
-    act(() => root.render(<Harness profile={profile("connection-b", "token-b")} route={{ kind: "home" }} />));
+    act(() => root.render(<Harness connection={profile("connection-b", "token-b")} route={{ kind: "home" }} />));
     expect(clearAuthorizationFailure).toHaveBeenCalledOnce();
   });
 
   it("clears recovery state when the Library Server settings route owns repair UI", () => {
     act(() => root.render(
-      <Harness profile={profile("connection-a", "token-a")} route={{ kind: "settings", tab: "library-server" }} />,
+      <Harness connection={profile("connection-a", "token-a")} route={{ kind: "settings", tab: "library-server" }} />,
     ));
     expect(clearAuthorizationFailure).toHaveBeenCalledOnce();
   });
 
-  it("persists repair-required state and lets workflow routing react to the profile change", () => {
-    const selectedProfile = profile("connection-a", "token-a");
+  it("persists repair-required state and lets workflow routing react to the connection change", () => {
+    const selectedConnection = profile("connection-a", "token-a");
     act(() => root.render(
-      <Harness profile={selectedProfile} route={{ kind: "home" }} authenticationRepairRequired />,
+      <Harness connection={selectedConnection} route={{ kind: "home" }} authenticationRepairRequired />,
     ));
 
-    expect(saveProfileMock).toHaveBeenCalledWith(expect.objectContaining({
+    expect(saveConnectionMock).toHaveBeenCalledWith(expect.objectContaining({
       id: "connection-a",
       authenticationState: "repair-required",
     }));
-    expect(onProfileChanged).toHaveBeenCalledOnce();
+    expect(onConnectionChanged).toHaveBeenCalledOnce();
   });
 
   function Harness({
-    profile: selectedProfile,
+    connection: selectedConnection,
     route,
     authenticationRepairRequired = false,
   }: {
-    profile: ConnectionProfile;
+    connection: ActiveConnection;
     route: AppRoute;
     authenticationRepairRequired?: boolean;
   }) {
     useAppConnectionRecoveryLifecycle({
       route,
-      profile: selectedProfile,
+      connection: selectedConnection,
       authenticationRepairRequired,
       clearAuthorizationFailure,
-      onProfileChanged,
+      onConnectionChanged,
     });
     return null;
   }
 });
 
-function profile(id: string, accessToken: string): ConnectionProfile {
+function profile(id: string, accessToken: string): ActiveConnection {
   return {
     id,
     label: "Library",

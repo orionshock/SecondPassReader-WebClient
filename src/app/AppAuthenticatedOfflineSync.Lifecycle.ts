@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import { buildOfflineCacheNamespace } from "./offline/namespace/OfflineCacheNamespace.Policy";
 import {
   createOfflineReaderAuthenticatedSyncGeneration,
@@ -12,20 +12,20 @@ import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 
 export function useAppAuthenticatedOfflineSyncLifecycle(input: {
   workflowStep: AppWorkflowStep;
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   requireAuthenticationRepair: () => void;
 }) {
   const verifiedOfflineNamespaceKey = useMemo(() => {
-    if (!input.profile?.verifiedAt) return null;
+    if (!input.connection?.verifiedAt) return null;
     return buildOfflineCacheNamespace({
-      serverBaseUrl: input.profile.serverBaseUrl,
-      accountProfileId: input.profile.verifiedUser?.profileId,
+      serverBaseUrl: input.connection.serverBaseUrl,
+      accountProfileId: input.connection.verifiedUser?.profileId,
     })?.key ?? null;
-  }, [input.profile?.serverBaseUrl, input.profile?.verifiedAt, input.profile?.verifiedUser?.profileId]);
+  }, [input.connection?.serverBaseUrl, input.connection?.verifiedAt, input.connection?.verifiedUser?.profileId]);
   const offlineNamespaceKey = input.workflowStep === "library_home" ? verifiedOfflineNamespaceKey : null;
-  const generationKey = offlineNamespaceKey && input.profile
-    ? JSON.stringify([offlineNamespaceKey, input.profile.id, input.profile.verifiedAt, input.profile.accessToken])
+  const generationKey = offlineNamespaceKey && input.connection
+    ? JSON.stringify([offlineNamespaceKey, input.connection.id, input.connection.verifiedAt, input.connection.accessToken])
     : null;
   const generation = useMemo(
     () => createOfflineReaderAuthenticatedSyncGeneration(),

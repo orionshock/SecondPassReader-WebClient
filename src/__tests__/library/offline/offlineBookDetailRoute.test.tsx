@@ -64,7 +64,7 @@ async function render(connectivity: "online" | "offline" | "unknown", namespaceK
     root.render(
       <AppBookDetailModalController
         route={{ kind: "home", bookId: "book-1" }}
-        profile={null}
+        connection={null}
         spl={null}
         connectivity={connectivity}
         offlineNamespaceKey={namespaceKey}

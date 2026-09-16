@@ -45,11 +45,7 @@ describe("connection server presets", () => {
 
     await act(async () => {
       root.render(
-        <ConnectServerScreen
-          selectedProfileId={null}
-          onSelectedProfileIdChange={vi.fn()}
-          onProfilesChanged={vi.fn()}
-        />,
+        <ConnectServerScreen onConnectionChanged={vi.fn()} />,
       );
     });
 
@@ -67,11 +63,7 @@ describe("connection server presets", () => {
 
     await act(async () => {
       root.render(
-        <ConnectServerScreen
-          selectedProfileId={null}
-          onSelectedProfileIdChange={vi.fn()}
-          onProfilesChanged={vi.fn()}
-        />,
+        <ConnectServerScreen onConnectionChanged={vi.fn()} />,
       );
     });
 

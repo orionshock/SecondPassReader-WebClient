@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { HomePage } from "../../features/home/HomePage.UI";
 import { LibraryBrowsePage } from "../../features/library/LibraryBrowsePage.UI";
 import type { OpenedBook } from "../../features/reader/Reader.Types";
@@ -34,7 +34,7 @@ const OfflineHomePage = lazy(async () => {
 // Unknown connectivity keeps the normal server-authoritative route.
 export function AppLibraryRouteRenderer({
   route,
-  profile,
+  connection,
   spl,
   connectivity,
   offlineNamespaceKey,
@@ -44,7 +44,7 @@ export function AppLibraryRouteRenderer({
   onRetryReaderRestore,
 }: {
   route: AppRoute | null;
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   connectivity: BrowserConnectivityStatus;
   offlineNamespaceKey: string | null;
@@ -118,7 +118,7 @@ export function AppLibraryRouteRenderer({
     return (
       <div className="libraryScreen">
         <ShelvesPage
-          profile={profile}
+          connection={connection}
           spl={spl}
           ordering={route.ordering}
           page={route.page ?? 1}
@@ -141,7 +141,7 @@ export function AppLibraryRouteRenderer({
     return (
       <div className="libraryScreen">
         <ShelfDetailPage
-          profile={profile}
+          connection={connection}
           spl={spl}
           shelfId={route.shelfId}
           selectedBookId={route.bookId ?? null}
@@ -166,7 +166,7 @@ export function AppLibraryRouteRenderer({
   if (route?.kind === "shelfEdit") {
     return (
       <div className="libraryScreen">
-        <ShelfEditPage profile={profile} spl={spl} shelfId={route.shelfId} />
+        <ShelfEditPage connection={connection} spl={spl} shelfId={route.shelfId} />
       </div>
     );
   }
@@ -174,7 +174,7 @@ export function AppLibraryRouteRenderer({
   if (route?.kind === "sessions") {
     return (
       <div className="libraryScreen">
-        <SessionsPage profile={profile} spl={spl} bookId={route.bookId ?? null} searchQuery={route.q ?? ""} />
+        <SessionsPage connection={connection} spl={spl} bookId={route.bookId ?? null} searchQuery={route.q ?? ""} />
       </div>
     );
   }
@@ -182,7 +182,7 @@ export function AppLibraryRouteRenderer({
   if (route?.kind === "session") {
     return (
       <div className="libraryScreen">
-        <SessionDetailPage profile={profile} spl={spl} sessionId={route.sessionId} />
+        <SessionDetailPage connection={connection} spl={spl} sessionId={route.sessionId} />
       </div>
     );
   }
@@ -206,7 +206,7 @@ export function AppLibraryRouteRenderer({
     return (
       <div className="libraryScreen">
         <LibraryBrowsePage
-          profile={profile}
+          connection={connection}
           spl={spl}
           route={route}
           selectedBookId={route.bookId ?? null}
@@ -281,7 +281,7 @@ export function AppLibraryRouteRenderer({
 
   return (
     <div className="libraryScreen">
-      <HomePage profile={profile} spl={spl} offlineNamespaceKey={offlineNamespaceKey} />
+      <HomePage connection={connection} spl={spl} offlineNamespaceKey={offlineNamespaceKey} />
     </div>
   );
 }

@@ -81,7 +81,7 @@ describe("Library accessibility semantics", () => {
     const initialBook = { id: "7", title: "Accessible Book" } as CompactBook;
     const html = renderToStaticMarkup(
       <BookDetailModal
-        profile={null} spl={null} bookId="7" initialBook={initialBook} onClose={noop}
+        connection={null} spl={null} bookId="7" initialBook={initialBook} onClose={noop}
         onOpenReader={noop} onViewSessions={noop} onViewAuthor={noop} onViewSeries={noop}
         onViewTag={noop} onManageShelves={noop} onManageOffline={noop} launchMessage={null} downloadState={{ phase: "idle" }}
       />,
@@ -108,7 +108,7 @@ describe("Library accessibility semantics", () => {
         busy={false}
         error={null}
         page={1}
-        profile={null}
+        connection={null}
         onSelectAuthor={noop}
         onViewBook={noop}
         onPageChange={noop}

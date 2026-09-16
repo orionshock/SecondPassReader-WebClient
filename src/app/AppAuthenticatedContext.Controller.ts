@@ -1,68 +1,68 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import {
   beginActiveConnectionPublication,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-} from "../storage/ConnectionProfiles.Store";
-import { applyAuthenticatedContextToProfile, hasCurrentAccountProfileChanged } from "../features/connection/ConnectionAccountProfile.Mapper";
+  saveActiveConnection,
+} from "../storage/ActiveConnection.Store";
+import { applyAuthenticatedContextToConnection, hasCurrentAccountChanged } from "../features/connection/ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 
 export function useAppAuthenticatedContextController({
   workflowStep,
-  profile,
+  connection,
   spl,
   clearAuthorizationFailure,
   reportAuthorizationFailure,
-  onProfileChanged,
+  onConnectionChanged,
 }: {
   workflowStep: AppWorkflowStep;
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   clearAuthorizationFailure: () => void;
   reportAuthorizationFailure: (error: unknown) => void;
-  onProfileChanged: () => void;
+  onConnectionChanged: () => void;
 }) {
   const lastCheckRef = useRef<Record<string, number>>({});
 
   const checkAuthenticatedContext = useCallback(async () => {
     // Keep verified user display fresh on page load and periodic focus changes.
     if (workflowStep !== "library_home") return;
-    if (!profile?.id) return;
-    if (!profile.apiBaseUrl || !profile.accessToken || !spl) return;
+    if (!connection?.id) return;
+    if (!connection.apiBaseUrl || !connection.accessToken || !spl) return;
 
-    const profileId = profile.id;
-    const refreshIdentity = JSON.stringify([profileId, profile.accessToken]);
+    const connectionId = connection.id;
+    const refreshIdentity = JSON.stringify([connectionId, connection.accessToken]);
     const now = Date.now();
     const last = lastCheckRef.current[refreshIdentity] ?? 0;
     if (now - last < 60_000) return; // throttle (avoid spamming)
     lastCheckRef.current[refreshIdentity] = now;
-    const publication = beginActiveConnectionPublication(profile);
+    const publication = beginActiveConnectionPublication(connection);
     if (!publication) return;
 
     try {
       const { currentUser, serverInfo } = await loadAuthenticatedContext(spl);
-      const nextProfile = applyAuthenticatedContextToProfile(
-        profile,
+      const nextConnection = applyAuthenticatedContextToConnection(
+        connection,
         currentUser,
         serverInfo,
         new Date().toISOString(),
         { markVerified: false },
       );
-      const changed = hasCurrentAccountProfileChanged(profile, nextProfile);
+      const changed = hasCurrentAccountChanged(connection, nextConnection);
       publishActiveConnectionResult(publication, () => {
         clearAuthorizationFailure();
         if (!changed) return;
-        saveConnectionProfile(nextProfile);
-        onProfileChanged();
+        saveActiveConnection(nextConnection);
+        onConnectionChanged();
       });
     } catch (error) {
       publishActiveConnectionResult(publication, () => reportAuthorizationFailure(error));
       // Auth failure enters repair without destroying the last verified namespace.
     }
-  }, [clearAuthorizationFailure, onProfileChanged, profile, reportAuthorizationFailure, spl, workflowStep]);
+  }, [clearAuthorizationFailure, onConnectionChanged, connection, reportAuthorizationFailure, spl, workflowStep]);
 
   useEffect(() => {
     void checkAuthenticatedContext();

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { removeConnectionAndOfflineData } from "../../features/connection/ConnectionRemoval.Controller";
-import { clearActiveConnection, saveConnectionProfile, type ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import { clearActiveConnection, saveActiveConnection, type ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 describe("destructive connection removal", () => {
   beforeEach(() => {
     clearActiveConnection();
-    saveConnectionProfile(connection());
+    saveActiveConnection(connection());
   });
 
   it("syncs pending work with waiting coordination, rechecks it, then removes after confirmation", async () => {
@@ -172,7 +172,7 @@ describe("destructive connection removal", () => {
       removeNamespace: async () => ({ status: "removed" }),
     });
     const replacement = { ...connection(), id: "connection-b" };
-    saveConnectionProfile(replacement);
+    saveActiveConnection(replacement);
     inspection.resolve(summary());
 
     await expect(removal).resolves.toEqual({ status: "superseded" });
@@ -190,7 +190,7 @@ function summary(overrides: Partial<{
   return { pendingBooks: 1, pendingIntents: 0, offlineAssetCount: 0, offlineAssetBytes: 0, ...overrides };
 }
 
-function connection(): ConnectionProfile {
+function connection(): ActiveConnection {
   return {
     id: "connection-a",
     label: "Library",

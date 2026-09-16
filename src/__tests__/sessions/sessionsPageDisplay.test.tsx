@@ -40,7 +40,7 @@ afterEach(() => {
 describe("Sessions page display", () => {
   it("shows the derived unnamed-session label without exposing the raw session id", async () => {
     await act(async () => {
-      root.render(<SessionsPage profile={null} spl={{} as SecondPassClient} />);
+      root.render(<SessionsPage connection={null} spl={{} as SecondPassClient} />);
     });
 
     expect(container.textContent).toContain("5a7445");

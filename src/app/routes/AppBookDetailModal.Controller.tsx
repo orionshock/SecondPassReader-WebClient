@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { BookDetailModal } from "../../features/library/BookDetailModal.UI";
 import type { ReaderReturnTarget } from "../../features/reader/Reader.Types";
 import type { AppRoute } from "../AppNavigation.Router";
@@ -15,14 +15,14 @@ const OfflineBookDetailDialog = lazy(async () => {
 
 export function AppBookDetailModalController({
   route,
-  profile,
+  connection,
   spl,
   connectivity,
   offlineNamespaceKey,
   onOpenReader,
 }: {
   route: AppRoute | null;
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   connectivity: BrowserConnectivityStatus;
   offlineNamespaceKey: string | null;
@@ -59,7 +59,7 @@ export function AppBookDetailModalController({
 
   return (
     <BookDetailModal
-      profile={profile}
+      connection={connection}
       spl={spl}
       bookId={modalBookId}
       initialBook={null}

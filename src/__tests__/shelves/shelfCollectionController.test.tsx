@@ -115,7 +115,7 @@ it("guards delete, preserves the menu on failure, and closes it before refreshin
 });
 
 it("binds the create dialog focus and dismissal without reloading the collection", async () => {
-  await act(async () => root.render(<ShelvesPage profile={null} spl={spl} />));
+  await act(async () => root.render(<ShelvesPage connection={null} spl={spl} />));
   const opener = [...container.querySelectorAll("button")].find((node) => node.textContent === "Create personal shelf")!;
   await act(async () => { opener.focus(); opener.click(); });
   expect(container.querySelector('[role="dialog"]')?.contains(document.activeElement)).toBe(true);

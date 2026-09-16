@@ -1,4 +1,4 @@
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { APP_BUILD_INFO } from "../AppBuildInfo.Constants";
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import { getConnectionStatus, getConnectionStatusLabel } from "../../features/connection/ConnectionStatus.Presenter";
@@ -14,7 +14,7 @@ export type SettingsLibraryServerActionState =
   | { phase: "error"; message: string; action: "check" | "logout" | "forget"; technicalDetail?: string | null };
 
 export function SettingsLibraryServerPanel({
-  profile,
+  connection,
   state,
   busy,
   onConnect,
@@ -25,7 +25,7 @@ export function SettingsLibraryServerPanel({
   onForgetLocally,
   serverActionsAvailable,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   state: SettingsLibraryServerActionState;
   busy: boolean;
   onConnect: () => void;
@@ -36,7 +36,7 @@ export function SettingsLibraryServerPanel({
   onForgetLocally: () => void;
   serverActionsAvailable: boolean;
 }) {
-  const status = getConnectionStatus(profile);
+  const status = getConnectionStatus(connection);
 
   return (
     <div className="settingsTabPanel">
@@ -48,7 +48,7 @@ export function SettingsLibraryServerPanel({
           </span>
         </div>
 
-        {!profile ? (
+        {!connection ? (
           <div className="settingsEmpty">
             <p className="muted">This browser isn't connected to Second Pass Library.</p>
             <button type="button" className="button buttonPrimary" onClick={onConnect} disabled={!serverActionsAvailable}>
@@ -58,17 +58,17 @@ export function SettingsLibraryServerPanel({
         ) : (
           <>
             <div className="settingsGrid">
-              <SettingsDetailRow label="Library" value={profile.serverName ?? profile.label} />
-              {profile.serverDescription ? (
+              <SettingsDetailRow label="Library" value={connection.serverName ?? connection.label} />
+              {connection.serverDescription ? (
                 <div className="detailRow">
                   <span className="muted">Description:</span>
-                  <ServerRichText value={profile.serverDescription} />
+                  <ServerRichText value={connection.serverDescription} />
                 </div>
               ) : null}
-              <SettingsDetailRow label="Library URL" value={profile.serverBaseUrl} mono />
-              <SettingsDetailRow label="Account" value={formatUser(profile)} />
-              <SettingsDetailRow label="Browser name" value={profile.clientSessionName ?? "Unknown"} />
-              <SettingsDetailRow label="Last checked" value={formatTimestamp(profile.lastCheckedAt ?? profile.verifiedAt)} />
+              <SettingsDetailRow label="Library URL" value={connection.serverBaseUrl} mono />
+              <SettingsDetailRow label="Account" value={formatUser(connection)} />
+              <SettingsDetailRow label="Browser name" value={connection.clientSessionName ?? "Unknown"} />
+              <SettingsDetailRow label="Last checked" value={formatTimestamp(connection.lastCheckedAt ?? connection.verifiedAt)} />
             </div>
             <div className="settingsActions">
               <button type="button" className="button" onClick={onCheckConnection} disabled={busy || !serverActionsAvailable}>
@@ -95,11 +95,11 @@ export function SettingsLibraryServerPanel({
           <SettingsDetailRow label="Web client release date" value={APP_BUILD_INFO.releaseDate} />
         </div>
         <div className="settingsActions">
-          <button type="button" className="button buttonDanger" onClick={onLogOut} disabled={!profile || busy || !serverActionsAvailable}>
+          <button type="button" className="button buttonDanger" onClick={onLogOut} disabled={!connection || busy || !serverActionsAvailable}>
             {state.phase === "logging_out" ? "Signing out..." : "Sign out"}
           </button>
         </div>
-        {profile ? (
+        {connection ? (
           <div className="settingsLocalFallback">
             <span className="muted">
               If Second Pass Library can't be reached, sign out locally. This removes the connection and its offline
@@ -137,8 +137,8 @@ export function SettingsLibraryServerPanel({
   );
 }
 
-function formatUser(profile: ConnectionProfile): string {
-  const user = profile.verifiedUser;
+function formatUser(connection: ActiveConnection): string {
+  const user = connection.verifiedUser;
   if (!user) return "Unknown";
   const first = typeof user.firstName === "string" ? user.firstName.trim() : "";
   const last = typeof user.lastName === "string" ? user.lastName.trim() : "";

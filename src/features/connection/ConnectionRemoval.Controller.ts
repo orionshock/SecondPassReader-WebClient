@@ -16,8 +16,8 @@ import {
   beginActiveConnectionPublication,
   isActiveConnectionPublicationCurrent,
   publishActiveConnectionResult,
-  type ConnectionProfile,
-} from "../../storage/ConnectionProfiles.Store";
+  type ActiveConnection,
+} from "../../storage/ActiveConnection.Store";
 
 export type ConnectionRemovalResult =
   | { status: "removed" }
@@ -38,7 +38,7 @@ export type RemoteClientSession = {
 // Keeps the verified connection available until destructive local cleanup succeeds,
 // so a failed cleanup can be retried instead of leaving inaccessible personal data.
 export async function removeConnectionAndOfflineData(input: {
-  expectedConnection: ConnectionProfile;
+  expectedConnection: ActiveConnection;
   intent: OfflineNamespaceRemovalIntent;
   namespaceKey: string | null;
   client: OfflineReaderSyncClient | null;

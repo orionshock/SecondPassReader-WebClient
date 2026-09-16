@@ -158,7 +158,7 @@ async function render(
     root.render(
       <AppLibraryRouteRenderer
         route={route}
-        profile={null}
+        connection={null}
         spl={null}
         connectivity={connectivity}
         offlineNamespaceKey="account-a"

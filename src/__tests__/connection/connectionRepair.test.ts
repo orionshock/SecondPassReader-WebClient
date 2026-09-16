@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { CurrentUser, ServerInfo } from "@secondpass/client";
 import { getAppWorkflowStep } from "../../app/AppWorkflow.Policy";
 import { buildOfflineCacheNamespace } from "../../app/offline/namespace/OfflineCacheNamespace.Policy";
-import { applyAuthenticatedContextToProfile } from "../../features/connection/ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection } from "../../features/connection/ConnectionAccountProfile.Mapper";
 import { markConnectionRepairRequired } from "../../features/connection/ConnectionRepair.State";
 import { finalizeConnectionRepair } from "../../features/connection/ConnectionRepair.Controller";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 describe("connection repair identity", () => {
   it("keeps repair and verification outside authenticated feature access", () => {
@@ -25,7 +25,7 @@ describe("connection repair identity", () => {
 
   it("reuses the namespace only after the same server and profile are verified", () => {
     const previous = namespace(profile());
-    const repaired = applyAuthenticatedContextToProfile(
+    const repaired = applyAuthenticatedContextToConnection(
       { ...profile(), accessToken: "replacement", authenticationState: "verifying-repair" },
       user("profile-a"),
       serverInfo(),
@@ -38,7 +38,7 @@ describe("connection repair identity", () => {
 
   it("isolates a different verified user even when the server is unchanged", () => {
     const previous = namespace(profile());
-    const repaired = applyAuthenticatedContextToProfile(
+    const repaired = applyAuthenticatedContextToConnection(
       { ...profile(), accessToken: "replacement", authenticationState: "verifying-repair" },
       user("profile-b"),
       serverInfo(),
@@ -50,7 +50,7 @@ describe("connection repair identity", () => {
 
   it("preserves the exact namespace when repair verifies the same identity", async () => {
     const previous = { ...profile(), authenticationState: "verifying-repair" as const };
-    const verified = applyAuthenticatedContextToProfile(previous, user("profile-a"), serverInfo(), "2026-09-09T01:00:00.000Z");
+    const verified = applyAuthenticatedContextToConnection(previous, user("profile-a"), serverInfo(), "2026-09-09T01:00:00.000Z");
     const save = vi.fn();
     const removeNamespace = vi.fn();
 
@@ -63,7 +63,7 @@ describe("connection repair identity", () => {
 
   it("removes the previous namespace before activating a different verified identity", async () => {
     const previous = { ...profile(), authenticationState: "verifying-repair" as const };
-    const verified = applyAuthenticatedContextToProfile(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
+    const verified = applyAuthenticatedContextToConnection(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
     const order: string[] = [];
 
     await expect(finalizeConnectionRepair({
@@ -82,7 +82,7 @@ describe("connection repair identity", () => {
 
   it("does not activate a different identity when previous namespace cleanup fails", async () => {
     const previous = { ...profile(), authenticationState: "verifying-repair" as const };
-    const verified = applyAuthenticatedContextToProfile(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
+    const verified = applyAuthenticatedContextToConnection(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
     const save = vi.fn();
 
     await expect(finalizeConnectionRepair({
@@ -96,14 +96,14 @@ describe("connection repair identity", () => {
   });
 });
 
-function namespace(value: ConnectionProfile): string | null {
+function namespace(value: ActiveConnection): string | null {
   return buildOfflineCacheNamespace({
     serverBaseUrl: value.serverBaseUrl,
     accountProfileId: value.verifiedUser?.profileId,
   })?.key ?? null;
 }
 
-function profile(): ConnectionProfile {
+function profile(): ActiveConnection {
   return {
     id: "connection-a",
     label: "Library",

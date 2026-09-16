@@ -175,7 +175,7 @@ it("does not close or navigate if the preceding metadata update fails", async ()
 });
 
 it("binds editor commands and restores close-dialog focus without reloading the page data", async () => {
-  await act(async () => root.render(<SessionDetailPage spl={spl} profile={null} sessionId="session-1" />));
+  await act(async () => root.render(<SessionDetailPage spl={spl} connection={null} sessionId="session-1" />));
   const button = (text: string) => [...container.querySelectorAll("button")].find((node) => node.textContent === text)!;
   act(() => (container.querySelector('[aria-label="Edit Reading Session name"]') as HTMLButtonElement).click());
   expect(container.querySelector('[aria-label="Reading Session name"]')).not.toBeNull();

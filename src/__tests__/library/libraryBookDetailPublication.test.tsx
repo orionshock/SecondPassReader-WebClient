@@ -33,7 +33,7 @@ it("does not publish a pending Book Detail after eligibility is lost", async () 
 function Harness({ spl }: { spl: SecondPassClient | null }) {
   return (
     <BookDetailModal
-      profile={null}
+      connection={null}
       spl={spl}
       bookId="book-1"
       initialBook={null}

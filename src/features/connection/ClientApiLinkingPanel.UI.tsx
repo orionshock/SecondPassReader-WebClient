@@ -5,19 +5,17 @@ import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import {
   beginActiveConnectionPublication,
-  getConnectionProfile,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-  type ConnectionProfile,
-} from "../../storage/ConnectionProfiles.Store";
-import { isProfileLinked } from "./ConnectionStatus.Presenter";
+  saveActiveConnection,
+  type ActiveConnection,
+} from "../../storage/ActiveConnection.Store";
+import { isConnectionLinked } from "./ConnectionStatus.Presenter";
 import { buildDefaultDeviceName } from "./DefaultDeviceName.Presenter";
 import { getPairingErrorMessage, runPairingAttempt } from "./PairingFlow.Controller";
 
 type Props = {
-  selectedProfileId?: string | null;
-  onProfilesChanged?: () => void;
-  profilesVersion?: number;
+  connection: ActiveConnection | null;
+  onConnectionChanged?: () => void;
   onCancel?: () => "completed" | "cancelled" | "failed" | Promise<"completed" | "cancelled" | "failed">;
 };
 
@@ -29,45 +27,39 @@ type LinkingState =
   | { phase: "success" }
   | { phase: "error"; message: string };
 
-function toDiscovery(profile: ConnectionProfile): SecondPassDiscovery | null {
-  if (!profile.apiBaseUrl || !profile.serverName || !profile.clientApi) return null;
+function toDiscovery(connection: ActiveConnection): SecondPassDiscovery | null {
+  if (!connection.apiBaseUrl || !connection.serverName || !connection.clientApi) return null;
   return {
-    server_name: profile.serverName,
-    server_description: profile.serverDescription,
-    server_version: profile.serverVersion,
-    server_release: profile.serverRelease,
-    server_release_date: profile.serverReleaseDate,
-    api_base_url: profile.apiBaseUrl,
+    server_name: connection.serverName,
+    server_description: connection.serverDescription,
+    server_version: connection.serverVersion,
+    server_release: connection.serverRelease,
+    server_release_date: connection.serverReleaseDate,
+    api_base_url: connection.apiBaseUrl,
     client_api: {
-      discovery_version: profile.clientApi.discoveryVersion,
-      login_request_endpoint: profile.clientApi.loginRequestEndpoint,
-      poll_endpoint_template: profile.clientApi.pollEndpointTemplate,
-      consume_endpoint_template: profile.clientApi.consumeEndpointTemplate,
-      token_type: profile.clientApi.tokenType,
+      discovery_version: connection.clientApi.discoveryVersion,
+      login_request_endpoint: connection.clientApi.loginRequestEndpoint,
+      poll_endpoint_template: connection.clientApi.pollEndpointTemplate,
+      consume_endpoint_template: connection.clientApi.consumeEndpointTemplate,
+      token_type: connection.clientApi.tokenType,
     },
   };
 }
 
-export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profilesVersion, onCancel }: Props) {
+export function ClientApiLinking({ connection, onConnectionChanged, onCancel }: Props) {
   const [state, setState] = useState<LinkingState>({ phase: "idle" });
   const [nextPollAt, setNextPollAt] = useState<number | null>(null);
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [clientName, setClientName] = useState<string>(() => buildDefaultDeviceName());
   const abortRef = useRef<AbortController | null>(null);
 
-  const profile = useMemo(() => {
-    if (!selectedProfileId) return null;
-    void profilesVersion;
-    return getConnectionProfile(selectedProfileId) ?? null;
-  }, [selectedProfileId, profilesVersion, state.phase]);
-
-  const discovery = useMemo(() => (profile ? toDiscovery(profile) : null), [profile]);
-  const repairing = profile?.authenticationState === "repair-required";
+  const discovery = useMemo(() => (connection ? toDiscovery(connection) : null), [connection]);
+  const repairing = connection?.authenticationState === "repair-required";
 
   useEffect(() => {
-    if (!profile) return;
-    setClientName(profile.clientSessionName ?? buildDefaultDeviceName());
-  }, [profile?.id]);
+    if (!connection) return;
+    setClientName(connection.clientSessionName ?? buildDefaultDeviceName());
+  }, [connection?.id]);
 
   useEffect(() => {
     return () => {
@@ -83,7 +75,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   }, [nextPollAt, state.phase]);
 
   async function startLinking() {
-    if (!profile) return;
+    if (!connection) return;
     if (!discovery) {
       setState({ phase: "error", message: "Library details are incomplete. Connect again." });
       return;
@@ -92,14 +84,14 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
-    const publication = beginActiveConnectionPublication(profile);
+    const publication = beginActiveConnectionPublication(connection);
     if (!publication) return;
 
     setNextPollAt(null);
     setState({ phase: "starting" });
 
     try {
-      const spl = createSecondPassClient({ apiBaseUrl: profile.apiBaseUrl ?? "" });
+      const spl = createSecondPassClient({ apiBaseUrl: connection.apiBaseUrl ?? "" });
       await runPairingAttempt({
         spl,
         discovery,
@@ -114,18 +106,18 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         onConsumed: (consumed) => {
           publishActiveConnectionResult(publication, () => {
             const now = new Date().toISOString();
-            const updated: ConnectionProfile = {
-              ...profile,
+            const updated: ActiveConnection = {
+              ...connection,
               accessToken: consumed.accessToken,
               tokenType: consumed.tokenType,
               clientSessionId: consumed.clientSession.id,
-              clientSessionName: consumed.clientSession.name || clientName.trim() || profile.clientSessionName,
+              clientSessionName: consumed.clientSession.name || clientName.trim() || connection.clientSessionName,
               linkedAt: now,
               lastUsedAt: now,
-              authenticationState: profile.authenticationState === "repair-required" ? "verifying-repair" : profile.authenticationState,
+              authenticationState: connection.authenticationState === "repair-required" ? "verifying-repair" : connection.authenticationState,
             };
-            saveConnectionProfile(updated);
-            onProfilesChanged?.();
+            saveActiveConnection(updated);
+            onConnectionChanged?.();
             setNextPollAt(null);
             setState({ phase: "success" });
           });
@@ -164,7 +156,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
   const secondsUntilNextPoll =
     nextPollAt === null ? null : Math.max(0, Math.ceil((nextPollAt - countdownNow) / 1000));
 
-  if (!selectedProfileId) {
+  if (!connection) {
     return (
       <section className="panel pairScreen">
         <h1 className="pairTitle">Connect to Second Pass Library</h1>
@@ -173,23 +165,14 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
     );
   }
 
-  if (!profile) {
-    return (
-      <section className="panel pairScreen">
-        <h1 className="pairTitle">Connect to Second Pass Library</h1>
-        <p className="muted">This connection was not found. Connect again.</p>
-      </section>
-    );
-  }
-
   return (
     <section className="panel pairScreen">
       <div className="pairHeader">
         <h1 className="pairTitle">{repairing ? "Repair connection" : "Connect to Second Pass Library"}</h1>
-        <div className="pairLibraryName">{profile.serverName ?? profile.label}</div>
-        <ServerRichText value={profile.serverDescription} className="pairLibraryDescription" />
+        <div className="pairLibraryName">{connection.serverName ?? connection.label}</div>
+        <ServerRichText value={connection.serverDescription} className="pairLibraryDescription" />
         <div className="pairLibraryAddress">
-          <span className="muted">at</span> <span className="mono">{profile.serverBaseUrl}</span>
+          <span className="muted">at</span> <span className="mono">{connection.serverBaseUrl}</span>
         </div>
       </div>
 
@@ -213,7 +196,7 @@ export function ClientApiLinking({ selectedProfileId, onProfilesChanged, profile
         </label>
 
         <p className="pairStatus muted" aria-live="polite">
-          {isProfileLinked(profile)
+          {isConnectionLinked(connection)
             ? "Linked."
             : state.phase === "starting"
               ? "Requesting approval..."

@@ -1,17 +1,17 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import {
   beginActiveConnectionPublication,
   isActiveConnectionPublicationCurrent,
   publishActiveConnectionResult,
-  saveConnectionProfile,
-} from "../storage/ConnectionProfiles.Store";
+  saveActiveConnection,
+} from "../storage/ActiveConnection.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
 import { discoverSecondPass } from "../features/connection/ConnectionServer.Queries";
-import { applyAuthenticatedContextToProfile } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection } from "../features/connection/ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
-import { createSplClientFromProfile } from "./AppSplClient.Factory";
+import { createSplClientFromConnection } from "./AppSplClient.Factory";
 import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
 import { getTechnicalErrorDetail, isAuthenticationRepairError, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 import { SettingsAppearancePanel } from "./settings/SettingsAppearancePanel.UI";
@@ -29,8 +29,8 @@ import {
 } from "../features/connection/ConnectionRemoval.Controller";
 
 type Props = {
-  profile: ConnectionProfile | null;
-  onProfilesChanged: () => void;
+  connection: ActiveConnection | null;
+  onConnectionChanged: () => void;
   onDisconnect: () => void;
   onRepairConnection: () => void;
   appTheme: AppTheme;
@@ -42,8 +42,8 @@ type Props = {
 };
 
 export function SettingsPanel({
-  profile,
-  onProfilesChanged,
+  connection,
+  onConnectionChanged,
   onDisconnect,
   onRepairConnection,
   appTheme,
@@ -79,21 +79,21 @@ export function SettingsPanel({
   }
 
   async function checkConnection() {
-    if (!profile) return;
-    if (!profile.accessToken) {
+    if (!connection) return;
+    if (!connection.accessToken) {
       setState({ phase: "error", action: "check", message: "This connection isn't authorized yet." });
       return;
     }
-    const publication = beginActiveConnectionPublication(profile);
+    const publication = beginActiveConnectionPublication(connection);
     if (!publication) return;
 
     setState({ phase: "checking" });
     try {
-      const discovery = await discoverSecondPass(profile.serverBaseUrl);
+      const discovery = await discoverSecondPass(connection.serverBaseUrl);
       if (!isActiveConnectionPublicationCurrent(publication)) return;
       const now = new Date().toISOString();
-      const discoveredProfile: ConnectionProfile = {
-        ...profile,
+      const discoveredConnection: ActiveConnection = {
+        ...connection,
         serverName: discovery.server_name,
         serverDescription: discovery.server_description,
         serverVersion: discovery.server_version,
@@ -103,10 +103,10 @@ export function SettingsPanel({
         lastCheckedAt: now,
       };
 
-      const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromProfile(discoveredProfile));
+      const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromConnection(discoveredConnection));
       publishActiveConnectionResult(publication, () => {
-        saveConnectionProfile(applyAuthenticatedContextToProfile(discoveredProfile, currentUser, serverInfo, now));
-        onProfilesChanged();
+        saveActiveConnection(applyAuthenticatedContextToConnection(discoveredConnection, currentUser, serverInfo, now));
+        onConnectionChanged();
         setState({ phase: "success", message: "Connection checked." });
       });
     } catch (e) {
@@ -127,7 +127,7 @@ export function SettingsPanel({
   }
 
   async function logOut() {
-    if (!client || !profile?.clientSessionId) {
+    if (!client || !connection?.clientSessionId) {
       setState({
         phase: "error",
         action: "logout",
@@ -137,7 +137,7 @@ export function SettingsPanel({
     }
     await removeConnection("sign-out", "logging_out", {
       client,
-      clientSessionId: profile.clientSessionId,
+      clientSessionId: connection.clientSessionId,
     });
   }
 
@@ -154,10 +154,10 @@ export function SettingsPanel({
     phase: "logging_out" | "signing_out_locally" | "forgetting",
     remoteSession?: RemoteClientSession,
   ) {
-    if (!profile || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting") return;
+    if (!connection || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting") return;
     setState({ phase });
     const result = await removeConnectionAndOfflineData({
-      expectedConnection: profile,
+      expectedConnection: connection,
       intent,
       namespaceKey: offlineNamespaceKey,
       client,
@@ -226,7 +226,7 @@ export function SettingsPanel({
         ) : null}
         {activeTab === "library-server" ? (
           <SettingsLibraryServerPanel
-            profile={profile}
+            connection={connection}
             state={state}
             busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting"}
             onConnect={() => navigateTo({ kind: "connect" })}

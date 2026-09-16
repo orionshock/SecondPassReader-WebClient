@@ -17,7 +17,7 @@ import {
   useBookOfflineAvailabilityController,
 } from "../../features/library/bookDetail/BookOfflineAvailability.Controller";
 import { BookOfflineAvailabilityPanel } from "../../features/library/bookDetail/BookOfflineAvailabilityPanel.UI";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 vi.mock("../../app/offline/browser/BrowserOfflineCapability.Queries", () => ({
   getBrowserOfflinePersistenceCapability: vi.fn(),
@@ -322,7 +322,7 @@ function ControllerHarness({
   observe?: (controller: BookOfflineAvailabilityController) => void;
 }) {
   const controller = useBookOfflineAvailabilityController({
-    profile: profile(),
+    connection: profile(),
     book: value,
     spl: TEST_SPL,
   });
@@ -388,7 +388,7 @@ function book(checksum: string | null): BookDetail {
   } as unknown as BookDetail;
 }
 
-function profile(): ConnectionProfile {
+function profile(): ActiveConnection {
   return {
     id: "connection-1",
     label: "Library",

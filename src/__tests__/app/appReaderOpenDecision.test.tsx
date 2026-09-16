@@ -12,7 +12,7 @@ import {
 import { openIndexedDbOfflineRepositories } from "../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import { openBookForReader } from "../../features/library/LibraryBookOpen.Actions";
 import type { OfflineOpenedBook, OpenedBook } from "../../features/reader/Reader.Types";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 vi.mock("../../app/connectivity/BrowserConnectivity.State", () => ({
   getBrowserConnectivitySnapshot: vi.fn(),
@@ -126,7 +126,7 @@ function Harness({
   const controller = useAppReaderOpenController({
     route: TEST_ROUTE,
     workflowStep: "library_home",
-    profile: TEST_PROFILE,
+    connection: TEST_PROFILE,
     spl,
     reportAuthorizationFailure,
   });
@@ -165,7 +165,7 @@ function repositorySet() {
   };
 }
 
-const TEST_PROFILE: ConnectionProfile = {
+const TEST_PROFILE: ActiveConnection = {
   id: "connection-1",
   label: "Library",
   serverBaseUrl: "https://library.example",

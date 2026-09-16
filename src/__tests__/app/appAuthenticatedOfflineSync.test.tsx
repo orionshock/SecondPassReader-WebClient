@@ -11,7 +11,7 @@ import {
 import { clearOfflineReaderSyncNotice } from "../../app/offline/reader/sync/notice/OfflineReaderSyncNotice.State";
 import { createOfflineReaderSyncOutcome } from "../../app/offline/reader/sync/notice/OfflineReaderSyncOutcome.State";
 import type { AppWorkflowStep } from "../../app/AppWorkflow.Policy";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 vi.mock("../../app/offline/reader/sync/OfflineReaderAuthenticatedSync.Lifecycle", () => ({
   createOfflineReaderAuthenticatedSyncGeneration: vi.fn(() => ({ active: false, startupDecided: false })),
@@ -48,7 +48,7 @@ describe("App authenticated offline sync lifecycle", () => {
   });
 
   it("starts only for a verified authenticated namespace", () => {
-    act(() => root.render(<Harness workflowStep="library_home" profile={profile("connection-a", "profile-a")} spl={spl} />));
+    act(() => root.render(<Harness workflowStep="library_home" connection={profile("connection-a", "profile-a")} spl={spl} />));
 
     expect(startSyncMock).toHaveBeenCalledOnce();
     expect(startSyncMock.mock.calls[0][0]).toMatchObject({
@@ -59,7 +59,7 @@ describe("App authenticated offline sync lifecycle", () => {
   });
 
   it("requests repair when a completed sweep reports reauthentication work", () => {
-    act(() => root.render(<Harness workflowStep="library_home" profile={profile("connection-a", "profile-a")} spl={spl} />));
+    act(() => root.render(<Harness workflowStep="library_home" connection={profile("connection-a", "profile-a")} spl={spl} />));
 
     const onSweepCompleted = startSyncMock.mock.calls[0][0].onSweepCompleted;
     act(() => onSweepCompleted?.({
@@ -76,7 +76,7 @@ describe("App authenticated offline sync lifecycle", () => {
   });
 
   it("does not run while authentication repair owns the workflow", () => {
-    act(() => root.render(<Harness workflowStep="pair_device" profile={profile("connection-a", "profile-a")} spl={null} />));
+    act(() => root.render(<Harness workflowStep="pair_device" connection={profile("connection-a", "profile-a")} spl={null} />));
 
     expect(startSyncMock).not.toHaveBeenCalled();
   });
@@ -86,15 +86,15 @@ describe("App authenticated offline sync lifecycle", () => {
     const stopSecond = vi.fn();
     startSyncMock.mockReturnValueOnce(stopFirst).mockReturnValueOnce(stopSecond);
 
-    act(() => root.render(<Harness workflowStep="library_home" profile={profile("connection-a", "profile-a")} spl={spl} />));
-    act(() => root.render(<Harness workflowStep="library_home" profile={profile("connection-b", "profile-b")} spl={spl} />));
+    act(() => root.render(<Harness workflowStep="library_home" connection={profile("connection-a", "profile-a")} spl={spl} />));
+    act(() => root.render(<Harness workflowStep="library_home" connection={profile("connection-b", "profile-b")} spl={spl} />));
 
     expect(stopFirst).toHaveBeenCalledOnce();
     expect(startSyncMock).toHaveBeenCalledTimes(2);
     expect(createGenerationMock).toHaveBeenCalledTimes(2);
     expect(clearNoticeMock).toHaveBeenCalledTimes(2);
 
-    act(() => root.render(<Harness workflowStep="library_home" profile={profile("connection-b", "profile-b")} spl={spl} />));
+    act(() => root.render(<Harness workflowStep="library_home" connection={profile("connection-b", "profile-b")} spl={spl} />));
     expect(startSyncMock).toHaveBeenCalledTimes(2);
     expect(clearNoticeMock).toHaveBeenCalledTimes(2);
   });
@@ -104,10 +104,10 @@ describe("App authenticated offline sync lifecycle", () => {
     startSyncMock.mockReturnValueOnce(stopFirst).mockReturnValueOnce(vi.fn());
 
     act(() => root.render(
-      <Harness workflowStep="library_home" profile={profile("connection-a", "profile-a", "old-token")} spl={spl} />,
+      <Harness workflowStep="library_home" connection={profile("connection-a", "profile-a", "old-token")} spl={spl} />,
     ));
     act(() => root.render(
-      <Harness workflowStep="library_home" profile={profile("connection-a", "profile-a", "repaired-token")} spl={spl} />,
+      <Harness workflowStep="library_home" connection={profile("connection-a", "profile-a", "repaired-token")} spl={spl} />,
     ));
 
     expect(stopFirst).toHaveBeenCalledOnce();
@@ -117,16 +117,16 @@ describe("App authenticated offline sync lifecycle", () => {
 
   function Harness({
     workflowStep,
-    profile: selectedProfile,
+    connection: selectedConnection,
     spl: client,
   }: {
     workflowStep: AppWorkflowStep;
-    profile: ConnectionProfile | null;
+    connection: ActiveConnection | null;
     spl: SecondPassClient | null;
   }) {
     useAppAuthenticatedOfflineSyncLifecycle({
       workflowStep,
-      profile: selectedProfile,
+      connection: selectedConnection,
       spl: client,
       requireAuthenticationRepair,
     });
@@ -134,7 +134,7 @@ describe("App authenticated offline sync lifecycle", () => {
   }
 });
 
-function profile(id: string, profileId: string, accessToken = "token"): ConnectionProfile {
+function profile(id: string, profileId: string, accessToken = "token"): ActiveConnection {
   return {
     id,
     label: "Library",

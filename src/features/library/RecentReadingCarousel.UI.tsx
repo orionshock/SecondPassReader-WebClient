@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MarginaliaRecentSession } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { routeToHash } from "../../app/AppNavigation.Router";
 import { resolveCoverUrl } from "./BookCover.Mapper";
@@ -17,12 +17,12 @@ function formatLastActivity(isoUtc: string): string {
 
 export function RecentReadingCarousel({
   items,
-  profile,
+  connection,
   disabled,
   onResume,
 }: {
   items: MarginaliaRecentSession[];
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   disabled: boolean;
   onResume: (bookId: string | number) => void;
 }) {
@@ -74,7 +74,7 @@ export function RecentReadingCarousel({
       >
         {items.map((item) => {
           const id = String(item.book.id);
-          const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.coverUrl, profile);
+          const coverSrc = brokenCoverIds[id] ? undefined : resolveCoverUrl(item.book.coverUrl, connection);
           const lastActivity = formatLastActivity(item.lastActivityAt);
           const sessionName = getSessionDisplayName(item.name, item.id);
           const statusLabel = item.status === "closed" ? "Closed" : "Active";

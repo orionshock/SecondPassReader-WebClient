@@ -1,22 +1,22 @@
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 export type ConnectionStatus = "not_configured" | "configured" | "linked" | "verified" | "repair_required";
 
-export function isProfileLinked(profile: ConnectionProfile | null | undefined): boolean {
-  return Boolean(profile?.accessToken && profile.authenticationState !== "repair-required");
+export function isConnectionLinked(connection: ActiveConnection | null | undefined): boolean {
+  return Boolean(connection?.accessToken && connection.authenticationState !== "repair-required");
 }
 
-export function isProfileVerified(profile: ConnectionProfile | null | undefined): boolean {
-  return Boolean(profile?.verifiedAt && !profile.authenticationState);
+export function isConnectionVerified(connection: ActiveConnection | null | undefined): boolean {
+  return Boolean(connection?.verifiedAt && !connection.authenticationState);
 }
 
-export function getConnectionStatus(profile: ConnectionProfile | null | undefined): ConnectionStatus {
-  if (!profile) return "not_configured";
-  if (profile.authenticationState === "repair-required" || profile.authenticationState === "verifying-repair") {
+export function getConnectionStatus(connection: ActiveConnection | null | undefined): ConnectionStatus {
+  if (!connection) return "not_configured";
+  if (connection.authenticationState === "repair-required" || connection.authenticationState === "verifying-repair") {
     return "repair_required";
   }
-  if (!isProfileLinked(profile)) return "configured";
-  if (!isProfileVerified(profile)) return "linked";
+  if (!isConnectionLinked(connection)) return "configured";
+  if (!isConnectionVerified(connection)) return "linked";
   return "verified";
 }
 

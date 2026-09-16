@@ -1,4 +1,4 @@
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import type { BookDetail, CompactBook } from "@secondpass/client";
 
 export function resolveCoverUrl(
@@ -28,7 +28,7 @@ export function resolveCoverUrl(
 
 export function getBookCoverUrl(
   book: Pick<CompactBook | BookDetail, "coverUrl"> | null | undefined,
-  base?: ConnectionProfile | { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null,
+  base?: ActiveConnection | { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null,
 ): string | undefined {
   const coverUrl = book?.coverUrl;
   if (!coverUrl) return undefined;

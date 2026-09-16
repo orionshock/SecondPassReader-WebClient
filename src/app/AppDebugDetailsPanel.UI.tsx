@@ -1,14 +1,14 @@
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
-import type { ConnectionProfile } from "../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 
 export function DebugDetails({
   step,
-  selectedProfileId,
-  profile,
+  activeConnectionId,
+  connection,
 }: {
   step: AppWorkflowStep;
-  selectedProfileId: string | null;
-  profile: ConnectionProfile | null;
+  activeConnectionId: string | null;
+  connection: ActiveConnection | null;
 }) {
   return (
     <details className="debugDetails">
@@ -18,38 +18,38 @@ export function DebugDetails({
           <span className="muted">workflow step:</span> <span className="mono">{step}</span>
         </div>
         <div className="detailRow">
-          <span className="muted">selected profile id:</span>{" "}
-          <span className="mono">{selectedProfileId ?? "-"}</span>
+          <span className="muted">selected connection id:</span>{" "}
+          <span className="mono">{activeConnectionId ?? "-"}</span>
         </div>
-        {profile ? (
+        {connection ? (
           <>
             <div className="detailRow">
-              <span className="muted">serverBaseUrl:</span> <span className="mono">{profile.serverBaseUrl}</span>
+              <span className="muted">serverBaseUrl:</span> <span className="mono">{connection.serverBaseUrl}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">apiBaseUrl:</span> <span className="mono">{profile.apiBaseUrl ?? "-"}</span>
+              <span className="muted">apiBaseUrl:</span> <span className="mono">{connection.apiBaseUrl ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">discovery:</span> {profile.clientApi ? "stored" : "missing"}
+              <span className="muted">discovery:</span> {connection.clientApi ? "stored" : "missing"}
             </div>
             <div className="detailRow">
-              <span className="muted">access token:</span> {profile.accessToken ? "stored" : "missing"}
+              <span className="muted">access token:</span> {connection.accessToken ? "stored" : "missing"}
             </div>
             <div className="detailRow">
-              <span className="muted">clientSessionId:</span> <span className="mono">{profile.clientSessionId ?? "-"}</span>
+              <span className="muted">clientSessionId:</span> <span className="mono">{connection.clientSessionId ?? "-"}</span>
             </div>
             <div className="detailRow">
               <span className="muted">clientSessionName:</span>{" "}
-              <span className="mono">{profile.clientSessionName ?? "-"}</span>
+              <span className="mono">{connection.clientSessionName ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">linkedAt:</span> <span className="mono">{profile.linkedAt ?? "-"}</span>
+              <span className="muted">linkedAt:</span> <span className="mono">{connection.linkedAt ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">verifiedAt:</span> <span className="mono">{profile.verifiedAt ?? "-"}</span>
+              <span className="muted">verifiedAt:</span> <span className="mono">{connection.verifiedAt ?? "-"}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">verified user:</span> <span className="mono">{profile.verifiedUser?.username ?? "-"}</span>
+              <span className="muted">verified user:</span> <span className="mono">{connection.verifiedUser?.username ?? "-"}</span>
             </div>
           </>
         ) : null}
@@ -57,4 +57,3 @@ export function DebugDetails({
     </details>
   );
 }
-

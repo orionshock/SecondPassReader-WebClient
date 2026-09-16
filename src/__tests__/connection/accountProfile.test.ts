@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { CurrentUser, ServerInfo } from "@secondpass/client";
 import {
-  applyAuthenticatedContextToProfile,
-  applyCurrentAccountToProfile,
-  hasCurrentAccountProfileChanged,
+  applyAuthenticatedContextToConnection,
+  applyCurrentAccountToConnection,
+  hasCurrentAccountChanged,
 } from "../../features/connection/ConnectionAccountProfile.Mapper";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
-function baseProfile(): ConnectionProfile {
+function baseProfile(): ActiveConnection {
   return {
     id: "local-1",
     label: "Discovery Name",
@@ -21,7 +21,7 @@ function baseProfile(): ConnectionProfile {
 
 describe("accountProfile", () => {
   it("stores identity from /accounts/me and display/config from /server/info", () => {
-    const next = applyAuthenticatedContextToProfile(
+    const next = applyAuthenticatedContextToConnection(
       baseProfile(),
       currentUser({
         username: "orionshock",
@@ -67,20 +67,20 @@ describe("accountProfile", () => {
 
   it("does not change server configuration when only /accounts/me is applied", () => {
     const profile = { ...baseProfile(), advancedLibraryGroupsEnabled: true, bannerText: "Server banner" };
-    const next = applyCurrentAccountToProfile(profile, currentUser(), "2026-06-25T12:00:00.000Z");
+    const next = applyCurrentAccountToConnection(profile, currentUser(), "2026-06-25T12:00:00.000Z");
 
     expect(next.advancedLibraryGroupsEnabled).toBe(true);
     expect(next.bannerText).toBe("Server banner");
   });
 
   it("detects account and authenticated server-context changes", () => {
-    const profile = applyAuthenticatedContextToProfile(
+    const profile = applyAuthenticatedContextToConnection(
       baseProfile(),
       currentUser({ role: "reader", isReader: true }),
       serverInfo({ advancedLibraryGroupsEnabled: false }),
       "2026-06-25T12:00:00.000Z",
     );
-    const next = applyAuthenticatedContextToProfile(
+    const next = applyAuthenticatedContextToConnection(
       profile,
       currentUser({ role: "manager", isManager: true }),
       serverInfo({ advancedLibraryGroupsEnabled: true }),
@@ -88,7 +88,7 @@ describe("accountProfile", () => {
       { markVerified: false },
     );
 
-    expect(hasCurrentAccountProfileChanged(profile, next)).toBe(true);
+    expect(hasCurrentAccountChanged(profile, next)).toBe(true);
     expect(next.advancedLibraryGroupsEnabled).toBe(true);
   });
 });

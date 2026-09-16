@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import type { CompactBook, SecondPassClient } from "@secondpass/client";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { BookResultsView } from "../library/display/BookResultsView.UI";
 import { BookViewModeToggle } from "../library/display/BookViewModeControl.UI";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl.UI";
@@ -19,7 +19,7 @@ const SHELF_ITEM_ORDERING_OPTIONS: Array<OrderingOption<ShelfItemOrdering>> = [
 ];
 
 export function ShelfDetailPage({
-  profile,
+  connection,
   spl,
   shelfId,
   selectedBookId,
@@ -28,7 +28,7 @@ export function ShelfDetailPage({
   pageSize = 20,
   onUpdateRoute,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   shelfId: string;
   selectedBookId?: string | null;
@@ -122,7 +122,7 @@ export function ShelfDetailPage({
         <BookResultsView
           books={shelfBooks}
           viewMode={bookViewMode}
-          serverBaseUrl={profile?.serverBaseUrl}
+          serverBaseUrl={connection?.serverBaseUrl}
           selectedBookId={selectedBookId ? String(selectedBookId) : null}
           onViewBook={(book) => openBookDetails(book.id)}
         />

@@ -80,7 +80,7 @@ describe("server descriptive rich text", () => {
   it("renders the connected Server description structurally", () => {
     const html = renderToStaticMarkup(
       <SettingsLibraryServerPanel
-        profile={{
+        connection={{
           id: "profile-1",
           label: "Library",
           serverBaseUrl: "https://library.example",

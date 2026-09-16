@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import { navigateTo } from "../../app/AppNavigation.Router";
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { useShelfEdit } from "./ShelfEdit.Controller";
 import { ShelfEditInfoModal } from "./ShelfEditInfoModal.UI";
 import { ShelfEditInfoPanel } from "./ShelfEditInfoPanel.UI";
 import { ShelfEditItemsList } from "./ShelfEditItemsList.UI";
 
-export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionProfile | null; spl: SecondPassClient | null; shelfId: string }) {
+export function ShelfEditPage({ connection, spl, shelfId }: { connection: ActiveConnection | null; spl: SecondPassClient | null; shelfId: string }) {
   const {
     canLoad, busy, error, shelf, items, nextUrl, loadMoreBusy,
     mutationBusyId, mutationError, infoOpen, infoDraft, infoBusy, canEdit,
@@ -55,7 +55,7 @@ export function ShelfEditPage({ profile, spl, shelfId }: { profile: ConnectionPr
           {canEdit ? (
             <ShelfEditItemsList
               items={items}
-              profile={profile}
+              connection={connection}
               itemCount={itemCount}
               positionOptions={positionOptions}
               mutationBusyId={mutationBusyId}

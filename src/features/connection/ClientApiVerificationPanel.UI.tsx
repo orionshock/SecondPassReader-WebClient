@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CurrentUser } from "@secondpass/client";
-import { getConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 import { verifyConnection } from "./ConnectionVerification.Controller";
 
 type Props = {
-  selectedProfileId?: string | null;
-  profilesVersion?: number;
-  onProfilesChanged?: () => void;
+  connection: ActiveConnection | null;
+  onConnectionChanged?: () => void;
   autoVerify?: boolean;
 };
 
@@ -17,25 +16,20 @@ type State =
   | { phase: "success"; me: CurrentUser }
   | { phase: "error"; message: string };
 
-export function ClientApiVerification({ selectedProfileId, profilesVersion, onProfilesChanged, autoVerify }: Props) {
+export function ClientApiVerification({ connection, onConnectionChanged, autoVerify }: Props) {
   const [state, setState] = useState<State>({ phase: "idle" });
   const autoVerifyAttemptedRef = useRef<string | null>(null);
 
-  const profile = useMemo(() => {
-    if (!selectedProfileId) return null;
-    void profilesVersion;
-    return getConnectionProfile(selectedProfileId) ?? null;
-  }, [selectedProfileId, profilesVersion]);
-  const verificationIdentity = profile
-    ? JSON.stringify([profile.id, profile.serverBaseUrl, profile.accessToken, profile.authenticationState])
+  const verificationIdentity = connection
+    ? JSON.stringify([connection.id, connection.serverBaseUrl, connection.accessToken, connection.authenticationState])
     : null;
 
   useEffect(() => {
     if (!autoVerify) return;
-    if (!profile) return;
-    if (!profile.accessToken) return;
-    if (!profile.apiBaseUrl) return;
-    if (profile.verifiedAt && profile.authenticationState !== "verifying-repair") return;
+    if (!connection) return;
+    if (!connection.accessToken) return;
+    if (!connection.apiBaseUrl) return;
+    if (connection.verifiedAt && connection.authenticationState !== "verifying-repair") return;
     if (autoVerifyAttemptedRef.current === verificationIdentity) return;
     autoVerifyAttemptedRef.current = verificationIdentity;
     void verify();
@@ -43,21 +37,21 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
   }, [autoVerify, verificationIdentity]);
 
   async function verify() {
-    if (!profile) return;
-    if (!profile.apiBaseUrl) {
+    if (!connection) return;
+    if (!connection.apiBaseUrl) {
       setState({ phase: "error", message: "Library details are incomplete. Connect again." });
       return;
     }
-    if (!profile.accessToken) {
+    if (!connection.accessToken) {
       setState({ phase: "error", message: "This connection isn't authorized yet." });
       return;
     }
 
     setState({ phase: "verifying" });
-    const result = await verifyConnection({ profile });
+    const result = await verifyConnection({ connection });
     if (result.status === "stale") return;
     if (result.status === "verified") {
-      onProfilesChanged?.();
+      onConnectionChanged?.();
       setState({ phase: "success", me: result.currentUser });
       return;
     }
@@ -73,8 +67,8 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
       return;
     }
     if (result.status === "authorization-failed") {
-      if (profile.authenticationState === "verifying-repair" && result.authenticationRejected) {
-        onProfilesChanged?.();
+      if (connection.authenticationState === "verifying-repair" && result.authenticationRejected) {
+        onConnectionChanged?.();
       }
       setState({
         phase: "error",
@@ -88,7 +82,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     setState({ phase: "error", message: "Couldn't verify the connection. Try again." });
   }
 
-  if (!selectedProfileId) {
+  if (!connection) {
     return (
       <section className="panel">
         <h2 className="panelTitle">Verify connection</h2>
@@ -97,16 +91,7 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     );
   }
 
-  if (!profile) {
-    return (
-      <section className="panel">
-        <h2 className="panelTitle">Verify connection</h2>
-        <p className="muted">This connection no longer exists. Connect again.</p>
-      </section>
-    );
-  }
-
-  if (!profile.accessToken) {
+  if (!connection.accessToken) {
     return (
       <section className="panel">
         <h2 className="panelTitle">Verify connection</h2>
@@ -119,28 +104,28 @@ export function ClientApiVerification({ selectedProfileId, profilesVersion, onPr
     <section className="panel">
       <h2 className="panelTitle">Verify connection</h2>
 
-      {profile.verifiedAt && profile.verifiedUser && !profile.authenticationState ? (
+      {connection.verifiedAt && connection.verifiedUser && !connection.authenticationState ? (
         <div className="discoveryBox">
           <div>
             <span className="muted">Status:</span> <span className="pill pillOk">verified</span>
           </div>
           <div>
-            <span className="muted">User:</span> <span className="mono">{profile.verifiedUser.username}</span>
+            <span className="muted">User:</span> <span className="mono">{connection.verifiedUser.username}</span>
           </div>
-          {profile.verifiedUser.email ? (
+          {connection.verifiedUser.email ? (
             <div>
-              <span className="muted">Email:</span> {profile.verifiedUser.email}
+              <span className="muted">Email:</span> {connection.verifiedUser.email}
             </div>
           ) : null}
           <div>
-            <span className="muted">Verified at:</span> {profile.verifiedAt}
+            <span className="muted">Verified at:</span> {connection.verifiedAt}
           </div>
         </div>
       ) : (
         <p className="muted">Not verified yet.</p>
       )}
 
-      {profile.mustChangePassword ? (
+      {connection.mustChangePassword ? (
         <p className="warningText">
           Change this account's password in Second Pass Library, then verify again.
         </p>

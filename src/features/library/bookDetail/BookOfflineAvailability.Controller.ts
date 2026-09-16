@@ -18,7 +18,7 @@ import {
   type IndexedDbOfflineRepositories,
 } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import { retainOfflineReaderBookMetadata } from "../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
-import type { ConnectionProfile } from "../../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../../storage/ActiveConnection.Store";
 
 const BOOK_DETAIL_OFFLINE_FORMAT = "epub";
 
@@ -42,18 +42,18 @@ export type BookOfflineAvailabilityController = {
 };
 
 export function useBookOfflineAvailabilityController({
-  profile,
+  connection,
   book,
   spl,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   book: BookDetail | null;
   spl: SecondPassClient | null;
 }): BookOfflineAvailabilityController {
   const namespace = useMemo(() => buildOfflineCacheNamespace({
-    serverBaseUrl: profile?.serverBaseUrl,
-    accountProfileId: profile?.verifiedUser?.profileId,
-  }), [profile?.serverBaseUrl, profile?.verifiedUser?.profileId]);
+    serverBaseUrl: connection?.serverBaseUrl,
+    accountProfileId: connection?.verifiedUser?.profileId,
+  }), [connection?.serverBaseUrl, connection?.verifiedUser?.profileId]);
   const [state, setState] = useState<BookOfflineAvailabilityState>({ status: "loading" });
   const stateRef = useRef(state);
   const repositoriesRef = useRef<IndexedDbOfflineRepositories<Blob> | null>(null);

@@ -1,4 +1,4 @@
-import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
+import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { routeToHash } from "../../app/AppNavigation.Router";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
@@ -32,10 +32,10 @@ export function RecentReadingLoadFailure({
 }
 
 export function RecentReadingSection({
-  profile,
+  connection,
   preview,
 }: {
-  profile: ConnectionProfile | null;
+  connection: ActiveConnection | null;
   preview: HomeRecentPreview;
 }) {
   const { busy, error, data, canLoad, showClosed } = preview;
@@ -74,7 +74,7 @@ export function RecentReadingSection({
       {data?.results?.length ? (
         <RecentReadingCarousel
           items={data.results}
-          profile={profile}
+          connection={connection}
           disabled={!canLoad}
           onResume={preview.resume}
         />
