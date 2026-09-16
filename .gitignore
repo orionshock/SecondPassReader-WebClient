@@ -4,7 +4,6 @@ dist
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
-!.vscode/launch.json
 .idea
 coverage
 .playwright-profile/

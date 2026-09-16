@@ -2,16 +2,17 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "files.exclude": {
-    "**/.npm-cache": true
-  },
-  "search.exclude": {
     "**/.npm-cache": true,
+    "**/coverage": true,
     "**/dist": true,
-    "**/node_modules": true
+    "**/node_modules": true,
+    "**/test-results": true,
+    "**/*.tsbuildinfo": true
   },
   "files.watcherExclude": {
     "**/.npm-cache/**": true,
+    "**/coverage/**": true,
     "**/dist/**": true,
-    "**/node_modules/**": true
+    "**/test-results/**": true
   }
 }

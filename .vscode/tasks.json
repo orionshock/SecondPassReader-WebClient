@@ -3,35 +3,91 @@
   "tasks": [
     {
       "label": "Verify: all",
-      "type": "npm",
-      "script": "verify",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "verify"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": {
         "kind": "test",
         "isDefault": true
       },
-      "problemMatcher": []
-    },
-    {
-      "label": "npm: dev",
-      "type": "npm",
-      "script": "dev",
       "problemMatcher": [],
-      "group": {
-        "kind": "build",
-        "isDefault": true
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
       }
     },
     {
-      "label": "npm: build",
-      "type": "npm",
-      "script": "build",
-      "problemMatcher": []
+      "label": "Dev: start",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "runOptions": {
+        "instanceLimit": 1
+      }
     },
     {
-      "label": "npm: preview",
-      "type": "npm",
-      "script": "preview",
-      "problemMatcher": []
+      "label": "Test: watch",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "test", "--", "--watch"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    },
+    {
+      "label": "Hygiene: touched",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "hygiene:touched"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Deploy: NewCaprica",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "NewCaprica",
+        "cd ~/projects/SecondPassReader-WebClient && git pull && ./docker/restart.sh"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "runOptions": {
+        "instanceLimit": 1
+      }
     }
   ]
 }
