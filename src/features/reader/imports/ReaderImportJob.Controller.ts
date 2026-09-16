@@ -1,21 +1,27 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { getReaderImportFormat } from "./ReaderImportFormats.Registry";
 import { acceptSuggestedBookmarkRow, getReaderImportJobCounts, type ReaderImportBookmarkSuggestion, resetOtherStagedRowsForActivation, resetStagedRowsForNavigation, setReaderImportRowStatus, undoReaderImportManualCompletion } from "./ReaderImportJob.State";
 import type { ReaderImportJob, ReaderImportRow, ReaderImportRowStatus } from "./ReaderImport.Types";
+import { ReaderImportReviewLifetime } from "./ReaderImportReview.Lifecycle";
 
 export function useReaderImportJob() {
   const [job, setJob] = useState<ReaderImportJob | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [bookmarkSuggestion, setBookmarkSuggestion] = useState<ReaderImportBookmarkSuggestion | null>(null);
+  const reviewLifetimeRef = useRef<ReaderImportReviewLifetime | null>(null);
+  if (!reviewLifetimeRef.current) reviewLifetimeRef.current = new ReaderImportReviewLifetime();
+  const reviewLifetime = reviewLifetimeRef.current;
 
   const startImport = useCallback(async (format: string, file: File) => {
+    const ownsReplacement = reviewLifetime.beginJobReplacement();
     await import("./handlers/ReaderImportHandlers.Lifecycle");
     const nextJob = await getReaderImportFormat(format).importFile(file);
+    if (!ownsReplacement()) return nextJob;
     setJob(nextJob);
     setBookmarkSuggestion(null);
     setDrawerOpen(true);
     return nextJob;
-  }, []);
+  }, [reviewLifetime]);
 
   const startGlaspCsvImport = useCallback((file: File) => startImport("glasp-csv", file), [startImport]);
 
@@ -31,11 +37,12 @@ export function useReaderImportJob() {
   }, []);
 
   const setSourcedRowStatus = useCallback((jobId: string, rowId: string, status: ReaderImportRowStatus) => {
+    reviewLifetime.invalidateJob(jobId);
     setJob((prev) => {
       if (!prev || prev.id !== jobId) return prev;
       return { ...prev, rows: prev.rows.map((row) => row.id === rowId ? setReaderImportRowStatus(row, status) : row) };
     });
-  }, []);
+  }, [reviewLifetime]);
 
   const selectRow = useCallback((rowId: string) => {
     setBookmarkSuggestion(null);
@@ -43,43 +50,54 @@ export function useReaderImportJob() {
   }, []);
 
   const clearJob = useCallback(() => {
+    reviewLifetime.invalidate();
     setBookmarkSuggestion(null);
     setJob(null);
     setDrawerOpen(false);
-  }, []);
+  }, [reviewLifetime]);
 
   const cancelStagedRowsForNavigation = useCallback(() => {
+    reviewLifetime.invalidate();
     setBookmarkSuggestion(null);
     setJob((prev) => prev ? { ...prev, rows: resetStagedRowsForNavigation(prev.rows) } : prev);
-  }, []);
+  }, [reviewLifetime]);
 
   const setImportDrawerOpen = useCallback((open: boolean) => {
-    if (!open) setBookmarkSuggestion(null);
+    if (!open) {
+      reviewLifetime.invalidate();
+      setBookmarkSuggestion(null);
+    }
     setDrawerOpen(open);
-  }, []);
+  }, [reviewLifetime]);
 
   const suggestBookmark = useCallback((suggestion: ReaderImportBookmarkSuggestion) => {
     setBookmarkSuggestion(suggestion);
   }, []);
 
-  const acceptBookmarkSuggestion = useCallback((currentCfi: string) => {
-    if (!bookmarkSuggestion || bookmarkSuggestion.cfi !== currentCfi.trim()) return;
+  const acceptBookmarkSuggestion = useCallback((suggestion: ReaderImportBookmarkSuggestion) => {
+    reviewLifetime.invalidateJob(suggestion.jobId);
     setJob((prev) => {
-      if (!prev || prev.id !== bookmarkSuggestion.jobId) return prev;
-      return { ...prev, rows: acceptSuggestedBookmarkRow(prev.rows, bookmarkSuggestion) };
+      if (!prev || prev.id !== suggestion.jobId) return prev;
+      return { ...prev, rows: acceptSuggestedBookmarkRow(prev.rows, suggestion) };
     });
-    setBookmarkSuggestion(null);
-  }, [bookmarkSuggestion]);
+    setBookmarkSuggestion((current) => current?.jobId === suggestion.jobId
+      && current.rowId === suggestion.rowId
+      && current.cfi === suggestion.cfi
+      ? null
+      : current);
+  }, [reviewLifetime]);
 
   const skipRow = useCallback((rowId: string) => {
+    reviewLifetime.invalidate();
     setBookmarkSuggestion((suggestion) => suggestion?.rowId === rowId ? null : suggestion);
     setRowStatus(rowId, "skipped");
-  }, [setRowStatus]);
+  }, [reviewLifetime, setRowStatus]);
 
   const markRowManuallyCompleted = useCallback((rowId: string) => {
+    reviewLifetime.invalidate();
     setBookmarkSuggestion((suggestion) => suggestion?.rowId === rowId ? null : suggestion);
     setRowStatus(rowId, "manually-completed");
-  }, [setRowStatus]);
+  }, [reviewLifetime, setRowStatus]);
 
   const undoManualCompletion = useCallback((rowId: string) => {
     setJob((prev) => prev ? {
@@ -95,6 +113,7 @@ export function useReaderImportJob() {
     drawerOpen,
     setDrawerOpen: setImportDrawerOpen,
     bookmarkSuggestion,
+    reviewLifetime,
     suggestBookmark,
     acceptBookmarkSuggestion,
     counts,

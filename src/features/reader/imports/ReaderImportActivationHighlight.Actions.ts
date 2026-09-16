@@ -140,8 +140,10 @@ export async function activateReaderImportHighlight({
         probeCfi,
         displayCfi,
         stagedSelection: stagedSelectionHandle,
+        isCurrent: () => request.isCurrent() && !request.signal.aborted,
       });
       if (!request.isCurrent() || request.signal.aborted) return;
+      if (!result) return;
       if (result.ok) {
         debugReaderImport("highlight CFI range stage success", { rowId, code: result.code });
         setRowActivationState(rowId, "staged", { attemptCursor: next.cursor + 1, resultCursor: 0, hasMatched: true });
@@ -219,9 +221,11 @@ export async function activateReaderImportHighlight({
     try {
       if (!displayCfi) throw new Error("Safe CFI display is unavailable.");
       await stagedSelectionHandle.runStagingTransaction(async () => {
+        if (!request.isCurrent() || request.signal.aborted) return;
         const display = await displayCfi(match.result.cfi, { navigationIntent: "import-staging" });
         if (!request.isCurrent() || request.signal.aborted) return;
         if (!display.ok) throw new Error(display.error);
+        if (!request.isCurrent() || request.signal.aborted) return;
         await stagedSelectionHandle.stageSelectionFromCfiRange({
           cfiRange: match.result.cfi,
           text: match.matchedText || row.quoteText || "",
@@ -244,6 +248,7 @@ export async function activateReaderImportHighlight({
         ...candidatePosition ?? {},
       });
     } catch {
+      if (!request.isCurrent() || request.signal.aborted) return;
       debugReaderImport("activation staging failed", {
         rowId,
         cfi: match.result.cfi,

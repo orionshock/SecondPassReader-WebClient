@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { useReaderImportActivation } from "../../../features/reader/imports/ReaderImportActivation.Controller";
 import type { ReaderImportJob, ReaderImportRow } from "../../../features/reader/imports/ReaderImport.Types";
 import type { ReaderSearchBookHandle, StagedSelectionHandle } from "../../../features/reader/domain/ReaderBridge.Types";
+import { ReaderImportReviewLifetime } from "../../../features/reader/imports/ReaderImportReview.Lifecycle";
 
 describe("reader import activation orchestration", () => {
   it("stages a found highlight without accepting it", async () => {
@@ -243,6 +244,45 @@ describe("reader import activation orchestration", () => {
     expect(harness.stagedSelection.stageSelectionFromCfiRange).not.toHaveBeenCalled();
   });
 
+  it("publishes nothing when the review invalidates a pending text search", async () => {
+    let resolveSearch: ((value: ReturnType<typeof searchResult>[]) => void) | undefined;
+    const search = new Promise<ReturnType<typeof searchResult>[]>((resolve) => { resolveSearch = resolve; });
+    const displayCfi = vi.fn(async () => ({ ok: true as const, code: "displayed" as const }));
+    const harness = createHarness(row({ quoteText: "Delayed quote" }), {
+      searchBook: () => search,
+      displayCfi,
+    });
+
+    const activation = harness.activate("row-1");
+    harness.invalidate();
+    resolveSearch?.([searchResult("stale-cfi", "Stale text")]);
+    await activation;
+
+    expect(displayCfi).not.toHaveBeenCalled();
+    expect(harness.stagedSelection.stageSelectionFromCfiRange).not.toHaveBeenCalled();
+    expect(harness.setRowActivationState).not.toHaveBeenCalled();
+    expect(harness.setDrawerOpen).not.toHaveBeenCalled();
+  });
+
+  it("does not publish or reopen review when bookmark display finishes after exit", async () => {
+    let resolveDisplay: ((value: { ok: true; code: "displayed" }) => void) | undefined;
+    const display = new Promise<{ ok: true; code: "displayed" }>((resolve) => { resolveDisplay = resolve; });
+    const harness = createHarness(row({ kind: "bookmark", cfiHint: "epubcfi(/6/2)" }), {
+      probeCfi: async () => ({ ok: true, code: "exists-in-book" }),
+      displayCfi: () => display,
+    });
+
+    const activation = harness.activate("row-1");
+    await vi.waitFor(() => expect(resolveDisplay).toBeTypeOf("function"));
+    harness.invalidate();
+    resolveDisplay?.({ ok: true, code: "displayed" });
+    await activation;
+
+    expect(harness.setRowActivationState).not.toHaveBeenCalled();
+    expect(harness.onBookmarkSuggested).not.toHaveBeenCalled();
+    expect(harness.setDrawerOpen).not.toHaveBeenCalled();
+  });
+
   it("marks a row not-found when staging dependencies are unavailable", async () => {
     const harness = createHarness(row({ quoteText: "Found quote" }), { stagedSelection: null });
 
@@ -289,13 +329,16 @@ function createHarness(importRow: ReaderImportRow, overrides: {
   const setDrawerOpen = vi.fn();
   const onBookmarkSuggested = vi.fn();
   let activate: (rowId: string) => Promise<void> = async () => undefined;
+  let invalidate: () => void = () => undefined;
   const job: ReaderImportJob = {
     id: "job-1", format: "test", fileName: "test.json", createdAt: "2026-01-01", rows: [importRow],
   };
 
   function Harness() {
-    activate = useReaderImportActivation({
+    const activation = useReaderImportActivation({
       job,
+      reviewOpen: true,
+      lifetime: new ReaderImportReviewLifetime(),
       searchBook: overrides.searchBook === undefined ? async () => [] : overrides.searchBook,
       probeCfi: overrides.probeCfi ?? null,
       displayCfi: overrides.displayCfi ?? (async () => ({ ok: true, code: "displayed" })),
@@ -307,11 +350,13 @@ function createHarness(importRow: ReaderImportRow, overrides: {
       clearTemporaryHighlight: vi.fn(),
       onBookmarkSuggested,
     });
+    activate = activation.activateRow;
+    invalidate = activation.invalidate;
     return null;
   }
   renderToStaticMarkup(createElement(Harness));
 
-  return { activate, stagedSelection: stagedSelection as StagedSelectionHandle, setRowActivationState, setDrawerOpen, onBookmarkSuggested };
+  return { activate, invalidate, stagedSelection: stagedSelection as StagedSelectionHandle, setRowActivationState, setDrawerOpen, onBookmarkSuggested };
 }
 
 function row(overrides: Partial<ReaderImportRow>): ReaderImportRow {

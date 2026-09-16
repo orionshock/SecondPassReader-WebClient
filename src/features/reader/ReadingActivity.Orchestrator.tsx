@@ -222,7 +222,7 @@ function ReaderActivityContent({
         }}
         importModalOpen={activityImport.modalOpen}
         onCloseImportModal={activityImport.closeModal}
-        onStartImport={readerImport.startImport}
+        onStartImport={activityImport.startImport}
         onParseImportAction={activityImport.handleParseAction}
         closeDialogOpen={completion.closeDialogOpen}
         closeInitialName={administration.currentSessionMeta.name ?? ""}

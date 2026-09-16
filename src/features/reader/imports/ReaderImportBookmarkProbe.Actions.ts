@@ -13,12 +13,14 @@ export async function probeReaderImportBookmarkCfi({
   probeCfi,
   displayCfi,
   rowId,
+  isCurrent,
 }: {
   cfiHint?: string;
   probeCfi: ReaderProbeCfiHandle | null;
   displayCfi: ReaderDisplayCfiHandle | null;
   rowId?: string;
-}): Promise<ReaderImportBookmarkProbeOutcome> {
+  isCurrent: () => boolean;
+}): Promise<ReaderImportBookmarkProbeOutcome | null> {
   const cfi = cfiHint?.trim() ?? "";
   if (!cfi) return { status: "not-found", result: { ok: false, code: "invalid", error: "Bookmark row has no CFI hint." } };
   if (!probeCfi) return { status: "not-found", result: { ok: false, code: "unsupported", error: "CFI probe is unavailable." } };
@@ -27,6 +29,7 @@ export async function probeReaderImportBookmarkCfi({
   let result: ReaderCfiProbeResult;
   try {
     result = await probeCfi(cfi);
+    if (!isCurrent()) return null;
   } catch (error) {
     const failure: ReaderCfiProbeResult = {
       ok: false,
@@ -45,7 +48,9 @@ export async function probeReaderImportBookmarkCfi({
 
   debugReaderImport("bookmark CFI display start", { rowId, cfiPreview: previewImportText(cfi) });
   try {
+    if (!isCurrent()) return null;
     const displayResult = await displayCfi(cfi, { navigationIntent: "import-staging" });
+    if (!isCurrent()) return null;
     if (displayResult.ok) {
       debugReaderImport("bookmark CFI display success", {
         rowId,

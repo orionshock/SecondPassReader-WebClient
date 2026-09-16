@@ -25,8 +25,10 @@ export function useReaderActivityImportController({
   const drawerInLayout = Boolean(readerImport.drawerOpen && readerImport.job);
   const lastDrawerLayoutRef = useRef(drawerInLayout);
   const capability = renderer.capability;
-  const activateRow = useReaderImportActivation({
+  const activation = useReaderImportActivation({
     job: readerImport.job,
+    reviewOpen: readerImport.drawerOpen,
+    lifetime: readerImport.reviewLifetime,
     searchBook: capability?.searchBook ?? null,
     probeCfi: capability?.probeCfi ?? null,
     displayCfi: capability?.displayCfi ?? null,
@@ -58,38 +60,52 @@ export function useReaderActivityImportController({
     renderer.clearTemporaryHighlight();
   }, [capability, renderer.clearTemporaryHighlight]);
 
+  useEffect(() => {
+    activation.invalidate();
+  }, [activation.invalidate, readerImport.job?.id]);
+
   const clearJob = useCallback(() => {
+    activation.invalidate();
     cleanupTemporaryState();
     readerImport.clearJob();
-  }, [cleanupTemporaryState, readerImport.clearJob]);
+  }, [activation.invalidate, cleanupTemporaryState, readerImport.clearJob]);
 
   const closeDrawer = useCallback(() => {
+    activation.invalidate();
     cleanupTemporaryState();
     readerImport.setDrawerOpen(false);
-  }, [cleanupTemporaryState, readerImport.setDrawerOpen]);
+  }, [activation.invalidate, cleanupTemporaryState, readerImport.setDrawerOpen]);
 
   const skipRow = useCallback((rowId: string) => {
+    activation.invalidate();
     const row = readerImport.job?.rows.find((item) => item.id === rowId);
     if (row?.status === "staged") capability?.stagedSelection.cancelStagedSelection();
     renderer.clearTemporaryHighlight();
     readerImport.skipRow(rowId);
-  }, [capability, readerImport.job, readerImport.skipRow, renderer.clearTemporaryHighlight]);
+  }, [activation.invalidate, capability, readerImport.job, readerImport.skipRow, renderer.clearTemporaryHighlight]);
 
   const markRowManuallyCompleted = useCallback((rowId: string) => {
+    activation.invalidate();
     completeReaderImportRowManually({
       row: readerImport.job?.rows.find((item) => item.id === rowId),
       cancelStagedSelection: () => capability?.stagedSelection.cancelStagedSelection(),
       clearTemporaryHighlight: renderer.clearTemporaryHighlight,
       markRowManuallyCompleted: readerImport.markRowManuallyCompleted,
     });
-  }, [capability, readerImport.job, readerImport.markRowManuallyCompleted, renderer.clearTemporaryHighlight]);
+  }, [activation.invalidate, capability, readerImport.job, readerImport.markRowManuallyCompleted, renderer.clearTemporaryHighlight]);
+
+  const startImport = useCallback(async (format: string, file: File) => {
+    activation.invalidate();
+    cleanupTemporaryState();
+    return readerImport.startImport(format, file);
+  }, [activation.invalidate, cleanupTemporaryState, readerImport.startImport]);
 
   const toggleBookmark = useCallback(() => {
     const suggestion = readerImport.bookmarkSuggestion;
     if (!annotations) return;
     void annotations.toggleBookmarkAtCurrentLocation().then((result) => {
       if (suggestion && shouldAcceptImportedBookmarkMutation(result)) {
-        readerImport.acceptBookmarkSuggestion(suggestion.cfi);
+        readerImport.acceptBookmarkSuggestion(suggestion);
       }
     });
   }, [annotations, readerImport.acceptBookmarkSuggestion, readerImport.bookmarkSuggestion]);
@@ -113,9 +129,10 @@ export function useReaderActivityImportController({
     openDrawer,
     clearJob,
     closeDrawer,
-    activateRow,
+    activateRow: activation.activateRow,
+    startImport,
     markRowManuallyCompleted,
     skipRow,
     toggleBookmark,
-  }), [activateRow, clearJob, closeDrawer, closeModal, drawerInLayout, handleParseAction, markRowManuallyCompleted, modalOpen, openDrawer, openModal, skipRow, toggleBookmark]);
+  }), [activation.activateRow, clearJob, closeDrawer, closeModal, drawerInLayout, handleParseAction, markRowManuallyCompleted, modalOpen, openDrawer, openModal, skipRow, startImport, toggleBookmark]);
 }

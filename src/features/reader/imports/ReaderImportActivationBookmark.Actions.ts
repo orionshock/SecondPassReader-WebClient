@@ -39,8 +39,9 @@ export async function activateReaderImportBookmark({
     cfiPreview: previewImportText(row.cfiHint),
   });
   try {
-    const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi, displayCfi, rowId: row.id });
+    const outcome = await probeReaderImportBookmarkCfi({ cfiHint: row.cfiHint, probeCfi, displayCfi, rowId: row.id, isCurrent });
     if (!isCurrent() || signal.aborted) return;
+    if (!outcome) return;
     setRowActivationState(row.id, outcome.status, {
       attemptCursor: row.attemptCursor,
       resultCursor: row.resultCursor,

@@ -19,6 +19,7 @@ describe("reader import highlight CFI staging", () => {
         runStagingTransaction: (operation) => operation(),
         cancelStagedSelection: vi.fn(),
       },
+      isCurrent: () => true,
     });
     expect(result).toEqual({ ok: true, code: "staged" });
     expect(stageSelectionFromCfiRange).toHaveBeenCalledWith(expect.objectContaining({
@@ -42,8 +43,10 @@ describe("reader import highlight CFI staging", () => {
         runStagingTransaction: (operation) => operation(),
         cancelStagedSelection: vi.fn(),
       },
+      isCurrent: () => true,
     });
-    expect(result.ok).toBe(false);
+    expect(result).not.toBeNull();
+    expect(result?.ok).toBe(false);
     expect(displayCfi).not.toHaveBeenCalled();
     expect(stageSelectionFromCfiRange).not.toHaveBeenCalled();
   });
@@ -59,10 +62,62 @@ describe("reader import highlight CFI staging", () => {
         runStagingTransaction: (operation) => operation(),
         cancelStagedSelection: vi.fn(),
       },
+      isCurrent: () => true,
     });
     expect(result).toEqual({ ok: false, code: "stage-failed", error: "No display" });
   });
+
+  it("does not display when ownership is lost during the CFI probe", async () => {
+    let resolveProbe: ((value: { ok: true; code: "exists-in-book"; cfiKind: "range"; rangeText: string }) => void) | undefined;
+    const probe = new Promise<{ ok: true; code: "exists-in-book"; cfiKind: "range"; rangeText: string }>((resolve) => { resolveProbe = resolve; });
+    let current = true;
+    const displayCfi = vi.fn(async () => ({ ok: true as const, code: "displayed" as const }));
+    const resultPromise = stageReaderImportHighlightCfi({
+      jobId: "job-a",
+      row: highlightRow(),
+      probeCfi: () => probe,
+      displayCfi,
+      stagedSelection: stagedSelection(),
+      isCurrent: () => current,
+    });
+
+    current = false;
+    resolveProbe?.({ ok: true, code: "exists-in-book", cfiKind: "range", rangeText: "Resolved text" });
+
+    await expect(resultPromise).resolves.toBeNull();
+    expect(displayCfi).not.toHaveBeenCalled();
+  });
+
+  it("does not stage when ownership is lost during CFI display", async () => {
+    let resolveDisplay: ((value: { ok: true; code: "displayed" }) => void) | undefined;
+    const display = new Promise<{ ok: true; code: "displayed" }>((resolve) => { resolveDisplay = resolve; });
+    let current = true;
+    const selection = stagedSelection();
+    const resultPromise = stageReaderImportHighlightCfi({
+      jobId: "job-a",
+      row: highlightRow(),
+      probeCfi: async () => ({ ok: true, code: "exists-in-book", cfiKind: "range", rangeText: "Resolved text" }),
+      displayCfi: () => display,
+      stagedSelection: selection,
+      isCurrent: () => current,
+    });
+    await vi.waitFor(() => expect(resolveDisplay).toBeTypeOf("function"));
+
+    current = false;
+    resolveDisplay?.({ ok: true, code: "displayed" });
+
+    await expect(resultPromise).resolves.toBeNull();
+    expect(selection.stageSelectionFromCfiRange).not.toHaveBeenCalled();
+  });
 });
+
+function stagedSelection() {
+  return {
+    stageSelectionFromCfiRange: vi.fn(async () => undefined),
+    runStagingTransaction: <T,>(operation: () => Promise<T>) => operation(),
+    cancelStagedSelection: vi.fn(),
+  };
+}
 
 function highlightRow(): ReaderImportRow {
   return { id: "row-1", index: 1, kind: "highlight", quoteText: "Imported text", cfiHint: "epubcfi(/6/2!/4/2,/1:0,/1:4)", status: "pending" };
