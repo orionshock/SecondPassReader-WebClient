@@ -3,6 +3,7 @@ import type { IndexedDbOfflineRepositories } from "../storage/IndexedDbOfflineRe
 import type { OfflineNamespaceRetentionSummary } from "./OfflineNamespaceRetention.Presenter";
 import { summarizeOfflineNamespaceRetention } from "./OfflineNamespaceRetention.Presenter";
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
+import { cleanupOfflineHomeProjectionNamespace } from "./OfflineHomeProjectionPublication.Lifecycle";
 
 type NamespaceRepositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -34,15 +35,18 @@ export async function removeOfflineNamespace(
   namespaceKey: string,
   openRepositories: () => Promise<NamespaceRepositories> = () => openIndexedDbOfflineRepositories<Blob>(),
 ): Promise<OfflineNamespaceCleanupResult> {
-  let repositories: NamespaceRepositories | null = null;
-  try {
-    repositories = await openRepositories();
-    await repositories.deleteNamespace(namespaceKey);
-    return { status: "removed" };
-  } catch (error) {
-    debugWarn("reader", "offline namespace cleanup failed", { error });
-    return { status: "failed" };
-  } finally {
-    repositories?.close();
-  }
+  const normalizedNamespaceKey = namespaceKey.trim();
+  return cleanupOfflineHomeProjectionNamespace(normalizedNamespaceKey, async () => {
+    let repositories: NamespaceRepositories | null = null;
+    try {
+      repositories = await openRepositories();
+      await repositories.deleteNamespace(normalizedNamespaceKey);
+      return { status: "removed" };
+    } catch (error) {
+      debugWarn("reader", "offline namespace cleanup failed", { error });
+      return { status: "failed" };
+    } finally {
+      repositories?.close();
+    }
+  });
 }

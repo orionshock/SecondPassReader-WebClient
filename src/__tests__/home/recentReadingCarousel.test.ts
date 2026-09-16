@@ -8,7 +8,19 @@ import { rawSessionId, recentSessionFixture } from "../sessions/SessionTest.Fixt
 
 describe("Home recent reading carousel", () => {
   it("renders View all as a Sessions link", () => {
-    const html = renderToStaticMarkup(createElement(RecentReadingSection, { profile: null, spl: null }));
+    const html = renderToStaticMarkup(createElement(RecentReadingSection, {
+      profile: null,
+      preview: {
+        busy: false,
+        error: null,
+        data: null,
+        canLoad: false,
+        showClosed: false,
+        toggleClosed: vi.fn(),
+        retry: vi.fn(),
+        resume: vi.fn(),
+      },
+    }));
 
     expect(html).toContain('href="#/sessions"');
   });

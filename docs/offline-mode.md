@@ -157,7 +157,9 @@ Successful online Home loads retain two normalized projections:
 - `home-shelves`: the six-item Shelf preview.
 
 Failed loads do not replace good snapshots, and cache-write failure does not affect online
-rendering.
+rendering. Preview results and cache writes belong to the authenticated client and verified
+namespace that started them; removal, replacement, repair, or a newer preview invalidates older
+publication work so it cannot recreate a cleaned projection.
 
 Offline Home preserves cached membership, ordering, Reading Session identity, status, and activity
 metadata. Matching local Reader state may replace only desired CFI, percentage, and stable location

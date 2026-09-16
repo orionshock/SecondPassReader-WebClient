@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
 import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
-import type { SecondPassClient, Shelf } from "@secondpass/client";
 import { HomeShelfCard } from "./HomeShelfCard.UI";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
-import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
+import type { HomeShelvesPreview } from "./HomePreview.Controller";
 
 export function ShelvesPreviewLoadFailure({
   error,
@@ -31,48 +29,13 @@ export function ShelvesPreviewLoadFailure({
 }
 
 export function ShelvesPreviewSection({
-  spl,
+  preview,
   serverBaseUrl,
-  offlineNamespaceKey = null,
 }: {
-  spl: SecondPassClient | null;
+  preview: HomeShelvesPreview;
   serverBaseUrl?: string | null;
-  offlineNamespaceKey?: string | null;
 }) {
-  const canLoad = Boolean(spl);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [shelves, setShelves] = useState<Shelf[] | null>(null);
-
-  const load = useCallback(async () => {
-    if (!spl) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const r = await spl.shelves.list({ pageSize: 6, includePreviewBooks: true });
-      const results = r.results ?? [];
-      setShelves(results);
-      if (offlineNamespaceKey && Array.isArray(r.results)) {
-        void import("./offline/OfflineHomeCache.Actions")
-          .then((module) => module.cacheOfflineHomeShelves({ namespaceKey: offlineNamespaceKey, items: results }))
-          .catch(() => undefined);
-      }
-    } catch (e) {
-      debugWarn("reader", "Home shelf preview could not be loaded", { error: e });
-      setError(e instanceof Error ? e : new Error("Couldn't load shelves."));
-      setShelves(null);
-    } finally {
-      setBusy(false);
-    }
-  }, [offlineNamespaceKey, spl]);
-
-  useEffect(() => {
-    setShelves(null);
-    setError(null);
-    setBusy(false);
-    if (!canLoad) return;
-    void load();
-  }, [canLoad, load]);
+  const { canLoad, busy, error, shelves } = preview;
 
   return (
     <div className="shelfPreviewSection">
@@ -90,7 +53,7 @@ export function ShelvesPreviewSection({
       {error ? (
         <ShelvesPreviewLoadFailure
           error={error}
-          onRetry={() => void load()}
+          onRetry={preview.retry}
           disabled={!canLoad || busy}
         />
       ) : null}

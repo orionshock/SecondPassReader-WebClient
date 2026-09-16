@@ -6,6 +6,11 @@ import { RecentReadingSection } from "../library/RecentReadingPanel.UI";
 import { getConnectionStatus } from "../connection/ConnectionStatus.Presenter";
 import { ShelvesPreviewSection } from "./ShelvesPreviewPanel.UI";
 import { startLibraryGlobalSearch } from "../../app/routes/AppLibraryRoute.Policy";
+import {
+  useHomePreviewLifetime,
+  useHomeRecentPreview,
+  useHomeShelvesPreview,
+} from "./HomePreview.Controller";
 
 const HOME_LIBRARY_SEARCH_LABEL = "Search Library";
 const HOME_LIBRARY_SEARCH_PLACEHOLDER = "Search books, authors, series, and publishers...";
@@ -21,6 +26,9 @@ export function HomePage({
 }) {
   const status = useMemo(() => getConnectionStatus(profile), [profile]);
   const [homeSearch, setHomeSearch] = useState("");
+  const previewLifetime = useHomePreviewLifetime(status === "verified" ? spl : null, offlineNamespaceKey);
+  const recentPreview = useHomeRecentPreview(previewLifetime);
+  const shelvesPreview = useHomeShelvesPreview(previewLifetime);
 
   return (
     <section className="panel">
@@ -62,12 +70,11 @@ export function HomePage({
             </form>
           </div>
 
-          <RecentReadingSection profile={profile} spl={spl} offlineNamespaceKey={offlineNamespaceKey} />
+          <RecentReadingSection profile={profile} preview={recentPreview} />
 
           <ShelvesPreviewSection
-            spl={spl}
+            preview={shelvesPreview}
             serverBaseUrl={profile?.serverBaseUrl}
-            offlineNamespaceKey={offlineNamespaceKey}
           />
         </>
       ) : null}

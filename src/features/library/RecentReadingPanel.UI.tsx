@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import type { MarginaliaRecentSessions, SecondPassClient } from "@secondpass/client";
 import type { ConnectionProfile } from "../../storage/ConnectionProfiles.Store";
-import { navigateTo, routeToHash } from "../../app/AppNavigation.Router";
-import { saveReaderReturnTarget } from "../reader/ReaderReturnTarget.Store";
+import { routeToHash } from "../../app/AppNavigation.Router";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
-import { loadRecentReading } from "../reader/ReaderMarginalia.Queries";
 import { RecentReadingCarousel } from "./RecentReadingCarousel.UI";
+import type { HomeRecentPreview } from "../home/HomePreview.Controller";
 
 const RECENT_READING_ERROR = "Couldn't load Recent History.";
 
@@ -36,57 +33,12 @@ export function RecentReadingLoadFailure({
 
 export function RecentReadingSection({
   profile,
-  spl,
-  offlineNamespaceKey = null,
+  preview,
 }: {
   profile: ConnectionProfile | null;
-  spl: SecondPassClient | null;
-  offlineNamespaceKey?: string | null;
+  preview: HomeRecentPreview;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [data, setData] = useState<MarginaliaRecentSessions | null>(null);
-  const [showClosed, setShowClosed] = useState(false);
-  const canLoad = Boolean(spl);
-
-  const loadRecent = useCallback(async () => {
-    if (!spl) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const r = await loadRecentReading(spl, { includeClosed: showClosed });
-      setData(r);
-      if (offlineNamespaceKey && Array.isArray(r.results)) {
-        void import("../home/offline/OfflineHomeCache.Actions")
-          .then((module) => module.cacheOfflineHomeRecent({ namespaceKey: offlineNamespaceKey, items: r.results }))
-          .catch(() => undefined);
-      }
-    } catch (e) {
-      setData(null);
-      setError(e instanceof Error ? e : new Error(RECENT_READING_ERROR));
-    } finally {
-      setBusy(false);
-    }
-  }, [offlineNamespaceKey, showClosed, spl]);
-
-  useEffect(() => {
-    setData(null);
-    setError(null);
-    setBusy(false);
-    if (!canLoad) return;
-    void loadRecent();
-  }, [canLoad, loadRecent]);
-
-  function handleResume(bookId: string | number) {
-    const bookKey = String(bookId);
-    setError(null);
-    try {
-      saveReaderReturnTarget(bookKey, { kind: "home", label: "Home", route: "#/home" });
-      navigateTo({ kind: "reader", bookId: bookKey });
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error("Couldn't resume reading."));
-    }
-  }
+  const { busy, error, data, canLoad, showClosed } = preview;
 
   return (
     <div className="recentReadingSection">
@@ -103,7 +55,7 @@ export function RecentReadingSection({
             className={`button buttonCompact${showClosed ? " buttonPrimary" : ""}`}
             aria-pressed={showClosed}
             disabled={busy}
-            onClick={() => setShowClosed((current) => !current)}
+            onClick={preview.toggleClosed}
           >
             Include closed
           </button>
@@ -114,7 +66,7 @@ export function RecentReadingSection({
       </div>
 
       {error ? (
-        <RecentReadingLoadFailure error={error} onRetry={() => void loadRecent()} disabled={!canLoad || busy} />
+        <RecentReadingLoadFailure error={error} onRetry={preview.retry} disabled={!canLoad || busy} />
       ) : null}
 
       {!busy && !error && (!data?.results || data.results.length === 0) ? <div className="muted">No Recent History yet.</div> : null}
@@ -124,7 +76,7 @@ export function RecentReadingSection({
           items={data.results}
           profile={profile}
           disabled={!canLoad}
-          onResume={handleResume}
+          onResume={preview.resume}
         />
       ) : null}
     </div>
