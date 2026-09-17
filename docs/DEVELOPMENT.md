@@ -121,10 +121,13 @@ requirements belong in [deployment.md](./deployment.md).
 
 ## Browser-local data
 
-The browser stores one active connection, its bearer token, application appearance, Reader
-settings, Library display preferences, Reader return targets, and Marginalia layer preferences.
+Origin-scoped `localStorage` stores one active connection, including its bearer token, plus
+application appearance, Reader settings, Library display preferences, Reader return targets, and
+Marginalia layer preferences.
 IndexedDB separately stores namespace-scoped cached projections, explicitly retained publication
 assets and covers, Reader continuity, and pending Reader work.
 
-Bearer tokens are password-equivalent. Never log them or place them in URLs. See
-[offline-mode.md](./offline-mode.md) for namespace, retention, repair, and cleanup rules.
+Bearer tokens are password-equivalent, and any script executing in the application origin can read
+this stored token. Never log tokens or place them in URLs. Sign-out and connection removal delete
+the active connection record. See [offline-mode.md](./offline-mode.md) for namespace, retention,
+repair, and cleanup rules.

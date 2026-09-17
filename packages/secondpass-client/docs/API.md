@@ -24,6 +24,11 @@ needs CORS before JavaScript can read its Blob.
 require an access token. Missing or rejected credentials produce
 `ApiError(kind="unauthorized")`.
 
+The SDK keeps a supplied access token only in the configured client instance. It does not select or
+provide persistent credential storage. A host application owns that policy and may persist a token
+only when its security design explicitly defines the storage, exposure, and cleanup behavior. Treat
+bearer tokens as passwords: never log them or place them in URLs.
+
 ## Server
 
 - `spl.server.discover(serverBaseUrl)`
@@ -143,6 +148,6 @@ Bearer clients do not expose archive import or export methods.
 ## Errors
 
 The package exports `ApiError` and `ApiErrorKind` for server failures. Other failures use normal
-JavaScript errors. Callers own user-facing remediation. Never log or persist bearer tokens.
+JavaScript errors. Callers own user-facing remediation.
 
 Server-owned invariants and limits are collected in [DATA_MODEL.md](./DATA_MODEL.md).

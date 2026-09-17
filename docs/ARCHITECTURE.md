@@ -46,9 +46,13 @@ Because navigation state follows `#`, application routes are not sent to the sta
 - W3C Web Annotation JSON-LD and EPUB CFI selectors remain the canonical annotation contract.
 - `@likecoin/epub-ts` types and behavior stay behind the Reader engine boundary.
 
-The active connection contains a bearer token after linking. Treat the token as a password: never
-log it or place it in a URL. Linking uses the PIN/code Client API flow; OAuth/OIDC is not part of
-the application.
+After linking, the Web Client deliberately persists its single active connection, including the
+bearer token, in origin-scoped `localStorage` so the connection survives a reload. Any script that
+executes in the application origin can therefore read the token; deployments must prevent
+untrusted script execution. Sign-out and connection removal delete the active connection record.
+Treat the token as a password: never log it or place it in a URL. The SDK itself does not own
+credential persistence. Linking uses the PIN/code Client API flow; OAuth/OIDC is not part of the
+application.
 
 ## SDK boundary
 
