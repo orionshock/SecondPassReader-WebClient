@@ -26,7 +26,7 @@ No `.env` file is required. Copy the example and start the container:
 
 ```bash
 cp docker/compose.example.yml docker/compose.yml
-docker/restart.sh
+docker/rebuild-deployment.sh
 ```
 
 Compose exposes port `8000` to its container network without publishing it on the host. Connect the
@@ -102,7 +102,7 @@ locations return normal missing-file responses instead of rewriting them to the 
 ## Version stamp
 
 Vite stamps builds with `git describe --tags --always --dirty` and the latest commit date.
-`docker/restart.sh` supplies both values because `.git` is excluded from the Docker build context.
+`docker/rebuild-deployment.sh` supplies both values because `.git` is excluded from the Docker build context.
 
 Settings > Library Server > This Device displays the compiled values. Builds without Git metadata
 or explicit build arguments report `development` and `unknown`. Changing runtime presets does not
