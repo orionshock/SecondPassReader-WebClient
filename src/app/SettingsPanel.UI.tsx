@@ -1,19 +1,10 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ActiveConnection } from "../storage/ActiveConnection.Store";
-import {
-  beginActiveConnectionPublication,
-  isActiveConnectionPublicationCurrent,
-  publishActiveConnectionResult,
-  saveActiveConnection,
-} from "../storage/ActiveConnection.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
-import { discoverSecondPass } from "../features/connection/ConnectionServer.Queries";
-import { applyAuthenticatedContextToConnection, ServerIdentityMismatchError } from "../features/connection/ConnectionAccountProfile.Mapper";
-import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
-import { createSplClientFromConnection } from "./AppSplClient.Factory";
+import { recoverConnectionRoute } from "../features/connection/ConnectionRouteRecovery.Controller";
 import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
-import { getTechnicalErrorDetail, isAuthenticationRepairError, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
+import { getTechnicalErrorDetail, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 import { SettingsAppearancePanel } from "./settings/SettingsAppearancePanel.UI";
 import {
   SettingsLibraryServerPanel,
@@ -84,50 +75,36 @@ export function SettingsPanel({
       setState({ phase: "error", action: "check", message: "This connection isn't authorized yet." });
       return;
     }
-    const publication = beginActiveConnectionPublication(connection);
-    if (!publication) return;
-
     setState({ phase: "checking" });
-    try {
-      const discovery = await discoverSecondPass(connection.serverBaseUrl);
-      if (!isActiveConnectionPublicationCurrent(publication)) return;
-      if (discovery.serverId.toLowerCase() !== connection.serverId.toLowerCase()) {
-        throw new ServerIdentityMismatchError();
-      }
-      const now = new Date().toISOString();
-      const discoveredConnection: ActiveConnection = {
-        ...connection,
-        serverName: discovery.server_name,
-        serverDescription: discovery.server_description,
-        serverVersion: discovery.server_version,
-        serverReleaseDate: discovery.server_release_date,
-        lastCheckedAt: now,
-      };
-
-      const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromConnection(discoveredConnection));
-      const checkedConnection = applyAuthenticatedContextToConnection(discoveredConnection, currentUser, serverInfo, now);
-      publishActiveConnectionResult(publication, () => {
-        saveActiveConnection(checkedConnection);
-        onConnectionChanged();
-        setState({ phase: "success", message: "Connection checked." });
-      });
-    } catch (e) {
-      publishActiveConnectionResult(publication, () => {
-        if (isAuthenticationRepairError(e)) onRepairConnection();
-        setState({
-          phase: "error",
-          action: "check",
-          message: isAuthenticationRepairError(e)
-            ? "This connection needs repair."
-            : e instanceof ServerIdentityMismatchError
-              ? "This URL returned a different Library server ID. Check the Library URL."
-            : isAuthorizationError(e)
-              ? "Second Pass Library denied the connection check."
-              : "Couldn't check the connection.",
-          technicalDetail: getTechnicalErrorDetail(e),
-        });
-      });
+    const result = await recoverConnectionRoute({
+      connection,
+      markVerified: true,
+      onConnectionChanged,
+      onTryingAlternate: () => setState({ phase: "trying" }),
+    });
+    if (result.status === "stale") return;
+    if (result.status === "verified") {
+      setState({ phase: "success", message: result.routeChanged ? "Connected through another Library URL." : "Connection checked." });
+      return;
     }
+    if (result.status === "authorization-failed" && result.authenticationRejected) onRepairConnection();
+    const error = result.status === "failed" || result.status === "authorization-failed" ? result.error : null;
+    setState({
+      phase: "error",
+      action: "check",
+      message: result.status === "authorization-failed"
+        ? result.authenticationRejected ? "This connection needs repair." : "Second Pass Library denied the connection check."
+        : result.status === "identity-mismatch"
+          ? "This URL returned a different Library server ID. Check the Library URL."
+          : result.status === "profile-mismatch"
+            ? "This URL returned a different Library account. Check the connection."
+            : result.status === "unavailable"
+              ? "No saved Library URL could be verified. Offline data is still available."
+              : "Couldn't check the connection.",
+      technicalDetail: result.status === "unavailable" && result.mismatchedCandidates > 0
+        ? `${result.mismatchedCandidates} saved URL${result.mismatchedCandidates === 1 ? "" : "s"} returned a different Library or account.`
+        : error ? getTechnicalErrorDetail(error) : null,
+    });
   }
 
   async function logOut() {
@@ -232,7 +209,7 @@ export function SettingsPanel({
           <SettingsLibraryServerPanel
             connection={connection}
             state={state}
-            busy={state.phase === "checking" || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting"}
+            busy={state.phase === "checking" || state.phase === "trying" || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting"}
             onConnect={() => navigateTo({ kind: "connect" })}
             onCheckConnection={() => void checkConnection()}
             onLogOut={() => void logOut()}

@@ -40,6 +40,9 @@ The Web Client keeps one active connection:
 - A rejected credential enters repair-required state without deleting local data.
 - Personal cached data stays inaccessible until identity is verified again.
 - Repair preserves the namespace when server ID and profile ID both match, even if the route changes.
+- A verified alternate Library route keeps this namespace and its Reader state, outbox, assets,
+  covers, and projections. Route recovery is attempted only after a transport failure while the
+  browser is online; failed probes leave offline data intact. Authentication failures require repair.
 - If repair verifies a different identity, the previous namespace is removed before the new
   identity becomes active.
 - Intentional Sign out and Forget connection and local data remove the active connection and its

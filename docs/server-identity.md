@@ -6,11 +6,14 @@ to a different ID. Public `/.well-known/secondpass` supplies the ID and display 
 client derives the API root as `<Library base URL>/api/v1/` for a root-mounted Library. Authenticated
 `/api/v1/server/info/` confirms the ID and supplies ordered `server_urls`.
 
-The declared URL order is operator preference. The client preserves it without sorting, deduping,
-categorizing, or assuming reachability. The current route is stored separately. Automatic fallback,
-route probing, and route selection are not implemented. Before a future route switch, the client
-must confirm the candidate's `server_id` by HTTP. mDNS is not implemented in this Web Client; any
-future mDNS result would be a candidate URL, with HTTP discovery establishing identity.
+The declared URL order is operator preference. The client stores it without sorting, deduping,
+categorizing, or assuming reachability. The current route is stored separately. When its authenticated
+check fails at the transport level, the client tries declared routes sequentially in operator order,
+skipping normalized duplicates. Each alternate must pass anonymous HTTP discovery, then authenticated
+server ID and profile ID checks before becoming current. Successful server info replaces the stored
+route list in its returned order. An unsuccessful pass keeps the saved connection and offline data.
+There is no route scoring, network categorization, background health monitor, or failover for 401/403
+and application errors. mDNS is not implemented in this Web Client.
 
 ## URL and identity inventory
 
@@ -20,9 +23,10 @@ future mDNS result would be a candidate URL, with HTTP discovery establishing id
 | SDK `Server.Api`, server schema | Authenticated ID and declared routes | Identity plus location list | Validate UUID and route structure; preserve list order | Route selection |
 | `ConnectionServer.Queries`, Connect screen, linking flow | Normalize entered URL, discover ID, pair through that route | Location plus identity | Keep one current route and explicit discovered ID | Reconnect flow |
 | `ActiveConnection.Store` | Persisted ID, current route, declared routes; exact-record publication snapshot | Mixed | Validate and persist all three; retain generation and full-record stale guard | None |
-| `ConnectionAccountProfile.Mapper`, verification, authenticated refresh, Settings check | Compare server IDs and verified profile IDs; refresh metadata | Identity | Reject mismatched IDs before publishing; retain profile identity | Alternate route verification |
+| `ConnectionAccountProfile.Mapper`, verification, authenticated refresh, Settings check | Compare server IDs and verified profile IDs; refresh metadata | Identity | Reject mismatched IDs before publishing; retain profile identity | None |
+| `ConnectionRouteRecovery.Controller` | Current route, ordered alternate probes, and guarded adoption | Identity plus location | Confirm both identities before changing the active route | Explicit route picker, if needed |
 | `ConnectionRepair.Controller`, `OfflineCacheNamespace.Policy` | Server ID plus profile namespace and repair cleanup | Durable identity | Preserve for same ID and profile; clean up a different identity | None |
-| `AppAuthenticatedOfflineSync.Lifecycle`, Book availability | Build namespace and start sync | Durable identity | Keep the key across routes; replace sync generation when route changes | Route selection |
+| `AppAuthenticatedOfflineSync.Lifecycle`, Book availability | Build namespace and start sync | Durable identity | Keep the key across routes; replace sync generation when route changes | None |
 | Home/Library/Book Detail offline controllers, namespace publication | Read and write namespace-scoped projections | Namespace ownership | Protect current publication and cleanup lifetime | None |
 | Reader state, outbox, publication assets/covers repositories | Namespace-indexed data and deletion | Namespace ownership | Keep one identity key across routes | None |
 | Home, Shelves, Library, Book Detail, Reader cover components | Relative image and publication URL resolution | Location | Use current route | Route switch invalidation |
@@ -44,5 +48,5 @@ current route, which is passed separately from the namespace.
 Repair compares server ID and verified profile ID. It removes the prior namespace before saving a
 different durable identity, including a different server behind the same URL or a different user on
 the same server. Sign out and Forget delete the active namespace across all five stores. Automatic
-route fallback remains a separate design pass; any candidate route must confirm the same server ID
-before adoption.
+route recovery is event driven: startup, focus checks, browser return to online, and Settings Check
+connection. Browser offline state does not probe routes. Manual credential Repair remains separate.

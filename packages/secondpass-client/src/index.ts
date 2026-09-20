@@ -1,4 +1,4 @@
-export { ApiError, type ApiErrorKind } from "./ApiHttp.Adapter";
+export { ApiError, ApiTransportError, type ApiErrorKind } from "./ApiHttp.Adapter";
 export { createSecondPassClient } from "./SecondPassClient.Factory";
 export { deriveApiRootUrl } from "./ServerRoute.Policy";
 export { isServerId } from "./ServerIdentity.Policy";

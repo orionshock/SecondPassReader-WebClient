@@ -75,7 +75,7 @@ not reproduce those contracts.
 | `src/app/offline/reader/` | Local Reader continuity, outbox, replay, retry, coordination, and sync notices |
 | `src/app/offline/namespace/` | Namespace identity, inspection, retention messaging, and complete cleanup |
 | `src/components/` | Small shared visual components and structured-content renderers |
-| `src/features/connection/` | Discovery, PIN/code linking, verification, repair, and connection removal |
+| `src/features/connection/` | Discovery, PIN/code linking, verification, bounded route recovery, repair, and connection removal |
 | `src/features/home/` | Server Home and cached offline Home previews |
 | `src/features/library/` | Catalog browsing, Book Detail, offline Library, and publication availability controls |
 | `src/features/shelves/` | Online Shelf list, detail, and editing |

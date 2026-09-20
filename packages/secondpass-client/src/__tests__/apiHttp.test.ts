@@ -104,12 +104,12 @@ describe("SDK HTTP contracts", () => {
     })).resolves.toBeUndefined();
   });
 
-  it("preserves network failures without wrapping them as ApiError", async () => {
+  it("marks fetch failures as transport failures without treating response parsing as transport", async () => {
     const networkFailure = new TypeError("Network unavailable");
     asMockFetch().mockRejectedValueOnce(networkFailure);
 
     await expect(requestAnonymousJsonUrl({ url: "https://api.example/unavailable/" }))
-      .rejects.toBe(networkFailure);
+      .rejects.toMatchObject({ name: "ApiTransportError", cause: networkFailure, message: "Could not reach Second Pass Library." });
   });
 
   it("api HTTP helpers surface specific error kinds and parse download filenames", async () => {

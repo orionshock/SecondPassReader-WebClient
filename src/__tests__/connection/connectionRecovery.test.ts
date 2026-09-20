@@ -39,6 +39,19 @@ describe("top-level connection recovery", () => {
     expect(html).toBe("");
   });
 
+  it("shows recoverable route unavailability without calling it an auth failure", () => {
+    const html = renderToStaticMarkup(createElement(ConnectionRecoveryBannerForState, {
+      authorizationFailure: false,
+      routeRecoveryState: "unavailable",
+      hasConnection: true,
+      route: { kind: "home" },
+    }));
+
+    expect(html).toContain("Library connection unavailable");
+    expect(html).toContain("offline data is still available");
+    expect(html).toContain("View connection");
+  });
+
   it("enters credential repair only for authentication rejection", () => {
     expect(reduceAuthenticationRepairRequired(false, new ApiError({ kind: "unauthorized", status: 401, message: "No" }))).toBe(true);
     expect(reduceAuthenticationRepairRequired(false, authError())).toBe(false);

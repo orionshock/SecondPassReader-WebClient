@@ -22,6 +22,16 @@ export class ApiError extends Error {
   }
 }
 
+export class ApiTransportError extends Error {
+  override readonly cause: unknown;
+
+  constructor(cause: unknown) {
+    super("Could not reach Second Pass Library.");
+    this.name = "ApiTransportError";
+    this.cause = cause;
+  }
+}
+
 function containsHtml(value: string): boolean {
   return /<!doctype\s+html\b|<html(?:\s|>)/i.test(value);
 }
@@ -199,7 +209,12 @@ async function executeRequest(
   init: RequestInit,
   errorMessages?: Partial<Record<number, string>>,
 ): Promise<Response> {
-  const response = await fetch(url, init);
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    throw new ApiTransportError(error);
+  }
   if (response.ok) return response;
 
   const responseBody = await response.text().catch(() => "");

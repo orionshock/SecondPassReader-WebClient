@@ -90,6 +90,22 @@ describe("authenticated context publication ownership", () => {
     expect(failureCallbacks.reportAuthorizationFailure).toHaveBeenCalledWith(expect.objectContaining({ cause: failure }));
   });
 
+  it("does not probe while browser offline and checks when it returns online", async () => {
+    const connection = profile("connection-a", "token-a");
+    saveActiveConnection(connection);
+    const spl = client(Promise.resolve(currentUser("profile-a")));
+    const callbacks = {
+      clearAuthorizationFailure: vi.fn(),
+      reportAuthorizationFailure: vi.fn(),
+      onConnectionChanged: vi.fn(),
+    };
+
+    act(() => root.render(<Harness connection={connection} spl={spl} {...callbacks} connectivity="offline" />));
+    expect(spl.account.getCurrentUser).not.toHaveBeenCalled();
+    act(() => root.render(<Harness connection={connection} spl={spl} {...callbacks} connectivity="online" />));
+    await vi.waitFor(() => expect(spl.account.getCurrentUser).toHaveBeenCalledOnce());
+  });
+
   function render(connection: ActiveConnection, spl: SecondPassClient) {
     saveActiveConnection(connection);
     const clearAuthorizationFailure = vi.fn();
@@ -119,6 +135,7 @@ function Harness(input: {
   clearAuthorizationFailure(): void;
   reportAuthorizationFailure(error: unknown): void;
   onConnectionChanged(): void;
+  connectivity?: "online" | "offline" | "unknown";
 }) {
   useAppAuthenticatedContextController({
     workflowStep: "library_home",

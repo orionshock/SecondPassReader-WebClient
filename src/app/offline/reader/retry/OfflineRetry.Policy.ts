@@ -1,4 +1,4 @@
-import { ApiError } from "@secondpass/client";
+import { ApiError, ApiTransportError } from "@secondpass/client";
 
 export const OFFLINE_RETRY_BASE_DELAY_MS = 30_000;
 export const OFFLINE_RETRY_MAX_DELAY_MS = 15 * 60_000;
@@ -72,6 +72,7 @@ export function computeOfflineRetryDelay(input: {
 }
 
 function normalizeFailure(error: unknown): OfflineDeliveryFailureInput | null {
+  if (error instanceof ApiTransportError) return { kind: "network" };
   if (error instanceof ApiError) {
     return {
       kind: "http",

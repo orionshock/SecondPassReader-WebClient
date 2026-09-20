@@ -1,4 +1,4 @@
-import { ApiError } from "@secondpass/client";
+import { ApiError, ApiTransportError } from "@secondpass/client";
 import { describe, expect, it } from "vitest";
 import {
   classifyOfflineDeliveryFailure,
@@ -10,6 +10,10 @@ import {
 describe("offline delivery retry policy", () => {
   it("classifies normalized network interruption for later retry", () => {
     expect(classifyOfflineDeliveryFailure({ kind: "network" })).toEqual({
+      classification: "retry-later",
+      retryAfterMs: null,
+    });
+    expect(classifyOfflineDeliveryFailure(new ApiTransportError(new TypeError("Failed to fetch")))).toEqual({
       classification: "retry-later",
       retryAfterMs: null,
     });

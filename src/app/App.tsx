@@ -51,6 +51,8 @@ function AppShell() {
     clearAuthorizationFailure,
     reportAuthorizationFailure,
     requireAuthenticationRepair,
+    routeRecoveryState,
+    setRouteRecoveryState,
   } = useConnectionRecovery();
 
   const activeConnection = useMemo(() => {
@@ -92,6 +94,8 @@ function AppShell() {
     clearAuthorizationFailure,
     reportAuthorizationFailure,
     onConnectionChanged: refreshActiveConnection,
+    connectivity: browserConnectivity,
+    onRouteRecoveryStateChange: setRouteRecoveryState,
   });
 
   const { verifiedOfflineNamespaceKey, offlineNamespaceKey } = useAppAuthenticatedOfflineSyncLifecycle({
@@ -122,6 +126,7 @@ function AppShell() {
 
   function handleConnectionChanged() {
     clearAuthorizationFailure();
+    setRouteRecoveryState("idle");
     refreshActiveConnection();
   }
 
@@ -130,6 +135,7 @@ function AppShell() {
     if (!publication) return;
     publishActiveConnectionResult(publication, () => {
       clearAuthorizationFailure();
+      setRouteRecoveryState("idle");
       clearActiveConnection();
       closeReader();
       refreshActiveConnection();
@@ -146,6 +152,7 @@ function AppShell() {
     const publication = beginActiveConnectionPublication(activeConnection);
     if (!publication) return;
     publishActiveConnectionResult(publication, () => {
+      setRouteRecoveryState("idle");
       saveActiveConnection(markConnectionRepairRequired(activeConnection));
       refreshActiveConnection();
       navigateTo({ kind: "pair" });
@@ -209,6 +216,7 @@ function AppShell() {
         authenticationRepairRequired={authenticationRepairRequired}
         hasConnection={Boolean(activeConnection)}
         route={route}
+        routeRecoveryState={routeRecoveryState}
       />
 
       {workflowStep === "library_home" ? <OfflineReaderSyncNoticePanel /> : null}

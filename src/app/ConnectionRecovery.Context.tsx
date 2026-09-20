@@ -11,6 +11,8 @@ import { isAuthenticationRepairError, isAuthorizationError } from "./AppUserFaci
 type ConnectionRecoveryContextValue = {
   authorizationFailure: boolean;
   authenticationRepairRequired: boolean;
+  routeRecoveryState: "idle" | "trying" | "unavailable";
+  setRouteRecoveryState: (state: "idle" | "trying" | "unavailable") => void;
   reportAuthorizationFailure: (error: unknown) => void;
   requireAuthenticationRepair: () => void;
   clearAuthorizationFailure: () => void;
@@ -19,6 +21,8 @@ type ConnectionRecoveryContextValue = {
 const DEFAULT_VALUE: ConnectionRecoveryContextValue = {
   authorizationFailure: false,
   authenticationRepairRequired: false,
+  routeRecoveryState: "idle",
+  setRouteRecoveryState: () => undefined,
   reportAuthorizationFailure: () => undefined,
   requireAuthenticationRepair: () => undefined,
   clearAuthorizationFailure: () => undefined,
@@ -37,6 +41,7 @@ export function reduceAuthenticationRepairRequired(current: boolean, error: unkn
 export function ConnectionRecoveryProvider({ children }: { children: ReactNode }) {
   const [authorizationFailure, setAuthorizationFailure] = useState(false);
   const [authenticationRepairRequired, setAuthenticationRepairRequired] = useState(false);
+  const [routeRecoveryState, setRouteRecoveryState] = useState<"idle" | "trying" | "unavailable">("idle");
 
   const reportAuthorizationFailure = useCallback((error: unknown) => {
     setAuthorizationFailure((current) => reduceAuthorizationFailure(current, error));
@@ -56,10 +61,12 @@ export function ConnectionRecoveryProvider({ children }: { children: ReactNode }
   const value = useMemo(() => ({
     authorizationFailure,
     authenticationRepairRequired,
+    routeRecoveryState,
+    setRouteRecoveryState,
     reportAuthorizationFailure,
     requireAuthenticationRepair,
     clearAuthorizationFailure,
-  }), [authenticationRepairRequired, authorizationFailure, clearAuthorizationFailure, reportAuthorizationFailure, requireAuthenticationRepair]);
+  }), [authenticationRepairRequired, authorizationFailure, clearAuthorizationFailure, reportAuthorizationFailure, requireAuthenticationRepair, routeRecoveryState]);
 
   return <ConnectionRecoveryContext.Provider value={value}>{children}</ConnectionRecoveryContext.Provider>;
 }

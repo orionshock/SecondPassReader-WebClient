@@ -7,6 +7,7 @@ import { SettingsDetailRow } from "./SettingsDetailRow.UI";
 export type SettingsLibraryServerActionState =
   | { phase: "idle" }
   | { phase: "checking" }
+  | { phase: "trying" }
   | { phase: "logging_out" }
   | { phase: "signing_out_locally" }
   | { phase: "forgetting" }
@@ -72,7 +73,8 @@ export function SettingsLibraryServerPanel({
             </div>
             <div className="settingsActions">
               <button type="button" className="button" onClick={onCheckConnection} disabled={busy || !serverActionsAvailable}>
-                {state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
+                {state.phase === "trying" ? "Trying another Library URL..."
+                  : state.phase === "checking" ? `Checking${"\u2026"}` : "Check connection"}
               </button>
               <button type="button" className="button buttonPrimary" onClick={onRepairConnection} disabled={busy || !serverActionsAvailable}>
                 Repair connection
