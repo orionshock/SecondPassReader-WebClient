@@ -4,6 +4,28 @@
   min-width: 0;
 }
 
+.shelfScopeControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.shelfScopeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shelfScopeButtonActive {
+  border-color: var(--sp-accent);
+  background: var(--color-hover-bg);
+}
+
+.shelfScopeButton .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .shelfList {
   display: grid;
   grid-template-columns: 1fr;
@@ -11,8 +33,24 @@
   margin-top: 10px;
 }
 
+.shelfCollectionControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .shelfCollectionPager {
-  margin-bottom: 10px;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.shelfCollectionPager .libraryMetaRow {
+  margin-top: 0;
+}
+
+.shelfCollectionControls .orderingControl {
+  margin-left: auto;
 }
 
 .shelfCard {

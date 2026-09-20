@@ -52,6 +52,25 @@ describe("SDK Shelves API", () => {
     transport.assertComplete();
   });
 
+  it("sends the server's distinct group and all scope values with shared pagination and preview parameters", async () => {
+    const transport = installScriptedTransport([
+      { name: "group shelves", response: jsonResponse({ count: 0, next: null, previous: null, results: [] }) },
+      { name: "all shelves", response: jsonResponse({ count: 0, next: null, previous: null, results: [] }) },
+    ]);
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
+    await spl.shelves.list({ scope: "group", page: 2, pageSize: 20, ordering: "-item_count", includePreviewBooks: true, previewLimit: 24 });
+    await spl.shelves.list({ scope: "all" });
+    const groupUrl = new URL(String(transport.request("group shelves").input));
+    expect(groupUrl.searchParams.get("scope")).toBe("group");
+    expect(groupUrl.searchParams.get("page")).toBe("2");
+    expect(groupUrl.searchParams.get("page_size")).toBe("20");
+    expect(groupUrl.searchParams.get("ordering")).toBe("-item_count");
+    expect(groupUrl.searchParams.get("include_preview_books")).toBe("true");
+    expect(groupUrl.searchParams.get("preview_limit")).toBe("24");
+    expect(new URL(String(transport.request("all shelves").input)).searchParams.get("scope")).toBe("all");
+    transport.assertComplete();
+  });
+
 
   it("shelf items list sends server ordering", async () => {
     const fetchMock = asMockFetch();

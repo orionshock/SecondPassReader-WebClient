@@ -26,11 +26,7 @@ export function formatUserHandle(user: Shelf["owner_user"]): string {
 }
 
 function groupOwnerName(shelf: Shelf): string {
-  return (
-    asString(shelf.owner_group?.name) ??
-    asString((shelf.owner_group as any)?.display_name) ??
-    (shelf.owner_group?.id !== undefined ? String(shelf.owner_group.id) : "Library Group shelf")
-  );
+  return asString(shelf.owner_group?.name) ?? "Group shelf";
 }
 
 export function isCanonicalPublicShelfGroup(shelf: Shelf): boolean {
@@ -52,9 +48,10 @@ export function formatShelfOwnerParts(shelf: Shelf): { kind: "user"; displayName
   };
 }
 
-export function ShelfMetaLine({ shelf }: { shelf: Shelf }) {
+export function ShelfMetaLine({ shelf, showOwner = true }: { shelf: Shelf; showOwner?: boolean }) {
   const itemCount = shelf.item_count ?? 0;
   const secondary = [formatShelfVisibility(shelf.visibility), `${itemCount} ${itemCount === 1 ? "book" : "books"}`];
+  if (!showOwner) return <span className="shelfMetaLine"><InlineMeta items={secondary} /></span>;
   const ownerParts = formatShelfOwnerParts(shelf);
 
   if (ownerParts.kind === "group") {

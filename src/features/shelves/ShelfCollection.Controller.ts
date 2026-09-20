@@ -7,6 +7,7 @@ import { canEditShelf } from "./ShelfMetadata.Presenter";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 const SHELF_PREVIEW_LIMIT = 24;
+export type ShelfScope = "personal" | "shared" | "group";
 
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
@@ -26,7 +27,7 @@ type ShelfPageState = {
 
 const initialPageState = (): ShelfPageState => ({ page: 1, requestedPage: 1, data: null, busy: false, error: null });
 
-function useShelfPage(scope: "personal" | "shared", spl: SecondPassClient | null, ordering: "name" | "-item_count") {
+function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering: "name" | "-item_count", active: boolean) {
   const [state, setState] = useState<ShelfPageState>(initialPageState);
   const requestSeq = useRef(0);
   const load = useCallback(async (targetPage: number) => {
@@ -55,9 +56,12 @@ function useShelfPage(scope: "personal" | "shared", spl: SecondPassClient | null
   useEffect(() => {
     requestSeq.current += 1;
     setState(initialPageState());
-    if (spl) void load(1);
     return () => { requestSeq.current += 1; };
-  }, [load, spl]);
+  }, [load]);
+
+  useEffect(() => {
+    if (active && spl && !state.data && !state.busy && !state.error) void load(1);
+  }, [active, spl, state.data, state.busy, state.error, load]);
 
   return {
     ...state,
@@ -68,14 +72,17 @@ function useShelfPage(scope: "personal" | "shared", spl: SecondPassClient | null
   };
 }
 
-export function useShelfCollection({ spl, ordering }: {
+export function useShelfCollection({ spl, ordering, activeScope }: {
   spl: SecondPassClient | null;
   ordering: "name" | "-item_count";
+  activeScope: ShelfScope;
 }) {
   const canLoad = Boolean(spl);
-  const personal = useShelfPage("personal", spl, ordering);
-  const shared = useShelfPage("shared", spl, ordering);
-  const busy = personal.busy || shared.busy;
+  const personal = useShelfPage("personal", spl, ordering, activeScope === "personal");
+  const shared = useShelfPage("shared", spl, ordering, activeScope === "shared");
+  const group = useShelfPage("group", spl, ordering, activeScope === "group");
+  const pages = { personal, shared, group };
+  const busy = pages[activeScope].busy;
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<ShelfFormValues>(() => shelfToFormValues());
   const [menuShelfId, setMenuShelfId] = useState<string | null>(null);
@@ -89,7 +96,7 @@ export function useShelfCollection({ spl, ordering }: {
     setMutationError(null);
     setMutationBusy(false);
     return () => { mutationRequestSeq.current += 1; };
-  }, [spl, ordering, personal.requestedPage, shared.requestedPage]);
+  }, [spl, ordering, activeScope, personal.requestedPage, shared.requestedPage, group.requestedPage]);
 
   const handleCreate = useCallback(async () => {
     if (!spl) return;
@@ -104,7 +111,7 @@ export function useShelfCollection({ spl, ordering }: {
       setCreateOpen(false);
       setCreateDraft(shelfToFormValues());
       setMenuShelfId(null);
-      await Promise.all([personal.reload(), shared.reload()]);
+      await Promise.all(Object.values(pages).filter((page) => page.data).map((page) => page.reload()));
     } catch (e) {
       debugWarn("reader", "shelf creation did not complete", { error: e });
       if (requestSeq !== mutationRequestSeq.current) return;
@@ -112,7 +119,7 @@ export function useShelfCollection({ spl, ordering }: {
     } finally {
       if (requestSeq === mutationRequestSeq.current) setMutationBusy(false);
     }
-  }, [createDraft, personal, shared, spl]);
+  }, [createDraft, pages, spl]);
 
   const handleDelete = useCallback(async (shelf: Shelf) => {
     if (!spl || !canEditShelf(shelf)) return;
@@ -124,7 +131,7 @@ export function useShelfCollection({ spl, ordering }: {
       await spl.shelves.remove(shelf.id);
       if (requestSeq !== mutationRequestSeq.current) return;
       setMenuShelfId(null);
-      await Promise.all([personal.reload(), shared.reload()]);
+      await Promise.all(Object.values(pages).filter((page) => page.data).map((page) => page.reload()));
     } catch (e) {
       debugWarn("reader", "shelf deletion did not complete", { shelfId: shelf.id, error: e });
       if (requestSeq !== mutationRequestSeq.current) return;
@@ -132,7 +139,7 @@ export function useShelfCollection({ spl, ordering }: {
     } finally {
       if (requestSeq === mutationRequestSeq.current) setMutationBusy(false);
     }
-  }, [personal, shared, spl]);
+  }, [pages, spl]);
 
   const beginCreate = useCallback(() => {
     setCreateOpen(true);
@@ -150,7 +157,7 @@ export function useShelfCollection({ spl, ordering }: {
   const dismissMenu = useCallback(() => setMenuShelfId(null), []);
 
   return {
-    canLoad, busy, personal, shared, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
+    canLoad, busy, pages, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
     createShelf: handleCreate, deleteShelf: handleDelete,
     beginCreate, cancelCreate, changeCreateDraft: setCreateDraft, toggleMenu, dismissMenu,
   };

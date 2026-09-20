@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import { DEFAULT_APP_PAGE_SIZE } from "../../app/AppNavigation.Constants";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
@@ -13,13 +13,18 @@ import { canEditShelf, ShelfMetaLine } from "./ShelfMetadata.Presenter";
 import { getAuthRecoveryMessage, getPageLoadErrorMessage } from "../../app/AppUserFacingErrors.Mapper";
 import { PageLoadErrorNotice } from "../../app/AppPageLoadErrorNotice.UI";
 import { useModalDialogFocus } from "../../components/ModalDialogFocus.Lifecycle";
-import { useShelfCollection } from "./ShelfCollection.Controller";
+import { useShelfCollection, type ShelfScope } from "./ShelfCollection.Controller";
 
 type ShelfOrdering = "name" | "-item_count";
 
 const SHELF_ORDERING_OPTIONS: Array<OrderingOption<ShelfOrdering>> = [
   { value: "name", label: "Shelf A-Z", icon: "sort_by_alpha" },
   { value: "-item_count", label: "Most books", icon: "format_list_numbered" },
+];
+const SHELF_SCOPES: Array<{ value: ShelfScope; label: string; icon: string; empty: string }> = [
+  { value: "personal", label: "Personal", icon: "shelves", empty: "You do not have any personal shelves." },
+  { value: "shared", label: "Shared by Others", icon: "share", empty: "No shelves shared by others." },
+  { value: "group", label: "Group Shelves", icon: "group_work", empty: "No group shelves." },
 ];
 
 export function ShelvesLoadErrorNotice({
@@ -56,11 +61,14 @@ export function ShelvesPage({
   ordering?: string;
   onChangeOrdering?: (ordering: string) => void;
 }) {
+  const [activeScope, setActiveScope] = useState<ShelfScope>("personal");
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const {
-    canLoad, busy, personal, shared, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
+    canLoad, busy, pages, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
     createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
-  } = useShelfCollection({ spl, ordering });
+  } = useShelfCollection({ spl, ordering, activeScope });
+  const activePage = pages[activeScope];
+  const activeScopeInfo = SHELF_SCOPES.find((scope) => scope.value === activeScope)!;
   const createDialogRef = useRef<HTMLElement | null>(null);
   const createDialogCloseRef = useRef<HTMLButtonElement | null>(null);
   useModalDialogFocus({
@@ -84,7 +92,7 @@ export function ShelvesPage({
         <button type="button" className="shelfCardMain shelfCardButton" aria-label={`Open shelf ${shelf.name}`}>
           <span className="shelfCardTitle">{shelf.name}</span>
           <span className="muted">
-            <ShelfMetaLine shelf={shelf} />
+            <ShelfMetaLine shelf={shelf} showOwner={activeScope !== "personal"} />
           </span>
         </button>
         <div className="shelfCardRight">
@@ -142,7 +150,7 @@ export function ShelvesPage({
         </div>
       </div>
     );
-  }, [deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, toggleMenu]);
+  }, [activeScope, deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, toggleMenu]);
 
   const formOpen = createOpen;
 
@@ -152,22 +160,14 @@ export function ShelvesPage({
         <h1 className="panelTitle">Shelves</h1>
         <div className="shelfHeaderControls">
           {canLoad ? (
-            <>
-              <OrderingControl
-                options={SHELF_ORDERING_OPTIONS}
-                value={ordering}
-                onChange={(nextOrdering) => onChangeOrdering?.(nextOrdering)}
-                ariaLabel="Sort shelves"
-              />
-              <button
-                type="button"
-                className="button buttonPrimary buttonCompact"
-                onClick={beginCreate}
-                disabled={busy || mutationBusy || formOpen}
-              >
-                Create personal shelf
-              </button>
-            </>
+            <button
+              type="button"
+              className="button buttonPrimary buttonCompact"
+              onClick={beginCreate}
+              disabled={busy || mutationBusy || formOpen}
+            >
+              Create personal shelf
+            </button>
           ) : null}
         </div>
       </div>
@@ -218,34 +218,30 @@ export function ShelvesPage({
         </div>
       ) : null}
 
-      {canLoad && !busy && personal.data?.count === 0 && shared.data?.count === 0
-        ? <p className="muted">No shelves yet.</p>
-        : null}
-
       {canLoad ? (
-        <div className="shelfList">
-          <section aria-labelledby="personal-shelves-title">
-            <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
-              <span id="personal-shelves-title">My shelves</span>
-            </h2>
-            {personal.busy && !personal.data ? <p className="muted">Loading personal shelves...</p> : null}
-            {personal.busy && personal.data ? <p className="muted">Loading page {personal.requestedPage}...</p> : null}
-            {personal.error ? <ShelvesLoadErrorNotice error={personal.error} onRetry={() => void personal.retry()} disabled={personal.busy} /> : null}
-            {personal.data?.count === 0 && !personal.error ? <div className="muted">No personal shelves.</div> : null}
-            <ShelfCollectionPager title="My shelves" section={personal} />
-            {personal.data?.results.map(renderShelf)}
-          </section>
-
-          <section aria-labelledby="shared-shelves-title">
-            <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
-              <span id="shared-shelves-title">Shared shelves</span>
-            </h2>
-            {shared.busy && !shared.data ? <p className="muted">Loading shared shelves...</p> : null}
-            {shared.busy && shared.data ? <p className="muted">Loading page {shared.requestedPage}...</p> : null}
-            {shared.error ? <ShelvesLoadErrorNotice error={shared.error} onRetry={() => void shared.retry()} disabled={shared.busy} /> : null}
-            {shared.data?.count === 0 && !shared.error ? <div className="muted">No shared shelves.</div> : null}
-            <ShelfCollectionPager title="Shared shelves" section={shared} />
-            {shared.data?.results.map(renderShelf)}
+        <div>
+          <div className="shelfScopeControls" role="group" aria-label="Shelf scope">
+            {SHELF_SCOPES.map((scope) => (
+              <button key={scope.value} type="button" className={`button buttonCompact shelfScopeButton${activeScope === scope.value ? " shelfScopeButtonActive" : ""}`} aria-label={scope.label} aria-pressed={activeScope === scope.value} onClick={() => setActiveScope(scope.value)}>
+                <MaterialIcon name={scope.icon} />{scope.label}
+              </button>
+            ))}
+          </div>
+          <section className="shelfList" aria-label={activeScopeInfo.label}>
+            {activePage.busy && !activePage.data ? <p className="muted">Loading {activeScopeInfo.label.toLowerCase()} shelves...</p> : null}
+            {activePage.busy && activePage.data ? <p className="muted">Loading page {activePage.requestedPage}...</p> : null}
+            {activePage.error ? <ShelvesLoadErrorNotice error={activePage.error} onRetry={() => void activePage.retry()} disabled={activePage.busy} /> : null}
+            {activePage.data?.count === 0 && !activePage.error ? <p className="muted">{activeScopeInfo.empty}</p> : null}
+            <div className="shelfCollectionControls">
+              <ShelfCollectionPager title={activeScopeInfo.label} section={activePage} />
+              <OrderingControl
+                options={SHELF_ORDERING_OPTIONS}
+                value={ordering}
+                onChange={(nextOrdering) => onChangeOrdering?.(nextOrdering)}
+                ariaLabel="Sort shelves"
+              />
+            </div>
+            {activePage.data?.results.map(renderShelf)}
           </section>
         </div>
       ) : null}
@@ -255,7 +251,7 @@ export function ShelvesPage({
 
 function ShelfCollectionPager({ title, section }: {
   title: string;
-  section: ReturnType<typeof useShelfCollection>["personal"];
+  section: ReturnType<typeof useShelfCollection>["pages"][ShelfScope];
 }) {
   if (!section.data || section.data.count === 0) return null;
   const totalPages = Math.max(1, Math.ceil(section.data.count / DEFAULT_APP_PAGE_SIZE));

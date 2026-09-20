@@ -78,7 +78,7 @@ export type ShelfListParams =
       ownerGroup?: never;
     })
   | (ShelfListBaseParams & {
-      scope?: "shared";
+      scope?: "all" | "shared" | "group";
       ownerGroup?: string | number;
     });
 
