@@ -22,6 +22,11 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
   align-items: center;
+  cursor: pointer;
+}
+
+.shelfCard:hover {
+  background: var(--color-hover-bg);
 }
 
 .shelfCardButton {
@@ -34,10 +39,6 @@
   color: inherit;
   font: inherit;
   text-align: left;
-}
-
-.shelfCardButton:hover {
-  background: var(--color-hover-bg);
 }
 
 .shelfCardButton:focus-visible {

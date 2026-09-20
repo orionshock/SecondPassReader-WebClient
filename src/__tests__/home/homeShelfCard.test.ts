@@ -50,6 +50,14 @@ describe("Home shelf cards", () => {
     expect(html).not.toContain("No books");
   });
 
+  it("keeps Home Shelf previews capped at three covers", () => {
+    const html = render(shelf({
+      preview_books: Array.from({ length: 5 }, (_, index) => ({ id: `book-${index}`, title: `Book ${index}`, cover_url: null })),
+    }));
+    expect(html.match(/class="previewBookCoverTile"/g)).toHaveLength(3);
+    expect(html).not.toContain('title="Book 3"');
+  });
+
   it("renders a compact placeholder when no previews are available", () => {
     const html = render(shelf({ preview_books: [] }));
 

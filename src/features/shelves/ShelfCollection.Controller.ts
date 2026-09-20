@@ -61,8 +61,8 @@ function useShelfPage(scope: "personal" | "shared", spl: SecondPassClient | null
 
   return {
     ...state,
-    next: () => { if (!state.busy && state.data?.next) void load(state.page + 1); },
-    previous: () => { if (!state.busy && state.data?.previous) void load(Math.max(1, state.page - 1)); },
+    next: () => { if (!state.busy && state.data && (state.data.next || state.page * DEFAULT_APP_PAGE_SIZE < state.data.count)) void load(state.page + 1); },
+    previous: () => { if (!state.busy && state.data && state.page > 1) void load(state.page - 1); },
     retry: () => load(state.requestedPage),
     reload: () => load(state.page),
   };

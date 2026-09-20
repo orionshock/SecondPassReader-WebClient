@@ -26,6 +26,10 @@ export class HomePreviewLifetime {
     return this.client === client && this.namespaceKey === (namespaceKey?.trim() ?? "");
   }
 
+  activate(): void {
+    this.invalidated = false;
+  }
+
   begin(kind: HomePreviewKind): HomePreviewRequest {
     const generation = ++this.generations[kind];
     const isCurrent = () => !this.invalidated && this.generations[kind] === generation;

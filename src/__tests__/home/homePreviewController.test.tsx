@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act } from "react";
+import { StrictMode, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { MarginaliaRecentSessions, SecondPassClient, Shelf } from "@secondpass/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,7 @@ import {
   useHomeShelvesPreview,
 } from "../../features/home/HomePreview.Controller";
 import { recentSessionFixture } from "../sessions/SessionTest.Fixtures";
+import { ShelvesPreviewSection } from "../../features/home/ShelvesPreviewPanel.UI";
 
 const cacheSpies = vi.hoisted(() => ({ recent: vi.fn(), shelves: vi.fn() }));
 
@@ -25,11 +26,11 @@ describe("Home preview publication ownership", () => {
   let recent: HomeRecentPreview;
   let shelves: HomeShelvesPreview;
 
-  function Harness({ client, namespaceKey }: { client: SecondPassClient; namespaceKey: string }) {
+  function Harness({ client, namespaceKey, showShelves = false }: { client: SecondPassClient; namespaceKey: string; showShelves?: boolean }) {
     const lifetime = useHomePreviewLifetime(client, namespaceKey);
     recent = useHomeRecentPreview(lifetime);
     shelves = useHomeShelvesPreview(lifetime);
-    return null;
+    return showShelves ? <ShelvesPreviewSection preview={shelves} /> : null;
   }
 
   beforeEach(() => {
@@ -102,6 +103,24 @@ describe("Home preview publication ownership", () => {
     expect(cacheSpies.shelves).not.toHaveBeenCalled();
     await act(async () => currentShelves.resolve({ results: [shelf("current")] }));
     expect(shelves.shelves).toEqual([shelf("current")]);
+  });
+
+  it("clears Home Shelf loading and renders its capped previews after StrictMode restarts effects", async () => {
+    const pending = deferred<{ results: Shelf[] }>();
+    const spl = client(resolvedRecent(), pending.promise);
+    const container = document.createElement("div");
+    const pageRoot = createRoot(container);
+    try {
+      await act(async () => pageRoot.render(<StrictMode><Harness client={spl} namespaceKey="account-a" showShelves /></StrictMode>));
+      expect(container.textContent).toContain("Loading shelves...");
+      expect(spl.shelves.list).toHaveBeenCalledWith({ pageSize: 6, includePreviewBooks: true });
+      await act(async () => pending.resolve({ results: [shelf("current")] }));
+      expect(container.textContent).not.toContain("Loading shelves...");
+      expect(container.textContent).toContain("current");
+      expect(container.querySelector(".homeShelfCard")).not.toBeNull();
+    } finally {
+      act(() => pageRoot.unmount());
+    }
   });
 
   it("does not cache a result that completes after Home unmounts", async () => {

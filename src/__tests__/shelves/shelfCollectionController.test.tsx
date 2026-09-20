@@ -188,6 +188,41 @@ it("shows scoped page status and hides controls for an empty or single-page sect
   expect(container.querySelector('nav[aria-label="Shared shelves pages"]')).toBeNull();
 });
 
+it("shows Shared pagination from count when navigation URLs are absent and pages independently", async () => {
+  list.mockImplementation(({ scope, page }: { scope: string; page: number }) => Promise.resolve(scope === "personal"
+    ? { ...result, results: [{ ...shelf, id: "mine" }] }
+    : { count: 25, next: null, previous: null, results: [{ ...shelf, id: `shared-${page}`, name: `Shared page ${page}` }] }));
+  await act(async () => root.render(<ShelvesPage connection={null} spl={spl} />));
+  const pager = container.querySelector('nav[aria-label="Shared shelves pages"]')!;
+  expect(pager.textContent).toContain("Page 1 of 2");
+  expect(pager.querySelectorAll("button")[0]?.disabled).toBe(true);
+  expect(container.querySelector('nav[aria-label="My shelves pages"]')).toBeNull();
+  await act(async () => pager.querySelectorAll("button")[1]!.click());
+  expect(container.textContent).toContain("Shared page 2");
+  expect(container.querySelector('nav[aria-label="Shared shelves pages"]')?.textContent).toContain("Page 2 of 2");
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "shared", page: 2, previewLimit: 24 }));
+  expect(list.mock.calls.filter(([query]) => query.scope === "personal")).toHaveLength(1);
+  await act(async () => container.querySelector<HTMLButtonElement>('nav[aria-label="Shared shelves pages"] button')!.click());
+  expect(container.textContent).toContain("Shared page 1");
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "shared", page: 1, previewLimit: 24 }));
+});
+
+it("opens a Shelf from its row and a Book modal route only from its preview cover", async () => {
+  list.mockResolvedValue({ ...result, results: [{ ...shelf, preview_books: [{ id: "book-1", title: "Preview Book", cover_url: null }] }] });
+  await act(async () => root.render(<ShelvesPage connection={null} spl={spl} />));
+  const card = container.querySelector(".shelfCard")!;
+  await act(async () => card.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  expect(window.location.hash).toBe("#/shelves/shelf-1");
+  window.location.hash = "#/shelves";
+  await act(async () => card.querySelector(".shelfCardMain")!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  expect(window.location.hash).toBe("#/shelves/shelf-1");
+  window.location.hash = "#/shelves";
+  await act(async () => card.querySelector(".previewBookCoverButton")!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  expect(window.location.hash).toBe("#/shelves?book=book-1");
+  expect(card.querySelector(".shelfCardMain")?.getAttribute("aria-label")).toBe("Open shelf Mine");
+  expect(card.querySelector(".previewBookCoverButton")?.getAttribute("aria-label")).toBe("View details for Preview Book");
+});
+
 it("keeps a successful section visible when the other section fails", async () => {
   list.mockImplementation(({ scope }: { scope: string }) => scope === "personal"
     ? Promise.reject(new Error("personal unavailable"))

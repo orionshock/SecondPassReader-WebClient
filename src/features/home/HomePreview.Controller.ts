@@ -52,7 +52,10 @@ export function useHomePreviewLifetime(
     lifetimeRef.current = new HomePreviewLifetime(client, namespaceKey);
   }
   const lifetime = lifetimeRef.current;
-  useEffect(() => () => lifetime.invalidate(), [lifetime]);
+  useEffect(() => {
+    lifetime.activate();
+    return () => lifetime.invalidate();
+  }, [lifetime]);
   return lifetime;
 }
 

@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
+import { DEFAULT_APP_PAGE_SIZE } from "../../app/AppNavigation.Constants";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
@@ -78,8 +79,9 @@ export function ShelvesPage({
       <div
         key={shelf.id}
         className="shelfCard"
+        onClick={openShelf}
       >
-        <button type="button" className="shelfCardMain shelfCardButton" onClick={openShelf} aria-label={`Open shelf ${shelf.name}`}>
+        <button type="button" className="shelfCardMain shelfCardButton" aria-label={`Open shelf ${shelf.name}`}>
           <span className="shelfCardTitle">{shelf.name}</span>
           <span className="muted">
             <ShelfMetaLine shelf={shelf} />
@@ -255,14 +257,18 @@ function ShelfCollectionPager({ title, section }: {
   title: string;
   section: ReturnType<typeof useShelfCollection>["personal"];
 }) {
-  if (!section.data || (!section.data.previous && !section.data.next)) return null;
+  if (!section.data) return null;
+  const totalPages = Math.max(1, Math.ceil(section.data.count / DEFAULT_APP_PAGE_SIZE));
+  const hasPrevious = section.page > 1;
+  const hasNext = Boolean(section.data.next) || section.page < totalPages;
+  if (!hasPrevious && !hasNext) return null;
   return (
     <nav aria-label={`${title} pages`}>
       <LibraryPaginationControls
-        metaItems={[`Page ${section.page}`, `${section.data.count} shelves`]}
+        metaItems={[`Page ${section.page} of ${totalPages}`, `${section.data.count} shelves`]}
         busy={section.busy}
-        hasPrevious={Boolean(section.data.previous)}
-        hasNext={Boolean(section.data.next)}
+        hasPrevious={hasPrevious}
+        hasNext={hasNext}
         onPrevious={section.previous}
         onNext={section.next}
         previousAriaLabel={`Previous page of ${title}`}
