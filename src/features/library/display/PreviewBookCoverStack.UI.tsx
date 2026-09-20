@@ -15,14 +15,14 @@ type PreviewBookCoverStackProps = {
 export function PreviewBookCoverStack({
   previewBooks,
   baseUrl,
-  maxCovers = 3,
+  maxCovers,
   variant = "compact",
   emptyLabel = "No books",
   decorative = false,
   onBookClick,
 }: PreviewBookCoverStackProps) {
   const [brokenCoverIds, setBrokenCoverIds] = useState<Set<string>>(() => new Set());
-  const visibleBooks = previewBooks.slice(0, Math.max(0, maxCovers));
+  const visibleBooks = maxCovers === undefined ? previewBooks : previewBooks.slice(0, Math.max(0, maxCovers));
   const className = `previewBookCoverStack previewBookCoverStack${variant === "homeShelf" ? "HomeShelf" : "Compact"}`;
 
   return (

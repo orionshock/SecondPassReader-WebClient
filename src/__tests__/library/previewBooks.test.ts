@@ -37,6 +37,19 @@ describe("preview books", () => {
     expect(html).toContain('alt="Preview Book"');
   });
 
+  it("leaves preview density to the caller instead of imposing a shared three-cover limit", () => {
+    const previewBooks = Array.from({ length: 6 }, (_, index) => ({
+      id: `book-${index}`,
+      title: `Book ${index}`,
+      coverUrl: null,
+    }));
+    const all = renderToStaticMarkup(createElement(PreviewBookCoverStack, { previewBooks }));
+    const capped = renderToStaticMarkup(createElement(PreviewBookCoverStack, { previewBooks, maxCovers: 3 }));
+
+    expect(all.match(/class="previewBookCoverTile"/g)).toHaveLength(6);
+    expect(capped.match(/class="previewBookCoverTile"/g)).toHaveLength(3);
+  });
+
   it("renders placeholders for empty previews and missing covers", () => {
     const empty = renderToStaticMarkup(createElement(PreviewBookCoverStack, { previewBooks: [] }));
     const missing = renderToStaticMarkup(createElement(PreviewBookCoverStack, {

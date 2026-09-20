@@ -25,6 +25,7 @@ export function HomeShelfCard({
     >
       <PreviewBookCoverStack
         previewBooks={previews}
+        maxCovers={3}
         baseUrl={baseUrl}
         variant="homeShelf"
         emptyLabel="No books"

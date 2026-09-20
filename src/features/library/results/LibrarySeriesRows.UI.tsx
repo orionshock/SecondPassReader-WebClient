@@ -17,7 +17,7 @@ export function LibrarySeriesRows({ data, busy, error, page, connection, onSelec
         <button type="button" className="libraryEntityMain libraryEntityCardButton" onClick={open} aria-label={`View books in ${series.name}`}>
           <span className="libraryEntityTitle">{series.name}</span><span className="muted">{series.bookCount} books</span>
         </button>
-        <PreviewBookCoverStack previewBooks={series.previewBooks} baseUrl={connection} onBookClick={onViewBook} />
+        <PreviewBookCoverStack previewBooks={series.previewBooks} baseUrl={connection} maxCovers={3} onBookClick={onViewBook} />
       </div>;
     })}</div> : null}
     {data ? <LibraryPaginationControls metaItems={[`Page ${page}`, `${data.count} series`]} busy={busy} hasPrevious={Boolean(data.previous)} hasNext={Boolean(data.next)} onPrevious={() => onPageChange(Math.max(1, page - 1))} onNext={() => onPageChange(page + 1)} /> : null}

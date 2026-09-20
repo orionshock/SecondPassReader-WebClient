@@ -125,6 +125,32 @@ it("binds the create dialog focus and dismissal without reloading the collection
   expect(list).toHaveBeenCalledTimes(2);
 });
 
+it("renders all supplied Shelf previews beside unchanged metadata", async () => {
+  const previews = Array.from({ length: 7 }, (_, index) => ({
+    id: `book-${index}`,
+    title: `Preview ${index}`,
+    cover_url: null,
+  }));
+  list.mockResolvedValue({ ...result, results: [{
+    ...shelf,
+    owner_user: { profile_id: "profile-1", username: "reader" },
+    visibility: "listed",
+    item_count: 7,
+    preview_books: previews,
+  }] });
+
+  await act(async () => root.render(<ShelvesPage connection={null} spl={spl} />));
+
+  const card = container.querySelector(".shelfCard")!;
+  expect(card.querySelector(".shelfCardMain")?.textContent).toContain("Mine");
+  const metadata = card.querySelector(".shelfCardMain")?.textContent;
+  expect(metadata).toContain("<@reader>");
+  expect(metadata).toContain("Public");
+  expect(metadata).toContain("7 books");
+  expect(card.querySelectorAll(".shelfCardRight .previewBookCoverTile")).toHaveLength(7);
+  expect(card.querySelectorAll(".shelfCardRight .previewBookCoverButton")).toHaveLength(7);
+});
+
 it.each([
   ["create", "success"], ["create", "failure"],
   ["delete", "success"], ["delete", "failure"],
