@@ -24,10 +24,13 @@ export function DebugDetails({
         {connection ? (
           <>
             <div className="detailRow">
-              <span className="muted">serverBaseUrl:</span> <span className="mono">{connection.serverBaseUrl}</span>
+              <span className="muted">current route:</span> <span className="mono">{connection.serverBaseUrl}</span>
             </div>
             <div className="detailRow">
-              <span className="muted">apiBaseUrl:</span> <span className="mono">{connection.apiBaseUrl ?? "-"}</span>
+              <span className="muted">server ID:</span> <span className="mono">{connection.serverId}</span>
+            </div>
+            <div className="detailRow">
+              <span className="muted">declared routes:</span> <span className="mono">{connection.serverUrls.join(", ") || "-"}</span>
             </div>
             <div className="detailRow">
               <span className="muted">discovery:</span> {connection.clientApi ? "stored" : "missing"}

@@ -393,6 +393,8 @@ function profile(): ActiveConnection {
     id: "connection-1",
     label: "Library",
     serverBaseUrl: "https://library.example",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     verifiedUser: { profileId: "reader-1", username: "reader" },
     createdAt: "2026-01-01T00:00:00Z",
   };

@@ -7,8 +7,8 @@ function jsonResponse(body: unknown) {
 }
 
 const discovery: SecondPassDiscovery = {
+  serverId: "123e4567-e89b-42d3-a456-426614174000",
   server_name: "Library",
-  api_base_url: "https://api.example/api/v1",
   client_api: {
     discovery_version: "1",
     login_request_endpoint: "/api/v1/client-api/login-requests/",
@@ -26,7 +26,7 @@ describe("client API auth contract", () => {
   it("projects all required login request fields including consume_url", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(loginRequestWire()));
 
-    await expect(createLoginRequest(discovery)).resolves.toEqual({
+    await expect(createLoginRequest(discovery, "https://api.example")).resolves.toEqual({
       id: "request-1",
       code: "ABCD",
       authorizeUrl: "https://library.example/authorize/request-1",
@@ -41,7 +41,7 @@ describe("client API auth contract", () => {
     const wire = loginRequestWire();
     delete (wire as Partial<typeof wire>).consume_url;
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(wire));
-    await expect(createLoginRequest(discovery)).rejects.toThrow("Invalid login request response.");
+    await expect(createLoginRequest(discovery, "https://api.example")).rejects.toThrow("Invalid login request response.");
   });
 
   it.each(["pending", "approved", "denied", "expired", "consumed"] as const)(

@@ -37,6 +37,21 @@ describe("active connection publication ownership", () => {
     expect(publishActiveConnectionResult(publication, vi.fn())).toBe(false);
     expect(getActiveConnection()?.id).toBe("connection-b");
   });
+
+  it("keeps route, server ID, and generation changes distinct", () => {
+    const first = profile("connection-a", "token-a");
+    saveActiveConnection(first);
+    const current = beginActiveConnectionPublication(first)!;
+    expect(publishActiveConnectionResult(current, vi.fn())).toBe(true);
+
+    saveActiveConnection({ ...first, serverBaseUrl: "https://alternate.example" });
+    expect(publishActiveConnectionResult(current, vi.fn())).toBe(false);
+    const alternate = getActiveConnection()!;
+    const alternatePublication = beginActiveConnectionPublication(alternate)!;
+
+    saveActiveConnection({ ...alternate, serverId: "123e4567-e89b-42d3-a456-426614174001" });
+    expect(publishActiveConnectionResult(alternatePublication, vi.fn())).toBe(false);
+  });
 });
 
 describe("connection verification publication", () => {
@@ -58,6 +73,20 @@ describe("connection verification publication", () => {
       verifiedAt: "2026-09-15T01:00:00.000Z",
       verifiedUser: { profileId: "profile-a" },
     });
+  });
+
+  it("refuses authenticated information from a different Library ID at the same route", async () => {
+    const connection = profile("connection-a", "token-a");
+    saveActiveConnection(connection);
+    const mismatched = context("profile-a");
+    mismatched.serverInfo.serverId = "123e4567-e89b-42d3-a456-426614174001";
+
+    await expect(verifyConnection({
+      connection,
+      createClient: () => ({}) as never,
+      loadContext: async () => mismatched,
+    })).resolves.toEqual({ status: "server-identity-mismatch" });
+    expect(getActiveConnection()).toEqual(connection);
   });
 
   it("does not restore a connection removed while verification is pending", async () => {
@@ -172,7 +201,8 @@ function profile(id: string, accessToken: string): ActiveConnection {
     id,
     label: "Library",
     serverBaseUrl: "https://library.example",
-    apiBaseUrl: "https://library.example/api/v1",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     accessToken,
     createdAt: "2026-09-15T00:00:00.000Z",
   };
@@ -196,6 +226,8 @@ function context(profileId: string): { currentUser: CurrentUser; serverInfo: Ser
       groups: [],
     },
     serverInfo: {
+      serverId: "123e4567-e89b-42d3-a456-426614174000",
+      serverUrls: ["https://library.example"],
       name: "Library",
       description: "",
       bannerText: "",

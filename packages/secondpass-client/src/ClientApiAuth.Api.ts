@@ -6,6 +6,8 @@ import type {
   SecondPassWellKnown,
 } from "./schemas/ClientApiAuth.Types";
 import { requestAnonymousJsonUrl, resolveUrl } from "./ApiHttp.Adapter";
+import { isServerId } from "./ServerIdentity.Policy";
+import { deriveApiRootUrl } from "./ServerRoute.Policy";
 
 type JsonRecord = Record<string, unknown>;
 const CLIENT_API_DISCOVERY_ENDPOINT = "/client-api/discovery/";
@@ -27,25 +29,24 @@ function optionalString(value: unknown, context: string): string | undefined {
 
 function parseWellKnown(value: unknown): SecondPassWellKnown {
   const wire = record(value, "SecondPass discovery");
+  if (!isServerId(wire.server_id)) throw new Error("Invalid SecondPass discovery response.");
   return {
+    server_id: wire.server_id,
     server_name: requiredString(wire.server_name, "SecondPass discovery"),
     server_description: optionalString(wire.server_description, "SecondPass discovery"),
     server_version: optionalString(wire.server_version, "SecondPass discovery"),
-    server_release: optionalString(wire.server_release, "SecondPass discovery"),
     server_release_date: optionalString(wire.server_release_date, "SecondPass discovery"),
-    api_base_url: requiredString(wire.api_base_url, "SecondPass discovery"),
   };
 }
 
 function parseClientApiDiscovery(value: unknown, wellKnown: SecondPassWellKnown): SecondPassDiscovery {
   const wire = record(value, "client API discovery");
   return {
+    serverId: wellKnown.server_id,
     server_name: wellKnown.server_name,
     server_description: wellKnown.server_description,
     server_version: wellKnown.server_version,
-    server_release: wellKnown.server_release,
     server_release_date: wellKnown.server_release_date,
-    api_base_url: wellKnown.api_base_url,
     client_api: {
       discovery_version: requiredString(wire.discovery_version, "client API discovery"),
       login_request_endpoint: requiredString(wire.login_request_endpoint, "client API discovery"),
@@ -107,18 +108,19 @@ function parseConsumeResponse(value: unknown): ClientApiConsumeResponse {
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   const wellKnownUrl = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
   const wellKnown = parseWellKnown(await requestAnonymousJsonUrl<unknown>({ url: wellKnownUrl, method: "GET", credentials: "omit" }));
-  const discoveryUrl = resolveUrl(wellKnown.api_base_url, CLIENT_API_DISCOVERY_ENDPOINT);
+  const discoveryUrl = resolveUrl(deriveApiRootUrl(serverBaseUrl), CLIENT_API_DISCOVERY_ENDPOINT);
   const clientApi = await requestAnonymousJsonUrl<unknown>({ url: discoveryUrl, method: "GET", credentials: "omit" });
   return parseClientApiDiscovery(clientApi, wellKnown);
 }
 
 export async function createLoginRequest(
   discovery: SecondPassDiscovery,
+  libraryBaseUrl: string,
   input?: { clientName?: string; clientType?: string },
 ): Promise<ClientApiLoginRequestResponse> {
   const endpoint = discovery.client_api?.login_request_endpoint;
   if (!endpoint) throw new Error("Invalid client API discovery response.");
-  const url = resolveUrl(discovery.api_base_url, endpoint);
+  const url = resolveUrl(deriveApiRootUrl(libraryBaseUrl), endpoint);
   const wire = await requestAnonymousJsonUrl<unknown>({
     url,
     method: "POST",

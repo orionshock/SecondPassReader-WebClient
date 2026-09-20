@@ -16,8 +16,12 @@ export async function finalizeConnectionRepair(input: {
   const verifiedNamespace = namespaceKey(input.verified);
   if (!verifiedNamespace) return { status: "failed" };
 
-  const identity = previousNamespace === verifiedNamespace ? "same" : "different";
-  if (previousNamespace && identity === "different") {
+  const sameServer = input.previous.serverId === input.verified.serverId;
+  const sameProfile = input.previous.verifiedUser?.profileId === input.verified.verifiedUser?.profileId;
+  const identity = sameServer && sameProfile ? "same" : "different";
+  // The current namespace cannot isolate different Library IDs at the same URL.
+  if (!sameServer && previousNamespace === verifiedNamespace) return { status: "failed" };
+  if (previousNamespace && previousNamespace !== verifiedNamespace) {
     // Remove the old identity before activating the new one; this client retains no dormant user namespace.
     const removed = await (input.removeNamespace ?? removeOfflineNamespace)(previousNamespace);
     if (removed.status !== "removed") return { status: "failed" };

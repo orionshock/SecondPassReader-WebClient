@@ -14,6 +14,7 @@ function clientApiDiscoveryResponse() {
 }
 
 describe("SDK Server API", () => {
+  const serverId = "123e4567-e89b-42d3-a456-426614174000";
   beforeEach(() => {
     asMockFetch();
   });
@@ -25,20 +26,40 @@ describe("SDK Server API", () => {
         server_name: "S",
         server_description: "D",
         server_version: "1.2.3",
-        server_release: "r1",
         server_release_date: "2026-07-06",
-        api_base_url: "https://api.example",
+        server_id: serverId,
       }),
     );
     fetchMock.mockResolvedValueOnce(jsonResponse(clientApiDiscoveryResponse()));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example" });
     const discovery = await spl.server.discover("https://server.example");
-    expect(discovery.api_base_url).toBe("https://api.example");
+    expect(discovery.serverId).toBe(serverId);
     expect(discovery.server_release_date).toBe("2026-07-06");
 
     expect(() => spl.server.info()).toThrowError(ApiError);
     expect(() => spl.library.books.list()).toThrowError(ApiError);
+  });
+
+  it.each([
+    [{ server_name: "Library" }, "missing ID"],
+    [{ server_name: "Library", server_id: "bad-id" }, "malformed ID"],
+    [{ server_name: "Library", installation_id: "123e4567-e89b-42d3-a456-426614174000" }, "old-only shape"],
+  ])("rejects public discovery with %s (%s)", async (body, _description) => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse(body));
+    const spl = createSecondPassClient({ apiRootUrl: "https://server.example/api/v1/" });
+    await expect(spl.server.discover("https://server.example")).rejects.toThrow("Invalid SecondPass discovery response.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not require an API root field in public discovery", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ server_id: serverId, server_name: "Library" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse(clientApiDiscoveryResponse()));
+    const spl = createSecondPassClient({ apiRootUrl: "https://server.example/api/v1/" });
+    await expect(spl.server.discover("https://server.example")).resolves.toMatchObject({ serverId });
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe("https://server.example/api/v1/client-api/discovery/");
   });
 
   it("server discovery and pairing use discovered endpoints without credentials", async () => {
@@ -49,9 +70,8 @@ describe("SDK Server API", () => {
           server_name: "S",
           server_description: "D",
           server_version: "1.2.3",
-          server_release: "r1",
           server_release_date: "2026-07-06",
-          api_base_url: "https://api.example",
+          server_id: serverId,
         }),
       },
       { name: "client API discovery", response: jsonResponse(clientApiDiscoveryResponse()) },
@@ -76,21 +96,20 @@ describe("SDK Server API", () => {
       }) },
     ]);
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "pairing-token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "pairing-token" });
     const discovery = await spl.server.discover("https://server.example/");
     expect(discovery).toEqual({
       server_name: "S",
       server_description: "D",
       server_version: "1.2.3",
-      server_release: "r1",
       server_release_date: "2026-07-06",
-      api_base_url: "https://api.example",
+      serverId,
       client_api: {
         ...clientApiDiscoveryResponse(),
       },
     });
 
-    const loginRequest = await spl.server.createLoginRequest(discovery);
+    const loginRequest = await spl.server.createLoginRequest(discovery, "https://server.example");
     expect(loginRequest.consumeUrl).toBe("https://api.example/client-api/login-requests/request-1/consume/");
     await spl.server.pollLoginRequest("https://api.example/client-api/login-requests/request-1/poll/");
     await spl.server.consumeLoginRequest("https://api.example/client-api/login-requests/request-1/consume/");
@@ -100,11 +119,11 @@ describe("SDK Server API", () => {
     expect(String(publicDiscovery.input)).toBe("https://server.example/.well-known/secondpass");
     expect(discoverHeaders.Authorization).toBeUndefined();
 
-    expect(String(transport.request("client API discovery").input)).toBe("https://api.example/client-api/discovery/");
+    expect(String(transport.request("client API discovery").input)).toBe("https://server.example/api/v1/client-api/discovery/");
 
     const createRequest = transport.request("create login request");
     const createHeaders = createRequest.init?.headers as Record<string, string>;
-    expect(String(createRequest.input)).toBe("https://api.example/client-api/login-requests/");
+    expect(String(createRequest.input)).toBe("https://server.example/api/v1/client-api/login-requests/");
     expect(createHeaders.Authorization).toBeUndefined();
     expect(JSON.parse(String(createRequest.init?.body))).toEqual({
       client_name: "Second Pass Reader",
@@ -142,15 +161,16 @@ describe("SDK Server API", () => {
       }),
     );
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example" });
     await spl.server.createLoginRequest(
       {
         server_name: "Library Server",
-        api_base_url: "https://api.example",
+        serverId,
         client_api: {
           ...clientApiDiscoveryResponse(),
         },
       },
+      "https://api.example",
       {
         clientName: "SecondPass Reader \u00b7 Firefox on Linux",
         clientType: "reader",
@@ -158,7 +178,7 @@ describe("SDK Server API", () => {
     );
 
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toBe("https://api.example/client-api/login-requests/");
+    expect(String(url)).toBe("https://api.example/api/v1/client-api/login-requests/");
     expect(JSON.parse(String(init?.body))).toEqual({
       client_name: "SecondPass Reader \u00b7 Firefox on Linux",
       client_type: "reader",
@@ -169,6 +189,8 @@ describe("SDK Server API", () => {
   it("server.info projects authenticated server display and configuration context", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({
+      server_id: serverId,
+      server_urls: ["https://library.example", "https://library.example:8443"],
       server_name: "Athena Library",
       server_description: "Private reading server",
       server_banner_message: "Maintenance tonight",
@@ -184,8 +206,10 @@ describe("SDK Server API", () => {
       server_release_date: "2026-08-01",
     }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await expect(spl.server.info()).resolves.toEqual({
+      serverId,
+      serverUrls: ["https://library.example", "https://library.example:8443"],
       name: "Athena Library",
       description: "Private reading server",
       bannerText: "Maintenance tonight",
@@ -203,6 +227,26 @@ describe("SDK Server API", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(String(url)).toBe("https://api.example/server/info/");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer t");
+  });
+
+  it.each([
+    { server_id: "bad-id", server_urls: ["https://library.example"] },
+    { server_id: serverId, server_urls: ["https://library.example", "not a URL"] },
+  ])("rejects malformed authenticated server identity or route list", async (wire) => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse(wire));
+    const spl = createSecondPassClient({ apiRootUrl: "https://library.example/api/v1/", accessToken: "t" });
+    await expect(spl.server.info()).rejects.toThrow("Invalid authenticated server information.");
+  });
+
+  it("accepts one declared route", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ server_id: serverId, server_urls: ["https://library.example"] }));
+    const spl = createSecondPassClient({ apiRootUrl: "https://library.example/api/v1/", accessToken: "t" });
+    await expect(spl.server.info()).resolves.toMatchObject({
+      serverId,
+      serverUrls: ["https://library.example"],
+    });
   });
 
 });

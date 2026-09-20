@@ -45,7 +45,7 @@ import type {
 } from "./schemas/Marginalia.Types";
 
 export type SecondPassClientConfig = {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken?: string;
   tokenType?: string;
 };
@@ -113,6 +113,7 @@ export type SecondPassClient = {
     info(): Promise<ServerInfo>;
     createLoginRequest(
       discovery: SecondPassDiscovery,
+      libraryBaseUrl: string,
       input?: { clientName?: string; clientType?: string },
     ): Promise<ClientApiLoginRequestResponse>;
     pollLoginRequest(pollUrl: string): Promise<ClientApiPollResponse>;

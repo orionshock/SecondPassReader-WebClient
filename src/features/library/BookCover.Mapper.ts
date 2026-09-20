@@ -3,7 +3,7 @@ import type { BookDetail, CompactBook } from "@secondpass/client";
 
 export function resolveCoverUrl(
   coverUrl: string | null | undefined,
-  base?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null,
+  base?: { serverBaseUrl?: string | null; apiRootUrl?: string | null } | string | null,
 ): string | undefined {
   const raw = typeof coverUrl === "string" ? coverUrl.trim() : "";
   if (!raw) return undefined;
@@ -14,7 +14,7 @@ export function resolveCoverUrl(
     typeof base === "string"
       ? base
       : base && typeof base === "object"
-        ? base.serverBaseUrl || base.apiBaseUrl || undefined
+        ? base.serverBaseUrl || base.apiRootUrl || undefined
         : undefined;
   if (!baseUrl) return undefined;
 
@@ -28,10 +28,10 @@ export function resolveCoverUrl(
 
 export function getBookCoverUrl(
   book: Pick<CompactBook | BookDetail, "coverUrl"> | null | undefined,
-  base?: ActiveConnection | { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null,
+  base?: ActiveConnection | { serverBaseUrl?: string | null; apiRootUrl?: string | null } | string | null,
 ): string | undefined {
   const coverUrl = book?.coverUrl;
   if (!coverUrl) return undefined;
   if (typeof base === "string" || base == null) return resolveCoverUrl(coverUrl, base);
-  return resolveCoverUrl(coverUrl, { serverBaseUrl: base.serverBaseUrl, apiBaseUrl: base.apiBaseUrl });
+  return resolveCoverUrl(coverUrl, base);
 }

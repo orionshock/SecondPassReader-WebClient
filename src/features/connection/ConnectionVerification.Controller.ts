@@ -9,7 +9,7 @@ import {
   type ActiveConnection,
 } from "../../storage/ActiveConnection.Store";
 import { loadAuthenticatedContext } from "./AuthenticatedContext.Queries";
-import { applyAuthenticatedContextToConnection } from "./ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection, ServerIdentityMismatchError } from "./ConnectionAccountProfile.Mapper";
 import { finalizeConnectionRepair } from "./ConnectionRepair.Controller";
 
 export type ConnectionVerificationResult =
@@ -17,6 +17,7 @@ export type ConnectionVerificationResult =
   | { status: "stale" }
   | { status: "repair-cleanup-failed"; previousProfileId?: string; verifiedProfileId?: string }
   | { status: "authorization-failed"; authenticationRejected: boolean }
+  | { status: "server-identity-mismatch" }
   | { status: "failed"; error: unknown };
 
 export async function verifyConnection(input: {
@@ -65,6 +66,11 @@ export async function verifyConnection(input: {
     }
     return saved ? { status: "verified", currentUser } : { status: "stale" };
   } catch (error) {
+    if (error instanceof ServerIdentityMismatchError) {
+      return publishActiveConnectionResult(publication, () => undefined)
+        ? { status: "server-identity-mismatch" }
+        : { status: "stale" };
+    }
     const authenticationRejected = isAuthenticationRepairError(error);
     if (isAuthorizationError(error)) {
       const published = publishActiveConnectionResult(publication, () => {

@@ -85,7 +85,7 @@ function buildAuthHeaders(input: { accessToken: string; tokenType: string }): Re
 }
 
 export async function requestJson<T>(input: {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken: string;
   tokenType: string;
   endpointOrUrl: string;
@@ -97,7 +97,7 @@ export async function requestJson<T>(input: {
 }
 
 export async function requestVoid(input: {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken: string;
   tokenType: string;
   endpointOrUrl: string;
@@ -107,13 +107,13 @@ export async function requestVoid(input: {
 }
 
 async function request(input: {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken: string;
   tokenType: string;
   endpointOrUrl: string;
   options?: RequestOptions;
 }): Promise<Response> {
-  const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
+  const url = resolveUrl(input.apiRootUrl, input.endpointOrUrl);
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...withoutAuthorization(input.options?.headers),
@@ -128,13 +128,13 @@ async function request(input: {
 }
 
 export async function requestAuthenticatedBlob(input: {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken: string;
   tokenType: string;
   endpointOrUrl: string;
   options?: Omit<RequestOptions, "body"> & { accept?: string };
 }): Promise<{ blob: Blob; response: Response }> {
-  const url = resolveUrl(input.apiBaseUrl, input.endpointOrUrl);
+  const url = resolveUrl(input.apiRootUrl, input.endpointOrUrl);
   const headers: Record<string, string> = {
     Accept: input.options?.accept ?? "application/octet-stream, */*",
     ...withoutAuthorization(input.options?.headers),

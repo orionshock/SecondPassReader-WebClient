@@ -132,7 +132,7 @@ function ReaderActivityContent({
   });
   const isBookmarked = Boolean(state.location?.cfi && state.annotations.some((a) => a.kind === "bookmark" && a.cfi === state.location?.cfi));
   const selectedPreviousSessionIds = new Set(marginalia.selectedPreviousSessionIds);
-  const coverBase = { apiBaseUrl: spl?.config.apiBaseUrl ?? null };
+  const coverBase = { apiRootUrl: spl?.config.apiRootUrl ?? null };
   const activityImport = useReaderActivityImportController({
     readerImport,
     renderer,

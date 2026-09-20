@@ -3,7 +3,7 @@ import { verifySecondPassServer } from "../../features/connection/ConnectionServ
 
 describe("preset connection verification", () => {
   it("discovers a selected preset through the well-known flow", async () => {
-    const discovery = { server_name: "Production Library", api_base_url: "https://library.example.com/api/v1" };
+    const discovery = { serverId: "123e4567-e89b-42d3-a456-426614174000", server_name: "Production Library" };
     const discover = vi.fn().mockResolvedValue(discovery);
 
     await expect(verifySecondPassServer("https://library.example.com", discover)).resolves.toEqual({

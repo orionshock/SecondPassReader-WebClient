@@ -1,12 +1,14 @@
+import { isLibraryBaseUrl, isServerId } from "@secondpass/client";
+
 export type ActiveConnection = {
   id: string;
   label: string;
   serverBaseUrl: string;
-  apiBaseUrl?: string;
+  serverId: string;
+  serverUrls: string[];
   serverName?: string;
   serverDescription?: string;
   serverVersion?: string;
-  serverRelease?: string;
   serverReleaseDate?: string;
   advancedLibraryGroupsEnabled?: boolean;
   bannerText?: string | null;
@@ -86,15 +88,16 @@ function isActiveConnection(value: unknown): value is ActiveConnection {
   if (!isRecord(value)) return false;
   if (!isNonEmptyString(value.id)
     || typeof value.label !== "string"
-    || !isNonEmptyString(value.serverBaseUrl)
+    || !isLibraryBaseUrl(value.serverBaseUrl)
+    || !isServerId(value.serverId)
+    || !Array.isArray(value.serverUrls)
+    || !value.serverUrls.every(isLibraryBaseUrl)
     || !isTimestamp(value.createdAt)) return false;
 
   if (!optionalFieldsMatch(value, [
-    "apiBaseUrl",
     "serverName",
     "serverDescription",
     "serverVersion",
-    "serverRelease",
     "serverReleaseDate",
     "readingClientBaseUrl",
     "marginaliaProfileUri",

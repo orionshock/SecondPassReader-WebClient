@@ -57,7 +57,7 @@ export function ReaderActivityDialogs({
   closeAfterOptions: CloseSessionAfterOption[];
   defaultAfterAction: CloseSessionInput["afterAction"];
   nextBook: CompactBook | null;
-  coverBase: { apiBaseUrl: string | null };
+  coverBase: { apiRootUrl: string | null };
   onCancelCloseSession: () => void;
   onSaveAndCloseSession: (input: CloseSessionInput) => Promise<void>;
   endBookDialogOpen: boolean;

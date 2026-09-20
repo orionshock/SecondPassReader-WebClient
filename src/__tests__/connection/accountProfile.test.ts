@@ -12,7 +12,8 @@ function baseProfile(): ActiveConnection {
     id: "local-1",
     label: "Discovery Name",
     serverBaseUrl: "https://server.example",
-    apiBaseUrl: "https://api.example",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     serverName: "Discovery Name",
     accessToken: "token",
     createdAt: "2026-06-25T00:00:00.000Z",
@@ -114,6 +115,8 @@ function currentUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
 
 function serverInfo(overrides: Partial<ServerInfo> = {}): ServerInfo {
   return {
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: ["https://library.example"],
     name: "Authenticated Library",
     description: "Library description",
     bannerText: "",

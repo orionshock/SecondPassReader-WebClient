@@ -1,19 +1,17 @@
 export type SecondPassWellKnown = {
+  server_id: string;
   server_name: string;
   server_description?: string;
   server_version?: string;
-  server_release?: string;
   server_release_date?: string;
-  api_base_url: string;
 };
 
 export type SecondPassDiscovery = {
+  serverId: string;
   server_name: string;
   server_description?: string;
   server_version?: string;
-  server_release?: string;
   server_release_date?: string;
-  api_base_url: string;
   client_api: {
     discovery_version: string;
     login_request_endpoint: string;

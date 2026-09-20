@@ -12,7 +12,7 @@ const emptyPage = { count: 0, next: null, previous: null, results: [] };
 
 describe("marginalia client", () => {
   beforeEach(() => { vi.stubGlobal("fetch", vi.fn()); });
-  const client = () => createSecondPassClient({ apiBaseUrl: "https://api.example/api/v1", accessToken: "token" });
+  const client = () => createSecondPassClient({ apiRootUrl: "https://api.example/api/v1", accessToken: "token" });
 
   it("projects book summaries, bounded books, recent sessions, and null activity", async () => {
     fetchMock()

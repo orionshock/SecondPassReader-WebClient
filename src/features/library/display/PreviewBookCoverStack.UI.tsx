@@ -4,7 +4,7 @@ import type { PreviewBook } from "@secondpass/client";
 
 type PreviewBookCoverStackProps = {
   previewBooks: PreviewBook[];
-  baseUrl?: string | { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | null;
+  baseUrl?: string | { serverBaseUrl?: string | null; apiRootUrl?: string | null } | null;
   maxCovers?: number;
   variant?: "compact" | "homeShelf";
   emptyLabel?: string;

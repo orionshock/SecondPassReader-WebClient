@@ -63,9 +63,9 @@ function AppShell() {
 
   const splClient: SecondPassClient | null = useMemo(() => {
     if (activeConnection?.authenticationState === "repair-required") return null;
-    if (!activeConnection?.apiBaseUrl || !activeConnection?.accessToken) return null;
+    if (!activeConnection?.serverId || !activeConnection?.accessToken) return null;
     return createSplClientFromConnection(activeConnection);
-  }, [activeConnection?.apiBaseUrl, activeConnection?.accessToken, activeConnection?.authenticationState, activeConnection?.tokenType]);
+  }, [activeConnection?.serverId, activeConnection?.serverBaseUrl, activeConnection?.accessToken, activeConnection?.authenticationState, activeConnection?.tokenType]);
 
   const workflowStep = useMemo(() => getAppWorkflowStep(activeConnection), [activeConnection]);
   const route = useAppRouteWorkflowLifecycle(workflowStep);
@@ -305,7 +305,7 @@ function ServerSummary({ connection }: { connection: ActiveConnection | null }) 
         <span className="muted">Library:</span> {connection.serverName ?? connection.label}
       </div>
       <div className="detailRow">
-        <span className="muted">Server URL:</span> <span className="mono">{connection.serverBaseUrl}</span>
+        <span className="muted">Current Library URL:</span> <span className="mono">{connection.serverBaseUrl}</span>
       </div>
       {connection.serverName ? (
         <div className="detailRow">
@@ -316,11 +316,6 @@ function ServerSummary({ connection }: { connection: ActiveConnection | null }) 
         <div className="detailRow">
           <span className="muted">Description:</span>
           <ServerRichText value={connection.serverDescription} />
-        </div>
-      ) : null}
-      {connection.apiBaseUrl ? (
-        <div className="detailRow">
-          <span className="muted">API base:</span> <span className="mono">{connection.apiBaseUrl}</span>
         </div>
       ) : null}
     </div>

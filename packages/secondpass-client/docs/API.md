@@ -3,9 +3,9 @@
 `@secondpass/client` exposes an initialized, workflow-shaped client:
 
 ```ts
-import { createSecondPassClient } from "@secondpass/client";
+import { createSecondPassClient, deriveApiRootUrl } from "@secondpass/client";
 
-const spl = createSecondPassClient({ apiBaseUrl, accessToken, tokenType });
+const spl = createSecondPassClient({ apiRootUrl: deriveApiRootUrl(libraryBaseUrl), accessToken, tokenType });
 ```
 
 ## Authentication
@@ -33,9 +33,15 @@ bearer tokens as passwords: never log them or place them in URLs.
 
 - `spl.server.discover(serverBaseUrl)`
 - `spl.server.info()`
-- `spl.server.createLoginRequest(discovery, input?)`
+- `spl.server.createLoginRequest(discovery, libraryBaseUrl, input?)`
 - `spl.server.pollLoginRequest(pollUrl)`
 - `spl.server.consumeLoginRequest(consumeUrl)`
+
+Public discovery at `/.well-known/secondpass` returns `server_id` as stable Library identity and
+display metadata. It does not provide the API root. `deriveApiRootUrl(libraryBaseUrl)` uses the
+root-mounted Library convention `<Library base URL>/api/v1/`. Authenticated server info includes
+the same `serverId` and ordered `serverUrls`; listed URLs are routes with no reachability guarantee.
+The application must compare the authenticated ID with public discovery before accepting it.
 
 ## Account
 

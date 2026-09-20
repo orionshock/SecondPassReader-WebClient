@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CurrentUser, ServerInfo } from "@secondpass/client";
 import { getAppWorkflowStep } from "../../app/AppWorkflow.Policy";
 import { buildOfflineCacheNamespace } from "../../app/offline/namespace/OfflineCacheNamespace.Policy";
-import { applyAuthenticatedContextToConnection } from "../../features/connection/ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection, ServerIdentityMismatchError } from "../../features/connection/ConnectionAccountProfile.Mapper";
 import { markConnectionRepairRequired } from "../../features/connection/ConnectionRepair.State";
 import { finalizeConnectionRepair } from "../../features/connection/ConnectionRepair.Controller";
 import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
@@ -61,6 +61,36 @@ describe("connection repair identity", () => {
     expect(save).toHaveBeenCalledWith(verified);
   });
 
+  it("recognizes the same Library ID across routes and rejects a different ID at the same route", () => {
+    const original = profile();
+    const alternate = { ...original, serverBaseUrl: "https://alternate.example" };
+    expect(() => applyAuthenticatedContextToConnection(alternate, user("profile-a"), serverInfo(), "2026-09-09T01:00:00.000Z"))
+      .not.toThrow();
+    expect(() => applyAuthenticatedContextToConnection(original, user("profile-a"), {
+      ...serverInfo(), serverId: "123e4567-e89b-42d3-a456-426614174001",
+    }, "2026-09-09T01:00:00.000Z")).toThrow(ServerIdentityMismatchError);
+  });
+
+  it("keeps server identity separate from route-scoped offline cleanup", async () => {
+    const previous = profile();
+    const verified = { ...profile(), serverBaseUrl: "https://alternate.example" };
+    const removeNamespace = vi.fn(async () => ({ status: "removed" as const }));
+    const save = vi.fn();
+
+    await expect(finalizeConnectionRepair({ previous, verified, removeNamespace, save }))
+      .resolves.toEqual({ status: "saved", identity: "same" });
+    expect(removeNamespace).toHaveBeenCalledWith(namespace(previous));
+    expect(save).toHaveBeenCalledWith(verified);
+  });
+
+  it("refuses a different Library ID at the same route while namespace keys remain route-based", async () => {
+    const previous = profile();
+    const verified = { ...profile(), serverId: "123e4567-e89b-42d3-a456-426614174001" };
+    const save = vi.fn();
+    await expect(finalizeConnectionRepair({ previous, verified, save })).resolves.toEqual({ status: "failed" });
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("removes the previous namespace before activating a different verified identity", async () => {
     const previous = { ...profile(), authenticationState: "verifying-repair" as const };
     const verified = applyAuthenticatedContextToConnection(previous, user("profile-b"), serverInfo(), "2026-09-09T01:00:00.000Z");
@@ -108,7 +138,8 @@ function profile(): ActiveConnection {
     id: "connection-a",
     label: "Library",
     serverBaseUrl: "https://library.example",
-    apiBaseUrl: "https://library.example/api",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     accessToken: "old-token",
     verifiedAt: "2026-09-08T00:00:00.000Z",
     verifiedUser: { profileId: "profile-a", username: "reader" },
@@ -136,6 +167,8 @@ function user(profileId: string): CurrentUser {
 
 function serverInfo(): ServerInfo {
   return {
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: ["https://library.example"],
     name: "Library",
     description: "",
     bannerText: "",

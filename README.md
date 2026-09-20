@@ -51,6 +51,7 @@ manifest and lockfile changes.
 - [Deployment](docs/deployment.md)
 - [Reader](docs/reader.md)
 - [Offline behavior](docs/offline-mode.md)
+- [Library identity and routes](docs/server-identity.md)
 - [epub-ts support ledger](docs/epub-ts-support-issues.md)
 - [`@secondpass/client` SDK](packages/secondpass-client/README.md)
   - [API](packages/secondpass-client/docs/API.md)

@@ -18,7 +18,7 @@ describe("SDK Library API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.library.books.list({
       author: "a1",
       series: "s1",
@@ -48,7 +48,7 @@ describe("SDK Library API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "book 1", title: "T", sort_title: "T", subtitle: "", authors: [], series: null, language: null, publisher: null, published_year: null, published_month: null, published_day: null, published_date_precision: "", cover_url: null, description: "", identifiers: [], catalog_tags: [], groups: [], file: { format: "epub", file_size: 4, checksum: "abc", download_url: "https://files.example/book.epub" } }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const book = await spl.library.books.get("book 1");
 
     expect(book.id).toBe("book 1");
@@ -66,7 +66,7 @@ describe("SDK Library API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 1, next: null, previous: null, results: [row] }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const result = await spl.library.books.list();
     expect(result.results[0]).not.toHaveProperty("groups");
     expect(result.results[0]).not.toHaveProperty("file");
@@ -97,7 +97,7 @@ describe("SDK Library API", () => {
       }],
     }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const result = await spl.library.books.list();
 
     expect(result.results[0]).toEqual({
@@ -131,7 +131,7 @@ describe("SDK Library API", () => {
       groups: [{ id: "g1", name: "Public", description: "", is_public_group: true }],
     }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const book = await spl.library.books.get("b1");
 
     expect(book.file).toEqual({ format: "epub", fileSize: 123456, checksum: "checksum", downloadUrl: "https://api.example/library/books/b1/download/" });
@@ -143,7 +143,7 @@ describe("SDK Library API", () => {
   it("library.search uses the slashless route and maps broad-search parameters", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
 
     await spl.library.search({ q: "", ordering: "-series", excludeShelf: "s1", excludeGroup: "g1", page: 2, pageSize: 40 });
 
@@ -162,7 +162,7 @@ describe("SDK Library API", () => {
       { name: "list tags", response: jsonResponse({ count: 0, next: null, previous: null, results: [] }) },
       { name: "get tag", response: jsonResponse({ id: "t 1", name: "Classic", slug: "classic", book_count: 3 }) },
     ]);
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.library.tags.list({ q: "class", ordering: "-book_count", page: 2, pageSize: 10 });
     await spl.library.tags.get("t 1");
 
@@ -187,7 +187,7 @@ describe("SDK Library API", () => {
       { name: "get author", response: jsonResponse({ id: "a1", name: "Author" }) },
     ]);
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.library.series.list({ q: "cycle", tag: "classic", page: 3, pageSize: 25, includePreviewBooks: true, previewLimit: 8, excludeId: "s0", ordering: "-book_count" });
     await spl.library.authors.list({ q: "le guin", tag: "classic", page: 4, pageSize: 10, includePreviewBooks: false, excludeId: "a0", ordering: "name" });
     const projectedSeries = await spl.library.series.get("s1", { includePreviewBooks: true, previewLimit: 4 });
@@ -219,7 +219,7 @@ describe("SDK Library API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: 42, title: "No File" }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await expect(spl.library.books.getDownloadUrl(42)).rejects.toThrowError(/without a file download URL/i);
   });
 
@@ -237,7 +237,7 @@ describe("SDK Library API", () => {
       }),
     );
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const blob = await spl.library.books.download(book);
     expect(blob.size).toBeGreaterThan(0);
 
@@ -252,7 +252,7 @@ describe("SDK Library API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["epub"], { type: "application/epub+zip" })));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const blob = await spl.library.books.download(1);
     expect(blob.size).toBeGreaterThan(0);
 
@@ -266,7 +266,7 @@ describe("SDK Library API", () => {
       .mockResolvedValueOnce(blobResponse(new Blob(["one"], { type: "image/jpeg" })))
       .mockResolvedValueOnce(blobResponse(new Blob(["two"], { type: "image/png" })))
       .mockResolvedValueOnce(blobResponse(new Blob(["three"], { type: "image/webp" })));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "secret" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "secret" });
 
     const relative = await spl.library.books.downloadCover("/media/cover.jpg");
     const sameOrigin = await spl.library.books.downloadCover("https://api.example/media/cover.png");
@@ -290,7 +290,7 @@ describe("SDK Library API", () => {
   it("does not require an access token to download a public cover", async () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["cover"], { type: "image/jpeg" })));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example" });
 
     await expect(spl.library.books.downloadCover("/media/cover.jpg")).resolves.toMatchObject({
       contentType: "image/jpeg",

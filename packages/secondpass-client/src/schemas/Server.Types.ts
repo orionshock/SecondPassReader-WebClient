@@ -5,6 +5,8 @@ export type ServerPublicGroup = {
 };
 
 export type ServerInfo = {
+  serverId: string;
+  serverUrls: string[];
   name: string;
   description: string;
   bannerText: string;

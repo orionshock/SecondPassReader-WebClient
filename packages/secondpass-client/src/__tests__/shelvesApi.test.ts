@@ -19,7 +19,7 @@ describe("SDK Shelves API", () => {
       { name: "list personal shelves", response: jsonResponse({ count: 0, next: null, previous: null, results: [] }) },
     ]);
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.shelves.list({
       scope: "shared",
       ownerGroup: 42,
@@ -54,7 +54,7 @@ describe("SDK Shelves API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.shelves.items("shelf-1", { page: 2, pageSize: 50, ordering: "author" });
 
     const url = new URL(String(fetchMock.mock.calls[0]![0]));
@@ -68,7 +68,7 @@ describe("SDK Shelves API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "shelf 1", name: "Shelf" }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.shelves.get("shelf 1", { includePreviewBooks: true });
 
     const url = new URL(String(fetchMock.mock.calls[0]![0]));
@@ -83,7 +83,7 @@ describe("SDK Shelves API", () => {
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }))
       .mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.shelves.items("shelf-1", { ordering: "position" });
     await spl.shelves.items("shelf-1", { ordering: "title" });
     await spl.shelves.items("shelf-1", { ordering: "author" });
@@ -100,7 +100,7 @@ describe("SDK Shelves API", () => {
     const fetchMock = asMockFetch();
     fetchMock.mockResolvedValueOnce(jsonResponse({ count: 0, next: null, previous: null, results: [] }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.shelves.list({ ownerGroup: "group-1" });
 
     const unscopedUrl = new URL(String(fetchMock.mock.calls[0]![0]));
@@ -123,7 +123,7 @@ describe("SDK Shelves API", () => {
       { name: "remove shelf", response: emptyResponse() },
     ]);
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await spl.shelves.create({ name: "Later", description: "<p>To <strong>read</strong></p>", visibility: "private", owner_type: "user" });
     await spl.shelves.update("shelf-1", { name: "Renamed", description: "<p>Updated<br>again</p>" });
     await spl.shelves.addItem("shelf-1", { book: "10" });

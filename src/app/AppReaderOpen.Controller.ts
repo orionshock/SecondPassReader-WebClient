@@ -87,7 +87,7 @@ export function useAppReaderOpenController({
     if (workflowStep !== "library_home") return;
     if (!route || route.kind !== "reader") return;
     if (!connection) return;
-    if (connectivity !== "offline" && (!connection.apiBaseUrl || !connection.accessToken || !spl)) return;
+    if (connectivity !== "offline" && (!connection.serverId || !connection.accessToken || !spl)) return;
 
     const requestedBookId = route.bookId;
     if (openedBook?.book?.id === requestedBookId) return;

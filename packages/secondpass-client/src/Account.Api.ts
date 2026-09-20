@@ -22,7 +22,7 @@ type CurrentUserWire = {
 
 export async function getCurrentUser(ctx: AuthenticatedClientContext): Promise<CurrentUser> {
   const wire = await requestJson<CurrentUserWire>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: "/accounts/me/",
@@ -61,7 +61,7 @@ export async function revokeClientSession(
 ): Promise<void> {
   try {
     await requestVoid({
-      apiBaseUrl: ctx.apiBaseUrl,
+      apiRootUrl: ctx.apiRootUrl,
       accessToken: ctx.accessToken,
       tokenType: ctx.tokenType,
       endpointOrUrl: `/accounts/me/client-sessions/${encodeURIComponent(clientSessionId)}/`,

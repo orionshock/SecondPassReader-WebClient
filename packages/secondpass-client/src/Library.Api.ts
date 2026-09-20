@@ -139,21 +139,21 @@ function addGroupParams(url: URL, params: GroupListParams): void {
 }
 
 async function list<W, T>(ctx: AuthenticatedClientContext, path: string, configure: (url: URL) => void, project: (wire: W) => T): Promise<PaginatedResponse<T>> {
-  const url = new URL(resolveUrl(ctx.apiBaseUrl, path));
+  const url = new URL(resolveUrl(ctx.apiRootUrl, path));
   configure(url);
-  const wire = await requestJson<WirePage<W>>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }) } });
+  const wire = await requestJson<WirePage<W>>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }) } });
   return page(wire, project);
 }
 async function catalogList<W, T>(ctx: AuthenticatedClientContext, path: string, configure: (url: URL) => void, project: (wire: W) => T): Promise<CatalogResultPage<T>> {
-  const url = new URL(resolveUrl(ctx.apiBaseUrl, path));
+  const url = new URL(resolveUrl(ctx.apiRootUrl, path));
   configure(url);
-  const wire = await requestJson<WireCatalogPage<W>>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }) } });
+  const wire = await requestJson<WireCatalogPage<W>>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403 }) } });
   return catalogPage(wire, project);
 }
 async function get<W, T>(ctx: AuthenticatedClientContext, path: string, notFound: string, project: (wire: W) => T, configure?: (url: URL) => void): Promise<T> {
-  const url = new URL(resolveUrl(ctx.apiBaseUrl, path));
+  const url = new URL(resolveUrl(ctx.apiRootUrl, path));
   configure?.(url);
-  const wire = await requestJson<W>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403, notFound }) } });
+  const wire = await requestJson<W>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: url.toString(), options: { errorMessages: authErrorMessages({ forbidden: LIBRARY_FORBIDDEN_403, notFound }) } });
   return project(wire);
 }
 
@@ -175,7 +175,7 @@ export const listGroupSeries = (ctx: AuthenticatedClientContext, groupId: string
 export const listGroupTags = (ctx: AuthenticatedClientContext, groupId: string, params: TagListParams = {}) => list(ctx, `/library/groups/${encodeURIComponent(groupId)}/tags/`, (url) => addTagParams(url, params), tag);
 
 export async function downloadBookFile(ctx: AuthenticatedClientContext, bookId: string): Promise<BookFileDownloadResult> {
-  const { blob, response } = await requestAuthenticatedBlob({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: resolveUrl(ctx.apiBaseUrl, `/library/books/${encodeURIComponent(bookId)}/download/`), options: { accept: "application/epub+zip, application/octet-stream, */*", errorMessages: authErrorMessages({ forbidden: LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 }) } });
+  const { blob, response } = await requestAuthenticatedBlob({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl: resolveUrl(ctx.apiRootUrl, `/library/books/${encodeURIComponent(bookId)}/download/`), options: { accept: "application/epub+zip, application/octet-stream, */*", errorMessages: authErrorMessages({ forbidden: LIBRARY_FILE_DOWNLOAD_FORBIDDEN_403 }) } });
   const contentType = response.headers.get("content-type") ?? undefined;
   const contentDisposition = response.headers.get("content-disposition") ?? undefined;
   const contentLengthRaw = response.headers.get("content-length");
@@ -184,10 +184,10 @@ export async function downloadBookFile(ctx: AuthenticatedClientContext, bookId: 
 }
 
 export async function downloadBookCover(
-  apiBaseUrl: string,
+  apiRootUrl: string,
   coverUrl: string,
 ): Promise<BookCoverDownloadResult> {
-  const url = new URL(coverUrl, apiBaseUrl);
+  const url = new URL(coverUrl, apiRootUrl);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Book cover URL must use HTTP or HTTPS.");
   }

@@ -3,6 +3,16 @@ import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 
 type VerifiedUser = NonNullable<ActiveConnection["verifiedUser"]>;
 
+export class ServerIdentityMismatchError extends Error {
+  constructor() {
+    super("Library server ID does not match the connected Library.");
+  }
+}
+
+export function assertServerIdentity(connection: ActiveConnection, serverInfo: ServerInfo): void {
+  if (connection.serverId !== serverInfo.serverId) throw new ServerIdentityMismatchError();
+}
+
 export function applyCurrentAccountToConnection(
   connection: ActiveConnection,
   me: CurrentUser,
@@ -23,8 +33,10 @@ export function applyServerInfoToConnection(
   serverInfo: ServerInfo,
   isoNow: string,
 ): ActiveConnection {
+  assertServerIdentity(connection, serverInfo);
   return {
     ...connection,
+    serverUrls: serverInfo.serverUrls,
     serverName: serverInfo.name,
     serverDescription: serverInfo.description,
     serverVersion: serverInfo.version,
@@ -64,6 +76,8 @@ export function hasCurrentAccountChanged(connection: ActiveConnection, next: Act
     connection.serverName !== next.serverName ||
     connection.serverDescription !== next.serverDescription ||
     connection.serverVersion !== next.serverVersion ||
+    connection.serverId !== next.serverId ||
+    JSON.stringify(connection.serverUrls) !== JSON.stringify(next.serverUrls) ||
     connection.serverReleaseDate !== next.serverReleaseDate ||
     connection.readingClientBaseUrl !== next.readingClientBaseUrl ||
     connection.marginaliaProfileUri !== next.marginaliaProfileUri ||

@@ -22,7 +22,7 @@ export async function listShelves(
     throw new TypeError("Shelf scope 'personal' cannot be combined with ownerGroup.");
   }
 
-  const url = new URL(resolveUrl(ctx.apiBaseUrl, "/shelves/"));
+  const url = new URL(resolveUrl(ctx.apiRootUrl, "/shelves/"));
   if (input?.scope) url.searchParams.set("scope", input.scope);
   if (input?.ownerGroup !== undefined) url.searchParams.set("owner_group", String(input.ownerGroup));
   if (input?.book !== undefined) url.searchParams.set("book", String(input.book));
@@ -32,7 +32,7 @@ export async function listShelves(
   if (input?.ordering) url.searchParams.set("ordering", input.ordering);
 
   return requestJson<PaginatedShelfResponse>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
@@ -46,10 +46,10 @@ export async function getShelf(
   ctx: AuthenticatedClientContext,
   input: { shelfId: string; includePreviewBooks?: boolean },
 ): Promise<Shelf> {
-  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`));
+  const url = new URL(resolveUrl(ctx.apiRootUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`));
   if (input.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
   return requestJson<Shelf>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
@@ -63,9 +63,9 @@ export async function getShelf(
 }
 
 export async function createShelf(ctx: AuthenticatedClientContext, input: CreateShelfInput): Promise<Shelf> {
-  const url = resolveUrl(ctx.apiBaseUrl, "/shelves/");
+  const url = resolveUrl(ctx.apiRootUrl, "/shelves/");
   return requestJson<Shelf>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
@@ -81,9 +81,9 @@ export async function updateShelf(
   ctx: AuthenticatedClientContext,
   input: { shelfId: string; update: UpdateShelfInput },
 ): Promise<Shelf> {
-  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
+  const url = resolveUrl(ctx.apiRootUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
   return requestJson<Shelf>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
@@ -99,9 +99,9 @@ export async function updateShelf(
 }
 
 export async function deleteShelf(ctx: AuthenticatedClientContext, input: { shelfId: string }): Promise<void> {
-  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
+  const url = resolveUrl(ctx.apiRootUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`);
   return requestJson<void>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
@@ -119,13 +119,13 @@ export async function listShelfItems(
   ctx: AuthenticatedClientContext,
   input: { shelfId: string; page?: number; pageSize?: number; ordering?: string },
 ): Promise<PaginatedShelfItemResponse> {
-  const url = new URL(resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/items/`));
+  const url = new URL(resolveUrl(ctx.apiRootUrl, `/shelves/${encodeURIComponent(input.shelfId)}/items/`));
   if (typeof input.page === "number") url.searchParams.set("page", String(input.page));
   if (typeof input.pageSize === "number") url.searchParams.set("page_size", String(input.pageSize));
   if (input.ordering) url.searchParams.set("ordering", input.ordering);
 
   return requestJson<PaginatedShelfItemResponse>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url.toString(),
@@ -142,9 +142,9 @@ export async function addShelfItem(
   ctx: AuthenticatedClientContext,
   input: { shelfId: string; item: AddShelfItemInput },
 ): Promise<ShelfItem> {
-  const url = resolveUrl(ctx.apiBaseUrl, `/shelves/${encodeURIComponent(input.shelfId)}/items/`);
+  const url = resolveUrl(ctx.apiRootUrl, `/shelves/${encodeURIComponent(input.shelfId)}/items/`);
   return requestJson<ShelfItem>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
@@ -164,11 +164,11 @@ export async function updateShelfItem(
   input: { shelfId: string; itemId: string; update: UpdateShelfItemInput },
 ): Promise<ShelfItem> {
   const url = resolveUrl(
-    ctx.apiBaseUrl,
+    ctx.apiRootUrl,
     `/shelves/${encodeURIComponent(input.shelfId)}/items/${encodeURIComponent(input.itemId)}/`,
   );
   return requestJson<ShelfItem>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url,
@@ -188,11 +188,11 @@ export async function deleteShelfItem(
   input: { shelfId: string; itemId: string },
 ): Promise<void> {
   const url = resolveUrl(
-    ctx.apiBaseUrl,
+    ctx.apiRootUrl,
     `/shelves/${encodeURIComponent(input.shelfId)}/items/${encodeURIComponent(input.itemId)}/`,
   );
   return requestJson<void>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: url,

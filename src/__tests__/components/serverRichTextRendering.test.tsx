@@ -84,6 +84,8 @@ describe("server descriptive rich text", () => {
           id: "profile-1",
           label: "Library",
           serverBaseUrl: "https://library.example",
+          serverId: "123e4567-e89b-42d3-a456-426614174000",
+          serverUrls: [],
           serverName: "Library",
           serverDescription: "<p>Server <strong>description</strong>.</p>",
           accessToken: "token",

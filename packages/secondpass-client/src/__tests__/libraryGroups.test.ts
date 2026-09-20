@@ -10,7 +10,7 @@ describe("library group client", () => {
   it("maps group preview controls on list and detail", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValueOnce(json(page)).mockResolvedValueOnce(json({ id: "group-1", name: "Group", description: "", is_public_group: false, preview_books: [] }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await spl.library.groups.list({ q: "club", book: "book-1", ordering: "-name", includePreviewBooks: true, previewLimit: 8, pageSize: 25 });
     await spl.library.groups.get("group-1", { includePreviewBooks: true, previewLimit: 4 });
     const listUrl = new URL(String(fetchMock.mock.calls[0]![0]));
@@ -23,7 +23,7 @@ describe("library group client", () => {
   it("keeps group book q on the title-filter browse endpoint", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation(async () => json(page));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await spl.library.groups.books("group-1", { q: "broad", excludeShelf: "shelf-1", series: "series-1", ordering: "series_index" });
     const booksUrl = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(booksUrl.origin + booksUrl.pathname).toBe("https://api.example/library/groups/group-1/books/");
@@ -35,7 +35,7 @@ describe("library group client", () => {
   it("maps group broad search to the scoped search endpoint", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation(async () => json(page));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await spl.library.groups.search("group 1", { q: "broad", ordering: "-author", excludeShelf: "shelf-1", page: 2, pageSize: 40 });
     const url = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(url.origin + url.pathname).toBe("https://api.example/library/groups/group%201/search");
@@ -49,7 +49,7 @@ describe("library group client", () => {
   it("maps normalized group author and series axis controls", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation(async () => json(page));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await spl.library.groups.authors("group-1", { q: "author", excludeId: "author-0", ordering: "-book_count", includePreviewBooks: true, previewLimit: 6 });
     await spl.library.groups.series("group-1", { q: "series", tag: "classic", excludeId: "series-0", ordering: "name", includePreviewBooks: true, previewLimit: 5 });
     const authorsUrl = new URL(String(fetchMock.mock.calls[0]![0]));
@@ -69,7 +69,7 @@ describe("library group client", () => {
   it("uses the group tag axis without preview-only parameters", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation(async () => json(page));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await spl.library.groups.tags("group-1", { q: "tag", ordering: "book_count", page: 2, pageSize: 50 });
     const tagsUrl = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(tagsUrl.origin + tagsUrl.pathname).toBe("https://api.example/library/groups/group-1/tags/");

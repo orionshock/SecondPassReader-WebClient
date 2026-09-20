@@ -95,7 +95,8 @@ function baseProfile(): ActiveConnection {
     id: "local-1",
     label: "Discovery Server Name",
     serverBaseUrl: "https://server.example",
-    apiBaseUrl: "https://api.example",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     serverName: "Discovery Server Name",
     accessToken: "token",
     createdAt: "2026-08-01T00:00:00.000Z",
@@ -122,6 +123,8 @@ function currentUser(): CurrentUser {
 
 function serverInfo(): ServerInfo {
   return {
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: ["https://library.example"],
     name: "Authenticated Server Name",
     description: "Authenticated server description",
     bannerText: "Server banner",

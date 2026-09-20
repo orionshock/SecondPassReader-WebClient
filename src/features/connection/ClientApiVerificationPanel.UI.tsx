@@ -21,14 +21,14 @@ export function ClientApiVerification({ connection, onConnectionChanged, autoVer
   const autoVerifyAttemptedRef = useRef<string | null>(null);
 
   const verificationIdentity = connection
-    ? JSON.stringify([connection.id, connection.serverBaseUrl, connection.accessToken, connection.authenticationState])
+    ? JSON.stringify([connection.id, connection.serverId, connection.serverBaseUrl, connection.accessToken, connection.authenticationState])
     : null;
 
   useEffect(() => {
     if (!autoVerify) return;
     if (!connection) return;
     if (!connection.accessToken) return;
-    if (!connection.apiBaseUrl) return;
+    if (!connection.serverId) return;
     if (connection.verifiedAt && connection.authenticationState !== "verifying-repair") return;
     if (autoVerifyAttemptedRef.current === verificationIdentity) return;
     autoVerifyAttemptedRef.current = verificationIdentity;
@@ -38,7 +38,7 @@ export function ClientApiVerification({ connection, onConnectionChanged, autoVer
 
   async function verify() {
     if (!connection) return;
-    if (!connection.apiBaseUrl) {
+    if (!connection.serverId) {
       setState({ phase: "error", message: "Library details are incomplete. Connect again." });
       return;
     }
@@ -64,6 +64,10 @@ export function ClientApiVerification({ connection, onConnectionChanged, autoVer
         phase: "error",
         message: "The connection was verified, but the previous account's offline data couldn't be removed. Try again.",
       });
+      return;
+    }
+    if (result.status === "server-identity-mismatch") {
+      setState({ phase: "error", message: "This route returned a different Library server ID. Check the Library URL." });
       return;
     }
     if (result.status === "authorization-failed") {

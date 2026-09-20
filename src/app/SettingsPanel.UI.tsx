@@ -9,7 +9,7 @@ import {
 } from "../storage/ActiveConnection.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
 import { discoverSecondPass } from "../features/connection/ConnectionServer.Queries";
-import { applyAuthenticatedContextToConnection } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection, ServerIdentityMismatchError } from "../features/connection/ConnectionAccountProfile.Mapper";
 import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import { createSplClientFromConnection } from "./AppSplClient.Factory";
 import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
@@ -91,21 +91,23 @@ export function SettingsPanel({
     try {
       const discovery = await discoverSecondPass(connection.serverBaseUrl);
       if (!isActiveConnectionPublicationCurrent(publication)) return;
+      if (discovery.serverId !== connection.serverId) {
+        throw new ServerIdentityMismatchError();
+      }
       const now = new Date().toISOString();
       const discoveredConnection: ActiveConnection = {
         ...connection,
         serverName: discovery.server_name,
         serverDescription: discovery.server_description,
         serverVersion: discovery.server_version,
-        serverRelease: discovery.server_release,
         serverReleaseDate: discovery.server_release_date,
-        apiBaseUrl: discovery.api_base_url,
         lastCheckedAt: now,
       };
 
       const { currentUser, serverInfo } = await loadAuthenticatedContext(createSplClientFromConnection(discoveredConnection));
+      const checkedConnection = applyAuthenticatedContextToConnection(discoveredConnection, currentUser, serverInfo, now);
       publishActiveConnectionResult(publication, () => {
-        saveActiveConnection(applyAuthenticatedContextToConnection(discoveredConnection, currentUser, serverInfo, now));
+        saveActiveConnection(checkedConnection);
         onConnectionChanged();
         setState({ phase: "success", message: "Connection checked." });
       });
@@ -117,6 +119,8 @@ export function SettingsPanel({
           action: "check",
           message: isAuthenticationRepairError(e)
             ? "This connection needs repair."
+            : e instanceof ServerIdentityMismatchError
+              ? "This URL returned a different Library server ID. Check the Library URL."
             : isAuthorizationError(e)
               ? "Second Pass Library denied the connection check."
               : "Couldn't check the connection.",

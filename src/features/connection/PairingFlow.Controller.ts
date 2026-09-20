@@ -21,6 +21,7 @@ export function getPairingErrorMessage(reason: unknown): string {
 export async function runPairingAttempt(input: {
   spl: SecondPassClient;
   discovery: SecondPassDiscovery;
+  libraryBaseUrl: string;
   clientName: string;
   signal: AbortSignal;
   onLoginRequest: (request: ClientApiLoginRequestResponse) => void;
@@ -29,7 +30,7 @@ export async function runPairingAttempt(input: {
   delay?: (ms: number, signal: AbortSignal) => Promise<void>;
   now?: () => number;
 }) {
-  const loginRequest = await input.spl.server.createLoginRequest(input.discovery, {
+  const loginRequest = await input.spl.server.createLoginRequest(input.discovery, input.libraryBaseUrl, {
     clientName: input.clientName,
     clientType: "reader",
   });

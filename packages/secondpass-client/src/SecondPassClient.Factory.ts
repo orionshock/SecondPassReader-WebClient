@@ -85,8 +85,8 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
         const auth = requireAuth(ctx);
         return getServerInfo(auth);
       },
-      createLoginRequest: (discovery: SecondPassDiscovery, input?: { clientName?: string; clientType?: string }) =>
-        createLoginRequest(discovery, input),
+      createLoginRequest: (discovery: SecondPassDiscovery, libraryBaseUrl: string, input?: { clientName?: string; clientType?: string }) =>
+        createLoginRequest(discovery, libraryBaseUrl, input),
       pollLoginRequest: (pollUrl: string) => pollLoginRequest(pollUrl),
       consumeLoginRequest: (consumeUrl: string) => consumeLoginRequest(consumeUrl),
     },
@@ -123,7 +123,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
           return downloadBookBlob(book);
         },
         downloadCover: async (coverUrl) => {
-          return downloadBookCover(ctx.apiBaseUrl, coverUrl);
+          return downloadBookCover(ctx.apiRootUrl, coverUrl);
         },
       },
 

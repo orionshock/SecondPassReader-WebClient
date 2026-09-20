@@ -27,7 +27,7 @@ describe("SDK Account API", () => {
       }),
     );
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     const me = await spl.account.getCurrentUser();
 
     expect(me.username).toBe("ada");
@@ -61,7 +61,7 @@ describe("SDK Account API", () => {
       .mockResolvedValueOnce(jsonResponse({ username: "librarian", role: "librarian" }))
       .mockResolvedValueOnce(jsonResponse({ username: "reader", role: "reader" }));
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     await expect(spl.account.getCurrentUser()).resolves.toMatchObject({
       isOwner: false,
       isManager: true,
@@ -90,7 +90,7 @@ describe("SDK Account API", () => {
     fetchMock.mockResolvedValueOnce(emptyResponse());
 
     const spl = createSecondPassClient({
-      apiBaseUrl: "https://api.example/api/v1",
+      apiRootUrl: "https://api.example/api/v1",
       accessToken: "secret",
       tokenType: "Token",
     });
@@ -109,7 +109,7 @@ describe("SDK Account API", () => {
     [500, "http_error"],
   ] as const)("account.revokeClientSession maps HTTP %i through ApiError", async (status, kind) => {
     asMockFetch().mockResolvedValueOnce(new Response("revoke failed", { status }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example/api/v1", accessToken: "secret" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example/api/v1", accessToken: "secret" });
 
     const error = await spl.account.revokeClientSession("session-1").catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(ApiError);

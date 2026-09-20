@@ -8,8 +8,8 @@ import {
 } from "../../features/connection/PairingFlow.Controller";
 
 const discovery: SecondPassDiscovery = {
+  serverId: "123e4567-e89b-42d3-a456-426614174000",
   server_name: "Test Library",
-  api_base_url: "https://library.example/api/v1",
   client_api: {
     discovery_version: "1",
     login_request_endpoint: "/api/v1/client-api/login-requests/",
@@ -25,7 +25,7 @@ describe("pairing workflow", () => {
 
     await run(api);
 
-    expect(api.createLoginRequest).toHaveBeenCalledWith(discovery, { clientName: "Test Browser", clientType: "reader" });
+    expect(api.createLoginRequest).toHaveBeenCalledWith(discovery, "https://library.example", { clientName: "Test Browser", clientType: "reader" });
     expect(api.pollLoginRequest).toHaveBeenCalledWith("https://library.example/concrete/poll/request-1");
     expect(api.consumeLoginRequest).toHaveBeenCalledWith("https://library.example/concrete/consume/request-1");
     expect(api.pollLoginRequest).not.toHaveBeenCalledWith(discovery.client_api.poll_endpoint_template);
@@ -125,6 +125,7 @@ function run(api: ReturnType<typeof pairingApi>, overrides: {
   return runPairingAttempt({
     spl: { server: api } as unknown as SecondPassClient,
     discovery,
+    libraryBaseUrl: "https://library.example",
     clientName: "Test Browser",
     signal: overrides.signal ?? new AbortController().signal,
     onLoginRequest: vi.fn(),

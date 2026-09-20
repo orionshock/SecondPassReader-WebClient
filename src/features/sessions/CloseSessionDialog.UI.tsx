@@ -39,7 +39,7 @@ export function CloseSessionDialog({
   afterOptions?: CloseSessionAfterOption[];
   defaultAfterAction?: CloseSessionAfterAction;
   nextBook?: CompactBook | null;
-  coverBase?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null;
+  coverBase?: { serverBaseUrl?: string | null; apiRootUrl?: string | null } | string | null;
   onCancel: () => void;
   onSaveAndClose: (input: CloseSessionInput) => Promise<void>;
 }) {

@@ -52,7 +52,7 @@ type WireBootstrap = {
 };
 
 const forbidden = authErrorMessages({ forbidden: "Token is not allowed to access marginalia (403)." });
-const url = (ctx: AuthenticatedClientContext, path: string) => resolveUrl(ctx.apiBaseUrl, `/marginalia${path}`);
+const url = (ctx: AuthenticatedClientContext, path: string) => resolveUrl(ctx.apiRootUrl, `/marginalia${path}`);
 const page = <T, R>(value: WirePage<T>, project: (item: T) => R): PaginatedResponse<R> => ({
   count: value.count, next: value.next, previous: value.previous, results: value.results.map(project),
 });
@@ -89,8 +89,8 @@ const projectBootstrap = (value: WireBootstrap): MarginaliaBootstrap => ({
 });
 const progressBody = (value: MarginaliaProgressInput) => ({ cfi: value.cfi, ...(value.locationLabel !== undefined ? { location_label: value.locationLabel } : {}) });
 const finalizeBody = (value?: MarginaliaSessionFinalizeInput) => value ? ({ ...("name" in value ? { name: value.name } : {}), ...("notes" in value ? { notes: value.notes } : {}), ...(value.progress ? { progress: progressBody(value.progress) } : {}) }) : {};
-const get = <T>(ctx: AuthenticatedClientContext, endpointOrUrl: string) => requestJson<T>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl, options: { errorMessages: forbidden } });
-const send = <T>(ctx: AuthenticatedClientContext, endpointOrUrl: string, method: "POST" | "PUT" | "PATCH", bodyValue: unknown, headers?: Record<string, string>) => requestJson<T>({ apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl, options: { method, body: bodyValue, headers, errorMessages: forbidden } });
+const get = <T>(ctx: AuthenticatedClientContext, endpointOrUrl: string) => requestJson<T>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl, options: { errorMessages: forbidden } });
+const send = <T>(ctx: AuthenticatedClientContext, endpointOrUrl: string, method: "POST" | "PUT" | "PATCH", bodyValue: unknown, headers?: Record<string, string>) => requestJson<T>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl, options: { method, body: bodyValue, headers, errorMessages: forbidden } });
 
 export async function listMarginaliaBooks(ctx: AuthenticatedClientContext, input?: { page?: number; pageSize?: number }): Promise<PaginatedResponse<MarginaliaBookSummary>> {
   const target = new URL(url(ctx, "/books/")); if (input?.page !== undefined) target.searchParams.set("page", String(input.page)); if (input?.pageSize !== undefined) target.searchParams.set("page_size", String(input.pageSize));

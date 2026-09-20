@@ -121,7 +121,7 @@ function discoveryResult(serverBaseUrl: string, serverName: string, serverDescri
     discovery: {
       server_name: serverName,
       server_description: serverDescription,
-      api_base_url: `${serverBaseUrl}/api/v1`,
+      serverId: "123e4567-e89b-42d3-a456-426614174000",
       client_api: {
         discovery_version: "1",
         login_request_endpoint: "/client-api/login-requests/",

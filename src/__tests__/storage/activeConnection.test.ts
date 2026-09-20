@@ -20,11 +20,10 @@ describe("active connection persistence", () => {
 
     const verified: ActiveConnection = {
       ...unverified,
-      apiBaseUrl: "https://library.example/api/v1",
       serverName: "Library",
+      serverUrls: ["https://library.example:8443", "https://library.example"],
       serverDescription: "Description",
       serverVersion: "1.2.3",
-      serverRelease: "stable",
       serverReleaseDate: "2026-09-15",
       advancedLibraryGroupsEnabled: true,
       bannerText: null,
@@ -74,6 +73,9 @@ describe("active connection persistence", () => {
     ["Client API metadata", { clientApi: { discoveryVersion: "1", loginRequestEndpoint: "/login" } }],
     ["timestamp metadata", { lastCheckedAt: "not-a-time" }],
     ["required identity", { id: "" }],
+    ["server ID", { serverId: "not-a-uuid" }],
+    ["current route", { serverBaseUrl: "https://library.example/path" }],
+    ["route list", { serverUrls: ["https://library.example", "javascript:alert(1)"] }],
   ])("ignores a persisted record with malformed %s", (_label, malformed) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...connection(), ...malformed }));
 
@@ -86,6 +88,8 @@ function connection(): ActiveConnection {
     id: "connection-1",
     label: "Library",
     serverBaseUrl: "https://library.example",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     createdAt: "2026-09-15T00:00:00.000Z",
   };
 }

@@ -1,5 +1,5 @@
 import type { SecondPassDiscovery } from "@secondpass/client";
-import { createSecondPassClient } from "@secondpass/client";
+import { createSecondPassClient, deriveApiRootUrl, normalizeLibraryBaseUrl } from "@secondpass/client";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
 export class ConnectionSetupError extends Error {}
@@ -23,13 +23,16 @@ export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string }
     throw new ConnectionSetupError("Server URL must start with http:// or https://");
   }
 
-  const serverBaseUrl = `${url.origin}`.replace(/\/+$/, "");
+  if (url.pathname !== "/" || url.search || url.hash || url.username || url.password) {
+    throw new ConnectionSetupError("Enter the Library base URL without a path, query, or credentials.");
+  }
+  const serverBaseUrl = normalizeLibraryBaseUrl(withProtocol);
   return { serverBaseUrl };
 }
 
 export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
   try {
-    return await createSecondPassClient({ apiBaseUrl: serverBaseUrl }).server.discover(serverBaseUrl);
+    return await createSecondPassClient({ apiRootUrl: deriveApiRootUrl(serverBaseUrl) }).server.discover(serverBaseUrl);
   } catch (e) {
     debugWarn("reader", "Second Pass Library discovery did not complete", { serverBaseUrl, error: e });
     throw new ConnectionSetupError("Couldn't reach Second Pass Library. Check the address and try again.", { cause: e });

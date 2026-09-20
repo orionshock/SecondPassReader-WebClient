@@ -139,7 +139,8 @@ function profile(id: string, accessToken: string): ActiveConnection {
     id,
     label: "Library",
     serverBaseUrl: "https://library.example",
-    apiBaseUrl: "https://library.example/api/v1",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     accessToken,
     verifiedAt: "2026-09-14T00:00:00.000Z",
     verifiedUser: { profileId: "profile-a", username: "reader-old" },
@@ -167,6 +168,8 @@ function currentUser(profileId: string): CurrentUser {
 
 function serverInfo(): ServerInfo {
   return {
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: ["https://library.example"],
     name: "Library",
     description: "",
     bannerText: "",

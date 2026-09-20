@@ -17,7 +17,7 @@ export function EndOfBookDialog({
 }: {
   nextBook: CompactBook | null;
   nextBookStatus: "idle" | "loading" | "ready" | "error";
-  coverBase?: { serverBaseUrl?: string | null; apiBaseUrl?: string | null } | string | null;
+  coverBase?: { serverBaseUrl?: string | null; apiRootUrl?: string | null } | string | null;
   hasSeries: boolean;
   onStartNextBook: (book: CompactBook) => void;
   onFinishSession: () => void;

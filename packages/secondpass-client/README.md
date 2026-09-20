@@ -7,17 +7,21 @@ authentication headers, or publication URLs for normal flows.
 ## Workspace import
 
 ```ts
-import { createSecondPassClient } from "@secondpass/client";
+import { createSecondPassClient, deriveApiRootUrl } from "@secondpass/client";
 ```
 
 ## Create a client
 
 ```ts
 const spl = createSecondPassClient({
-  apiBaseUrl,
+  apiRootUrl: deriveApiRootUrl(libraryBaseUrl),
   accessToken,
   tokenType,
 });
+
+`serverId` identifies a Library; its base URLs are routes. The SDK derives the API root from the
+current root-mounted Library URL. Authenticated server info exposes ordered `serverUrls` without
+implying that each route is reachable.
 ```
 
 `accessToken` is optional for public discovery, linking, and cover retrieval. It is required for

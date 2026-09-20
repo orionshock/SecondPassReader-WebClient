@@ -31,7 +31,7 @@ describe("library catalog result aggregates", () => {
   it("normalizes contextual tags on global and Group Book result pages", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation(async () => json({ count: 1, next: null, previous: null, catalog_tags: [aggregate], results: [book] }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
 
     const global = await spl.library.books.list();
     const group = await spl.library.groups.books("group-1");
@@ -58,7 +58,7 @@ describe("library catalog result aggregates", () => {
         catalog_tags: [aggregate],
         results: [{ id: "series-1", name: "Dune", sort_name: "Dune", summary: "", book_count: 2, preview_books: [] }],
       }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
 
     expect((await spl.library.authors.list()).catalogTags?.[0]?.bookCount).toBe(84);
     expect((await spl.library.groups.series("group-1")).catalogTags?.[0]?.bookCount).toBe(84);
@@ -69,7 +69,7 @@ describe("library catalog result aggregates", () => {
     fetchMock
       .mockResolvedValueOnce(json({ count: 0, next: null, previous: null, catalog_tags: [], results: [] }))
       .mockResolvedValueOnce(json({ count: 0, next: null, previous: null, results: [] }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
 
     expect((await spl.library.search({ q: "missing" })).catalogTags).toEqual([]);
     expect((await spl.library.books.list()).catalogTags).toBeUndefined();
@@ -78,7 +78,7 @@ describe("library catalog result aggregates", () => {
   it("sends the selected tag through global and Group broad Book search", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockImplementation(async () => json({ count: 0, next: null, previous: null, catalog_tags: [], results: [] }));
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
 
     await spl.library.search({ q: "space", tag: "science-fiction" });
     await spl.library.groups.search("group-1", { q: "space", tag: "science-fiction" });

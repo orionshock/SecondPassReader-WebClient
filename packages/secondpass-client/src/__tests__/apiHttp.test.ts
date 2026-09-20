@@ -25,7 +25,7 @@ describe("SDK HTTP contracts", () => {
     expect(resolveUrl("https://api.example/root/", "https://files.example/book.epub")).toBe("https://files.example/book.epub");
 
     await requestJson({
-      apiBaseUrl: "https://api.example",
+      apiRootUrl: "https://api.example",
       accessToken: "token",
       tokenType: "Bearer",
       endpointOrUrl: "/direct/",
@@ -47,7 +47,7 @@ describe("SDK HTTP contracts", () => {
       .mockResolvedValueOnce(blobResponse(new Blob(["x"])));
 
     await requestJson({
-      apiBaseUrl: "https://api.example",
+      apiRootUrl: "https://api.example",
       accessToken: "configured-token",
       tokenType: "Token",
       endpointOrUrl: "/authenticated/",
@@ -63,7 +63,7 @@ describe("SDK HTTP contracts", () => {
       },
     });
     await requestAuthenticatedBlob({
-      apiBaseUrl: "https://api.example",
+      apiRootUrl: "https://api.example",
       accessToken: "configured-token",
       tokenType: "Token",
       endpointOrUrl: "/file/",
@@ -97,7 +97,7 @@ describe("SDK HTTP contracts", () => {
     asMockFetch().mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(requestJson({
-      apiBaseUrl: "https://api.example",
+      apiRootUrl: "https://api.example",
       accessToken: "token",
       tokenType: "Bearer",
       endpointOrUrl: "/empty/",
@@ -122,7 +122,7 @@ describe("SDK HTTP contracts", () => {
       requestAnonymousJsonUrl({ url: "https://api.example/missing/", errorMessages: { 404: "Custom not found." } }),
     ).rejects.toMatchObject({ kind: "http_error", status: 404, message: "Custom not found." });
 
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await expect(spl.library.books.download({ id: "1", title: "T" } as unknown as CompactBook)).rejects.toMatchObject({
       kind: "forbidden",
       status: 403,
@@ -163,7 +163,7 @@ describe("SDK HTTP contracts", () => {
       statusText: "Bad Gateway",
       message: "Request failed: 502 Bad Gateway",
     });
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "token" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "token" });
     await expect(spl.marginalia.sessions.recent()).rejects.toMatchObject({
       status: 404,
       statusText: "Not Found",
@@ -182,13 +182,13 @@ describe("SDK HTTP contracts", () => {
     });
   });
 
-  it("client config requires apiBaseUrl and authenticated Blob uses the default accept header", async () => {
+  it("client config requires apiRootUrl and authenticated Blob uses the default accept header", async () => {
     const fetchMock = asMockFetch();
-    expect(() => createSecondPassClient({ apiBaseUrl: "" })).toThrowError(/apiBaseUrl is required/i);
+    expect(() => createSecondPassClient({ apiRootUrl: "" })).toThrowError(/apiRootUrl is required/i);
 
     fetchMock.mockResolvedValueOnce(blobResponse(new Blob(["x"])));
     const result = await requestAuthenticatedBlob({
-      apiBaseUrl: "https://api.example",
+      apiRootUrl: "https://api.example",
       accessToken: "token",
       tokenType: "Bearer",
       endpointOrUrl: "/files/book.epub",
@@ -206,7 +206,7 @@ describe("SDK HTTP contracts", () => {
 
   it("401 marginalia responses surface as ApiError(kind=unauthorized)", async () => {
     const fetchMock = asMockFetch();
-    const spl = createSecondPassClient({ apiBaseUrl: "https://api.example", accessToken: "t" });
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
     fetchMock.mockResolvedValueOnce(new Response("nope", { status: 401 }));
     await expect(spl.marginalia.sessions.list()).rejects.toMatchObject({ kind: "unauthorized", status: 401 });
   });

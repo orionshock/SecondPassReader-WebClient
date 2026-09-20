@@ -1,8 +1,12 @@
 import { authErrorMessages, requestJson } from "./ApiHttp.Adapter";
 import type { AuthenticatedClientContext } from "./ClientContext.Policy";
 import type { ServerInfo } from "./schemas/Server.Types";
+import { isServerId } from "./ServerIdentity.Policy";
+import { isLibraryBaseUrl } from "./ServerRoute.Policy";
 
 type ServerInfoWire = {
+  server_id?: unknown;
+  server_urls?: unknown;
   server_name?: string;
   server_description?: string;
   server_banner_message?: string;
@@ -20,7 +24,7 @@ type ServerInfoWire = {
 
 export async function getServerInfo(ctx: AuthenticatedClientContext): Promise<ServerInfo> {
   const wire = await requestJson<ServerInfoWire>({
-    apiBaseUrl: ctx.apiBaseUrl,
+    apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: "/server/info/",
@@ -29,7 +33,14 @@ export async function getServerInfo(ctx: AuthenticatedClientContext): Promise<Se
     },
   });
 
+  if (!isServerId(wire.server_id) || !Array.isArray(wire.server_urls)
+    || !wire.server_urls.every(isLibraryBaseUrl)) {
+    throw new Error("Invalid authenticated server information.");
+  }
+
   return {
+    serverId: wire.server_id,
+    serverUrls: wire.server_urls,
     name: wire.server_name ?? "",
     description: wire.server_description ?? "",
     bannerText: wire.server_banner_message ?? "",

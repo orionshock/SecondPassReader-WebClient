@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createSecondPassClient } from "@secondpass/client";
+import { createSecondPassClient, deriveApiRootUrl } from "@secondpass/client";
 import type { ClientApiLoginRequestResponse, SecondPassDiscovery } from "@secondpass/client";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
@@ -28,14 +28,13 @@ type LinkingState =
   | { phase: "error"; message: string };
 
 function toDiscovery(connection: ActiveConnection): SecondPassDiscovery | null {
-  if (!connection.apiBaseUrl || !connection.serverName || !connection.clientApi) return null;
+  if (!connection.serverId || !connection.serverName || !connection.clientApi) return null;
   return {
+    serverId: connection.serverId,
     server_name: connection.serverName,
     server_description: connection.serverDescription,
     server_version: connection.serverVersion,
-    server_release: connection.serverRelease,
     server_release_date: connection.serverReleaseDate,
-    api_base_url: connection.apiBaseUrl,
     client_api: {
       discovery_version: connection.clientApi.discoveryVersion,
       login_request_endpoint: connection.clientApi.loginRequestEndpoint,
@@ -91,10 +90,11 @@ export function ClientApiLinking({ connection, onConnectionChanged, onCancel }: 
     setState({ phase: "starting" });
 
     try {
-      const spl = createSecondPassClient({ apiBaseUrl: connection.apiBaseUrl ?? "" });
+      const spl = createSecondPassClient({ apiRootUrl: deriveApiRootUrl(connection.serverBaseUrl) });
       await runPairingAttempt({
         spl,
         discovery,
+        libraryBaseUrl: connection.serverBaseUrl,
         clientName: clientName.trim(),
         signal: abort.signal,
         onLoginRequest: (loginRequest) => {

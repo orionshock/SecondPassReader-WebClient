@@ -1,7 +1,7 @@
 import { ApiError } from "./ApiHttp.Adapter";
 
 export type ClientContext = {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   /**
    * Optional: `server.*` discovery/linking calls may be unauthenticated.
    *
@@ -12,19 +12,19 @@ export type ClientContext = {
 };
 
 export type AuthenticatedClientContext = {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken: string;
   tokenType: string;
 };
 
 export function createClientContext(input: {
-  apiBaseUrl: string;
+  apiRootUrl: string;
   accessToken?: string;
   tokenType?: string;
 }): ClientContext {
-  if (!input.apiBaseUrl) throw new Error("SecondPassClient config.apiBaseUrl is required.");
+  if (!input.apiRootUrl) throw new Error("SecondPassClient config.apiRootUrl is required.");
   return {
-    apiBaseUrl: input.apiBaseUrl,
+    apiRootUrl: input.apiRootUrl,
     accessToken: input.accessToken,
     tokenType: input.tokenType ?? "Bearer",
   };
@@ -34,6 +34,6 @@ export function requireAuth(ctx: ClientContext): AuthenticatedClientContext {
   if (!ctx.accessToken) {
     throw new ApiError({ kind: "unauthorized", status: 401, message: "Access token is missing." });
   }
-  return { apiBaseUrl: ctx.apiBaseUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType };
+  return { apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType };
 }
 

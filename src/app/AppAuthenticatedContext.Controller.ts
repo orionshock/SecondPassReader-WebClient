@@ -6,7 +6,9 @@ import {
   publishActiveConnectionResult,
   saveActiveConnection,
 } from "../storage/ActiveConnection.Store";
-import { applyAuthenticatedContextToConnection, hasCurrentAccountChanged } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { applyAuthenticatedContextToConnection, hasCurrentAccountChanged, ServerIdentityMismatchError } from "../features/connection/ConnectionAccountProfile.Mapper";
+import { markConnectionRepairRequired } from "../features/connection/ConnectionRepair.State";
+import { debugWarn } from "../lib/debug/DebugLogger.Diagnostics";
 import { loadAuthenticatedContext } from "../features/connection/AuthenticatedContext.Queries";
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 
@@ -31,10 +33,10 @@ export function useAppAuthenticatedContextController({
     // Keep verified user display fresh on page load and periodic focus changes.
     if (workflowStep !== "library_home") return;
     if (!connection?.id) return;
-    if (!connection.apiBaseUrl || !connection.accessToken || !spl) return;
+    if (!connection.serverId || !connection.accessToken || !spl) return;
 
     const connectionId = connection.id;
-    const refreshIdentity = JSON.stringify([connectionId, connection.accessToken]);
+    const refreshIdentity = JSON.stringify([connectionId, connection.serverId, connection.serverBaseUrl, connection.accessToken]);
     const now = Date.now();
     const last = lastCheckRef.current[refreshIdentity] ?? 0;
     if (now - last < 60_000) return; // throttle (avoid spamming)
@@ -59,6 +61,17 @@ export function useAppAuthenticatedContextController({
         onConnectionChanged();
       });
     } catch (error) {
+      if (error instanceof ServerIdentityMismatchError) {
+        publishActiveConnectionResult(publication, () => {
+          debugWarn("reader", "[SPR connection] authenticated server ID changed at the current route", {
+            serverId: connection.serverId,
+            serverBaseUrl: connection.serverBaseUrl,
+          });
+          saveActiveConnection(markConnectionRepairRequired(connection));
+          onConnectionChanged();
+        });
+        return;
+      }
       publishActiveConnectionResult(publication, () => reportAuthorizationFailure(error));
       // Auth failure enters repair without destroying the last verified namespace.
     }

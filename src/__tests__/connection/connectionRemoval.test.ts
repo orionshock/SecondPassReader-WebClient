@@ -195,6 +195,8 @@ function connection(): ActiveConnection {
     id: "connection-a",
     label: "Library",
     serverBaseUrl: "https://library.example",
+    serverId: "123e4567-e89b-42d3-a456-426614174000",
+    serverUrls: [],
     createdAt: "2026-09-15T00:00:00.000Z",
   };
 }

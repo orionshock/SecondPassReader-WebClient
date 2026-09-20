@@ -1,5 +1,9 @@
 export { ApiError, type ApiErrorKind } from "./ApiHttp.Adapter";
 export { createSecondPassClient } from "./SecondPassClient.Factory";
+export { deriveApiRootUrl } from "./ServerRoute.Policy";
+export { isServerId } from "./ServerIdentity.Policy";
+export { isLibraryBaseUrl } from "./ServerRoute.Policy";
+export { normalizeLibraryBaseUrl } from "./ServerRoute.Policy";
 export type {
   SecondPassClient,
   SecondPassClientConfig,

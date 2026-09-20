@@ -27,6 +27,10 @@ authentication problem does not trigger an offline fallback.
 Account-owned records use a namespace derived from normalized Second Pass Library origin and the
 verified profile ID returned by `/accounts/me`:
 
+This is the current offline namespace model, pending a deliberate cutover to stable Library
+`serverId` plus profile ID. The route-derived namespace must not be interpreted as canonical
+Library identity. See [Library identity and routes](server-identity.md) for the impact audit.
+
 ```text
 server:<encoded-origin>|profile:<encoded-profile-id>
 ```

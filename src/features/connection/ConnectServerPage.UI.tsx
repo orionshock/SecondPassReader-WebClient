@@ -33,12 +33,11 @@ function newConnectionId() {
 
 function formatDiscoverySummary(discovery: SecondPassDiscovery) {
   return {
+    serverId: discovery.serverId,
     serverName: discovery.server_name,
     serverDescription: discovery.server_description,
     serverVersion: discovery.server_version,
-    serverRelease: discovery.server_release,
     serverReleaseDate: discovery.server_release_date,
-    apiBaseUrl: discovery.api_base_url,
     clientApi: {
       discoveryVersion: discovery.client_api.discovery_version,
       loginRequestEndpoint: discovery.client_api.login_request_endpoint,
@@ -106,12 +105,12 @@ export function ConnectServerScreen({ onConnectionChanged }: Props) {
         createdAt: existing?.createdAt ?? now,
         label,
         serverBaseUrl,
+        serverId: summary.serverId,
+        serverUrls: [],
         serverName: summary.serverName,
         serverDescription: summary.serverDescription,
         serverVersion: summary.serverVersion,
-        serverRelease: summary.serverRelease,
         serverReleaseDate: summary.serverReleaseDate,
-        apiBaseUrl: summary.apiBaseUrl,
         clientApi: summary.clientApi,
         lastUsedAt: now,
       };
