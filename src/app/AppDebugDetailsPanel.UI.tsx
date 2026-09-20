@@ -1,5 +1,6 @@
 import type { AppWorkflowStep } from "./AppWorkflow.Policy";
 import type { ActiveConnection } from "../storage/ActiveConnection.Store";
+import { buildOfflineCacheNamespace } from "./offline/namespace/OfflineCacheNamespace.Policy";
 
 export function DebugDetails({
   step,
@@ -10,6 +11,9 @@ export function DebugDetails({
   activeConnectionId: string | null;
   connection: ActiveConnection | null;
 }) {
+  const namespace = connection?.verifiedAt
+    ? buildOfflineCacheNamespace({ serverId: connection.serverId, profileId: connection.verifiedUser?.profileId })
+    : null;
   return (
     <details className="debugDetails">
       <summary>Debug details</summary>
@@ -28,6 +32,12 @@ export function DebugDetails({
             </div>
             <div className="detailRow">
               <span className="muted">server ID:</span> <span className="mono">{connection.serverId}</span>
+            </div>
+            <div className="detailRow">
+              <span className="muted">profile ID:</span> <span className="mono">{connection.verifiedUser?.profileId ?? "-"}</span>
+            </div>
+            <div className="detailRow">
+              <span className="muted">offline namespace:</span> <span className="mono">{namespace?.key ?? "-"}</span>
             </div>
             <div className="detailRow">
               <span className="muted">declared routes:</span> <span className="mono">{connection.serverUrls.join(", ") || "-"}</span>

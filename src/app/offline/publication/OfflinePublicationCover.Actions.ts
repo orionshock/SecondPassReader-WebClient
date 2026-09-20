@@ -1,5 +1,6 @@
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import type { OfflineCacheNamespace } from "../namespace/OfflineCacheNamespace.Policy";
+import { publishOfflineNamespaceMutation, type OfflineNamespacePublicationLease } from "../namespace/OfflineNamespacePublication.Lifecycle";
 import type {
   OfflinePublicationCoverRecord,
   OfflinePublicationCoverRepository,
@@ -13,21 +14,25 @@ import {
 const COVER_SCHEMA_VERSION = 1;
 
 export type OfflinePublicationCoverAcquisitionResult =
+  | { status: "superseded" }
   | { status: "stored" | "already-available"; sourceUrl: string; contentType: string; byteLength: number }
   | { status: "unavailable" }
   | { status: "failed" };
 
 export async function acquireOfflinePublicationCover(input: {
   namespace: OfflineCacheNamespace;
+  publication: OfflineNamespacePublicationLease;
+  libraryBaseUrl: string;
   book: BookDetail;
   spl: SecondPassClient;
   repository: OfflinePublicationCoverRepository<Blob>;
 }): Promise<OfflinePublicationCoverAcquisitionResult> {
   const namespaceKey = input.namespace.key.trim();
   const bookId = String(input.book.id).trim();
-  if (!namespaceKey || !bookId) return { status: "failed" };
+  if (!namespaceKey || !bookId || input.publication.namespaceKey !== namespaceKey) return { status: "failed" };
+  if (!input.publication.isCurrent()) return { status: "superseded" };
 
-  const sourceUrl = resolveCoverSource(input.book.coverUrl, input.namespace.serverOrigin);
+  const sourceUrl = resolveCoverSource(input.book.coverUrl, input.libraryBaseUrl);
   let existing: OfflinePublicationCoverRecord<Blob> | null;
   try {
     existing = await input.repository.get(namespaceKey, bookId);
@@ -39,7 +44,12 @@ export async function acquireOfflinePublicationCover(input: {
   if (!sourceUrl) {
     if (existing) {
       try {
-        await input.repository.delete(namespaceKey, bookId);
+        const published = await publishOfflineNamespaceMutation(input.publication, async () => {
+          const previous = await input.repository.get(namespaceKey, bookId);
+          await input.repository.delete(namespaceKey, bookId);
+          return () => previous ? input.repository.put(previous) : Promise.resolve();
+        });
+        if (!published) return { status: "superseded" };
       } catch (error) {
         debugWarn("reader", "stale offline cover could not be removed", { bookId, operation: "acquire", error });
         return { status: "failed" };
@@ -65,15 +75,20 @@ export async function acquireOfflinePublicationCover(input: {
       debugWarn("reader", "offline cover download was not a supported image", { bookId, operation: "acquire" });
       return { status: "failed" };
     }
-    await input.repository.put({
-      namespaceKey,
-      bookId,
-      sourceUrl,
-      contentType: contentType!,
-      byteLength: downloaded.blob.size,
-      schemaVersion: COVER_SCHEMA_VERSION,
-      payload: downloaded.blob,
+    const published = await publishOfflineNamespaceMutation(input.publication, async () => {
+      const previous = await input.repository.get(namespaceKey, bookId);
+      await input.repository.put({
+        namespaceKey,
+        bookId,
+        sourceUrl,
+        contentType,
+        byteLength: downloaded.blob.size,
+        schemaVersion: COVER_SCHEMA_VERSION,
+        payload: downloaded.blob,
+      });
+      return () => previous ? input.repository.put(previous) : input.repository.delete(namespaceKey, bookId);
     });
+    if (!published) return { status: "superseded" };
     return { status: "stored", sourceUrl, contentType: contentType!, byteLength: downloaded.blob.size };
   } catch (error) {
     debugWarn("reader", "offline cover acquisition failed", { bookId, operation: "acquire", error });
@@ -81,11 +96,11 @@ export async function acquireOfflinePublicationCover(input: {
   }
 }
 
-function resolveCoverSource(value: string | null | undefined, serverOrigin: string): string | null {
+function resolveCoverSource(value: string | null | undefined, libraryBaseUrl: string): string | null {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
   try {
-    const url = new URL(raw, serverOrigin);
+    const url = new URL(raw, libraryBaseUrl);
     return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
   } catch {
     return null;

@@ -10,7 +10,9 @@ export class ServerIdentityMismatchError extends Error {
 }
 
 export function assertServerIdentity(connection: ActiveConnection, serverInfo: ServerInfo): void {
-  if (connection.serverId !== serverInfo.serverId) throw new ServerIdentityMismatchError();
+  if (connection.serverId.toLowerCase() !== serverInfo.serverId.toLowerCase()) {
+    throw new ServerIdentityMismatchError();
+  }
 }
 
 export function applyCurrentAccountToConnection(

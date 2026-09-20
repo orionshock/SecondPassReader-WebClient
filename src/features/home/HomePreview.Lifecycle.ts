@@ -1,13 +1,13 @@
 import type { SecondPassClient } from "@secondpass/client";
 import {
-  createOfflineProjectionPublicationLease,
-  type OfflineProjectionPublicationLease,
-} from "../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
+  createOfflineNamespacePublicationLease,
+  type OfflineNamespacePublicationLease,
+} from "../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 
 export type HomePreviewKind = "recent" | "shelves";
 
 export type HomePreviewRequest = {
-  publication: OfflineProjectionPublicationLease | null;
+  publication: OfflineNamespacePublicationLease | null;
   isCurrent(): boolean;
 };
 
@@ -31,7 +31,7 @@ export class HomePreviewLifetime {
     const isCurrent = () => !this.invalidated && this.generations[kind] === generation;
     return {
       isCurrent,
-      publication: createOfflineProjectionPublicationLease(this.namespaceKey, isCurrent),
+      publication: createOfflineNamespacePublicationLease(this.namespaceKey, isCurrent),
     };
   }
 

@@ -1,6 +1,7 @@
 import type { BookDetail, SecondPassClient } from "@secondpass/client";
 import { describe, expect, it, vi } from "vitest";
 import type { OfflineCacheNamespace } from "../../../app/offline/namespace/OfflineCacheNamespace.Policy";
+import { createOfflineNamespacePublicationLease } from "../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 import { acquireOfflinePublicationCover } from "../../../app/offline/publication/OfflinePublicationCover.Actions";
 import {
   removeAllOfflinePublicationAssets,
@@ -15,8 +16,8 @@ import type {
 
 const namespace: OfflineCacheNamespace = {
   key: "account-a",
-  serverOrigin: "https://library.example",
-  accountProfileId: "reader-1",
+  serverId: "123e4567-e89b-42d3-a456-426614174000",
+  profileId: "reader-1",
 };
 
 describe("offline publication covers", () => {
@@ -29,6 +30,8 @@ describe("offline publication covers", () => {
 
     const result = await acquireOfflinePublicationCover({
       namespace,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => true)!,
+      libraryBaseUrl: "https://library.example",
       book: book("/media/covers/book-1.jpg"),
       spl: client(downloadCover),
       repository: covers.repository,
@@ -45,6 +48,29 @@ describe("offline publication covers", () => {
     });
   });
 
+  it("uses the current route for relative covers and ignores an old-route completion", async () => {
+    const covers = coverStore();
+    let finish!: (value: { blob: Blob; contentType: string }) => void;
+    const pendingDownload = new Promise<{ blob: Blob; contentType: string }>((resolve) => { finish = resolve; });
+    const downloadCover = vi.fn(async () => pendingDownload);
+    let current = true;
+    const pending = acquireOfflinePublicationCover({
+      namespace,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => current)!,
+      libraryBaseUrl: "https://first.example",
+      book: book("/covers/book-1.jpg"),
+      spl: client(downloadCover),
+      repository: covers.repository,
+    });
+    await vi.waitFor(() => expect(downloadCover).toHaveBeenCalledWith("https://first.example/covers/book-1.jpg"));
+
+    current = false;
+    finish({ blob: new Blob(["cover"], { type: "image/jpeg" }), contentType: "image/jpeg" });
+    await expect(pending).resolves.toEqual({ status: "superseded" });
+    expect(covers.repository.put).not.toHaveBeenCalled();
+    expect(covers.current()).toBeNull();
+  });
+
   it("reuses the same source and refreshes a changed source", async () => {
     const covers = coverStore(cover("https://library.example/covers/old.jpg"));
     const downloadCover = vi.fn(async () => ({
@@ -54,12 +80,16 @@ describe("offline publication covers", () => {
 
     const unchanged = await acquireOfflinePublicationCover({
       namespace,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => true)!,
+      libraryBaseUrl: "https://library.example",
       book: book("/covers/old.jpg"),
       spl: client(downloadCover),
       repository: covers.repository,
     });
     const changed = await acquireOfflinePublicationCover({
       namespace,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => true)!,
+      libraryBaseUrl: "https://library.example",
       book: book("/covers/new.png"),
       spl: client(downloadCover),
       repository: covers.repository,
@@ -76,6 +106,8 @@ describe("offline publication covers", () => {
     const covers = coverStore(oldCover);
     const result = await acquireOfflinePublicationCover({
       namespace,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => true)!,
+      libraryBaseUrl: "https://library.example",
       book: book("/covers/new.svg"),
       spl: client(vi.fn(async () => ({
         blob: new Blob([], { type: "image/svg+xml" }),
@@ -94,6 +126,8 @@ describe("offline publication covers", () => {
 
     const result = await acquireOfflinePublicationCover({
       namespace,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => true)!,
+      libraryBaseUrl: "https://library.example",
       book: book("https://cdn.example/covers/new.jpg"),
       spl: client(vi.fn(async () => { throw new TypeError("Failed to fetch"); })),
       repository: covers.repository,

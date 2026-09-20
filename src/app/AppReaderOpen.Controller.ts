@@ -119,8 +119,8 @@ export function useAppReaderOpenController({
         if (connectivity === "offline") {
           try {
             const namespace = buildOfflineCacheNamespace({
-              serverBaseUrl: connection.serverBaseUrl,
-              accountProfileId: connection.verifiedUser?.profileId,
+              serverId: connection.serverId,
+              profileId: connection.verifiedUser?.profileId,
             });
             if (!namespace) throw new OfflineReaderAdmissionError();
 

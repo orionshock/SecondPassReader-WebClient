@@ -71,24 +71,39 @@ describe("connection repair identity", () => {
     }, "2026-09-09T01:00:00.000Z")).toThrow(ServerIdentityMismatchError);
   });
 
-  it("keeps server identity separate from route-scoped offline cleanup", async () => {
+  it("preserves the offline namespace when the same Library and user move to another route", async () => {
     const previous = profile();
-    const verified = { ...profile(), serverBaseUrl: "https://alternate.example" };
+    const verified = { ...profile(), serverId: profile().serverId.toUpperCase(), serverBaseUrl: "https://alternate.example" };
     const removeNamespace = vi.fn(async () => ({ status: "removed" as const }));
     const save = vi.fn();
 
     await expect(finalizeConnectionRepair({ previous, verified, removeNamespace, save }))
       .resolves.toEqual({ status: "saved", identity: "same" });
-    expect(removeNamespace).toHaveBeenCalledWith(namespace(previous));
+    expect(namespace(verified)).toBe(namespace(previous));
+    expect(removeNamespace).not.toHaveBeenCalled();
     expect(save).toHaveBeenCalledWith(verified);
   });
 
-  it("refuses a different Library ID at the same route while namespace keys remain route-based", async () => {
+  it("accepts the same UUID with different letter case from authenticated server info", () => {
+    const connection = profile();
+    expect(() => applyAuthenticatedContextToConnection(
+      connection,
+      user("profile-a"),
+      { ...serverInfo(), serverId: connection.serverId.toUpperCase() },
+      "2026-09-09T01:00:00.000Z",
+    )).not.toThrow();
+  });
+
+  it("cleans up a different Library ID at the same route before saving", async () => {
     const previous = profile();
     const verified = { ...profile(), serverId: "123e4567-e89b-42d3-a456-426614174001" };
     const save = vi.fn();
-    await expect(finalizeConnectionRepair({ previous, verified, save })).resolves.toEqual({ status: "failed" });
-    expect(save).not.toHaveBeenCalled();
+    const removeNamespace = vi.fn(async () => ({ status: "removed" as const }));
+    await expect(finalizeConnectionRepair({ previous, verified, save, removeNamespace }))
+      .resolves.toEqual({ status: "saved", identity: "different" });
+    expect(namespace(verified)).not.toBe(namespace(previous));
+    expect(removeNamespace).toHaveBeenCalledWith(namespace(previous));
+    expect(save).toHaveBeenCalledWith(verified);
   });
 
   it("removes the previous namespace before activating a different verified identity", async () => {
@@ -128,8 +143,8 @@ describe("connection repair identity", () => {
 
 function namespace(value: ActiveConnection): string | null {
   return buildOfflineCacheNamespace({
-    serverBaseUrl: value.serverBaseUrl,
-    accountProfileId: value.verifiedUser?.profileId,
+    serverId: value.serverId,
+    profileId: value.verifiedUser?.profileId,
   })?.key ?? null;
 }
 

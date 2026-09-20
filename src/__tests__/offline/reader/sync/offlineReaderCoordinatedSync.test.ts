@@ -15,8 +15,19 @@ import type {
 
 import type { OfflineReaderSyncClient } from "../../../../app/offline/reader/sync/OfflineReaderSync.Actions";
 import { createInMemoryReaderRepositories } from "../../storage/OfflineRepositoryTest.Fixtures";
+import { buildOfflineCacheNamespace } from "../../../../app/offline/namespace/OfflineCacheNamespace.Policy";
 
 describe("browser offline sync lock", () => {
+  it("uses one lock identity for the same Library and user across routes", () => {
+    const first = { serverId: "123e4567-e89b-42d3-a456-426614174000", profileId: "reader-1", route: "https://first.example" };
+    const second = { ...first, route: "https://second.example" };
+    const namespace = (connection: typeof first) => buildOfflineCacheNamespace({
+      serverId: connection.serverId,
+      profileId: connection.profileId,
+    })!.key;
+    expect(buildBrowserOfflineSyncLockName(namespace(first), "book-1"))
+      .toBe(buildBrowserOfflineSyncLockName(namespace(second), "book-1"));
+  });
   it("serializes waiting callers for the same namespace and Book", async () => {
     const locks = new TestLockManager();
     const firstGate = deferred<void>();

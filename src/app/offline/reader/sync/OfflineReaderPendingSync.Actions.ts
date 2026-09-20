@@ -18,7 +18,11 @@ import type { ReaderOutboxIntent } from "../outbox/ReaderOutbox.Policy";
 
 const PENDING_SYNC_BOOK_CONCURRENCY = 3;
 type PendingSyncMode = NonNullable<OfflineReaderCoordinatedSyncInput["mode"]>;
-type ActivePendingSync = { mode: PendingSyncMode; operation: Promise<OfflineReaderPendingSyncResult> };
+type ActivePendingSync = {
+  mode: PendingSyncMode;
+  isCurrent(): boolean;
+  operation: Promise<OfflineReaderPendingSyncResult>;
+};
 const activePendingSyncs = new Map<string, ActivePendingSync>();
 
 type PendingSyncRepositories = Pick<
@@ -61,8 +65,9 @@ export function syncPendingOfflineReaderWork(
   const mode = input.mode ?? "if-available";
   const active = activePendingSyncs.get(namespaceKey);
   if (active) {
-    // A manual waiter must run after a non-blocking sweep; sharing it could report contention as completion.
-    if (mode === "wait" && active.mode === "if-available") {
+    // A new generation needs its own HTTP client after the old sweep releases the namespace.
+    // A manual waiter also needs a fresh sweep after a non-blocking one.
+    if (!active.isCurrent() || (mode === "wait" && active.mode === "if-available")) {
       return active.operation.then(() => {
         if (activePendingSyncs.get(namespaceKey) === active) activePendingSyncs.delete(namespaceKey);
         return syncPendingOfflineReaderWork({ ...input, namespaceKey, mode }, dependencyOverrides);
@@ -77,16 +82,17 @@ export function syncPendingOfflineReaderWork(
     reportFailure: reportPendingSyncFailure,
     ...dependencyOverrides,
   };
+  const isCurrent = input.isCurrent ?? (() => true);
   const operation = runPendingSync({
     namespaceKey,
     client: input.client,
-    isCurrent: input.isCurrent ?? (() => true),
+    isCurrent,
     mode,
     attemptMode: input.attemptMode ?? (mode === "wait" ? "manual" : "automatic"),
     onCompleted: input.onCompleted,
     dependencies,
   });
-  const activeSync = { mode, operation };
+  const activeSync = { mode, isCurrent, operation };
   activePendingSyncs.set(namespaceKey, activeSync);
   const clear = () => {
     if (activePendingSyncs.get(namespaceKey) === activeSync) activePendingSyncs.delete(namespaceKey);

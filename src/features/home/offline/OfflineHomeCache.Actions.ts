@@ -6,8 +6,8 @@ import {
 } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
 import {
   publishOfflineProjection,
-  type OfflineProjectionPublicationLease,
-} from "../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
+  type OfflineNamespacePublicationLease,
+} from "../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 import {
   OFFLINE_HOME_PROJECTION_SCHEMA_VERSION,
   OFFLINE_HOME_RECENT_PROJECTION_KEY,
@@ -22,7 +22,7 @@ type CacheDependencies = {
 export function cacheOfflineHomeRecent(input: {
   namespaceKey: string;
   items: MarginaliaRecentSession[];
-}, publication: OfflineProjectionPublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
+}, publication: OfflineNamespacePublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
   return cacheProjection({
     namespaceKey: input.namespaceKey,
     projectionKey: OFFLINE_HOME_RECENT_PROJECTION_KEY,
@@ -33,7 +33,7 @@ export function cacheOfflineHomeRecent(input: {
 export function cacheOfflineHomeShelves(input: {
   namespaceKey: string;
   items: Shelf[];
-}, publication: OfflineProjectionPublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
+}, publication: OfflineNamespacePublicationLease, overrides: Partial<CacheDependencies> = {}): Promise<void> {
   return cacheProjection({
     namespaceKey: input.namespaceKey,
     projectionKey: OFFLINE_HOME_SHELVES_PROJECTION_KEY,
@@ -43,7 +43,7 @@ export function cacheOfflineHomeShelves(input: {
 
 async function cacheProjection<T>(
   input: { namespaceKey: string; projectionKey: string; value: T },
-  publication: OfflineProjectionPublicationLease,
+  publication: OfflineNamespacePublicationLease,
   overrides: Partial<CacheDependencies>,
 ): Promise<void> {
   const namespaceKey = input.namespaceKey.trim();

@@ -19,13 +19,13 @@ export function useAppAuthenticatedOfflineSyncLifecycle(input: {
   const verifiedOfflineNamespaceKey = useMemo(() => {
     if (!input.connection?.verifiedAt) return null;
     return buildOfflineCacheNamespace({
-      serverBaseUrl: input.connection.serverBaseUrl,
-      accountProfileId: input.connection.verifiedUser?.profileId,
+      serverId: input.connection.serverId,
+      profileId: input.connection.verifiedUser?.profileId,
     })?.key ?? null;
-  }, [input.connection?.serverBaseUrl, input.connection?.verifiedAt, input.connection?.verifiedUser?.profileId]);
+  }, [input.connection?.serverId, input.connection?.verifiedAt, input.connection?.verifiedUser?.profileId]);
   const offlineNamespaceKey = input.workflowStep === "library_home" ? verifiedOfflineNamespaceKey : null;
   const generationKey = offlineNamespaceKey && input.connection
-    ? JSON.stringify([offlineNamespaceKey, input.connection.id, input.connection.verifiedAt, input.connection.accessToken])
+    ? JSON.stringify([offlineNamespaceKey, input.connection.id, input.connection.serverBaseUrl, input.connection.verifiedAt, input.connection.accessToken])
     : null;
   const generation = useMemo(
     () => createOfflineReaderAuthenticatedSyncGeneration(),

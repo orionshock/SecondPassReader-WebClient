@@ -52,7 +52,7 @@ describe("App authenticated offline sync lifecycle", () => {
 
     expect(startSyncMock).toHaveBeenCalledOnce();
     expect(startSyncMock.mock.calls[0][0]).toMatchObject({
-      namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:profile-a",
+      namespaceKey: "server:123e4567-e89b-42d3-a456-426614174000|profile:profile-a",
       client: spl,
     });
     expect(clearNoticeMock).toHaveBeenCalledOnce();
@@ -113,6 +113,26 @@ describe("App authenticated offline sync lifecycle", () => {
     expect(stopFirst).toHaveBeenCalledOnce();
     expect(createGenerationMock).toHaveBeenCalledTimes(2);
     expect(startSyncMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the namespace but replaces sync ownership when the current route changes", () => {
+    const stopFirst = vi.fn();
+    startSyncMock.mockReturnValueOnce(stopFirst).mockReturnValueOnce(vi.fn());
+    const original = profile("connection-a", "profile-a");
+    const alternateClient = {} as SecondPassClient;
+
+    act(() => root.render(<Harness workflowStep="library_home" connection={original} spl={spl} />));
+    const first = startSyncMock.mock.calls[0][0];
+    act(() => root.render(<Harness workflowStep="library_home" connection={{
+      ...original, serverBaseUrl: "https://alternate.example",
+    }} spl={alternateClient} />));
+    const second = startSyncMock.mock.calls[1][0];
+
+    expect(second.namespaceKey).toBe(first.namespaceKey);
+    expect(second.client).toBe(alternateClient);
+    expect(second.generation).not.toBe(first.generation);
+    expect(stopFirst).toHaveBeenCalledOnce();
+    expect(createGenerationMock).toHaveBeenCalledTimes(2);
   });
 
   function Harness({

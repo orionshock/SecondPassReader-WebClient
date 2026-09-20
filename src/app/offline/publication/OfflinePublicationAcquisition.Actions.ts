@@ -12,6 +12,7 @@ import {
   type BrowserStorageEstimate,
 } from "../browser/BrowserStorageEstimate.Queries";
 import type { OfflineCacheNamespace } from "../namespace/OfflineCacheNamespace.Policy";
+import { publishOfflineNamespaceMutation, type OfflineNamespacePublicationLease } from "../namespace/OfflineNamespacePublication.Lifecycle";
 import {
   normalizePublicationChecksum,
   normalizePublicationFormat,
@@ -40,6 +41,7 @@ type AcquiredAsset = AcquisitionContext & {
 };
 
 export type OfflinePublicationAcquisitionResult =
+  | { status: "superseded" }
   | (AcquiredAsset & { status: "already-available" })
   | (AcquiredAsset & { status: "stored" })
   | {
@@ -66,6 +68,7 @@ export type OfflinePublicationAcquisitionResult =
 
 export async function acquireOfflinePublicationAsset(input: {
   namespace: OfflineCacheNamespace;
+  publication: OfflineNamespacePublicationLease;
   book: BookDetail;
   spl: SecondPassClient;
   repository: OfflinePublicationAssetRepository<Blob>;
@@ -74,6 +77,9 @@ export async function acquireOfflinePublicationAsset(input: {
 }): Promise<OfflinePublicationAcquisitionResult> {
   const metadata = validateInput(input.namespace, input.book, input.supportedFormat);
   if (!metadata.ok) return { status: "unverifiable", reason: metadata.reason };
+  if (input.publication.namespaceKey !== metadata.namespaceKey || !input.publication.isCurrent()) {
+    return { status: "superseded" };
+  }
 
   let capability: BrowserOfflineCapability;
   try {
@@ -181,16 +187,23 @@ export async function acquireOfflinePublicationAsset(input: {
 
   try {
     // Publish only a fully verified Blob; an interrupted or mismatched download must not replace a readable asset.
-    await input.repository.putComplete({
-      status: "complete",
-      namespaceKey: metadata.namespaceKey,
-      bookId: metadata.bookId,
-      format: metadata.format,
-      checksum: verification.checksum,
-      byteLength: verification.observedByteLength,
-      schemaVersion: OFFLINE_PUBLICATION_ASSET_SCHEMA_VERSION,
-      payload: blob,
+    const published = await publishOfflineNamespaceMutation(input.publication, async () => {
+      const previous = await input.repository.get(metadata.namespaceKey, metadata.bookId, metadata.format);
+      await input.repository.putComplete({
+        status: "complete",
+        namespaceKey: metadata.namespaceKey,
+        bookId: metadata.bookId,
+        format: metadata.format,
+        checksum: verification.checksum,
+        byteLength: verification.observedByteLength,
+        schemaVersion: OFFLINE_PUBLICATION_ASSET_SCHEMA_VERSION,
+        payload: blob,
+      });
+      return () => previous
+        ? input.repository.putComplete(previous)
+        : input.repository.delete(metadata.namespaceKey, metadata.bookId, metadata.format);
     });
+    if (!published) return { status: "superseded" };
   } catch {
     return { status: "storage-failed", ...context };
   }

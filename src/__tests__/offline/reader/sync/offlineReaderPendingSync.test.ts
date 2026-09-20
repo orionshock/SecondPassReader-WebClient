@@ -74,6 +74,31 @@ describe("pending offline Reader sync", () => {
     expect(harness.close).toHaveBeenCalledOnce();
   });
 
+  it("starts a fresh sweep with the current route's client after the prior generation expires", async () => {
+    const harness = await createHarness([establishIntent("book-1")]);
+    const oldRouteGate = deferred<OfflineReaderCoordinatedSyncResult>();
+    harness.syncBook.mockReturnValueOnce(oldRouteGate.promise).mockResolvedValue(completed());
+    const oldRouteClient = client();
+    const currentRouteClient = client();
+    let oldGenerationCurrent = true;
+
+    const oldRoute = harness.run(() => oldGenerationCurrent, undefined, undefined, oldRouteClient);
+    await waitFor(() => harness.syncBook.mock.calls.length === 1);
+    oldGenerationCurrent = false;
+    const currentRoute = harness.run(() => true, undefined, undefined, currentRouteClient);
+
+    expect(currentRoute).not.toBe(oldRoute);
+    expect(harness.syncBook).toHaveBeenCalledTimes(1);
+    oldRouteGate.resolve(completed());
+    await oldRoute;
+    await currentRoute;
+
+    expect(harness.syncBook).toHaveBeenCalledTimes(2);
+    expect(harness.syncBook.mock.calls[0]?.[0].client).toBe(oldRouteClient);
+    expect(harness.syncBook.mock.calls[1]?.[0].client).toBe(currentRouteClient);
+    expect(harness.openRepositories).toHaveBeenCalledTimes(2);
+  });
+
   it("runs an explicit wait-mode sweep after an in-flight automatic non-waiting sweep", async () => {
     const harness = await createHarness([establishIntent("book-1")]);
     const automaticGate = deferred<OfflineReaderCoordinatedSyncResult>();
@@ -262,9 +287,10 @@ async function createHarness(intents: ReaderOutboxIntent[], namespaceKey = "acco
     isCurrent?: () => boolean,
     onCompleted?: Parameters<typeof syncPendingOfflineReaderWork>[0]["onCompleted"],
     mode?: Parameters<typeof syncPendingOfflineReaderWork>[0]["mode"],
+    syncClient = client(),
   ) => syncPendingOfflineReaderWork({
     namespaceKey,
-    client: client(),
+    client: syncClient,
     isCurrent,
     onCompleted,
     mode,

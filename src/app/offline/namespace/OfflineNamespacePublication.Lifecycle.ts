@@ -6,15 +6,15 @@ import type {
 const namespaceGenerations = new Map<string, number>();
 const namespaceQueues = new Map<string, Promise<void>>();
 
-export type OfflineProjectionPublicationLease = {
+export type OfflineNamespacePublicationLease = {
   namespaceKey: string;
   isCurrent(): boolean;
 };
 
-export function createOfflineProjectionPublicationLease(
+export function createOfflineNamespacePublicationLease(
   namespaceKey: string,
   ownsPublication: () => boolean,
-): OfflineProjectionPublicationLease | null {
+): OfflineNamespacePublicationLease | null {
   const normalized = namespaceKey.trim();
   if (!normalized) return null;
   const generation = namespaceGenerations.get(normalized) ?? 0;
@@ -24,10 +24,10 @@ export function createOfflineProjectionPublicationLease(
   };
 }
 
-// Projection work may outlive the namespace or request that started it. Serialize publication
+// Namespace work may outlive the namespace or request that started it. Serialize publication
 // with cleanup and undo a commit that lost ownership while IndexedDB was completing it.
 export function publishOfflineProjection<T>(input: {
-  lease: OfflineProjectionPublicationLease;
+  lease: OfflineNamespacePublicationLease;
   repository: OfflineProjectionRepository;
   record: OfflineProjectionRecord<T>;
 }): Promise<boolean> {
@@ -46,7 +46,22 @@ export function publishOfflineProjection<T>(input: {
   });
 }
 
-export function cleanupOfflineProjectionNamespace<T>(
+// Asset and cover writes share the namespace lifetime and cleanup queue with projections.
+// Rollback runs before a newer write or namespace cleanup can enter the queue.
+export function publishOfflineNamespaceMutation(
+  lease: OfflineNamespacePublicationLease,
+  mutate: () => Promise<() => Promise<void>>,
+): Promise<boolean> {
+  return serializeNamespaceOperation(lease.namespaceKey, async () => {
+    if (!lease.isCurrent()) return false;
+    const rollback = await mutate();
+    if (lease.isCurrent()) return true;
+    await rollback();
+    return false;
+  });
+}
+
+export function cleanupOfflineNamespacePublication<T>(
   namespaceKey: string,
   cleanup: () => Promise<T>,
 ): Promise<T> {

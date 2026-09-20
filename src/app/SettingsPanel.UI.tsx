@@ -91,7 +91,7 @@ export function SettingsPanel({
     try {
       const discovery = await discoverSecondPass(connection.serverBaseUrl);
       if (!isActiveConnectionPublicationCurrent(publication)) return;
-      if (discovery.serverId !== connection.serverId) {
+      if (discovery.serverId.toLowerCase() !== connection.serverId.toLowerCase()) {
         throw new ServerIdentityMismatchError();
       }
       const now = new Date().toISOString();

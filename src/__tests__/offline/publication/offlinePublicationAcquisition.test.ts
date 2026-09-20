@@ -5,6 +5,7 @@ import { getBrowserOfflinePersistenceCapability } from "../../../app/offline/bro
 import { requestBrowserPersistentStorage } from "../../../app/offline/browser/BrowserPersistentStorage.Actions";
 import { getBrowserStorageEstimate } from "../../../app/offline/browser/BrowserStorageEstimate.Queries";
 import type { OfflineCacheNamespace } from "../../../app/offline/namespace/OfflineCacheNamespace.Policy";
+import { createOfflineNamespacePublicationLease } from "../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 import { acquireOfflinePublicationAsset } from "../../../app/offline/publication/OfflinePublicationAcquisition.Actions";
 import { verifyOfflinePublicationBlob } from "../../../app/offline/publication/OfflinePublicationVerification.Actions";
 import type {
@@ -110,6 +111,23 @@ describe("offline publication acquisition", () => {
     expect(result.status).toBe("stored");
     expect(store.current()).toMatchObject({ checksum: CHECKSUM_B, payload: newBlob });
     expect(store.put).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not store an old-route download after publication ownership changes", async () => {
+    const store = assetStore();
+    let resolveDownload!: (blob: Blob) => void;
+    const download = new Promise<Blob>((resolve) => { resolveDownload = resolve; });
+    const client = downloadClient(download);
+    let current = true;
+    const input = acquisitionInput(client, store.repository);
+    input.publication = createOfflineNamespacePublicationLease(input.namespace.key, () => current)!;
+    const pending = acquireOfflinePublicationAsset(input);
+    await vi.waitFor(() => expect(client.download).toHaveBeenCalledOnce());
+
+    current = false;
+    resolveDownload(new Blob(["new"]));
+    await expect(pending).resolves.toEqual({ status: "superseded" });
+    expect(store.put).not.toHaveBeenCalled();
   });
 
   it("leaves an old asset intact when replacement verification fails", async () => {
@@ -329,10 +347,11 @@ function acquisitionInput(
 ) {
   return {
     namespace: {
-      serverOrigin: "https://library.example",
-      accountProfileId: "profile-1",
+      serverId: "123e4567-e89b-42d3-a456-426614174000",
+      profileId: "profile-1",
       key: "account-a",
     } satisfies OfflineCacheNamespace,
+    publication: createOfflineNamespacePublicationLease("account-a", () => true)!,
     book: overrides.book ?? book(CHECKSUM_B),
     spl: client.spl,
     repository,

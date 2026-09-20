@@ -4,8 +4,8 @@ import {
   cacheOfflineHomeShelves,
 } from "../../../features/home/offline/OfflineHomeCache.Actions";
 import type { IndexedDbOfflineRepositories } from "../../../app/offline/storage/IndexedDbOfflineRepositories.Factory";
-import type { OfflineProjectionPublicationLease } from "../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
-import { createOfflineProjectionPublicationLease } from "../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
+import type { OfflineNamespacePublicationLease } from "../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
+import { createOfflineNamespacePublicationLease } from "../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 import { removeOfflineNamespace } from "../../../app/offline/namespace/OfflineNamespaceCleanup.Actions";
 import type { OfflineProjectionRecord } from "../../../app/offline/storage/OfflineRepositories.Types";
 import { recentSessionFixture } from "../../sessions/SessionTest.Fixtures";
@@ -128,7 +128,7 @@ describe("offline Home cache writes", () => {
       },
       close: vi.fn(),
     } as unknown as IndexedDbOfflineRepositories<Blob>;
-    const publication = createOfflineProjectionPublicationLease("account-preserved", () => ownsPreview)!;
+    const publication = createOfflineNamespacePublicationLease("account-preserved", () => ownsPreview)!;
     const cache = cacheOfflineHomeRecent(
       { namespaceKey: "account-preserved", items: [recentSessionFixture()] },
       publication,
@@ -145,12 +145,12 @@ describe("offline Home cache writes", () => {
   });
 });
 
-function currentPublication(namespaceKey: string): OfflineProjectionPublicationLease {
+function currentPublication(namespaceKey: string): OfflineNamespacePublicationLease {
   return { namespaceKey, isCurrent: () => true };
 }
 
-function ownedPublication(namespaceKey: string): OfflineProjectionPublicationLease {
-  return createOfflineProjectionPublicationLease(namespaceKey, () => true)!;
+function ownedPublication(namespaceKey: string): OfflineNamespacePublicationLease {
+  return createOfflineNamespacePublicationLease(namespaceKey, () => true)!;
 }
 
 function deferred<T>() {

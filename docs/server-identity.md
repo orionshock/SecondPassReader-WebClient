@@ -21,35 +21,28 @@ future mDNS result would be a candidate URL, with HTTP discovery establishing id
 | `ConnectionServer.Queries`, Connect screen, linking flow | Normalize entered URL, discover ID, pair through that route | Location plus identity | Keep one current route and explicit discovered ID | Reconnect flow |
 | `ActiveConnection.Store` | Persisted ID, current route, declared routes; exact-record publication snapshot | Mixed | Validate and persist all three; retain generation and full-record stale guard | None |
 | `ConnectionAccountProfile.Mapper`, verification, authenticated refresh, Settings check | Compare server IDs and verified profile IDs; refresh metadata | Identity | Reject mismatched IDs before publishing; retain profile identity | Alternate route verification |
-| `ConnectionRepair.Controller`, `OfflineCacheNamespace.Policy` | Origin plus profile namespace and repair cleanup | Route used as offline identity | Keep formula and cleanup unchanged in this pass | Namespace cutover |
-| `AppAuthenticatedOfflineSync.Lifecycle`, Book availability | Build namespace and start sync | Route used as offline identity | Retain route-based key | Namespace cutover |
-| Home/Library/Book Detail offline controllers, projection publication | Read and write namespace-scoped projections | Namespace ownership | No change | Namespace cutover |
-| Reader state, outbox, publication assets/covers repositories | Namespace-indexed data and deletion | Namespace ownership | No change | Namespace cutover |
+| `ConnectionRepair.Controller`, `OfflineCacheNamespace.Policy` | Server ID plus profile namespace and repair cleanup | Durable identity | Preserve for same ID and profile; clean up a different identity | None |
+| `AppAuthenticatedOfflineSync.Lifecycle`, Book availability | Build namespace and start sync | Durable identity | Keep the key across routes; replace sync generation when route changes | Route selection |
+| Home/Library/Book Detail offline controllers, namespace publication | Read and write namespace-scoped projections | Namespace ownership | Protect current publication and cleanup lifetime | None |
+| Reader state, outbox, publication assets/covers repositories | Namespace-indexed data and deletion | Namespace ownership | Keep one identity key across routes | None |
 | Home, Shelves, Library, Book Detail, Reader cover components | Relative image and publication URL resolution | Location | Use current route | Route switch invalidation |
 | Settings, app summary, debug details | Current Library URL and server details | Location plus identity in diagnostics | Show ID and declared routes in diagnostics | Route picker |
 
-## Offline namespace impact report
+## Offline namespace
 
-`OfflineCacheNamespace.Policy` currently forms
-`server:<encoded normalized origin>|profile:<encoded verified profile ID>`. The URL is serving as
-offline identity here, even though Library identity is now `serverId`. This remains an explicit
-exception until a separate namespace design pass.
+`OfflineCacheNamespace.Policy` forms
+`server:<normalized UUID>|profile:<encoded verified profile ID>`. It does not accept a URL. This
+pre-release cutover does not read or migrate old origin-based keys; old local data may be discarded.
+IndexedDB remains at version 3 because its five stores still use a string `namespaceKey`.
 
-1. Switching to `serverId + profileId` changes every namespace key and the admission keys for
-   projections, Home/Library/Book Detail caches, publication assets and covers, reader state,
-   reader outbox, sync locks, and queued projection writes. The IndexedDB schema can still use a
-   string namespace key; its records and ownership decisions change.
-2. A verified route switch to the same server ID and profile could then preserve offline data.
-   The new route must be verified before old data becomes usable under it. Cover source resolution
-   currently uses `namespace.serverOrigin` and would need the active route as a separate input.
-3. Repair compares `serverId` and profile ID for domain sameness, but it still removes the old
-   namespace whenever the route-derived key changes. It refuses a different server ID at the
-   same route because the current namespace cannot isolate that data. Connection removal deletes
-   the one active namespace across all five stores.
-4. Because this is pre-release and local test data may be discarded, a destructive cutover is
-   simpler than migrating every record and in-flight writer. It still needs an explicit design for
-   timing, cleanup failure, browser tabs, and pending outbox intent.
-5. The next pass must update namespace policy and retention/atomic-cleanup tests, connection repair
-   tests, offline sync and publication tests, Home/Library/Book Detail cache tests, cover-source
-   tests, and publication-generation guards. A route-switch test must prove same ID plus profile
-   retains data and a different ID at the same URL cannot read it.
+The key scopes retained Home, Library, and Book Detail projections; publication assets and covers;
+Reader state and outbox; foreground retry work; and Web Locks. A same-server route change keeps the
+key and offline data. It replaces the active HTTP and sync generation, so work started against an
+older route cannot publish as the current connection. Relative cover URLs resolve against the
+current route, which is passed separately from the namespace.
+
+Repair compares server ID and verified profile ID. It removes the prior namespace before saving a
+different durable identity, including a different server behind the same URL or a different user on
+the same server. Sign out and Forget delete the active namespace across all five stores. Automatic
+route fallback remains a separate design pass; any candidate route must confirm the same server ID
+before adoption.

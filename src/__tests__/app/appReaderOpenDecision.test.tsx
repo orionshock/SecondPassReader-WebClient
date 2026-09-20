@@ -83,7 +83,7 @@ describe("app Reader open decision", () => {
     expect(spl.library.books.get).not.toHaveBeenCalled();
     expect(onlineOpenMock).not.toHaveBeenCalled();
     expect(loadMetadataMock).toHaveBeenCalledWith(expect.objectContaining({
-      namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+      namespaceKey: "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1",
       bookId: "book-1",
     }));
     expect(offlineOpenMock).toHaveBeenCalledWith(expect.objectContaining({

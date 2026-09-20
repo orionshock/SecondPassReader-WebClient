@@ -81,7 +81,7 @@ describe("Book Detail offline availability", () => {
     repositoriesMock.mockResolvedValue(repositories.value);
     await renderController(book(CHECKSUM_B));
     expect(repositories.projections.put).toHaveBeenCalledWith(expect.objectContaining({
-      namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+      namespaceKey: "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1",
       projectionKey: "reader-book:book-1",
       value: expect.objectContaining({ id: "book-1" }),
     }));
@@ -92,6 +92,22 @@ describe("Book Detail offline availability", () => {
     repositoriesMock.mockResolvedValue(repositorySet(completeAsset(CHECKSUM_A)).value);
     await renderController(book(CHECKSUM_B));
     expect(button("Update offline copy")).toBeTruthy();
+  });
+
+  it("keeps a saved publication available after the same Library moves to another route", async () => {
+    const repositories = repositorySet(completeAsset(CHECKSUM_B));
+    repositoriesMock.mockResolvedValue(repositories.value);
+    await renderController(book(CHECKSUM_B));
+    expect(button("Remove offline copy")).toBeTruthy();
+
+    await renderController(book(CHECKSUM_B), undefined, {
+      ...profile(), serverBaseUrl: "https://alternate.example",
+    });
+    expect(button("Remove offline copy")).toBeTruthy();
+    expect(repositories.publicationAssets.get).toHaveBeenLastCalledWith(
+      "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1", "book-1", "epub",
+    );
+    expect(repositories.publicationAssets.deleteNamespace).not.toHaveBeenCalled();
   });
 
   it("offers Settings management for a retained offline asset without changing removal", async () => {
@@ -176,12 +192,12 @@ describe("Book Detail offline availability", () => {
     await act(async () => button("Remove offline copy")?.click());
 
     expect(repositories.publicationAssets.delete).toHaveBeenCalledWith(
-      "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+      "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1",
       "book-1",
       "epub",
     );
     expect(repositories.publicationCovers.delete).toHaveBeenCalledWith(
-      "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+      "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1",
       "book-1",
     );
     expect(repositories.projections.deleteNamespace).not.toHaveBeenCalled();
@@ -308,21 +324,24 @@ describe("Book Detail offline availability", () => {
 async function renderController(
   value: BookDetail,
   observe?: (controller: BookOfflineAvailabilityController) => void,
+  connection: ActiveConnection = profile(),
 ) {
   await act(async () => root.render(
-    <ControllerHarness book={value} observe={observe} />,
+    <ControllerHarness book={value} observe={observe} connection={connection} />,
   ));
 }
 
 function ControllerHarness({
   book: value,
   observe,
+  connection,
 }: {
   book: BookDetail;
   observe?: (controller: BookOfflineAvailabilityController) => void;
+  connection: ActiveConnection;
 }) {
   const controller = useBookOfflineAvailabilityController({
-    connection: profile(),
+    connection,
     book: value,
     spl: TEST_SPL,
   });
@@ -404,7 +423,7 @@ function completeAsset(checksum: string): OfflinePublicationAssetCompleteRecord<
   const payload = new Blob(["old"]);
   return {
     status: "complete",
-    namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+    namespaceKey: "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1",
     bookId: "book-1",
     format: "epub",
     checksum,
@@ -428,7 +447,7 @@ function supportedCapability() {
 function storedResult() {
   return {
     status: "stored" as const,
-    namespaceKey: "server:https%3A%2F%2Flibrary.example|profile:reader-1",
+    namespaceKey: "server:123e4567-e89b-42d3-a456-426614174000|profile:reader-1",
     bookId: "book-1",
     format: "epub",
     checksum: CHECKSUM_B,

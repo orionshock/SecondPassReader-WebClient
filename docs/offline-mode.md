@@ -24,25 +24,22 @@ authentication problem does not trigger an offline fallback.
 
 ## Identity and privacy
 
-Account-owned records use a namespace derived from normalized Second Pass Library origin and the
-verified profile ID returned by `/accounts/me`:
-
-This is the current offline namespace model, pending a deliberate cutover to stable Library
-`serverId` plus profile ID. The route-derived namespace must not be interpreted as canonical
-Library identity. See [Library identity and routes](server-identity.md) for the impact audit.
+Account-owned records use a namespace derived from the verified Library server ID and the verified
+profile ID returned by `/accounts/me`:
 
 ```text
-server:<encoded-origin>|profile:<encoded-profile-id>
+server:<server-id>|profile:<encoded-profile-id>
 ```
 
-Both values are required. Display names, bearer tokens, local connection IDs, client-session IDs,
-API paths, and release metadata are not identity.
+Both values are required. The current route, declared alternate routes, display names, bearer
+tokens, local connection IDs, client-session IDs, API paths, and release metadata are not durable
+offline identity. See [Library identity and routes](server-identity.md).
 
 The Web Client keeps one active connection:
 
 - A rejected credential enters repair-required state without deleting local data.
 - Personal cached data stays inaccessible until identity is verified again.
-- Repair preserves the namespace only when normalized server origin and profile ID both match.
+- Repair preserves the namespace when server ID and profile ID both match, even if the route changes.
 - If repair verifies a different identity, the previous namespace is removed before the new
   identity becomes active.
 - Intentional Sign out and Forget connection and local data remove the active connection and its

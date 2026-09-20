@@ -5,8 +5,8 @@ import type { OfflineCacheNamespace } from "../../namespace/OfflineCacheNamespac
 import type { OfflineClock } from "../../OfflineClock.Types";
 import {
   publishOfflineProjection,
-  type OfflineProjectionPublicationLease,
-} from "../../namespace/OfflineProjectionPublication.Lifecycle";
+  type OfflineNamespacePublicationLease,
+} from "../../namespace/OfflineNamespacePublication.Lifecycle";
 import { loadOrCreateOfflineReaderContinuity } from "./OfflineReaderContinuity.Controller";
 import {
   classifyOfflinePublicationAssetAvailability,
@@ -38,7 +38,7 @@ export function offlineReaderBookProjectionKey(bookId: string | number): string 
 export async function retainOfflineReaderBookMetadata(input: {
   book: BookDetail;
   repository: OfflineProjectionRepository;
-  publication: OfflineProjectionPublicationLease;
+  publication: OfflineNamespacePublicationLease;
   clock?: OfflineClock;
 }): Promise<boolean> {
   return publishOfflineProjection({

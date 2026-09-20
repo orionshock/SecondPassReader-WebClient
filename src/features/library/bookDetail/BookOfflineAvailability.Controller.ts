@@ -13,7 +13,7 @@ import {
 } from "../../../app/offline/publication/OfflinePublicationAcquisition.Actions";
 import { acquireOfflinePublicationCover } from "../../../app/offline/publication/OfflinePublicationCover.Actions";
 import { removeOfflinePublicationAsset } from "../../../app/offline/publication/OfflinePublicationRemoval.Actions";
-import { createOfflineProjectionPublicationLease } from "../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
+import { createOfflineNamespacePublicationLease } from "../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 import {
   openIndexedDbOfflineRepositories,
   type IndexedDbOfflineRepositories,
@@ -52,9 +52,9 @@ export function useBookOfflineAvailabilityController({
   spl: SecondPassClient | null;
 }): BookOfflineAvailabilityController {
   const namespace = useMemo(() => buildOfflineCacheNamespace({
-    serverBaseUrl: connection?.serverBaseUrl,
-    accountProfileId: connection?.verifiedUser?.profileId,
-  }), [connection?.serverBaseUrl, connection?.verifiedUser?.profileId]);
+    serverId: connection?.serverId,
+    profileId: connection?.verifiedUser?.profileId,
+  }), [connection?.serverId, connection?.verifiedUser?.profileId]);
   const [state, setState] = useState<BookOfflineAvailabilityState>({ status: "loading" });
   const stateRef = useRef(state);
   const repositoriesRef = useRef<IndexedDbOfflineRepositories<Blob> | null>(null);
@@ -74,7 +74,7 @@ export function useBookOfflineAvailabilityController({
   ) => {
     if (!book || !namespace) return;
     const retentionRevision = ++retentionRevisionRef.current;
-    const publication = createOfflineProjectionPublicationLease(
+    const publication = createOfflineNamespacePublicationLease(
       namespace.key,
       () => generation === generationRef.current && retentionRevision === retentionRevisionRef.current,
     );
@@ -153,20 +153,26 @@ export function useBookOfflineAvailabilityController({
       if (repositoriesRef.current === repositories) repositoriesRef.current = null;
       repositories?.close();
     };
-  }, [book, namespace, refresh, spl, updateState]);
+  }, [book, connection?.serverBaseUrl, namespace, refresh, spl, updateState]);
 
   const acquire = useCallback(async () => {
     const repositories = repositoriesRef.current;
     if (operationRunningRef.current || !repositories || !book || !namespace || !spl) return;
 
+    const generation = generationRef.current;
+    const publication = createOfflineNamespacePublicationLease(
+      namespace.key,
+      () => generation === generationRef.current,
+    );
+    if (!publication) return;
     operationRunningRef.current = true;
     retentionRevisionRef.current += 1;
-    const generation = generationRef.current;
     const previousState = stateRef.current;
     updateState({ status: "working", operation: "acquire" });
     try {
       const result = await acquireOfflinePublicationAsset({
         namespace,
+        publication,
         book,
         spl,
         repository: repositories.publicationAssets,
@@ -178,6 +184,8 @@ export function useBookOfflineAvailabilityController({
       if (result.status === "stored" || result.status === "already-available") {
         await acquireOfflinePublicationCover({
           namespace,
+          publication,
+          libraryBaseUrl: connection?.serverBaseUrl ?? "",
           book,
           spl,
           repository: repositories.publicationCovers,
@@ -193,7 +201,7 @@ export function useBookOfflineAvailabilityController({
     } finally {
       if (generation === generationRef.current) operationRunningRef.current = false;
     }
-  }, [book, namespace, refresh, spl, updateState]);
+  }, [book, connection?.serverBaseUrl, namespace, refresh, spl, updateState]);
 
   const remove = useCallback(async () => {
     const repositories = repositoriesRef.current;

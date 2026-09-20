@@ -3,7 +3,7 @@ import type { IndexedDbOfflineRepositories } from "../storage/IndexedDbOfflineRe
 import type { OfflineNamespaceRetentionSummary } from "./OfflineNamespaceRetention.Presenter";
 import { summarizeOfflineNamespaceRetention } from "./OfflineNamespaceRetention.Presenter";
 import { debugWarn } from "../../../lib/debug/DebugLogger.Diagnostics";
-import { cleanupOfflineProjectionNamespace } from "./OfflineProjectionPublication.Lifecycle";
+import { cleanupOfflineNamespacePublication } from "./OfflineNamespacePublication.Lifecycle";
 
 type NamespaceRepositories = IndexedDbOfflineRepositories<Blob>;
 
@@ -36,7 +36,7 @@ export async function removeOfflineNamespace(
   openRepositories: () => Promise<NamespaceRepositories> = () => openIndexedDbOfflineRepositories<Blob>(),
 ): Promise<OfflineNamespaceCleanupResult> {
   const normalizedNamespaceKey = namespaceKey.trim();
-  return cleanupOfflineProjectionNamespace(normalizedNamespaceKey, async () => {
+  return cleanupOfflineNamespacePublication(normalizedNamespaceKey, async () => {
     let repositories: NamespaceRepositories | null = null;
     try {
       repositories = await openRepositories();

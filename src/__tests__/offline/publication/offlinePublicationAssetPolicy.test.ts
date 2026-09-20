@@ -78,8 +78,8 @@ describe("offline publication asset policy", () => {
 
   it("includes format in asset identity but excludes display metadata", () => {
     const namespace = buildOfflineCacheNamespace({
-      serverBaseUrl: "https://library.example",
-      accountProfileId: "profile-1",
+      serverId: "123e4567-e89b-42d3-a456-426614174000",
+      profileId: "profile-1",
     });
     const input = {
       namespace,
@@ -94,7 +94,7 @@ describe("offline publication asset policy", () => {
       buildOfflinePublicationAssetKey(input),
     );
     expect(buildOfflinePublicationAssetKey(input)).toBe(
-      `server:https%3A%2F%2Flibrary.example|profile:profile-1|book:book%2F1|format:epub|checksum:${CHECKSUM_A}`,
+      `server:123e4567-e89b-42d3-a456-426614174000|profile:profile-1|book:book%2F1|format:epub|checksum:${CHECKSUM_A}`,
     );
     expect(buildOfflinePublicationAssetKey({ ...input, format: "cbz" })).not.toBe(
       buildOfflinePublicationAssetKey(input),
@@ -103,9 +103,9 @@ describe("offline publication asset policy", () => {
 
   it.each([
     { namespace: null, bookId: "book-1", format: "epub", checksum: CHECKSUM_A },
-    { namespace: buildOfflineCacheNamespace({ serverBaseUrl: "https://library.example", accountProfileId: "profile-1" }), bookId: " ", format: "epub", checksum: CHECKSUM_A },
-    { namespace: buildOfflineCacheNamespace({ serverBaseUrl: "https://library.example", accountProfileId: "profile-1" }), bookId: "book-1", format: " ", checksum: CHECKSUM_A },
-    { namespace: buildOfflineCacheNamespace({ serverBaseUrl: "https://library.example", accountProfileId: "profile-1" }), bookId: "book-1", format: "epub", checksum: "invalid" },
+    { namespace: buildOfflineCacheNamespace({ serverId: "123e4567-e89b-42d3-a456-426614174000", profileId: "profile-1" }), bookId: " ", format: "epub", checksum: CHECKSUM_A },
+    { namespace: buildOfflineCacheNamespace({ serverId: "123e4567-e89b-42d3-a456-426614174000", profileId: "profile-1" }), bookId: "book-1", format: " ", checksum: CHECKSUM_A },
+    { namespace: buildOfflineCacheNamespace({ serverId: "123e4567-e89b-42d3-a456-426614174000", profileId: "profile-1" }), bookId: "book-1", format: "epub", checksum: "invalid" },
   ])("does not build incomplete asset identity", (input) => {
     expect(buildOfflinePublicationAssetKey(input)).toBeNull();
   });

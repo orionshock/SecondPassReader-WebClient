@@ -7,9 +7,9 @@ import {
   retainOfflineReaderBookMetadata,
 } from "../../../../app/offline/reader/continuity/OfflineReaderOpen.Actions";
 import {
-  cleanupOfflineProjectionNamespace,
-  createOfflineProjectionPublicationLease,
-} from "../../../../app/offline/namespace/OfflineProjectionPublication.Lifecycle";
+  cleanupOfflineNamespacePublication,
+  createOfflineNamespacePublicationLease,
+} from "../../../../app/offline/namespace/OfflineNamespacePublication.Lifecycle";
 import type {
   OfflineProjectionRepository,
   OfflineProjectionRecord,
@@ -22,8 +22,8 @@ import { createInMemoryOfflineRepositoryFactories } from "../../storage/OfflineR
 const CHECKSUM = "a".repeat(64);
 const OTHER_CHECKSUM = "b".repeat(64);
 const namespace = buildOfflineCacheNamespace({
-  serverBaseUrl: "https://library.example",
-  accountProfileId: "reader-1",
+  serverId: "123e4567-e89b-42d3-a456-426614174000",
+  profileId: "reader-1",
 })!;
 
 describe("offline Reader admission", () => {
@@ -142,7 +142,7 @@ describe("offline Reader admission", () => {
     await retainOfflineReaderBookMetadata({
       book: value,
       repository,
-      publication: createOfflineProjectionPublicationLease(namespace.key, () => true)!,
+      publication: createOfflineNamespacePublicationLease(namespace.key, () => true)!,
       clock: { now: () => 123 },
     });
 
@@ -173,10 +173,10 @@ describe("offline Reader admission", () => {
       delete: vi.fn(async () => { projection = null; }),
       deleteNamespace: vi.fn(async () => { projection = null; }),
     } as unknown as OfflineProjectionRepository;
-    const publication = createOfflineProjectionPublicationLease(namespaceKey, () => true)!;
+    const publication = createOfflineNamespacePublicationLease(namespaceKey, () => true)!;
     const write = retainOfflineReaderBookMetadata({ book: book(CHECKSUM), repository, publication });
     await putStarted.promise;
-    const cleanup = cleanupOfflineProjectionNamespace(namespaceKey, () => repository.deleteNamespace(namespaceKey));
+    const cleanup = cleanupOfflineNamespacePublication(namespaceKey, () => repository.deleteNamespace(namespaceKey));
 
     releasePut.resolve();
     await Promise.all([write, cleanup]);
@@ -204,7 +204,7 @@ describe("offline Reader admission", () => {
       deleteNamespace: vi.fn(async () => { projection = null; }),
     } as unknown as OfflineProjectionRepository;
     let revision = 1;
-    const oldPublication = createOfflineProjectionPublicationLease(namespaceKey, () => revision === 1)!;
+    const oldPublication = createOfflineNamespacePublicationLease(namespaceKey, () => revision === 1)!;
     const oldWrite = retainOfflineReaderBookMetadata({
       book: { ...book(CHECKSUM), title: "Old title" },
       repository,
@@ -215,7 +215,7 @@ describe("offline Reader admission", () => {
     const newWrite = retainOfflineReaderBookMetadata({
       book: { ...book(CHECKSUM), title: "New title" },
       repository,
-      publication: createOfflineProjectionPublicationLease(namespaceKey, () => revision === 2)!,
+      publication: createOfflineNamespacePublicationLease(namespaceKey, () => revision === 2)!,
     });
 
     releaseOldPut.resolve();
