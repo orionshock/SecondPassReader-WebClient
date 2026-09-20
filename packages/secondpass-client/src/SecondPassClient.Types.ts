@@ -109,8 +109,8 @@ export type SecondPassClient = {
   readonly config: Readonly<SecondPassClientConfig>;
 
   server: {
-    discover(serverBaseUrl: string): Promise<SecondPassDiscovery>;
-    info(): Promise<ServerInfo>;
+    discover(serverBaseUrl: string, options?: { signal?: AbortSignal }): Promise<SecondPassDiscovery>;
+    info(options?: { signal?: AbortSignal }): Promise<ServerInfo>;
     createLoginRequest(
       discovery: SecondPassDiscovery,
       libraryBaseUrl: string,
@@ -121,7 +121,7 @@ export type SecondPassClient = {
   };
 
   account: {
-    getCurrentUser(): Promise<CurrentUser>;
+    getCurrentUser(options?: { signal?: AbortSignal }): Promise<CurrentUser>;
     revokeClientSession(clientSessionId: string): Promise<void>;
   };
 

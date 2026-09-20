@@ -24,6 +24,17 @@ describe("authenticated bootstrap context", () => {
     expect(info).toHaveBeenCalledOnce();
   });
 
+  it("passes one candidate signal to both authenticated verification requests", async () => {
+    const signal = new AbortController().signal;
+    const getCurrentUser = vi.fn().mockResolvedValue(currentUser());
+    const info = vi.fn().mockResolvedValue(serverInfo());
+    const spl = { account: { getCurrentUser }, server: { info } } as unknown as SecondPassClient;
+
+    await loadAuthenticatedContext(spl, signal);
+    expect(getCurrentUser).toHaveBeenCalledExactlyOnceWith({ signal });
+    expect(info).toHaveBeenCalledExactlyOnceWith({ signal });
+  });
+
   it("uses server.info display/config and /me identity in header and Settings", () => {
     const connection = applyAuthenticatedContextToConnection(
       baseProfile(),

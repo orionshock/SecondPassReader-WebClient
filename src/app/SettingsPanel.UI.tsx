@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { SecondPassClient } from "@secondpass/client";
 import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
@@ -45,8 +45,16 @@ export function SettingsPanel({
   connectivity,
 }: Props) {
   const [state, setState] = useState<SettingsLibraryServerActionState>({ phase: "idle" });
+  const activeCheckRef = useRef<AbortController | null>(null);
   const activeTab = route.tab ?? "appearance";
   const tabListRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => () => activeCheckRef.current?.abort(), [connection?.id, connection?.serverId, connection?.serverBaseUrl, connection?.accessToken]);
+  useEffect(() => {
+    if (connectivity !== "offline" || !activeCheckRef.current) return;
+    activeCheckRef.current.abort();
+    activeCheckRef.current = null;
+    setState((current) => current.phase === "checking" || current.phase === "trying" ? { phase: "idle" } : current);
+  }, [connectivity]);
   const tabs: Array<{ value: SettingsTab; label: string }> = [
     { value: "appearance", label: "Appearance" },
     { value: "offline", label: "Offline" },
@@ -76,12 +84,22 @@ export function SettingsPanel({
       return;
     }
     setState({ phase: "checking" });
-    const result = await recoverConnectionRoute({
-      connection,
-      markVerified: true,
-      onConnectionChanged,
-      onTryingAlternate: () => setState({ phase: "trying" }),
-    });
+    activeCheckRef.current?.abort();
+    const check = new AbortController();
+    activeCheckRef.current = check;
+    let result: Awaited<ReturnType<typeof recoverConnectionRoute>>;
+    try {
+      result = await recoverConnectionRoute({
+        connection,
+        signal: check.signal,
+        markVerified: true,
+        onConnectionChanged,
+        onTryingAlternate: () => setState({ phase: "trying" }),
+      });
+    } finally {
+      if (activeCheckRef.current === check) activeCheckRef.current = null;
+    }
+    if (check.signal.aborted) return;
     if (result.status === "stale") return;
     if (result.status === "verified") {
       setState({ phase: "success", message: result.routeChanged ? "Connected through another Library URL." : "Connection checked." });

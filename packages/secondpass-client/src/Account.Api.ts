@@ -20,13 +20,14 @@ type CurrentUserWire = {
   }>;
 };
 
-export async function getCurrentUser(ctx: AuthenticatedClientContext): Promise<CurrentUser> {
+export async function getCurrentUser(ctx: AuthenticatedClientContext, options?: { signal?: AbortSignal }): Promise<CurrentUser> {
   const wire = await requestJson<CurrentUserWire>({
     apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: "/accounts/me/",
     options: {
+      signal: options?.signal,
       errorMessages: authErrorMessages({ forbidden: "Token is not allowed for /me (403)." }),
     },
   });

@@ -41,6 +41,19 @@ describe("SDK Server API", () => {
     expect(() => spl.library.books.list()).toThrowError(ApiError);
   });
 
+  it("uses the same cancellation signal for both anonymous discovery requests", async () => {
+    const fetchMock = asMockFetch();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ server_id: serverId, server_name: "Library" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse(clientApiDiscoveryResponse()));
+    const signal = new AbortController().signal;
+
+    await createSecondPassClient({ apiRootUrl: "https://server.example/api/v1/" })
+      .server.discover("https://server.example", { signal });
+
+    expect(fetchMock.mock.calls.map(([, init]) => init?.signal)).toEqual([signal, signal]);
+    expect(fetchMock.mock.calls.every(([, init]) => init?.credentials === "omit")).toBe(true);
+  });
+
   it.each([
     [{ server_name: "Library" }, "missing ID"],
     [{ server_name: "Library", server_id: "bad-id" }, "malformed ID"],

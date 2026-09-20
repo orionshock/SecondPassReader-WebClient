@@ -30,10 +30,11 @@ export function normalizeServerBaseUrl(input: string): { serverBaseUrl: string }
   return { serverBaseUrl };
 }
 
-export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
+export async function discoverSecondPass(serverBaseUrl: string, signal?: AbortSignal): Promise<SecondPassDiscovery> {
   try {
-    return await createSecondPassClient({ apiRootUrl: deriveApiRootUrl(serverBaseUrl) }).server.discover(serverBaseUrl);
+    return await createSecondPassClient({ apiRootUrl: deriveApiRootUrl(serverBaseUrl) }).server.discover(serverBaseUrl, { signal });
   } catch (e) {
+    if (signal?.aborted || (e instanceof Error && e.name === "AbortError")) throw e;
     debugWarn("reader", "Second Pass Library discovery did not complete", { serverBaseUrl, error: e });
     throw new ConnectionSetupError("Couldn't reach Second Pass Library. Check the address and try again.", { cause: e });
   }

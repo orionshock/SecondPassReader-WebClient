@@ -18,12 +18,12 @@ export class AuthenticatedContextLoadError extends Error {
   }
 }
 
-export async function loadAuthenticatedContext(spl: SecondPassClient): Promise<AuthenticatedContext> {
+export async function loadAuthenticatedContext(spl: SecondPassClient, signal?: AbortSignal): Promise<AuthenticatedContext> {
   const [currentUser, serverInfo] = await Promise.all([
-    spl.account.getCurrentUser().catch((error: unknown) => {
+    spl.account.getCurrentUser({ signal }).catch((error: unknown) => {
       throw new AuthenticatedContextLoadError("currentUser", error);
     }),
-    spl.server.info().catch((error: unknown) => {
+    spl.server.info({ signal }).catch((error: unknown) => {
       throw new AuthenticatedContextLoadError("serverInfo", error);
     }),
   ]);

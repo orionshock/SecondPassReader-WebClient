@@ -106,6 +106,53 @@ describe("authenticated context publication ownership", () => {
     await vi.waitFor(() => expect(spl.account.getCurrentUser).toHaveBeenCalledOnce());
   });
 
+  it("aborts an in-flight context check when browser connectivity turns offline", async () => {
+    const connection = profile("connection-a", "token-a");
+    saveActiveConnection(connection);
+    const user = deferred<CurrentUser>();
+    const spl = client(user.promise);
+    const callbacks = {
+      clearAuthorizationFailure: vi.fn(),
+      reportAuthorizationFailure: vi.fn(),
+      onConnectionChanged: vi.fn(),
+    };
+    act(() => root.render(<Harness connection={connection} spl={spl} {...callbacks} connectivity="online" />));
+    await vi.waitFor(() => expect(spl.account.getCurrentUser).toHaveBeenCalledOnce());
+    const signal = vi.mocked(spl.account.getCurrentUser).mock.calls[0]![0]?.signal;
+    expect(signal?.aborted).toBe(false);
+
+    act(() => root.render(<Harness connection={connection} spl={spl} {...callbacks} connectivity="offline" />));
+    expect(signal?.aborted).toBe(true);
+    user.resolve(currentUser("profile-a"));
+    await act(async () => user.promise);
+    expect(callbacks.onConnectionChanged).not.toHaveBeenCalled();
+  });
+
+  it("aborts the prior request when a newer connection starts verification", async () => {
+    const first = profile("connection-a", "token-a");
+    const next = profile("connection-b", "token-b");
+    const pending = deferred<CurrentUser>();
+    const firstClient = client(pending.promise);
+    const nextClient = client(Promise.resolve(currentUser("profile-a")));
+    const callbacks = {
+      clearAuthorizationFailure: vi.fn(),
+      reportAuthorizationFailure: vi.fn(),
+      onConnectionChanged: vi.fn(),
+    };
+    saveActiveConnection(first);
+    act(() => root.render(<Harness connection={first} spl={firstClient} {...callbacks} />));
+    await vi.waitFor(() => expect(firstClient.account.getCurrentUser).toHaveBeenCalledOnce());
+    const priorSignal = vi.mocked(firstClient.account.getCurrentUser).mock.calls[0]![0]?.signal;
+
+    saveActiveConnection(next);
+    act(() => root.render(<Harness connection={next} spl={nextClient} {...callbacks} />));
+    await vi.waitFor(() => expect(nextClient.account.getCurrentUser).toHaveBeenCalledOnce());
+    expect(priorSignal?.aborted).toBe(true);
+    pending.resolve(currentUser("profile-a"));
+    await act(async () => pending.promise);
+    expect(getActiveConnection()?.id).toBe(next.id);
+  });
+
   function render(connection: ActiveConnection, spl: SecondPassClient) {
     saveActiveConnection(connection);
     const clearAuthorizationFailure = vi.fn();

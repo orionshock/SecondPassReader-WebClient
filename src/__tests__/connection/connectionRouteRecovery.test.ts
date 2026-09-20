@@ -2,6 +2,7 @@
 import { ApiError, ApiTransportError, type CurrentUser, type SecondPassDiscovery, type SecondPassClient, type ServerInfo } from "@secondpass/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildOfflineCacheNamespace } from "../../app/offline/namespace/OfflineCacheNamespace.Policy";
+import type { AuthenticatedContext } from "../../features/connection/AuthenticatedContext.Queries";
 import {
   isRouteTransportFailure,
   orderedConnectionRoutes,
@@ -20,13 +21,20 @@ beforeEach(() => clearActiveConnection());
 describe("saved Library route recovery", () => {
   it("keeps a working current route and does not discover alternates", async () => {
     const connection = saved();
+    const clearTimer = vi.spyOn(globalThis, "clearTimeout");
     const discover = vi.fn();
-    const loadContext = vi.fn(async () => context());
+    let signal: AbortSignal | undefined;
+    const loadContext = vi.fn(async (_client: SecondPassClient, requestSignal?: AbortSignal) => {
+      signal = requestSignal;
+      return context();
+    });
     const result = await recoverConnectionRoute({ connection, discover, loadContext });
 
     expect(result).toMatchObject({ status: "verified", routeChanged: false });
     expect(loadContext).toHaveBeenCalledOnce();
     expect(discover).not.toHaveBeenCalled();
+    expect(signal?.aborted).toBe(false);
+    expect(clearTimer).toHaveBeenCalled();
     expect(getActiveConnection()?.serverBaseUrl).toBe(CURRENT);
   });
 
@@ -42,7 +50,7 @@ describe("saved Library route recovery", () => {
 
     await expect(recoverConnectionRoute({ connection, discover, loadContext, onConnectionChanged }))
       .resolves.toMatchObject({ status: "verified", routeChanged: true });
-    expect(discover).toHaveBeenCalledExactlyOnceWith(FIRST);
+    expect(discover).toHaveBeenCalledExactlyOnceWith(FIRST, expect.any(AbortSignal));
     expect(loadContext.mock.calls.map(([client]) => routeOf(client))).toEqual([CURRENT, FIRST]);
     expect(getActiveConnection()?.serverBaseUrl).toBe(FIRST);
     expect(namespace(getActiveConnection()!)).toBe(before);
@@ -51,12 +59,17 @@ describe("saved Library route recovery", () => {
 
   it("tries declared alternates sequentially in operator order", async () => {
     const connection = saved();
+    let currentSignal: AbortSignal | undefined;
     const discover = vi.fn(async (route: string) => {
+      expect(currentSignal?.aborted).toBe(true);
       if (route === FIRST) throw transportFailure();
       return discovery();
     });
-    const loadContext = vi.fn(async (client: SecondPassClient) => {
-      if (routeOf(client) === CURRENT) throw transportFailure();
+    const loadContext = vi.fn(async (client: SecondPassClient, signal?: AbortSignal) => {
+      if (routeOf(client) === CURRENT) {
+        currentSignal = signal;
+        throw transportFailure();
+      }
       return context();
     });
 
@@ -116,7 +129,7 @@ describe("saved Library route recovery", () => {
 
     await expect(recoverConnectionRoute({ connection, discover, loadContext }))
       .resolves.toMatchObject({ status: "authorization-failed", authenticationRejected: true });
-    expect(discover).toHaveBeenCalledExactlyOnceWith(FIRST);
+    expect(discover).toHaveBeenCalledExactlyOnceWith(FIRST, expect.any(AbortSignal));
     expect(getActiveConnection()).toEqual(connection);
   });
 
@@ -215,17 +228,86 @@ describe("saved Library route recovery", () => {
   it("moves to the next route when a probe does not settle within the bound", async () => {
     vi.useFakeTimers();
     try {
+      const clearTimer = vi.spyOn(globalThis, "clearTimeout");
       const connection = saved([FIRST]);
-      const discover = vi.fn(async () => discovery());
-      const loadContext = vi.fn(async (client: SecondPassClient) => {
-        if (routeOf(client) === CURRENT) return new Promise<ReturnType<typeof context>>(() => undefined);
+      let currentSignal: AbortSignal | undefined;
+      const discover = vi.fn(async (_route: string, signal?: AbortSignal) => {
+        expect(currentSignal?.aborted).toBe(true);
+        expect(signal?.aborted).toBe(false);
+        return discovery();
+      });
+      const loadContext = vi.fn(async (client: SecondPassClient, signal?: AbortSignal) => {
+        if (routeOf(client) === CURRENT) {
+          currentSignal = signal;
+          return new Promise<ReturnType<typeof context>>(() => undefined);
+        }
         return context();
       });
       const running = recoverConnectionRoute({ connection, discover, loadContext });
       await vi.advanceTimersByTimeAsync(10_000);
 
       await expect(running).resolves.toMatchObject({ status: "verified", routeChanged: true });
-      expect(discover).toHaveBeenCalledExactlyOnceWith(FIRST);
+      expect(discover).toHaveBeenCalledExactlyOnceWith(FIRST, expect.any(AbortSignal));
+      expect(currentSignal?.aborted).toBe(true);
+      expect(clearTimer).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("aborts timed-out anonymous discovery before trying the next candidate", async () => {
+    vi.useFakeTimers();
+    try {
+      const clearTimer = vi.spyOn(globalThis, "clearTimeout");
+      const connection = saved();
+      let firstSignal: AbortSignal | undefined;
+      const discover = vi.fn((route: string, signal?: AbortSignal) => {
+        if (route === FIRST) {
+          firstSignal = signal;
+          return new Promise<SecondPassDiscovery>(() => undefined);
+        }
+        expect(firstSignal?.aborted).toBe(true);
+        return Promise.resolve(discovery());
+      });
+      const loadContext = vi.fn(async (client: SecondPassClient) => {
+        if (routeOf(client) === CURRENT) throw transportFailure();
+        return context();
+      });
+      const running = recoverConnectionRoute({ connection, discover, loadContext });
+      await vi.advanceTimersByTimeAsync(10_000);
+      await expect(running).resolves.toMatchObject({ status: "verified", routeChanged: true });
+      expect(firstSignal?.aborted).toBe(true);
+      expect(discover.mock.calls.map(([route]) => route)).toEqual([FIRST, SECOND]);
+      expect(clearTimer).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels an active recovery without classifying its abort as transport", async () => {
+    vi.useFakeTimers();
+    try {
+      const clearTimer = vi.spyOn(globalThis, "clearTimeout");
+      const connection = saved();
+      const cancel = new AbortController();
+      let requestSignal: AbortSignal | undefined;
+      const discover = vi.fn();
+      const running = recoverConnectionRoute({
+        connection,
+        signal: cancel.signal,
+        discover,
+        loadContext: async (_client, signal) => {
+          requestSignal = signal;
+          return new Promise<AuthenticatedContext>(() => undefined);
+        },
+      });
+      cancel.abort();
+      await expect(running).resolves.toEqual({ status: "stale" });
+      expect(requestSignal?.aborted).toBe(true);
+      expect(discover).not.toHaveBeenCalled();
+      expect(clearTimer).toHaveBeenCalled();
+      expect(isRouteTransportFailure(new DOMException("Cancelled", "AbortError"))).toBe(false);
+      expect(getActiveConnection()).toEqual(connection);
     } finally {
       vi.useRealTimers();
     }

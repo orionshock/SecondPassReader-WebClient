@@ -105,11 +105,11 @@ function parseConsumeResponse(value: unknown): ClientApiConsumeResponse {
   };
 }
 
-export async function discoverSecondPass(serverBaseUrl: string): Promise<SecondPassDiscovery> {
+export async function discoverSecondPass(serverBaseUrl: string, options?: { signal?: AbortSignal }): Promise<SecondPassDiscovery> {
   const wellKnownUrl = resolveUrl(serverBaseUrl, "/.well-known/secondpass");
-  const wellKnown = parseWellKnown(await requestAnonymousJsonUrl<unknown>({ url: wellKnownUrl, method: "GET", credentials: "omit" }));
+  const wellKnown = parseWellKnown(await requestAnonymousJsonUrl<unknown>({ url: wellKnownUrl, method: "GET", credentials: "omit", signal: options?.signal }));
   const discoveryUrl = resolveUrl(deriveApiRootUrl(serverBaseUrl), CLIENT_API_DISCOVERY_ENDPOINT);
-  const clientApi = await requestAnonymousJsonUrl<unknown>({ url: discoveryUrl, method: "GET", credentials: "omit" });
+  const clientApi = await requestAnonymousJsonUrl<unknown>({ url: discoveryUrl, method: "GET", credentials: "omit", signal: options?.signal });
   return parseClientApiDiscovery(clientApi, wellKnown);
 }
 

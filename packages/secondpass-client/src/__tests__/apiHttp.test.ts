@@ -112,6 +112,29 @@ describe("SDK HTTP contracts", () => {
       .rejects.toMatchObject({ name: "ApiTransportError", cause: networkFailure, message: "Could not reach Second Pass Library." });
   });
 
+  it("passes request cancellation to fetch without classifying abort as transport", async () => {
+    const fetchMock = asMockFetch();
+    const abort = new AbortController();
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
+    await requestAnonymousJsonUrl({ url: "https://api.example/discovery/", signal: abort.signal });
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(abort.signal);
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
+    await requestJson({
+      apiRootUrl: "https://api.example",
+      accessToken: "token",
+      tokenType: "Bearer",
+      endpointOrUrl: "/accounts/me/",
+      options: { signal: abort.signal },
+    });
+    expect(fetchMock.mock.calls[1]?.[1]?.signal).toBe(abort.signal);
+
+    abort.abort();
+    fetchMock.mockRejectedValueOnce(new DOMException("Aborted", "AbortError"));
+    await expect(requestAnonymousJsonUrl({ url: "https://api.example/discovery/", signal: abort.signal }))
+      .rejects.toMatchObject({ name: "AbortError" });
+  });
+
   it("api HTTP helpers surface specific error kinds and parse download filenames", async () => {
     const fetchMock = asMockFetch();
     fetchMock

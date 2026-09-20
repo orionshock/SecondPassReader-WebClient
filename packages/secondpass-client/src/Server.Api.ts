@@ -22,13 +22,14 @@ type ServerInfoWire = {
   server_release_date?: string;
 };
 
-export async function getServerInfo(ctx: AuthenticatedClientContext): Promise<ServerInfo> {
+export async function getServerInfo(ctx: AuthenticatedClientContext, options?: { signal?: AbortSignal }): Promise<ServerInfo> {
   const wire = await requestJson<ServerInfoWire>({
     apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,
     tokenType: ctx.tokenType,
     endpointOrUrl: "/server/info/",
     options: {
+      signal: options?.signal,
       errorMessages: authErrorMessages({ forbidden: "Token is not allowed for /server/info (403)." }),
     },
   });

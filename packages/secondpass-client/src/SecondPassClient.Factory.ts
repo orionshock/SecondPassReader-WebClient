@@ -80,10 +80,10 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
     config: frozenConfig,
 
     server: {
-      discover: (serverBaseUrl: string) => discoverSecondPass(serverBaseUrl),
-      info: () => {
+      discover: (serverBaseUrl: string, options?: { signal?: AbortSignal }) => discoverSecondPass(serverBaseUrl, options),
+      info: (options?: { signal?: AbortSignal }) => {
         const auth = requireAuth(ctx);
-        return getServerInfo(auth);
+        return getServerInfo(auth, options);
       },
       createLoginRequest: (discovery: SecondPassDiscovery, libraryBaseUrl: string, input?: { clientName?: string; clientType?: string }) =>
         createLoginRequest(discovery, libraryBaseUrl, input),
@@ -92,9 +92,9 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
     },
 
     account: {
-      getCurrentUser: () => {
+      getCurrentUser: (options?: { signal?: AbortSignal }) => {
         const auth = requireAuth(ctx);
-        return getCurrentUser(auth);
+        return getCurrentUser(auth, options);
       },
       revokeClientSession: (clientSessionId) => {
         const auth = requireAuth(ctx);

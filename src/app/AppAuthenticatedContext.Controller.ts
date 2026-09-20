@@ -30,6 +30,7 @@ export function useAppAuthenticatedContextController({
 }) {
   const lastCheckRef = useRef<Record<string, number>>({});
   const priorConnectivityRef = useRef(connectivity);
+  const activeRecoveryRef = useRef<AbortController | null>(null);
 
   const checkAuthenticatedContext = useCallback(async (force = false) => {
     // Keep verified user display fresh on page load and periodic focus changes.
@@ -44,14 +45,23 @@ export function useAppAuthenticatedContextController({
     const last = lastCheckRef.current[refreshIdentity] ?? 0;
     if (!force && now - last < 60_000) return; // throttle focus checks
     lastCheckRef.current[refreshIdentity] = now;
-    const result = await recoverConnectionRoute({
-      connection,
-      markVerified: false,
-      createClient: (candidate) => candidate.serverBaseUrl === connection.serverBaseUrl
-        ? spl : createSplClientFromConnection(candidate),
-      onConnectionChanged,
-      onTryingAlternate: () => onRouteRecoveryStateChange?.("trying"),
-    });
+    activeRecoveryRef.current?.abort();
+    const recovery = new AbortController();
+    activeRecoveryRef.current = recovery;
+    let result: Awaited<ReturnType<typeof recoverConnectionRoute>>;
+    try {
+      result = await recoverConnectionRoute({
+        connection,
+        signal: recovery.signal,
+        markVerified: false,
+        createClient: (candidate) => candidate.serverBaseUrl === connection.serverBaseUrl
+          ? spl : createSplClientFromConnection(candidate),
+        onConnectionChanged,
+        onTryingAlternate: () => onRouteRecoveryStateChange?.("trying"),
+      });
+    } finally {
+      if (activeRecoveryRef.current === recovery) activeRecoveryRef.current = null;
+    }
     if (result.status === "stale") return;
     if (result.status === "verified") {
       clearAuthorizationFailure();
@@ -73,6 +83,12 @@ export function useAppAuthenticatedContextController({
       });
     }
   }, [clearAuthorizationFailure, connectivity, onConnectionChanged, onRouteRecoveryStateChange, connection, reportAuthorizationFailure, spl, workflowStep]);
+
+  useEffect(() => {
+    if (connectivity === "offline" || workflowStep !== "library_home") activeRecoveryRef.current?.abort();
+  }, [connectivity, workflowStep]);
+
+  useEffect(() => () => activeRecoveryRef.current?.abort(), [connection?.id, connection?.serverId, connection?.serverBaseUrl, connection?.accessToken]);
 
   useEffect(() => {
     if (priorConnectivityRef.current !== connectivity) return;

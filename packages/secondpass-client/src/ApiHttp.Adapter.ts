@@ -3,6 +3,7 @@ export type AnonymousJsonUrlOptions = {
   body?: unknown;
   credentials?: RequestCredentials;
   url: string;
+  signal?: AbortSignal;
   /** Status-specific user messages that do not change response classification. */
   errorMessages?: Partial<Record<number, string>>;
 };
@@ -76,6 +77,7 @@ export async function requestAnonymousJsonUrl<T>(options: AnonymousJsonUrlOption
     headers,
     body: options.body,
     credentials: options.credentials,
+    signal: options.signal,
   }), options.errorMessages);
 
   return (await res.json()) as T;
@@ -88,6 +90,7 @@ export type RequestOptions = {
   headers?: Record<string, string>;
   body?: unknown;
   errorMessages?: Partial<Record<number, string>>;
+  signal?: AbortSignal;
 };
 
 function buildAuthHeaders(input: { accessToken: string; tokenType: string }): Record<string, string> {
@@ -134,6 +137,7 @@ async function request(input: {
     method: input.options?.method,
     headers,
     body: input.options?.body,
+    signal: input.options?.signal,
   }), input.options?.errorMessages);
 }
 
@@ -190,6 +194,7 @@ function prepareJsonRequest(input: {
   headers: Record<string, string>;
   body?: unknown;
   credentials?: RequestCredentials;
+  signal?: AbortSignal;
 }): RequestInit {
   let body: BodyInit | undefined;
   if (input.body !== undefined) {
@@ -201,6 +206,7 @@ function prepareJsonRequest(input: {
     headers: input.headers,
     body,
     credentials: input.credentials,
+    signal: input.signal,
   };
 }
 
@@ -213,6 +219,8 @@ async function executeRequest(
   try {
     response = await fetch(url, init);
   } catch (error) {
+    if (init.signal?.aborted) throw new DOMException("Request aborted.", "AbortError");
+    if (error instanceof Error && error.name === "AbortError") throw error;
     throw new ApiTransportError(error);
   }
   if (response.ok) return response;
