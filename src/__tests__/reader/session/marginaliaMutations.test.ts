@@ -18,7 +18,7 @@ describe("Reader marginalia mutations", () => {
 
   it("keeps bookmark upserts body-free", () => {
     const locationLabel = buildSavedReaderLocationLabel({ toc: null, location: { locationIndex: 7, bookProgress: 0.42 } });
-    const operation = buildBookmarkUpsert({ clientId: "client-b", cfi: "point", locationLabel });
+    const operation = buildBookmarkUpsert({ clientId: "client-b", cfi: "epubcfi(/6/4!/4/2/1:7)", locationLabel });
     expect(operation).not.toHaveProperty("annotation.body");
     expect(operation).toHaveProperty("annotation.location.locationLabel", "042% - Location");
   });
@@ -56,7 +56,7 @@ describe("Reader marginalia mutations", () => {
       id: "highlight-1",
       clientId: "client-h",
       kind: "highlight",
-      location: { cfi: "range", locationLabel: " Label  stays " },
+      location: { cfi: "epubcfi(/6/4!/4/2,/1:2,/1:7)", locationLabel: " Label  stays " },
       body: {
         text: " Text\n with\tspaces ",
         prefix: " Prefix\n text ",

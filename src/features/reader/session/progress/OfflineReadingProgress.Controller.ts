@@ -4,6 +4,7 @@ import {
 } from "../../../../app/offline/reader/progress/OfflineReaderProgressPersistence.Actions";
 import type { ReaderLocation, ReaderTocItem } from "../../domain/ReaderDomain.Types";
 import { buildSavedReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
+import { assertDurableReaderCfi } from "../../domain/DurableReaderCfi.Policy";
 
 export const OFFLINE_READING_PROGRESS_DELAY_MS = 750;
 
@@ -25,6 +26,7 @@ export function buildOfflineReadingProgress(input: {
 }): OfflineReadingProgress | null {
   const cfi = input.location?.cfi?.trim() ?? "";
   if (!cfi) return null;
+  assertDurableReaderCfi(cfi);
   const rawProgress = input.location?.bookProgress;
   const percentage = typeof rawProgress === "number" && Number.isFinite(rawProgress)
     ? Math.max(0, Math.min(100, Math.round(rawProgress * 100)))

@@ -5,8 +5,8 @@ import { buildBookmarkUpsert, buildHighlightUpsert } from "../../../features/rea
 
 describe("server current-session annotation authority", () => {
   it.each([
-    buildBookmarkUpsert({ clientId: "bookmark", cfi: "point" }),
-    buildHighlightUpsert({ clientId: "highlight", cfi: "range", text: "  Text\n", color: "blue", note: "Note" }),
+    buildBookmarkUpsert({ clientId: "bookmark", cfi: "epubcfi(/6/4!/4/2/1:2)" }),
+    buildHighlightUpsert({ clientId: "highlight", cfi: "epubcfi(/6/4!/4/2,/1:2,/1:7)", text: "  Text\n", color: "blue", note: "Note" }),
     { action: "delete" as const, clientId: "annotation" },
   ])("delivers canonical $action intent and returns the authoritative response", async (mutation) => {
     const response = { annotations: [] };

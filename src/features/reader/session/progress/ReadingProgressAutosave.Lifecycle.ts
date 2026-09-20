@@ -9,6 +9,7 @@ import {
 } from "./ReadingProgressAutosave.Controller";
 import { buildMarginaliaProgressInput } from "../ReadingSessionMarginalia.Actions";
 import { buildSavedReaderLocationLabel } from "../../display/ReaderLocation.Presenter";
+import { assertDurableReaderCfi } from "../../domain/DurableReaderCfi.Policy";
 
 const READING_PROGRESS_EXIT_FLUSH_TIMEOUT_MS = 3000;
 
@@ -23,6 +24,7 @@ export function buildReadingProgressSaveInput(input: {
   if (!input.location) return null;
   const cfi = typeof input.location.cfi === "string" ? input.location.cfi.trim() : "";
   if (!cfi) return null;
+  assertDurableReaderCfi(cfi);
   return { cfi, locationLabel: buildSavedReaderLocationLabel(input) };
 }
 

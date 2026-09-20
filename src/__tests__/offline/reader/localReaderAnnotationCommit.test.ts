@@ -96,7 +96,7 @@ describe("atomic local Reader annotation commit", () => {
     if (intent.type !== "delete-annotation") throw new Error("missing delete");
     expect(projectionMatchesIntent(deleted.state.annotations[0], intent)).toBe(true);
     const restored = await repositories.readerAnnotationCommit.commit(author(deleted.state,
-      buildBookmarkUpsert({ clientId: "annotation-1", cfi: "point" })));
+      buildBookmarkUpsert({ clientId: "annotation-1", cfi: "epubcfi(/6/4!/4/2/1:2)" })));
     expect(restored.status).toBe("committed");
     expect(await repositories.readerOutbox.list("account")).toEqual([
       expect.objectContaining({ type: "upsert-annotation", intentRevision: 2, origin: state.annotations[0].origin }),
@@ -144,7 +144,7 @@ describe("atomic local Reader annotation commit", () => {
 });
 
 function highlight(note = "first") {
-  return buildHighlightUpsert({ clientId: "annotation-1", cfi: "range", text: "Text", color: "yellow", note });
+  return buildHighlightUpsert({ clientId: "annotation-1", cfi: "epubcfi(/6/4!/4/2,/1:2,/1:7)", text: "Text", color: "yellow", note });
 }
 
 function author(state: OfflineReaderBookState, mutation = highlight()): LocalReaderAnnotationCommit {

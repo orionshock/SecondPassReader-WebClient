@@ -1,4 +1,5 @@
 import type { CurrentSessionAnnotationMutation } from "./annotations/CurrentSessionAnnotation.Types";
+import { assertDurableReaderCfi } from "../domain/DurableReaderCfi.Policy";
 import type {
   MarginaliaAnnotation,
   MarginaliaHighlight,
@@ -19,6 +20,7 @@ export function normalizeOptionalHighlightContext(value?: string): string {
 }
 
 export function buildMarginaliaProgressInput(cfi: string, locationLabel?: string): MarginaliaProgressInput {
+  assertDurableReaderCfi(cfi);
   return { cfi, locationLabel: toMarginaliaLocationLabel(locationLabel) };
 }
 
@@ -27,6 +29,7 @@ export function buildBookmarkUpsert(input: {
   cfi: string;
   locationLabel?: string;
 }): CurrentSessionAnnotationMutation {
+  assertDurableReaderCfi(input.cfi);
   return {
     action: "upsert",
     annotation: {
@@ -49,6 +52,7 @@ export function buildHighlightUpsert(input: {
 }): CurrentSessionAnnotationMutation {
   const text = normalizeHighlightText(input.text);
   if (!text) throw new Error("Highlight text must not be blank.");
+  assertDurableReaderCfi(input.cfi);
 
   return {
     action: "upsert",
@@ -73,6 +77,7 @@ export function buildHighlightUpdate(annotation: MarginaliaHighlight, input: {
 }): CurrentSessionAnnotationMutation {
   const text = normalizeHighlightText(annotation.body.text);
   if (!text) throw new Error("Highlight text must not be blank.");
+  assertDurableReaderCfi(annotation.location.cfi);
 
   return {
     action: "upsert",

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { findPunctuationTolerantRepairRange } from "../../../features/reader/engine/EpubImportRangeRepair.Policy";
 import { repairImportedHighlightRangeInSection } from "../../../features/reader/engine/EpubTsImportRangeRepair.Engine";
+import { buildHighlightUpsert } from "../../../features/reader/session/ReadingSessionMarginalia.Actions";
 import type { ReaderRangeRepairDiagnostic } from "../../../features/reader/domain/ReaderRangeRepair.Diagnostics";
 
 describe("EPUB import range repair matching", () => {
@@ -42,6 +43,19 @@ describe("EPUB import range repair matching", () => {
     expect(repaired).toEqual({
       cfiRange: "epubcfi(/6/2!/4/2,/1:7,/1:34)",
       matchedText: "complete imported highlight",
+    });
+    expect(buildHighlightUpsert({
+      clientId: "imported",
+      cfi: repaired!.cfiRange,
+      text: repaired!.matchedText,
+      prefix: "Before",
+      suffix: "after",
+      color: "yellow",
+    })).toMatchObject({
+      annotation: {
+        location: { cfi: "epubcfi(/6/2!/4/2,/1:7,/1:34)" },
+        body: { text: "complete imported highlight", prefix: "Before", suffix: "after" },
+      },
     });
     expect(diagnostics.map((diagnostic) => diagnostic.event)).toContain("range repair start");
     expect(diagnostics.map((diagnostic) => diagnostic.event)).toContain("range repair success");

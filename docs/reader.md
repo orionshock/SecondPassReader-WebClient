@@ -4,6 +4,25 @@ The Reader organizes each EPUB workflow around a Reading Session and its Margina
 Library owns server data; the browser owns interaction state and sends EPUB operations through the
 Reader engine boundary. EPUB CFI is the canonical machine anchor. Renderer state is transient.
 
+## Durable EPUB CFI profile
+
+Web-authored progress, bookmarks, highlights, and notes use compact `epubcfi(...)` locations:
+structural path steps, character offsets, simple ranges, and structural element ID assertions such
+as `/4[element-id]`. A text-location assertion after an offset, such as `:17[surrounding text]`, is
+outside the durable profile. Temporal and spatial offsets and CFI extensions or parameters are
+also unsupported. All clients must author this compact structural profile for interoperability.
+
+epub-ts creates and interprets Web locations. Progress and annotation writes guard against
+unsupported authored forms; this lightweight guard is not a full CFI parser. The Library validates
+the wire profile and stores accepted CFIs byte-for-byte without opening EPUBs, resolving locations,
+or repairing anchors. Quote repair context belongs in the separate `text`, `prefix`, and `suffix`
+fields, never inside a CFI. Chapter labels and percentages are presentation metadata, not anchors.
+
+Glasp quote matching generates a new EPUB range CFI through epub-ts. Second Pass Marginalia CFI
+hints are probed against the EPUB and retained unchanged when accepted; structural ID assertions
+are valid. Existing server/import validation handles unsupported imported values. Continuation and
+copy-forward retain an accepted CFI unchanged.
+
 ## Opening a Book
 
 `src/app/AppReaderOpen.Controller.ts` owns both supported opening paths:
