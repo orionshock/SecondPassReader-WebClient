@@ -98,6 +98,35 @@ it("preserves each scope's page and results when switching selectors", async () 
   for (const [query] of list.mock.calls) expect(query).toMatchObject({ includePreviewBooks: true, previewLimit: 24 });
 });
 
+it("keeps the displayed scope until an uncached scope has a result", async () => {
+  let resolveShared!: (value: PaginatedShelfResponse) => void;
+  let resolveGroup!: (value: PaginatedShelfResponse) => void;
+  list.mockImplementation(({ scope }: { scope: ShelfScope }) => {
+    if (scope === "shared") return new Promise<PaginatedShelfResponse>((resolve) => { resolveShared = resolve; });
+    if (scope === "group") return new Promise<PaginatedShelfResponse>((resolve) => { resolveGroup = resolve; });
+    return Promise.resolve(page(scope));
+  });
+  await renderPage();
+
+  await selectScope("Shared by Others");
+  expect(container.textContent).toContain("personal page 1");
+  expect(container.textContent).not.toContain("Loading shared by others shelves...");
+  expect(container.querySelector('nav[aria-label="Personal pages"]')).not.toBeNull();
+  expect(container.querySelector('button[aria-label="Shared by Others"]')?.getAttribute("aria-busy")).toBe("true");
+  await act(async () => resolveShared(page("shared")));
+  expect(container.textContent).toContain("shared page 1");
+  expect(container.textContent).not.toContain("personal page 1");
+
+  await selectScope("Group Shelves");
+  expect(container.textContent).toContain("shared page 1");
+  expect(container.textContent).not.toContain("Loading group shelves...");
+  await act(async () => resolveGroup(page("group")));
+  expect(container.textContent).toContain("group page 1");
+  await selectScope("Personal");
+  expect(container.textContent).toContain("personal page 1");
+  expect(list.mock.calls.filter(([query]) => query.scope === "personal")).toHaveLength(1);
+});
+
 it("keeps last-good rows visible while the active scope loads another page", async () => {
   let resolveNext!: (value: PaginatedShelfResponse) => void;
   list.mockImplementation(({ scope, page: number }: { scope: ShelfScope; page: number }) => number === 2
@@ -106,9 +135,28 @@ it("keeps last-good rows visible while the active scope loads another page", asy
   await renderPage();
   act(() => container.querySelector<HTMLButtonElement>('nav[aria-label="Personal pages"] button[aria-label="Next page of Personal"]')!.click());
   expect(container.textContent).toContain("personal page 1");
-  expect(container.textContent).toContain("Loading page 2...");
+  expect(container.textContent).not.toContain("Loading page 2...");
   await act(async () => resolveNext(page("personal", 2, 25)));
   expect(container.textContent).toContain("personal page 2");
+  expect(container.textContent).not.toContain("personal page 1");
+});
+
+it("keeps the current Shelf rows visible until a new sort order arrives", async () => {
+  let resolveSorted!: (value: PaginatedShelfResponse) => void;
+  list.mockImplementation(({ scope, ordering }: { scope: ShelfScope; ordering: string }) => ordering === "-item_count"
+    ? new Promise<PaginatedShelfResponse>((resolve) => { resolveSorted = resolve; })
+    : Promise.resolve(page(scope, 1, 25)));
+  await renderPage("name");
+  expect(container.textContent).toContain("personal page 1");
+
+  await renderPage("-item_count");
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "personal", ordering: "-item_count", page: 1, previewLimit: 24 }));
+  expect(container.textContent).toContain("personal page 1");
+  expect(container.textContent).not.toContain("Loading");
+  expect(container.querySelector('.shelfCollectionPager .orderingControlButton[title="Most books"]')?.getAttribute("aria-pressed")).toBe("true");
+
+  await act(async () => resolveSorted({ ...page("personal", 1, 25), results: [{ ...shelf, name: "Most books first" }] }));
+  expect(container.textContent).toContain("Most books first");
   expect(container.textContent).not.toContain("personal page 1");
 });
 
@@ -215,7 +263,8 @@ it("lets a hidden scope finish into its own cache without replacing the visible 
     : Promise.resolve(page(scope)));
   await renderPage();
   await selectScope("Shared by Others");
-  expect(container.textContent).toContain("Loading shared by others shelves...");
+  expect(container.textContent).toContain("personal page 1");
+  expect(container.textContent).not.toContain("Loading shared by others shelves...");
   await selectScope("Group Shelves");
   await act(async () => resolveShared(page("shared")));
   expect(container.textContent).toContain("group page 1");

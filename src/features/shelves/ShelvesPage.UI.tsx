@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
 import { APP_PAGE_SIZE_OPTIONS } from "../../app/AppNavigation.Constants";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
@@ -62,13 +62,19 @@ export function ShelvesPage({
   onChangeOrdering?: (ordering: string) => void;
 }) {
   const [activeScope, setActiveScope] = useState<ShelfScope>("personal");
+  const [displayScope, setDisplayScope] = useState<ShelfScope>("personal");
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const {
     canLoad, busy, pages, pageSize, changePageSize, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
     createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
   } = useShelfCollection({ spl, ordering, activeScope });
-  const activePage = pages[activeScope];
-  const activeScopeInfo = SHELF_SCOPES.find((scope) => scope.value === activeScope)!;
+  const requestedPage = pages[activeScope];
+  const visibleScope = requestedPage.data || requestedPage.error ? activeScope : displayScope;
+  const activePage = pages[visibleScope];
+  const activeScopeInfo = SHELF_SCOPES.find((scope) => scope.value === visibleScope)!;
+  useEffect(() => {
+    if (requestedPage.data || requestedPage.error) setDisplayScope(activeScope);
+  }, [activeScope, requestedPage.data, requestedPage.error]);
   const createDialogRef = useRef<HTMLElement | null>(null);
   const createDialogCloseRef = useRef<HTMLButtonElement | null>(null);
   useModalDialogFocus({
@@ -92,7 +98,7 @@ export function ShelvesPage({
         <button type="button" className="shelfCardMain shelfCardButton" aria-label={`Open shelf ${shelf.name}`}>
           <span className="shelfCardTitle">{shelf.name}</span>
           <span className="muted">
-            <ShelfMetaLine shelf={shelf} showOwner={activeScope !== "personal"} />
+            <ShelfMetaLine shelf={shelf} showOwner={visibleScope !== "personal"} />
           </span>
         </button>
         <div className="shelfCardRight">
@@ -150,7 +156,7 @@ export function ShelvesPage({
         </div>
       </div>
     );
-  }, [activeScope, deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, toggleMenu]);
+  }, [visibleScope, deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, toggleMenu]);
 
   const formOpen = createOpen;
 
@@ -222,14 +228,13 @@ export function ShelvesPage({
         <div>
           <div className="shelfScopeControls" role="group" aria-label="Shelf scope">
             {SHELF_SCOPES.map((scope) => (
-              <button key={scope.value} type="button" className={`button buttonCompact shelfScopeButton${activeScope === scope.value ? " shelfScopeButtonActive" : ""}`} aria-label={scope.label} aria-pressed={activeScope === scope.value} onClick={() => setActiveScope(scope.value)}>
+              <button key={scope.value} type="button" className={`button buttonCompact shelfScopeButton${visibleScope === scope.value ? " shelfScopeButtonActive" : ""}${activeScope === scope.value && visibleScope !== activeScope ? " shelfScopeButtonPending" : ""}`} aria-label={scope.label} aria-pressed={visibleScope === scope.value} aria-busy={activeScope === scope.value && visibleScope !== activeScope} onClick={() => setActiveScope(scope.value)}>
                 <MaterialIcon name={scope.icon} />{scope.label}
               </button>
             ))}
           </div>
           <section className="shelfList" aria-label={activeScopeInfo.label}>
             {activePage.busy && !activePage.data ? <p className="muted">Loading {activeScopeInfo.label.toLowerCase()} shelves...</p> : null}
-            {activePage.busy && activePage.data ? <p className="muted">Loading page {activePage.requestedPage}...</p> : null}
             {activePage.error ? <ShelvesLoadErrorNotice error={activePage.error} onRetry={() => void activePage.retry()} disabled={activePage.busy} /> : null}
             {activePage.data?.count === 0 && !activePage.error ? <p className="muted">{activeScopeInfo.empty}</p> : null}
             <ShelfCollectionPager

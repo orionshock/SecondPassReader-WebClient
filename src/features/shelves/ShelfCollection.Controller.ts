@@ -30,6 +30,9 @@ const initialPageState = (): ShelfPageState => ({ page: 1, requestedPage: 1, dat
 function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering: "name" | "-item_count", pageSize: number, active: boolean) {
   const [state, setState] = useState<ShelfPageState>(initialPageState);
   const requestSeq = useRef(0);
+  const previousQuery = useRef({ spl, ordering, pageSize });
+  const hasActiveData = useRef(false);
+  hasActiveData.current = active && state.data !== null;
   const load = useCallback(async (targetPage: number) => {
     if (!spl) return;
     const request = ++requestSeq.current;
@@ -54,10 +57,18 @@ function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering:
   }, [spl, scope, ordering, pageSize]);
 
   useEffect(() => {
+    const preserveData = previousQuery.current.spl === spl
+      && previousQuery.current.pageSize === pageSize
+      && previousQuery.current.ordering !== ordering
+      && hasActiveData.current;
+    previousQuery.current = { spl, ordering, pageSize };
     requestSeq.current += 1;
-    setState(initialPageState());
+    setState((current) => preserveData
+      ? { ...current, requestedPage: 1, busy: false, error: null }
+      : initialPageState());
+    if (preserveData) void load(1);
     return () => { requestSeq.current += 1; };
-  }, [load]);
+  }, [load, spl, ordering, pageSize]);
 
   useEffect(() => {
     if (active && spl && !state.data && !state.busy && !state.error) void load(1);

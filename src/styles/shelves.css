@@ -22,6 +22,10 @@
   background: var(--color-hover-bg);
 }
 
+.shelfScopeButtonPending {
+  border-color: var(--sp-accent);
+}
+
 .shelfScopeButton .material-symbols-outlined {
   font-size: 18px;
 }
