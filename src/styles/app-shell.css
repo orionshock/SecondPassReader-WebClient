@@ -140,6 +140,11 @@
   min-width: 0;
 }
 
+/* Route changes focus this non-interactive landmark for page context. */
+.appMain:focus {
+  outline: none;
+}
+
 .appMain > * {
   min-width: 0;
 }

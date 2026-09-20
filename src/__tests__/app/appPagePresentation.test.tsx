@@ -49,6 +49,9 @@ describe("App page presentation lifecycle", () => {
   it("updates title and focuses only for a new page identity", () => {
     const focus = vi.spyOn(HTMLElement.prototype, "focus");
     act(() => root.render(<Harness route={{ kind: "home" }} />));
+    const main = container.querySelector("main")!;
+    expect(main.className).toBe("appMain");
+    expect(main.tabIndex).toBe(-1);
     expect(document.title).toBe("Second Pass Reader - Home");
     expect(focus).not.toHaveBeenCalled();
 
@@ -58,10 +61,17 @@ describe("App page presentation lifecycle", () => {
     act(() => root.render(<Harness route={{ kind: "reader", bookId: "book-1" }} readerBookTitle="The Book" />));
     expect(document.title).toBe("Second Pass Reader - The Book");
     expect(focus).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(main);
+
+    const button = container.querySelector("button")!;
+    act(() => button.focus());
+    act(() => root.render(<Harness route={{ kind: "reader", bookId: "book-1" }} readerBookTitle="The Book" connectionStatus="unavailable" />));
+    expect(focus).toHaveBeenCalledTimes(2);
+    expect(document.activeElement).toBe(button);
   });
 });
 
-function Harness({ route, readerBookTitle }: { route: AppRoute; readerBookTitle?: string }) {
+function Harness({ route, readerBookTitle, connectionStatus }: { route: AppRoute; readerBookTitle?: string; connectionStatus?: string }) {
   const { mainRef } = useAppPagePresentationLifecycle({ route, workflowStep: "library_home", readerBookTitle });
-  return <main ref={mainRef} tabIndex={-1} />;
+  return <main ref={mainRef} className="appMain" tabIndex={-1}><button type="button">Action</button>{connectionStatus}</main>;
 }
