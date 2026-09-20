@@ -80,10 +80,12 @@ describe("preview books", () => {
       busy: false,
       error: null,
       page: 1,
+      pageSize: 20,
       connection: profile(),
       onSelectAuthor: vi.fn(),
       onViewBook: vi.fn(),
       onPageChange: vi.fn(),
+      onPageSizeChange: vi.fn(),
     }));
 
     expect(html).toContain('src="https://library.example/covers/book.jpg"');

@@ -27,7 +27,7 @@ type ShelfPageState = {
 
 const initialPageState = (): ShelfPageState => ({ page: 1, requestedPage: 1, data: null, busy: false, error: null });
 
-function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering: "name" | "-item_count", active: boolean) {
+function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering: "name" | "-item_count", pageSize: number, active: boolean) {
   const [state, setState] = useState<ShelfPageState>(initialPageState);
   const requestSeq = useRef(0);
   const load = useCallback(async (targetPage: number) => {
@@ -36,11 +36,11 @@ function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering:
     setState((current) => ({ ...current, requestedPage: targetPage, busy: true, error: null }));
     try {
       const result = await spl.shelves.list({
-        scope, ordering, page: targetPage, pageSize: DEFAULT_APP_PAGE_SIZE,
+        scope, ordering, page: targetPage, pageSize,
         includePreviewBooks: true, previewLimit: SHELF_PREVIEW_LIMIT,
       });
       if (request !== requestSeq.current) return;
-      const lastPage = Math.max(1, Math.ceil(result.count / DEFAULT_APP_PAGE_SIZE));
+      const lastPage = Math.max(1, Math.ceil(result.count / pageSize));
       if (targetPage > lastPage && result.results.length === 0) {
         await load(lastPage);
         return;
@@ -51,7 +51,7 @@ function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering:
       debugWarn("reader", "shelf page could not be loaded", { scope, page: targetPage, error });
       setState((current) => ({ ...current, busy: false, error }));
     }
-  }, [spl, scope, ordering]);
+  }, [spl, scope, ordering, pageSize]);
 
   useEffect(() => {
     requestSeq.current += 1;
@@ -65,7 +65,7 @@ function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering:
 
   return {
     ...state,
-    next: () => { if (!state.busy && state.data && (state.data.next || state.page * DEFAULT_APP_PAGE_SIZE < state.data.count)) void load(state.page + 1); },
+    next: () => { if (!state.busy && state.data && (state.data.next || state.page * pageSize < state.data.count)) void load(state.page + 1); },
     previous: () => { if (!state.busy && state.data && state.page > 1) void load(state.page - 1); },
     retry: () => load(state.requestedPage),
     reload: () => load(state.page),
@@ -78,9 +78,10 @@ export function useShelfCollection({ spl, ordering, activeScope }: {
   activeScope: ShelfScope;
 }) {
   const canLoad = Boolean(spl);
-  const personal = useShelfPage("personal", spl, ordering, activeScope === "personal");
-  const shared = useShelfPage("shared", spl, ordering, activeScope === "shared");
-  const group = useShelfPage("group", spl, ordering, activeScope === "group");
+  const [pageSize, changePageSize] = useState(DEFAULT_APP_PAGE_SIZE);
+  const personal = useShelfPage("personal", spl, ordering, pageSize, activeScope === "personal");
+  const shared = useShelfPage("shared", spl, ordering, pageSize, activeScope === "shared");
+  const group = useShelfPage("group", spl, ordering, pageSize, activeScope === "group");
   const pages = { personal, shared, group };
   const busy = pages[activeScope].busy;
   const [createOpen, setCreateOpen] = useState(false);
@@ -96,7 +97,7 @@ export function useShelfCollection({ spl, ordering, activeScope }: {
     setMutationError(null);
     setMutationBusy(false);
     return () => { mutationRequestSeq.current += 1; };
-  }, [spl, ordering, activeScope, personal.requestedPage, shared.requestedPage, group.requestedPage]);
+  }, [spl, ordering, pageSize, activeScope, personal.requestedPage, shared.requestedPage, group.requestedPage]);
 
   const handleCreate = useCallback(async () => {
     if (!spl) return;
@@ -157,7 +158,7 @@ export function useShelfCollection({ spl, ordering, activeScope }: {
   const dismissMenu = useCallback(() => setMenuShelfId(null), []);
 
   return {
-    canLoad, busy, pages, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
+    canLoad, busy, pages, pageSize, changePageSize, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
     createShelf: handleCreate, deleteShelf: handleDelete,
     beginCreate, cancelCreate, changeCreateDraft: setCreateDraft, toggleMenu, dismissMenu,
   };

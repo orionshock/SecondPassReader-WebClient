@@ -194,10 +194,8 @@ export function LibraryBrowsePage({
         <>
           <LibrarySearchControls
             draft={qDraft}
-            pageSize={pageSize}
             placeholder={searchPlaceholder}
             onDraftChange={setQDraft}
-            onPageSizeChange={handlePageSizeChange}
             onSearch={handleCommitSearch}
           />
 
@@ -261,13 +259,14 @@ export function LibraryBrowsePage({
                     selectedBookId={selectedBookId ? String(selectedBookId) : null}
                     onViewBook={(book) => onViewBook?.(String(book.id))}
                     onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                     hasError={Boolean(activeResult.error)}
                   />
                 </>
               ) : activeResult.kind === "series" ? (
-                <LibrarySeriesRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} connection={connection} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
+                <LibrarySeriesRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} pageSize={pageSize} connection={connection} onSelectSeries={(seriesId) => onShowSeriesBooks?.(seriesId)} onViewBook={onViewBook} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} />
               ) : (
-                <LibraryAuthorRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} connection={connection} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} />
+                <LibraryAuthorRows data={activeResult.data} busy={activeResult.busy} error={activeResult.error} page={activeResult.page} pageSize={pageSize} connection={connection} onSelectAuthor={(authorId) => onShowAuthorBooks?.(authorId)} onViewBook={onViewBook} onPageChange={handlePageChange} onPageSizeChange={handlePageSizeChange} />
               )}
             </div>
           </div>

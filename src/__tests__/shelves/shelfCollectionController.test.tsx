@@ -116,11 +116,11 @@ it("shows only the active scope pager before its rows with server count", async 
   list.mockImplementation(({ scope }: { scope: ShelfScope }) => Promise.resolve(scope === "personal" ? empty : { ...page(scope, 1, 25), next: null }));
   await renderPage();
   expect(container.textContent).toContain("You do not have any personal shelves.");
-  expect(container.querySelector("nav")).toBeNull();
+  expect(container.querySelector('nav[aria-label="Personal pages"]')?.textContent).toContain("Page 1 of 1");
   await selectScope("Shared by Others");
   const pager = container.querySelector('nav[aria-label="Shared by Others pages"]')!;
   expect(pager.textContent).toContain("Page 1 of 2");
-  expect(pager.textContent).toContain("25 shelves");
+  expect(pager.querySelector(".collectionPagerStatus")?.textContent).toContain("25");
   expect(pager.querySelector<HTMLButtonElement>('button[aria-label="Next page of Shared by Others"]')?.disabled).toBe(false);
   expect(pager.compareDocumentPosition(container.querySelector(".shelfCard")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(container.querySelectorAll("nav")).toHaveLength(1);
@@ -133,16 +133,20 @@ it("keeps the sort toggle beside the active scope pager instead of in the page h
   const onChangeOrdering = vi.fn();
   await renderPage(undefined, onChangeOrdering);
   expect(container.querySelector(".shelfHeaderControls .orderingControl")).toBeNull();
-  const controls = container.querySelector(".shelfCollectionControls")!;
-  expect(controls.querySelector('nav[aria-label="Personal pages"]')).not.toBeNull();
+  const controls = container.querySelector('nav[aria-label="Personal pages"]')!;
   expect(controls.querySelector('[aria-label="Sort shelves"]')).not.toBeNull();
+  const sort = controls.querySelector('[aria-label="Sort shelves"]')!;
+  const pageSize = controls.querySelector(".collectionPagerPageSize")!;
+  const previous = controls.querySelector('.pagerButtons button[aria-label="Previous page of Personal"]')!;
+  expect(sort.compareDocumentPosition(pageSize) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(pageSize.compareDocumentPosition(previous) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(controls.compareDocumentPosition(container.querySelector(".shelfCard")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   await act(async () => controls.querySelector<HTMLButtonElement>('.orderingControlButton[title="Most books"]')!.click());
   expect(onChangeOrdering).toHaveBeenCalledWith("-item_count");
   await renderPage("-item_count", onChangeOrdering);
-  expect(container.querySelector('.shelfCollectionControls .orderingControlButton[title="Most books"]')?.getAttribute("aria-pressed")).toBe("true");
+  expect(container.querySelector('.shelfCollectionPager .orderingControlButton[title="Most books"]')?.getAttribute("aria-pressed")).toBe("true");
   await selectScope("Group Shelves");
-  expect(container.querySelector('.shelfCollectionControls [aria-label="Sort shelves"]')).not.toBeNull();
+  expect(container.querySelector('.shelfCollectionPager [aria-label="Sort shelves"]')).not.toBeNull();
   expect(container.querySelectorAll('[aria-label="Sort shelves"]')).toHaveLength(1);
 });
 
@@ -154,7 +158,7 @@ it("shows scope-specific empty states", async () => {
   expect(container.textContent).toContain("No shelves shared by others.");
   await selectScope("Group Shelves");
   expect(container.textContent).toContain("No group shelves.");
-  expect(container.querySelector("nav")).toBeNull();
+  expect(container.querySelector('nav[aria-label="Group Shelves pages"]')?.textContent).toContain("Page 1 of 1");
 });
 
 it("resets all loaded pages on sort change and uses the new ordering on later scope visits", async () => {
@@ -170,6 +174,24 @@ it("resets all loaded pages on sort change and uses the new ordering on later sc
   expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "shared", ordering: "-item_count", page: 1 }));
   await act(async () => root.render(<Harness activeScope="personal" ordering="-item_count" />));
   expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "personal", ordering: "-item_count", page: 1 }));
+});
+
+it("shares one Shelf page size and resets all scope pages when it changes", async () => {
+  list.mockImplementation(({ scope, page: number, pageSize }: { scope: ShelfScope; page: number; pageSize: number }) =>
+    Promise.resolve({ ...page(scope, number, 65), next: number * pageSize < 65 ? "next" : null }));
+  await act(async () => root.render(<Harness />));
+  await act(async () => state.pages.personal.next());
+  await act(async () => root.render(<Harness activeScope="shared" />));
+  await act(async () => state.pages.shared.next());
+  act(() => state.changePageSize(50));
+  expect(state.pageSize).toBe(50);
+  expect(state.pages.shared.page).toBe(1);
+  expect(state.pages.personal.data).toBeNull();
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "shared", page: 1, pageSize: 50, previewLimit: 24 }));
+  await act(async () => root.render(<Harness activeScope="personal" />));
+  expect(state.pages.personal.page).toBe(1);
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "personal", page: 1, pageSize: 50, previewLimit: 24 }));
+  expect(state.pages.group.data).toBeNull();
 });
 
 it("ignores a stale page result after a newer page request", async () => {

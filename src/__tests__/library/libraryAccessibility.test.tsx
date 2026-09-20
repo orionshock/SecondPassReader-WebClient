@@ -108,10 +108,12 @@ describe("Library accessibility semantics", () => {
         busy={false}
         error={null}
         page={1}
+        pageSize={20}
         connection={null}
         onSelectAuthor={noop}
         onViewBook={noop}
         onPageChange={noop}
+        onPageSizeChange={noop}
       />,
     );
     expect(html).not.toContain('role="button"');

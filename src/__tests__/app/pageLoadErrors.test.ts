@@ -22,6 +22,7 @@ describe("page-local load errors", () => {
         selectedBookId: null,
         onViewBook: vi.fn(),
         onPageChange: vi.fn(),
+        onPageSizeChange: vi.fn(),
       }),
     ));
 

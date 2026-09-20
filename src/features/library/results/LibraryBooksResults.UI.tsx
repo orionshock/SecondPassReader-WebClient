@@ -1,7 +1,8 @@
 import type { CompactBook, PaginatedResponse } from "@secondpass/client";
 import type { LibraryBooksView } from "../../../storage/LibraryBooksView.Store";
 import { BookResultsView } from "../display/BookResultsView.UI";
-import { LibraryPaginationControls } from "../controls/LibraryPaginationControls.UI";
+import { CollectionPagination } from "../../../components/CollectionPagination.UI";
+import { APP_PAGE_SIZE_OPTIONS } from "../../../app/AppNavigation.Constants";
 
 type Props = {
   data: PaginatedResponse<CompactBook> | null;
@@ -13,16 +14,17 @@ type Props = {
   selectedBookId: string | null;
   onViewBook: (book: CompactBook) => void;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   hasError?: boolean;
 };
 
-export function LibraryBooksResults({ data, busy, page, pageSize, viewMode, serverBaseUrl, selectedBookId, onViewBook, onPageChange, hasError = false }: Props) {
+export function LibraryBooksResults({ data, busy, page, pageSize, viewMode, serverBaseUrl, selectedBookId, onViewBook, onPageChange, onPageSizeChange, hasError = false }: Props) {
   if (!data && hasError) return null;
   if (!data) return <div className="muted" style={{ marginTop: 10 }}>{busy ? "Loading..." : "No books found."}</div>;
-  const totalPages = Math.max(1, Math.ceil((data.count ?? 0) / pageSize));
-  const metaItems = [`Page ${page} of ${totalPages}`, `${data.count} ${data.count === 1 ? "book" : "books"}`];
   const pagination = {
-    metaItems,
+    page,
+    total: data.count,
+    pageSize: { value: pageSize, options: APP_PAGE_SIZE_OPTIONS, onChange: onPageSizeChange },
     busy,
     hasPrevious: Boolean(data.previous),
     hasNext: Boolean(data.next),
@@ -31,9 +33,9 @@ export function LibraryBooksResults({ data, busy, page, pageSize, viewMode, serv
   };
   return (
     <>
-      <LibraryPaginationControls {...pagination} />
+      <CollectionPagination {...pagination} />
       <BookResultsView books={data.results} viewMode={viewMode} serverBaseUrl={serverBaseUrl} selectedBookId={selectedBookId} onViewBook={onViewBook} />
-      <LibraryPaginationControls {...pagination} stickyBottom />
+      <CollectionPagination {...pagination} stickyBottom />
     </>
   );
 }

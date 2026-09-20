@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { navigateTo } from "../../app/AppNavigation.Router";
-import { DEFAULT_APP_PAGE_SIZE } from "../../app/AppNavigation.Constants";
+import { APP_PAGE_SIZE_OPTIONS } from "../../app/AppNavigation.Constants";
 import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl.UI";
-import { LibraryPaginationControls } from "../library/controls/LibraryPaginationControls.UI";
+import { CollectionPagination } from "../../components/CollectionPagination.UI";
 import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack.UI";
 import { normalizePreviewBooks } from "../library/display/PreviewBooks.Mapper";
 import { ShelfForm } from "./ShelfForm.UI";
@@ -64,7 +64,7 @@ export function ShelvesPage({
   const [activeScope, setActiveScope] = useState<ShelfScope>("personal");
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const {
-    canLoad, busy, pages, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
+    canLoad, busy, pages, pageSize, changePageSize, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
     createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
   } = useShelfCollection({ spl, ordering, activeScope });
   const activePage = pages[activeScope];
@@ -232,15 +232,14 @@ export function ShelvesPage({
             {activePage.busy && activePage.data ? <p className="muted">Loading page {activePage.requestedPage}...</p> : null}
             {activePage.error ? <ShelvesLoadErrorNotice error={activePage.error} onRetry={() => void activePage.retry()} disabled={activePage.busy} /> : null}
             {activePage.data?.count === 0 && !activePage.error ? <p className="muted">{activeScopeInfo.empty}</p> : null}
-            <div className="shelfCollectionControls">
-              <ShelfCollectionPager title={activeScopeInfo.label} section={activePage} />
-              <OrderingControl
-                options={SHELF_ORDERING_OPTIONS}
-                value={ordering}
-                onChange={(nextOrdering) => onChangeOrdering?.(nextOrdering)}
-                ariaLabel="Sort shelves"
-              />
-            </div>
+            <ShelfCollectionPager
+              title={activeScopeInfo.label}
+              section={activePage}
+              pageSize={pageSize}
+              onPageSizeChange={changePageSize}
+              ordering={ordering}
+              onChangeOrdering={onChangeOrdering}
+            />
             {activePage.data?.results.map(renderShelf)}
           </section>
         </div>
@@ -249,23 +248,30 @@ export function ShelvesPage({
   );
 }
 
-function ShelfCollectionPager({ title, section }: {
+function ShelfCollectionPager({ title, section, pageSize, onPageSizeChange, ordering, onChangeOrdering }: {
   title: string;
   section: ReturnType<typeof useShelfCollection>["pages"][ShelfScope];
+  pageSize: number;
+  onPageSizeChange: (pageSize: number) => void;
+  ordering: ShelfOrdering;
+  onChangeOrdering?: (ordering: string) => void;
 }) {
-  if (!section.data || section.data.count === 0) return null;
-  const totalPages = Math.max(1, Math.ceil(section.data.count / DEFAULT_APP_PAGE_SIZE));
+  const sortControl = <OrderingControl options={SHELF_ORDERING_OPTIONS} value={ordering} onChange={(value) => onChangeOrdering?.(value)} ariaLabel="Sort shelves" />;
+  if (!section.data) return <div className="shelfCollectionPager">{sortControl}</div>;
   const hasPrevious = section.page > 1;
-  const hasNext = Boolean(section.data.next) || section.page < totalPages;
+  const hasNext = Boolean(section.data.next) || section.page * pageSize < section.data.count;
   return (
     <nav className="shelfCollectionPager" aria-label={`${title} pages`}>
-      <LibraryPaginationControls
-        metaItems={[`Page ${section.page} of ${totalPages}`, `${section.data.count} shelves`]}
+      <CollectionPagination
+        page={section.page}
+        total={section.data.count}
+        pageSize={{ value: pageSize, options: APP_PAGE_SIZE_OPTIONS, onChange: onPageSizeChange }}
         busy={section.busy}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
         onPrevious={section.previous}
         onNext={section.next}
+        contextControls={sortControl}
         previousAriaLabel={`Previous page of ${title}`}
         nextAriaLabel={`Next page of ${title}`}
       />

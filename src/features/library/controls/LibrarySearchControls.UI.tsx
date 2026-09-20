@@ -1,13 +1,11 @@
 type Props = {
   draft: string;
-  pageSize: number;
   placeholder: string;
   onDraftChange: (value: string) => void;
-  onPageSizeChange: (pageSize: number) => void;
   onSearch: () => void;
 };
 
-export function LibrarySearchControls({ draft, pageSize, placeholder, onDraftChange, onPageSizeChange, onSearch }: Props) {
+export function LibrarySearchControls({ draft, placeholder, onDraftChange, onSearch }: Props) {
   return (
     <div className="librarySearchSection">
       <div className="libraryToolbar">
@@ -25,14 +23,6 @@ export function LibrarySearchControls({ draft, pageSize, placeholder, onDraftCha
             placeholder={placeholder}
             aria-label={placeholder}
           />
-        </label>
-        <label className="toolbarField">
-          <span className="srOnly">Results per page</span>
-          <select className="input inputCompact" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
         </label>
         <button className="button buttonPrimary librarySearchButton" type="button" onClick={onSearch}>Search</button>
       </div>

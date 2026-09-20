@@ -33,23 +33,17 @@
   margin-top: 10px;
 }
 
-.shelfCollectionControls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
 .shelfCollectionPager {
-  flex: 1 1 280px;
   min-width: 0;
 }
 
-.shelfCollectionPager .libraryMetaRow {
+.shelfCollectionPager .collectionPager {
   margin-top: 0;
 }
 
-.shelfCollectionControls .orderingControl {
+.shelfCollectionPager > .orderingControl {
+  display: flex;
+  width: max-content;
   margin-left: auto;
 }
 
