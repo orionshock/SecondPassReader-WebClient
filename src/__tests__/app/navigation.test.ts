@@ -120,8 +120,6 @@ describe("navigation route ordering params", () => {
     expect(routeToHash({
       kind: "shelves",
       ordering: "name",
-      page: 1,
-      pageSize: 20,
     })).toBe("#/shelves");
 
     expect(routeToHash({

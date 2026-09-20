@@ -121,14 +121,10 @@ export function AppLibraryRouteRenderer({
           connection={connection}
           spl={spl}
           ordering={route.ordering}
-          page={route.page ?? 1}
-          pageSize={route.pageSize ?? 20}
-          onUpdateRoute={(patch) => {
+          onChangeOrdering={(ordering) => {
             navigateTo({
               kind: "shelves",
-              ordering: patch.ordering ?? route.ordering ?? "name",
-              page: patch.page ?? route.page ?? 1,
-              pageSize: patch.pageSize ?? route.pageSize ?? 20,
+              ordering,
               bookId: route.bookId,
             });
           }}

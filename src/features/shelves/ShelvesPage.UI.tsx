@@ -4,6 +4,7 @@ import type { SecondPassClient, Shelf } from "@secondpass/client";
 import type { ActiveConnection } from "../../storage/ActiveConnection.Store";
 import { MaterialIcon } from "../../components/MaterialIcon.UI";
 import { OrderingControl, type OrderingOption } from "../../components/OrderingControl.UI";
+import { LibraryPaginationControls } from "../library/controls/LibraryPaginationControls.UI";
 import { PreviewBookCoverStack } from "../library/display/PreviewBookCoverStack.UI";
 import { normalizePreviewBooks } from "../library/display/PreviewBooks.Mapper";
 import { ShelfForm } from "./ShelfForm.UI";
@@ -47,22 +48,18 @@ export function ShelvesPage({
   connection,
   spl,
   ordering: routeOrdering,
-  page = 1,
-  pageSize = 20,
-  onUpdateRoute,
+  onChangeOrdering,
 }: {
   connection: ActiveConnection | null;
   spl: SecondPassClient | null;
   ordering?: string;
-  page?: number;
-  pageSize?: number;
-  onUpdateRoute?: (patch: { ordering?: string; page?: number; pageSize?: number }) => void;
+  onChangeOrdering?: (ordering: string) => void;
 }) {
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const {
-    canLoad, busy, error, data, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
-    retry, createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
-  } = useShelfCollection({ spl, ordering, page, pageSize });
+    canLoad, busy, personal, shared, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
+    createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
+  } = useShelfCollection({ spl, ordering });
   const createDialogRef = useRef<HTMLElement | null>(null);
   const createDialogCloseRef = useRef<HTMLButtonElement | null>(null);
   useModalDialogFocus({
@@ -157,7 +154,7 @@ export function ShelvesPage({
               <OrderingControl
                 options={SHELF_ORDERING_OPTIONS}
                 value={ordering}
-                onChange={(nextOrdering) => onUpdateRoute?.({ ordering: nextOrdering, page: 1, pageSize })}
+                onChange={(nextOrdering) => onChangeOrdering?.(nextOrdering)}
                 ariaLabel="Sort shelves"
               />
               <button
@@ -174,14 +171,6 @@ export function ShelvesPage({
       </div>
 
       {!canLoad ? <p className="muted">Verify the connection to view shelves.</p> : null}
-      {busy && !data ? <p className="muted">Loading shelves...</p> : null}
-      {error ? (
-        <ShelvesLoadErrorNotice
-          error={error}
-          onRetry={() => void retry()}
-          disabled={!canLoad || busy}
-        />
-      ) : null}
       {mutationError && !formOpen ? <div className="errorText">{mutationError}</div> : null}
 
       {formOpen ? (
@@ -227,29 +216,58 @@ export function ShelvesPage({
         </div>
       ) : null}
 
-      {canLoad && !busy && !error && data && data.personal.length === 0 && data.shared.length === 0
+      {canLoad && !busy && personal.data?.count === 0 && shared.data?.count === 0
         ? <p className="muted">No shelves yet.</p>
         : null}
 
-      {data ? (
+      {canLoad ? (
         <div className="shelfList">
-          <div>
+          <section aria-labelledby="personal-shelves-title">
             <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
-              My shelves
+              <span id="personal-shelves-title">My shelves</span>
             </h2>
-            {data.personal.length === 0 ? <div className="muted">No personal shelves.</div> : null}
-            {data.personal.map(renderShelf)}
-          </div>
+            {personal.busy && !personal.data ? <p className="muted">Loading personal shelves...</p> : null}
+            {personal.busy && personal.data ? <p className="muted">Loading page {personal.requestedPage}...</p> : null}
+            {personal.error ? <ShelvesLoadErrorNotice error={personal.error} onRetry={() => void personal.retry()} disabled={personal.busy} /> : null}
+            {personal.data?.count === 0 && !personal.error ? <div className="muted">No personal shelves.</div> : null}
+            {personal.data?.results.map(renderShelf)}
+            <ShelfCollectionPager title="My shelves" section={personal} />
+          </section>
 
-          <div>
+          <section aria-labelledby="shared-shelves-title">
             <h2 className="panelTitle" style={{ margin: "6px 0 8px" }}>
-              Shared shelves
+              <span id="shared-shelves-title">Shared shelves</span>
             </h2>
-            {data.shared.length === 0 ? <div className="muted">No shared shelves.</div> : null}
-            {data.shared.map(renderShelf)}
-          </div>
+            {shared.busy && !shared.data ? <p className="muted">Loading shared shelves...</p> : null}
+            {shared.busy && shared.data ? <p className="muted">Loading page {shared.requestedPage}...</p> : null}
+            {shared.error ? <ShelvesLoadErrorNotice error={shared.error} onRetry={() => void shared.retry()} disabled={shared.busy} /> : null}
+            {shared.data?.count === 0 && !shared.error ? <div className="muted">No shared shelves.</div> : null}
+            {shared.data?.results.map(renderShelf)}
+            <ShelfCollectionPager title="Shared shelves" section={shared} />
+          </section>
         </div>
       ) : null}
     </section>
+  );
+}
+
+function ShelfCollectionPager({ title, section }: {
+  title: string;
+  section: ReturnType<typeof useShelfCollection>["personal"];
+}) {
+  if (!section.data || (!section.data.previous && !section.data.next)) return null;
+  return (
+    <nav aria-label={`${title} pages`}>
+      <LibraryPaginationControls
+        metaItems={[`Page ${section.page}`, `${section.data.count} shelves`]}
+        busy={section.busy}
+        hasPrevious={Boolean(section.data.previous)}
+        hasNext={Boolean(section.data.next)}
+        onPrevious={section.previous}
+        onNext={section.next}
+        previousAriaLabel={`Previous page of ${title}`}
+        nextAriaLabel={`Next page of ${title}`}
+      />
+    </nav>
   );
 }

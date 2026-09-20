@@ -8,16 +8,18 @@ type Props = {
   hasNext: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  previousAriaLabel?: string;
+  nextAriaLabel?: string;
   stickyBottom?: boolean;
 };
 
-export function LibraryPaginationControls({ metaItems, busy, hasPrevious, hasNext, onPrevious, onNext, stickyBottom = false }: Props) {
+export function LibraryPaginationControls({ metaItems, busy, hasPrevious, hasNext, onPrevious, onNext, previousAriaLabel, nextAriaLabel, stickyBottom = false }: Props) {
   return (
     <div className={`libraryMetaRow ${stickyBottom ? "libraryMetaRowBottom" : ""}`.trim()}>
       <div className="muted"><InlineMeta items={metaItems} /></div>
       <div className="pagerButtons">
-        <button className="button buttonCompact" type="button" onClick={onPrevious} disabled={busy || !hasPrevious}>Previous</button>
-        <button className="button buttonCompact" type="button" onClick={onNext} disabled={busy || !hasNext}>Next</button>
+        <button className="button buttonCompact" type="button" onClick={onPrevious} disabled={busy || !hasPrevious} aria-label={previousAriaLabel}>Previous</button>
+        <button className="button buttonCompact" type="button" onClick={onNext} disabled={busy || !hasNext} aria-label={nextAriaLabel}>Next</button>
       </div>
     </div>
   );

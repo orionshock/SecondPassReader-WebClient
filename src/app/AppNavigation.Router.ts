@@ -23,7 +23,7 @@ export type AppRoute =
     }
   | { kind: "sessions"; bookId?: string; q?: string }
   | { kind: "session"; sessionId: string }
-  | { kind: "shelves"; bookId?: string; ordering?: string; page?: number; pageSize?: number }
+  | { kind: "shelves"; bookId?: string; ordering?: string }
   | { kind: "shelf"; shelfId: string; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelfEdit"; shelfId: string }
   | { kind: "settings"; tab?: SettingsTab; bookId?: string }
@@ -97,8 +97,6 @@ export function routeToHash(route: AppRoute): string {
     case "shelves":
       return `#/shelves${buildQuery({
         ordering: nonDefaultOrdering(route.ordering, "name"),
-        page: nonDefaultPage(route.page),
-        page_size: nonDefaultPageSize(route.pageSize),
         book: route.bookId,
       })}`;
     case "shelf":
@@ -241,7 +239,7 @@ export function parseCurrentRoute(): AppRoute | null {
           : { kind: "shelf", shelfId: parts[1], ordering, page, pageSize };
       }
     }
-    return bookId ? { kind: "shelves", ordering, page, pageSize, bookId } : { kind: "shelves", ordering, page, pageSize };
+    return bookId ? { kind: "shelves", ordering, bookId } : { kind: "shelves", ordering };
   }
   if (head === "settings") {
     const tabRaw = queryParams.get("tab")?.trim() ?? "";
