@@ -170,7 +170,7 @@ it("returns to the last valid page when a collection shrinks", async () => {
   expect(list.mock.calls.filter(([query]) => query.scope === "personal").map(([query]) => query.page)).toEqual([1, 2, 1]);
 });
 
-it("shows scoped page status and hides controls for an empty or single-page section", async () => {
+it("shows scoped page status and hides controls for an empty section", async () => {
   list.mockImplementation(({ scope, page }: { scope: string; page: number }) => Promise.resolve(scope === "personal"
     ? { count: 41, next: "next", previous: page > 1 ? "previous" : null, results: [shelf] }
     : { count: 0, next: null, previous: null, results: [] }));
@@ -196,7 +196,10 @@ it("shows Shared pagination from count when navigation URLs are absent and pages
   const pager = container.querySelector('nav[aria-label="Shared shelves pages"]')!;
   expect(pager.textContent).toContain("Page 1 of 2");
   expect(pager.querySelectorAll("button")[0]?.disabled).toBe(true);
-  expect(container.querySelector('nav[aria-label="My shelves pages"]')).toBeNull();
+  expect(pager.compareDocumentPosition(container.querySelector('section[aria-labelledby="shared-shelves-title"] .shelfCard')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const personalPager = container.querySelector('nav[aria-label="My shelves pages"]')!;
+  expect(personalPager.textContent).toContain("Page 1 of 1");
+  expect([...personalPager.querySelectorAll("button")].every((button) => button.disabled)).toBe(true);
   await act(async () => pager.querySelectorAll("button")[1]!.click());
   expect(container.textContent).toContain("Shared page 2");
   expect(container.querySelector('nav[aria-label="Shared shelves pages"]')?.textContent).toContain("Page 2 of 2");
@@ -288,8 +291,8 @@ it("guards delete, preserves the menu on failure, and closes it before refreshin
 
 it("binds the create dialog focus and dismissal without reloading the collection", async () => {
   await act(async () => root.render(<ShelvesPage connection={null} spl={spl} />));
-  expect(container.querySelector('nav[aria-label="My shelves pages"]')).toBeNull();
-  expect(container.querySelector('nav[aria-label="Shared shelves pages"]')).toBeNull();
+  expect(container.querySelector('nav[aria-label="My shelves pages"]')?.textContent).toContain("Page 1 of 1");
+  expect(container.querySelector('nav[aria-label="Shared shelves pages"]')?.textContent).toContain("Page 1 of 1");
   const opener = [...container.querySelectorAll("button")].find((node) => node.textContent === "Create personal shelf")!;
   await act(async () => { opener.focus(); opener.click(); });
   expect(container.querySelector('[role="dialog"]')?.contains(document.activeElement)).toBe(true);

@@ -11,6 +11,10 @@
   margin-top: 10px;
 }
 
+.shelfCollectionPager {
+  margin-bottom: 10px;
+}
+
 .shelfCard {
   display: grid;
   grid-template-columns: fit-content(24rem) minmax(0, 1fr);

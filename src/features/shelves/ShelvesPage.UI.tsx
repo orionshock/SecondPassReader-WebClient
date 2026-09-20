@@ -232,8 +232,8 @@ export function ShelvesPage({
             {personal.busy && personal.data ? <p className="muted">Loading page {personal.requestedPage}...</p> : null}
             {personal.error ? <ShelvesLoadErrorNotice error={personal.error} onRetry={() => void personal.retry()} disabled={personal.busy} /> : null}
             {personal.data?.count === 0 && !personal.error ? <div className="muted">No personal shelves.</div> : null}
-            {personal.data?.results.map(renderShelf)}
             <ShelfCollectionPager title="My shelves" section={personal} />
+            {personal.data?.results.map(renderShelf)}
           </section>
 
           <section aria-labelledby="shared-shelves-title">
@@ -244,8 +244,8 @@ export function ShelvesPage({
             {shared.busy && shared.data ? <p className="muted">Loading page {shared.requestedPage}...</p> : null}
             {shared.error ? <ShelvesLoadErrorNotice error={shared.error} onRetry={() => void shared.retry()} disabled={shared.busy} /> : null}
             {shared.data?.count === 0 && !shared.error ? <div className="muted">No shared shelves.</div> : null}
-            {shared.data?.results.map(renderShelf)}
             <ShelfCollectionPager title="Shared shelves" section={shared} />
+            {shared.data?.results.map(renderShelf)}
           </section>
         </div>
       ) : null}
@@ -257,13 +257,12 @@ function ShelfCollectionPager({ title, section }: {
   title: string;
   section: ReturnType<typeof useShelfCollection>["personal"];
 }) {
-  if (!section.data) return null;
+  if (!section.data || section.data.count === 0) return null;
   const totalPages = Math.max(1, Math.ceil(section.data.count / DEFAULT_APP_PAGE_SIZE));
   const hasPrevious = section.page > 1;
   const hasNext = Boolean(section.data.next) || section.page < totalPages;
-  if (!hasPrevious && !hasNext) return null;
   return (
-    <nav aria-label={`${title} pages`}>
+    <nav className="shelfCollectionPager" aria-label={`${title} pages`}>
       <LibraryPaginationControls
         metaItems={[`Page ${section.page} of ${totalPages}`, `${section.data.count} shelves`]}
         busy={section.busy}
