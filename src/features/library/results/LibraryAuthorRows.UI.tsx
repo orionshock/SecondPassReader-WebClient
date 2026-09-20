@@ -15,11 +15,11 @@ export function LibraryAuthorRows({ data, busy, error, page, pageSize, connectio
     {data ? <CollectionPagination page={page} total={data.count} pageSize={{ value: pageSize, options: APP_PAGE_SIZE_OPTIONS, onChange: onPageSizeChange }} busy={busy} hasPrevious={Boolean(data.previous)} hasNext={Boolean(data.next)} onPrevious={() => onPageChange(Math.max(1, page - 1))} onNext={() => onPageChange(page + 1)} /> : null}
     {data?.results.length ? <div className="libraryEntityList">{data.results.map((author) => {
       const open = () => onSelectAuthor(String(author.id));
-      return <div key={String(author.id)} className="libraryEntityCard">
-        <button type="button" className="libraryEntityMain libraryEntityCardButton" onClick={open} aria-label={`View books by ${author.name}`}>
+      return <div key={String(author.id)} className="libraryEntityCard" onClick={open}>
+        <button type="button" className="libraryEntityMain libraryEntityCardButton" aria-label={`View books by ${author.name}`}>
           <span className="libraryEntityTitle">{author.name}</span><span className="muted">{author.bookCount} books</span>
         </button>
-        <PreviewBookCoverStack previewBooks={author.previewBooks} baseUrl={connection} maxCovers={3} onBookClick={onViewBook} />
+        <PreviewBookCoverStack previewBooks={author.previewBooks} baseUrl={connection} onBookClick={onViewBook} />
       </div>;
     })}</div> : null}
   </>;

@@ -414,9 +414,14 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(12rem, max-content) minmax(0, 1fr);
   gap: 12px;
   align-items: center;
+  cursor: pointer;
+}
+
+.libraryEntityCard:hover {
+  background: var(--color-hover-bg);
 }
 
 .libraryEntityCardButton {
@@ -431,10 +436,6 @@
   color: inherit;
 }
 
-.libraryEntityCardButton:hover {
-  background: var(--color-hover-bg);
-}
-
 .libraryEntityCardButton:focus-visible {
   outline: 2px solid var(--sp-accent);
   outline-offset: 2px;
@@ -442,8 +443,16 @@
 
 .libraryEntityMain {
   min-width: 0;
+  max-width: 24rem;
   display: grid;
   gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.libraryEntityCard > .previewBookCoverStack {
+  width: 100%;
+  overflow: clip;
+  justify-content: safe flex-end;
 }
 
 .libraryEntityTitle {
@@ -1212,7 +1221,7 @@
     grid-template-columns: 1fr;
   }
 
-  .previewBookCoverStack {
+  .libraryEntityCard > .previewBookCoverStack {
     justify-content: flex-start;
   }
 }

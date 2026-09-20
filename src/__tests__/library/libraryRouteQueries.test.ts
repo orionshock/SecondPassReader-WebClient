@@ -153,7 +153,7 @@ describe("Library axis queries", () => {
     await loadLibraryAuthors(spl, "g1", params);
     await loadLibrarySeries(spl, "g1", params);
 
-    const expected = { ...params, includePreviewBooks: true };
+    const expected = { ...params, includePreviewBooks: true, previewLimit: 24 };
     expect(authorList).toHaveBeenCalledWith(expected);
     expect(seriesList).toHaveBeenCalledWith(expected);
     expect(groupAuthors).toHaveBeenCalledWith("g1", expected);
