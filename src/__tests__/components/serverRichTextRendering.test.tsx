@@ -99,6 +99,12 @@ describe("server descriptive rich text", () => {
         onLogOut={noop}
         onSignOutLocally={noop}
         onRepairConnection={noop}
+        routeEntryOpen={false}
+        routeUrl=""
+        onOpenRouteEntry={noop}
+        onRouteUrlChange={noop}
+        onSubmitRoute={noop}
+        onCancelRoute={noop}
         onForgetLocally={noop}
         serverActionsAvailable
       />,

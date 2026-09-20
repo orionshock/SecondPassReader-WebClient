@@ -8,11 +8,12 @@ export type SettingsLibraryServerActionState =
   | { phase: "idle" }
   | { phase: "checking" }
   | { phase: "trying" }
+  | { phase: "route_checking" }
   | { phase: "logging_out" }
   | { phase: "signing_out_locally" }
   | { phase: "forgetting" }
   | { phase: "success"; message: string }
-  | { phase: "error"; message: string; action: "check" | "logout" | "forget"; technicalDetail?: string | null };
+  | { phase: "error"; message: string; action: "check" | "route" | "logout" | "forget"; technicalDetail?: string | null };
 
 export function SettingsLibraryServerPanel({
   connection,
@@ -23,6 +24,12 @@ export function SettingsLibraryServerPanel({
   onLogOut,
   onSignOutLocally,
   onRepairConnection,
+  routeEntryOpen,
+  routeUrl,
+  onOpenRouteEntry,
+  onRouteUrlChange,
+  onSubmitRoute,
+  onCancelRoute,
   onForgetLocally,
   serverActionsAvailable,
 }: {
@@ -34,6 +41,12 @@ export function SettingsLibraryServerPanel({
   onLogOut: () => void;
   onSignOutLocally: () => void;
   onRepairConnection: () => void;
+  routeEntryOpen: boolean;
+  routeUrl: string;
+  onOpenRouteEntry: () => void;
+  onRouteUrlChange: (value: string) => void;
+  onSubmitRoute: () => void;
+  onCancelRoute: () => void;
   onForgetLocally: () => void;
   serverActionsAvailable: boolean;
 }) {
@@ -79,7 +92,38 @@ export function SettingsLibraryServerPanel({
               <button type="button" className="button buttonPrimary" onClick={onRepairConnection} disabled={busy || !serverActionsAvailable}>
                 Repair connection
               </button>
+              <button type="button" className="button" onClick={onOpenRouteEntry} disabled={busy || !serverActionsAvailable}>
+                Use another Library URL
+              </button>
             </div>
+            {routeEntryOpen ? (
+              <form className="form" onSubmit={(event) => { event.preventDefault(); onSubmitRoute(); }}>
+                <label className="field">
+                  <span className="fieldLabel">Another Library URL</span>
+                  <input
+                    className="input"
+                    value={routeUrl}
+                    onChange={(event) => onRouteUrlChange(event.target.value)}
+                    placeholder="https://library.example.com"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </label>
+                <div className="formActions">
+                  <button type="submit" className="button buttonPrimary" disabled={!serverActionsAvailable}>
+                    {state.phase === "route_checking" ? "Checking URL..." : "Verify and use URL"}
+                  </button>
+                  <button type="button" className="button" onClick={onCancelRoute}>Cancel</button>
+                </div>
+                {state.phase === "route_checking" ? <p className="muted" role="status">Checking this Library URL...</p> : null}
+                {state.phase === "error" && state.action === "route" ? (
+                  <div role="alert">
+                    <p className="errorText">{state.message}</p>
+                    {state.technicalDetail ? <p className="muted mono">{state.technicalDetail}</p> : null}
+                  </div>
+                ) : null}
+              </form>
+            ) : null}
             {!serverActionsAvailable ? <p className="muted">Connection actions are unavailable while offline.</p> : null}
           </>
         )}
@@ -129,7 +173,7 @@ export function SettingsLibraryServerPanel({
       </section>
 
       {state.phase === "success" ? <p className="settingsNotice">{state.message}</p> : null}
-      {state.phase === "error" ? (
+      {state.phase === "error" && state.action !== "route" ? (
         <div className="settingsNotice">
           <p className="errorText">{state.message}</p>
           {state.technicalDetail ? <p className="muted mono">{state.technicalDetail}</p> : null}

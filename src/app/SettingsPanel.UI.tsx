@@ -3,6 +3,7 @@ import type { SecondPassClient } from "@secondpass/client";
 import type { ActiveConnection } from "../storage/ActiveConnection.Store";
 import type { AppTheme } from "../storage/AppTheme.Store";
 import { recoverConnectionRoute } from "../features/connection/ConnectionRouteRecovery.Controller";
+import { repairConnectionRoute } from "../features/connection/ConnectionManualRouteRepair.Controller";
 import { navigateTo, type AppRoute, type SettingsTab } from "./AppNavigation.Router";
 import { getTechnicalErrorDetail, isAuthorizationError } from "./AppUserFacingErrors.Mapper";
 import { SettingsAppearancePanel } from "./settings/SettingsAppearancePanel.UI";
@@ -46,15 +47,31 @@ export function SettingsPanel({
 }: Props) {
   const [state, setState] = useState<SettingsLibraryServerActionState>({ phase: "idle" });
   const activeCheckRef = useRef<AbortController | null>(null);
+  const routeRepairRef = useRef<AbortController | null>(null);
+  const [routeEntryOpen, setRouteEntryOpen] = useState(false);
+  const [routeUrl, setRouteUrl] = useState("");
   const activeTab = route.tab ?? "appearance";
   const tabListRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => () => activeCheckRef.current?.abort(), [connection?.id, connection?.serverId, connection?.serverBaseUrl, connection?.accessToken]);
+  useEffect(() => () => routeRepairRef.current?.abort(), [connection]);
   useEffect(() => {
     if (connectivity !== "offline" || !activeCheckRef.current) return;
     activeCheckRef.current.abort();
     activeCheckRef.current = null;
     setState((current) => current.phase === "checking" || current.phase === "trying" ? { phase: "idle" } : current);
   }, [connectivity]);
+  useEffect(() => {
+    if (connectivity !== "offline") return;
+    routeRepairRef.current?.abort();
+    routeRepairRef.current = null;
+    setState((current) => current.phase === "route_checking" ? { phase: "idle" } : current);
+  }, [connectivity]);
+  useEffect(() => {
+    if (activeTab === "library-server") return;
+    routeRepairRef.current?.abort();
+    routeRepairRef.current = null;
+    setRouteEntryOpen(false);
+  }, [activeTab]);
   const tabs: Array<{ value: SettingsTab; label: string }> = [
     { value: "appearance", label: "Appearance" },
     { value: "offline", label: "Offline" },
@@ -122,6 +139,57 @@ export function SettingsPanel({
       technicalDetail: result.status === "unavailable" && result.mismatchedCandidates > 0
         ? `${result.mismatchedCandidates} saved URL${result.mismatchedCandidates === 1 ? "" : "s"} returned a different Library or account.`
         : error ? getTechnicalErrorDetail(error) : null,
+    });
+  }
+
+  function cancelRouteRepair() {
+    routeRepairRef.current?.abort();
+    routeRepairRef.current = null;
+    setRouteEntryOpen(false);
+    setState({ phase: "idle" });
+  }
+
+  async function submitRouteRepair() {
+    if (!connection) return;
+    if (connectivity === "offline") return;
+    routeRepairRef.current?.abort();
+    const attempt = new AbortController();
+    routeRepairRef.current = attempt;
+    setState({ phase: "route_checking" });
+    let result: Awaited<ReturnType<typeof repairConnectionRoute>>;
+    try {
+      result = await repairConnectionRoute({
+        connection,
+        enteredUrl: routeUrl,
+        signal: attempt.signal,
+        onConnectionChanged,
+      });
+    } finally {
+      if (routeRepairRef.current === attempt) routeRepairRef.current = null;
+    }
+    if (result.status === "stale" || (attempt.signal.aborted && result.status !== "verified")) return;
+    if (result.status === "verified") {
+      setRouteEntryOpen(false);
+      setRouteUrl("");
+      setState({ phase: "success", message: result.routeChanged ? "Library URL updated." : "Library URL verified." });
+      return;
+    }
+    setState({
+      phase: "error",
+      action: "route",
+      message: result.status === "invalid-url" ? result.message
+        : result.status === "server-mismatch"
+          ? "This URL belongs to a different Library. To replace this connection, use Forget connection and local data below, then connect again."
+          : result.status === "profile-mismatch"
+            ? "This URL returned a different Library account. To switch accounts, use Forget connection and local data below, then connect again."
+            : result.status === "authorization-failed"
+              ? result.authenticationRejected
+                ? "This Library rejected the saved credentials. Repair connection signs in again through the current Library URL."
+                : "This Library did not allow this account to connect. The saved connection and offline data are unchanged."
+              : result.status === "unavailable"
+                ? "This Library URL could not be reached. The saved connection and offline data are unchanged."
+                : "This Library URL could not be verified.",
+      technicalDetail: result.status === "failed" ? getTechnicalErrorDetail(result.error) : null,
     });
   }
 
@@ -227,12 +295,18 @@ export function SettingsPanel({
           <SettingsLibraryServerPanel
             connection={connection}
             state={state}
-            busy={state.phase === "checking" || state.phase === "trying" || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting"}
+            busy={state.phase === "checking" || state.phase === "trying" || state.phase === "route_checking" || state.phase === "logging_out" || state.phase === "signing_out_locally" || state.phase === "forgetting"}
             onConnect={() => navigateTo({ kind: "connect" })}
             onCheckConnection={() => void checkConnection()}
             onLogOut={() => void logOut()}
             onSignOutLocally={() => void signOutLocally()}
             onRepairConnection={onRepairConnection}
+            routeEntryOpen={routeEntryOpen}
+            routeUrl={routeUrl}
+            onOpenRouteEntry={() => { setRouteEntryOpen(true); setState({ phase: "idle" }); }}
+            onRouteUrlChange={setRouteUrl}
+            onSubmitRoute={() => void submitRouteRepair()}
+            onCancelRoute={cancelRouteRepair}
             onForgetLocally={() => void forgetConnection()}
             serverActionsAvailable={connectivity !== "offline"}
           />

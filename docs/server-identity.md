@@ -15,6 +15,15 @@ route list in its returned order. An unsuccessful pass keeps the saved connectio
 There is no route scoring, network categorization, background health monitor, or failover for 401/403
 and application errors. mDNS is not implemented in this Web Client.
 
+Settings also accepts an explicitly entered Library base URL for a saved Connection. The client
+normalizes that candidate, confirms its `server_id` through public discovery, then verifies the
+same server ID and profile ID with saved credentials before making it the current route. This
+same-identity change retains the `serverId + profileId` offline namespace and its data. Authenticated
+server info replaces `serverUrls` in operator order; the entered route is not inserted into that
+declared list. A different Library or account is not adopted. Replacing the saved Library requires
+the separate Forget connection and local data flow, with its pending-work inspection and explicit
+loss confirmation. Credential Repair still re-links on the saved current route.
+
 ## URL and identity inventory
 
 | Owner | URL use | Classification | Current action | Later work |
@@ -49,4 +58,5 @@ Repair compares server ID and verified profile ID. It removes the prior namespac
 different durable identity, including a different server behind the same URL or a different user on
 the same server. Sign out and Forget delete the active namespace across all five stores. Automatic
 route recovery is event driven: startup, focus checks, browser return to online, and Settings Check
-connection. Browser offline state does not probe routes. Manual credential Repair remains separate.
+connection. Browser offline state does not probe routes. Manual URL entry and credential Repair remain
+separate from automatic recovery.

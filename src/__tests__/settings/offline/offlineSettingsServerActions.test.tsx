@@ -33,15 +33,54 @@ describe("offline Second Pass Library settings", () => {
         onLogOut={vi.fn()}
         onSignOutLocally={vi.fn()}
         onRepairConnection={vi.fn()}
+        routeEntryOpen={false}
+        routeUrl=""
+        onOpenRouteEntry={vi.fn()}
+        onRouteUrlChange={vi.fn()}
+        onSubmitRoute={vi.fn()}
+        onCancelRoute={vi.fn()}
         onForgetLocally={vi.fn()}
       />,
     ));
 
     expect(button("Check connection").disabled).toBe(true);
     expect(button("Repair connection").disabled).toBe(true);
+    expect(button("Use another Library URL").disabled).toBe(true);
     expect(button("Sign out").disabled).toBe(true);
     expect(button("Sign out locally").disabled).toBe(false);
     expect(button("Forget connection and local data").disabled).toBe(false);
+  });
+
+  it("offers a focused manual URL form while keeping destructive actions separate", () => {
+    const submit = vi.fn();
+    const cancel = vi.fn();
+    act(() => root.render(
+      <SettingsLibraryServerPanel
+        connection={profile()}
+        state={{ phase: "route_checking" }}
+        busy
+        serverActionsAvailable
+        onConnect={vi.fn()}
+        onCheckConnection={vi.fn()}
+        onLogOut={vi.fn()}
+        onSignOutLocally={vi.fn()}
+        onRepairConnection={vi.fn()}
+        routeEntryOpen
+        routeUrl="https://new.example"
+        onOpenRouteEntry={vi.fn()}
+        onRouteUrlChange={vi.fn()}
+        onSubmitRoute={submit}
+        onCancelRoute={cancel}
+        onForgetLocally={vi.fn()}
+      />,
+    ));
+    expect(container.querySelector("input")?.value).toBe("https://new.example");
+    expect(button("Checking URL...").disabled).toBe(false);
+    act(() => button("Checking URL...").click());
+    expect(submit).toHaveBeenCalledOnce();
+    act(() => button("Cancel").click());
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(button("Forget connection and local data").disabled).toBe(true);
   });
 });
 

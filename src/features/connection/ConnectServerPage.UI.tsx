@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { SecondPassDiscovery } from "@secondpass/client";
 import { ServerRichText } from "../../components/ServerRichText.Renderer";
 import {
   beginActiveConnectionPublication,
@@ -9,6 +8,7 @@ import {
   type ActiveConnection,
 } from "../../storage/ActiveConnection.Store";
 import { ConnectionSetupError, verifySecondPassServer } from "./ConnectionServer.Queries";
+import { toConnectionDiscoveryMetadata } from "./ConnectionDiscovery.Mapper";
 import { loadServerPresets, type ServerPreset } from "./ServerPresets.Queries";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
@@ -29,23 +29,6 @@ function newConnectionId() {
   } catch {}
   // This ID is a local routing key, not an authentication or offline namespace identity.
   return `cp_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
-}
-
-function formatDiscoverySummary(discovery: SecondPassDiscovery) {
-  return {
-    serverId: discovery.serverId,
-    serverName: discovery.server_name,
-    serverDescription: discovery.server_description,
-    serverVersion: discovery.server_version,
-    serverReleaseDate: discovery.server_release_date,
-    clientApi: {
-      discoveryVersion: discovery.client_api.discovery_version,
-      loginRequestEndpoint: discovery.client_api.login_request_endpoint,
-      pollEndpointTemplate: discovery.client_api.poll_endpoint_template,
-      consumeEndpointTemplate: discovery.client_api.consume_endpoint_template,
-      tokenType: discovery.client_api.token_type,
-    },
-  };
 }
 
 export function ConnectServerScreen({ onConnectionChanged }: Props) {
@@ -95,7 +78,7 @@ export function ConnectServerScreen({ onConnectionChanged }: Props) {
     setBusy(true);
     try {
       const { serverBaseUrl, discovery } = await verifySecondPassServer(serverUrlInput);
-      const summary = formatDiscoverySummary(discovery);
+      const summary = toConnectionDiscoveryMetadata(discovery);
 
       const now = new Date().toISOString();
       const label = summary.serverName || serverBaseUrl;
