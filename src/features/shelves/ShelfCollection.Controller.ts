@@ -5,6 +5,8 @@ import type { ShelfFormValues } from "./ShelfForm.Types";
 import { canEditShelf } from "./ShelfMetadata.Presenter";
 import { debugWarn } from "../../lib/debug/DebugLogger.Diagnostics";
 
+const SHELF_PREVIEW_LIMIT = 24;
+
 function shelfToFormValues(shelf?: Shelf | null): ShelfFormValues {
   return {
     name: shelf?.name ?? "",
@@ -42,8 +44,8 @@ export function useShelfCollection({ spl, ordering, page, pageSize }: {
     setError(null);
     try {
       const [personal, shared] = await Promise.all([
-        spl.shelves.list({ scope: "personal", includePreviewBooks: true, ordering, page, pageSize }),
-        spl.shelves.list({ scope: "shared", includePreviewBooks: true, ordering, page, pageSize }),
+        spl.shelves.list({ scope: "personal", includePreviewBooks: true, previewLimit: SHELF_PREVIEW_LIMIT, ordering, page, pageSize }),
+        spl.shelves.list({ scope: "shared", includePreviewBooks: true, previewLimit: SHELF_PREVIEW_LIMIT, ordering, page, pageSize }),
       ]);
       if (requestSeq !== loadRequestSeq.current) return;
       setData({

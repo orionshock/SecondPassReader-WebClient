@@ -171,7 +171,7 @@ export type SecondPassClient = {
   shelves: {
     list(params?: ShelfListParams): Promise<PaginatedShelfResponse>;
     create(input: CreateShelfInput): Promise<Shelf>;
-    get(shelfId: string, params?: { includePreviewBooks?: boolean }): Promise<Shelf>;
+    get(shelfId: string, params?: { includePreviewBooks?: boolean; previewLimit?: number }): Promise<Shelf>;
     update(shelfId: string, input: UpdateShelfInput): Promise<Shelf>;
     remove(shelfId: string): Promise<void>;
     items(shelfId: string, params?: { page?: number; pageSize?: number; ordering?: string }): Promise<PaginatedShelfItemResponse>;

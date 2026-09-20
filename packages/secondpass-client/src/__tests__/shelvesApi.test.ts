@@ -27,6 +27,7 @@ describe("SDK Shelves API", () => {
       page: 2,
       pageSize: 25,
       includePreviewBooks: true,
+      previewLimit: 24,
       ordering: "-item_count",
     });
     await spl.shelves.list({ scope: "personal", book: 7, includePreviewBooks: false });
@@ -39,6 +40,7 @@ describe("SDK Shelves API", () => {
     expect(sharedUrl.searchParams.get("page")).toBe("2");
     expect(sharedUrl.searchParams.get("page_size")).toBe("25");
     expect(sharedUrl.searchParams.get("include_preview_books")).toBe("true");
+    expect(sharedUrl.searchParams.get("preview_limit")).toBe("24");
     expect(sharedUrl.searchParams.get("ordering")).toBe("-item_count");
 
     const personalUrl = new URL(String(transport.request("list personal shelves").input));
@@ -46,6 +48,7 @@ describe("SDK Shelves API", () => {
     expect(personalUrl.searchParams.get("book")).toBe("7");
     expect(personalUrl.searchParams.has("owner_group")).toBe(false);
     expect(personalUrl.searchParams.has("include_preview_books")).toBe(false);
+    expect(personalUrl.searchParams.has("preview_limit")).toBe(false);
     transport.assertComplete();
   });
 
@@ -69,11 +72,12 @@ describe("SDK Shelves API", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: "shelf 1", name: "Shelf" }));
 
     const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
-    await spl.shelves.get("shelf 1", { includePreviewBooks: true });
+    await spl.shelves.get("shelf 1", { includePreviewBooks: true, previewLimit: 8 });
 
     const url = new URL(String(fetchMock.mock.calls[0]![0]));
     expect(url.origin + url.pathname).toBe("https://api.example/shelves/shelf%201/");
     expect(url.searchParams.get("include_preview_books")).toBe("true");
+    expect(url.searchParams.get("preview_limit")).toBe("8");
   });
 
   it("shelf items list supports position, title, and author ordering without mutating shelf positions", async () => {

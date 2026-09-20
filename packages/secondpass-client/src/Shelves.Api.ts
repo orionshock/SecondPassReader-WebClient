@@ -29,6 +29,7 @@ export async function listShelves(
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));
   if (input?.pageSize !== undefined) url.searchParams.set("page_size", String(input.pageSize));
   if (input?.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+  if (input?.previewLimit !== undefined) url.searchParams.set("preview_limit", String(input.previewLimit));
   if (input?.ordering) url.searchParams.set("ordering", input.ordering);
 
   return requestJson<PaginatedShelfResponse>({
@@ -44,10 +45,11 @@ export async function listShelves(
 
 export async function getShelf(
   ctx: AuthenticatedClientContext,
-  input: { shelfId: string; includePreviewBooks?: boolean },
+  input: { shelfId: string; includePreviewBooks?: boolean; previewLimit?: number },
 ): Promise<Shelf> {
   const url = new URL(resolveUrl(ctx.apiRootUrl, `/shelves/${encodeURIComponent(input.shelfId)}/`));
   if (input.includePreviewBooks === true) url.searchParams.set("include_preview_books", "true");
+  if (input.previewLimit !== undefined) url.searchParams.set("preview_limit", String(input.previewLimit));
   return requestJson<Shelf>({
     apiRootUrl: ctx.apiRootUrl,
     accessToken: ctx.accessToken,

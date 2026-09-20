@@ -229,7 +229,7 @@ export function createSecondPassClient(config: SecondPassClientConfig): SecondPa
       },
       get: (shelfId, params) => {
         const auth = requireAuth(ctx);
-        return getShelf(auth, { shelfId, includePreviewBooks: params?.includePreviewBooks });
+        return getShelf(auth, { shelfId, includePreviewBooks: params?.includePreviewBooks, previewLimit: params?.previewLimit });
       },
       update: (shelfId, input) => {
         const auth = requireAuth(ctx);

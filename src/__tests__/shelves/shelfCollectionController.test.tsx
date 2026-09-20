@@ -35,7 +35,7 @@ afterEach(() => { act(() => root.unmount()); container.remove(); vi.restoreAllMo
 it("loads both scopes with route pagination and keeps old data during failed refresh and retry", async () => {
   await act(async () => root.render(<Harness page={2} />));
   for (const scope of ["personal", "shared"]) {
-    expect(list).toHaveBeenCalledWith({ scope, includePreviewBooks: true, ordering: "name", page: 2, pageSize: 20 });
+    expect(list).toHaveBeenCalledWith({ scope, includePreviewBooks: true, previewLimit: 24, ordering: "name", page: 2, pageSize: 20 });
   }
   let reject!: (error: Error) => void;
   list.mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail; }));

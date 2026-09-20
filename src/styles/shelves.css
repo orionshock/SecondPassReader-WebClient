@@ -13,7 +13,7 @@
 
 .shelfCard {
   display: grid;
-  grid-template-columns: minmax(min(100%, 18rem), 1fr) minmax(0, 1.5fr);
+  grid-template-columns: fit-content(24rem) minmax(0, 1fr);
   gap: 12px;
   text-align: left;
   border: 1px solid var(--sp-border);
@@ -50,9 +50,10 @@
 }
 
 .shelfCardMain {
-  min-width: 0;
+  min-width: min(100%, 18rem);
   display: grid;
   gap: 4px;
+  overflow-wrap: anywhere;
 }
 
 .shelfCardRight {
@@ -63,10 +64,12 @@
 }
 
 .shelfCardRight .previewBookCoverStack {
-  flex: 1 1 0;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: thin;
-  justify-content: flex-start;
+  justify-content: safe flex-end;
 }
 
 .shelfCardActions {
@@ -398,6 +401,10 @@
   .shelfCardRight,
   .shelfCardActions,
   .shelfBookActions {
+    justify-content: flex-start;
+  }
+
+  .shelfCardRight .previewBookCoverStack {
     justify-content: flex-start;
   }
 

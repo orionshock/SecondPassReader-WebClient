@@ -68,6 +68,7 @@ type ShelfListBaseParams = {
   page?: number;
   pageSize?: number;
   includePreviewBooks?: boolean;
+  previewLimit?: number;
   ordering?: string;
 };
 
