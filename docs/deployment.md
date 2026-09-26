@@ -100,9 +100,10 @@ advances `dev` only after its immutable image has been pulled back and smoked. M
 tags trigger the `Release` workflow, which publishes `sha-*` and the exact release tag; it does not
 move `dev` or publish `latest`.
 
-Workflow registry coordinates are repository variables named `REGISTRY_HOST` and `REGISTRY_IMAGE`.
-Image jobs request `code: read` and `packages: write`, then authenticate as the workflow actor with
-Gitea's scoped `GITEA_TOKEN`. No personal registry credential is stored in the repository.
+Workflow registry coordinates are repository variables named `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
+`REGISTRY_USERNAME`. `REGISTRY_TOKEN` is a repository secret containing a dedicated Gitea access
+token limited to `write:package`; the OCI registry does not accept the Actions job token for Docker
+login. Credentials must not be committed to workflows, Compose, or documentation examples.
 
 ## Reverse proxy and Library access
 
