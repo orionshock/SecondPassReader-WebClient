@@ -2,24 +2,10 @@ name: secondpassreader-webclient
 
 services:
   secondpassreader-webclient:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      args:
-        SECONDPASS_WEBCLIENT_VERSION: ${SECONDPASS_WEBCLIENT_VERSION:-development}
-        SECONDPASS_WEBCLIENT_RELEASE_DATE: ${SECONDPASS_WEBCLIENT_RELEASE_DATE:-unknown}
-    image: secondpassreader-webclient:local
-    env_file:
-      - path: .env
-        required: false
-    # If you do not use .env, uncomment environment and use either JSON or
-    # indexed URLs.
-    # environment:
-    #   SECONDPASS_SERVER_PRESETS_JSON: '["https://library.example.com"]'
-    # Or use indexed URLs:
-    # environment:
-    #   SECONDPASS_SERVER_1_URL: https://library.example.com
-    #   SECONDPASS_SERVER_2_URL: https://library-two.example.com
-    expose:
-      - "8000"
+    # Prefer an immutable dev-sha-* or release tag for reproducible deployments.
+    image: git.zcaprica.duckdns.org/orionshock/secondpassreader-webclient:dev
+    environment:
+      SECONDPASS_SERVER_PRESETS_JSON: '["https://library.example.com"]'
+    ports:
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped

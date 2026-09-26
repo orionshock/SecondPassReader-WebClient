@@ -70,24 +70,6 @@
         "panel": "dedicated",
         "clear": true
       }
-    },
-    {
-      "label": "Deploy: NewCaprica",
-      "type": "shell",
-      "command": "ssh",
-      "args": [
-        "NewCaprica",
-        "cd ~/projects/SecondPassReader-WebClient && git pull && ./docker/rebuild-deployment.sh"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "runOptions": {
-        "instanceLimit": 1
-      }
     }
   ]
 }

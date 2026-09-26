@@ -105,9 +105,11 @@ universe becomes implausibly small.
 Run `npm.cmd audit` and `npm.cmd audit --omit=dev` during dependency updates or periodic dependency
 maintenance. They require registry access and do not belong in deterministic routine verification.
 
-Run the Docker build from [deployment.md](./deployment.md) after Docker, nginx, runtime preset,
-healthcheck, dependency-install, or deployment changes. Docker validation remains separate because
-it is substantially slower and requires a working Docker environment.
+Docker validation remains separate because it requires a suitable runner. After Docker, nginx,
+runtime preset, healthcheck, dependency-install, or deployment changes, dispatch the `Build
+development image` workflow. It builds the production Dockerfile, exercises the resulting image,
+publishes immutable and `dev` tags, and proves the immutable registry image after pulling it back.
+See [deployment.md](./deployment.md).
 
 ## Build and preview
 
