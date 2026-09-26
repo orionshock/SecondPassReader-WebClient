@@ -7,9 +7,6 @@ concurrency:
   group: build-development-image
   cancel-in-progress: false
 
-permissions:
-  contents: read
-
 env:
   REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
   REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
@@ -18,6 +15,9 @@ jobs:
   build:
     name: Verify, build, smoke, and publish
     runs-on: ubuntu-latest
+    permissions:
+      code: read
+      packages: write
     steps:
       - name: Check out complete Git history
         uses: actions/checkout@v4
@@ -33,15 +33,10 @@ jobs:
 
       - name: Require registry configuration
         shell: bash
-        env:
-          REGISTRY_USERNAME: ${{ vars.REGISTRY_USERNAME }}
-          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
           test -n "$REGISTRY_HOST" || { echo "REGISTRY_HOST is required." >&2; exit 1; }
           test -n "$REGISTRY_IMAGE" || { echo "REGISTRY_IMAGE is required." >&2; exit 1; }
-          test -n "$REGISTRY_USERNAME" || { echo "REGISTRY_USERNAME is required." >&2; exit 1; }
-          test -n "$REGISTRY_TOKEN" || { echo "REGISTRY_TOKEN is required." >&2; exit 1; }
 
       - name: Derive development image metadata
         id: metadata
@@ -61,15 +56,15 @@ jobs:
         with:
           tags: ${{ steps.metadata.outputs.immutable_image }}
           smoke_image: ${{ steps.metadata.outputs.immutable_image }}
-          version: ${{ steps.metadata.outputs.version }}
+          app_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
 
       - name: Log in to registry
         uses: docker/login-action@v3
         with:
           registry: ${{ vars.REGISTRY_HOST }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          username: ${{ gitea.actor }}
+          password: ${{ secrets.GITEA_TOKEN }}
 
       - name: Publish immutable development image
         env:

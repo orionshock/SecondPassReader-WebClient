@@ -8,7 +8,7 @@ inputs:
   smoke_image:
     description: Image reference exercised by the production smoke test.
     required: true
-  version:
+  app_version:
     description: Web Client version embedded in the application bundle.
     required: true
   release_date:
@@ -30,17 +30,17 @@ runs:
         push: false
         tags: ${{ inputs.tags }}
         build-args: |
-          SECONDPASS_WEBCLIENT_VERSION=${{ inputs.version }}
+          SECONDPASS_WEBCLIENT_VERSION=${{ inputs.app_version }}
           SECONDPASS_WEBCLIENT_RELEASE_DATE=${{ inputs.release_date }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          org.opencontainers.image.version=${{ inputs.version }}
+          org.opencontainers.image.version=${{ inputs.app_version }}
 
     - name: Exercise production image
       shell: bash
       env:
         IMAGE: ${{ inputs.smoke_image }}
-        EXPECTED_VERSION: ${{ inputs.version }}
+        EXPECTED_VERSION: ${{ inputs.app_version }}
         EXPECTED_RELEASE_DATE: ${{ inputs.release_date }}
       run: sh tools/smoke-production-image.sh "$IMAGE" "$EXPECTED_VERSION" "$EXPECTED_RELEASE_DATE"

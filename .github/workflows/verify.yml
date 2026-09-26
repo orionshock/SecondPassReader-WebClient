@@ -10,13 +10,12 @@ concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   verify:
     name: Full Web verification
     runs-on: ubuntu-latest
+    permissions:
+      code: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
