@@ -91,6 +91,8 @@ export function buildSessionBookmarkViewModels(input: {
       description: entry?.value ?? null,
       fallbackBookProgress: input.currentBookProgress ?? null,
       timestamp,
+      createdAt: rawAnnotation?.createdAt ?? "",
+      updatedAt: rawAnnotation?.updatedAt ?? "",
       locationLabel: rawAnnotation?.location.locationLabel,
       descriptionStatus: entry?.status ?? (input.describeCfiAvailable ? "idle" : "idle"),
     });
@@ -125,6 +127,8 @@ export function buildSessionHighlightViewModels(input: {
       note: note ?? undefined,
       color: color ?? undefined,
       timestamp: timestamp ?? undefined,
+      createdAt: rawAnnotation?.createdAt ?? "",
+      updatedAt: rawAnnotation?.updatedAt ?? "",
       label: rawAnnotation?.location.locationLabel || locationDisplay.label,
       labelParts: rawAnnotation?.location.locationLabel
         ? [rawAnnotation.location.locationLabel]

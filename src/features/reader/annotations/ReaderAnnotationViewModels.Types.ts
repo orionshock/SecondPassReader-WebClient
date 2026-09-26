@@ -9,6 +9,8 @@ export type HighlightViewModel = {
   note?: string;
   color?: string;
   timestamp?: string;
+  createdAt: string;
+  updatedAt: string;
   label: string;
   labelParts: string[];
   descriptionStatus: "idle" | "loading" | "ready" | "error";

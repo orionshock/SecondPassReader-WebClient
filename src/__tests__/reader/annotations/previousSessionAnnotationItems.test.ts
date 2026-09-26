@@ -17,5 +17,9 @@ describe("previousSessionAnnotationItems", () => {
     const items = toPreviousSessionItems(annotations, descriptions, [{ id: "toc", href: "chapter.xhtml", label: "Derived label" }]);
     expect(items.find((item) => item.kind === "bookmark")?.locationLabel).toBe("Server label");
     expect(items.find((item) => item.kind === "highlight")?.locationLabel).toBe("Chapter 08 - 42%");
+    expect(items.find((item) => item.kind === "highlight")).toMatchObject({
+      createdAt: "2024-01-01",
+      updatedAt: "2024-01-02",
+    });
   });
 });

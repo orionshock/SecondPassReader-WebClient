@@ -7,6 +7,10 @@ import { CurrentAnnotationCard } from "./CurrentAnnotationCard.UI";
 import { AnnotationWorkspaceTabs, type AnnotationWorkspaceTabKey } from "./AnnotationWorkspaceTabs.UI";
 import { useAnnotationWorkspaceFocus, type AnnotationWorkspaceFocusRequest } from "./ReaderAnnotationWorkspaceFocus.Lifecycle";
 import { useCurrentAnnotationEditingController } from "./CurrentAnnotationEditing.Controller";
+import {
+  sortReaderAnnotations,
+  type ReaderAnnotationSortMode,
+} from "./ReaderAnnotationSort.Policy";
 
 export function AnnotationWorkspace({
   annotations,
@@ -47,6 +51,18 @@ export function AnnotationWorkspace({
 }) {
   const rootRef = useRef<HTMLElement | null>(null);
   const [tab, setTab] = useState<AnnotationWorkspaceTabKey>("current");
+  const [sortMode, setSortMode] = useState<ReaderAnnotationSortMode>("created");
+  const sortedAnnotations = useMemo(
+    () => sortReaderAnnotations(annotations, sortMode),
+    [annotations, sortMode],
+  );
+  const sortedPreviousSessionGroups = useMemo(
+    () => (previousSessionGroups ?? []).map((group) => ({
+      ...group,
+      items: group.items ? sortReaderAnnotations(group.items, sortMode) : undefined,
+    })),
+    [previousSessionGroups, sortMode],
+  );
   const currentHighlights = useMemo(
     () => annotations.flatMap((annotation) => "cfiRange" in annotation
       ? [{ clientId: annotation.clientId, annotationId: annotation.id }]
@@ -66,6 +82,19 @@ export function AnnotationWorkspace({
         <div className="spAnnotationWorkspaceHeaderTop">
           <h2 className="panelTitle spAnnotationWorkspaceTitle">Annotations</h2>
           <AnnotationWorkspaceTabs tab={tab} onChange={setTab} />
+          <label className="spAnnotationSortControl">
+            <span>Sort</span>
+            <select
+              className="input inputCompact"
+              aria-label="Sort annotations"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as ReaderAnnotationSortMode)}
+            >
+              <option value="updated">Last updated</option>
+              <option value="created">Created</option>
+              <option value="location">Location</option>
+            </select>
+          </label>
         </div>
         {currentSessionMeta && onUpdateCurrentSessionMeta ? (
           <div className="spAnnotationWorkspaceHeaderMeta">
@@ -92,7 +121,7 @@ export function AnnotationWorkspace({
 
           {annotations.length > 0 ? (
             <div className="spAnnotationList" aria-label="Current Reading Session annotations">
-              {annotations.map((a) => {
+              {sortedAnnotations.map((a) => {
                 return (
                   <CurrentAnnotationCard
                     key={a.id}
@@ -118,7 +147,7 @@ export function AnnotationWorkspace({
       ) : (
         <div id="annotation-previous-panel" role="tabpanel" aria-labelledby="annotation-previous-tab" className="spAnnotationTabPanel" tabIndex={0}>
           <PreviousSessionAnnotationsPanel
-            groups={previousSessionGroups ?? []}
+            groups={sortedPreviousSessionGroups}
             onEnableInMarginalia={(sessionId) => onEnablePreviousSession?.(sessionId)}
             onJumpToCfi={onJumpToCfi}
             onJumpToCfiRange={onJumpToCfiRange}

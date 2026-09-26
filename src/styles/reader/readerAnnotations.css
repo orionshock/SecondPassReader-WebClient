@@ -15,6 +15,17 @@
   display: block;
 }
 
+.spAnnotationSortControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  width: max-content;
+  max-width: 100%;
+  color: var(--sp-reader-muted);
+  font-size: 13px;
+}
+
 .spAnnotationTabs {
   display: inline-flex;
   gap: 6px;

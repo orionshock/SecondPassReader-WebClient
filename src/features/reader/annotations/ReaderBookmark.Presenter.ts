@@ -9,6 +9,8 @@ export type ReaderBookmarkViewModel = {
   label: string;
   labelParts: string[];
   timestamp?: string;
+  createdAt: string;
+  updatedAt: string;
   isCurrent: boolean;
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 };
@@ -48,6 +50,8 @@ export function toBookmarkViewModel(input: {
   description?: ReaderLocationDescription | null;
   fallbackBookProgress?: number | null | undefined;
   timestamp?: string | null;
+  createdAt: string;
+  updatedAt: string;
   locationLabel?: string;
   descriptionStatus: "idle" | "loading" | "ready" | "error";
 }): ReaderBookmarkViewModel {
@@ -72,6 +76,8 @@ export function toBookmarkViewModel(input: {
     label: input.locationLabel || locationDisplay.label,
     labelParts: input.locationLabel ? [input.locationLabel] : locationDisplay.labelParts,
     timestamp: input.timestamp ?? undefined,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
     isCurrent,
     descriptionStatus: input.descriptionStatus,
   };

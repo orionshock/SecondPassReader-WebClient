@@ -33,6 +33,8 @@ export type PreviousSessionAnnotationItem =
       note?: string;
       color?: string;
       timestamp?: string;
+      createdAt: string;
+      updatedAt: string;
       locationLabel?: string;
       descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
     }
@@ -41,6 +43,8 @@ export type PreviousSessionAnnotationItem =
       id: string;
       cfi: string;
       timestamp?: string;
+      createdAt: string;
+      updatedAt: string;
       locationLabel?: string;
       descriptionStatus: PreviousSessionLocationLabel["descriptionStatus"];
     };
@@ -90,7 +94,7 @@ export function toPreviousSessionItems(
     if (isBookmarkAnnotation(a)) {
       const cfi = getAnnotationFragmentCfi(a);
       if (!cfi) continue;
-      out.push({ kind: "bookmark", id: a.id, cfi, timestamp, ...toPreviousSessionLocationLabel({ cfi, serverLocationLabel: a.location.locationLabel, descriptions, toc, bookTitle }) });
+      out.push({ kind: "bookmark", id: a.id, cfi, timestamp, createdAt: a.createdAt, updatedAt: a.updatedAt, ...toPreviousSessionLocationLabel({ cfi, serverLocationLabel: a.location.locationLabel, descriptions, toc, bookTitle }) });
       continue;
     }
     if (isHighlightAnnotation(a)) {
@@ -106,6 +110,8 @@ export function toPreviousSessionItems(
         note,
         color,
         timestamp,
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
         ...toPreviousSessionLocationLabel({ cfi: ra.cfiRange, serverLocationLabel: a.location.locationLabel, descriptions, toc, bookTitle }),
       });
     }
