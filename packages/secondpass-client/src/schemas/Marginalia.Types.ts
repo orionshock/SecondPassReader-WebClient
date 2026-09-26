@@ -22,7 +22,7 @@ export type BoundedSessionBook = {
 };
 
 export type MarginaliaProgress = {
-  cfi: string;
+  location: string;
   locationLabel: string;
   updatedAt: string;
 };
@@ -69,7 +69,7 @@ export type MarginaliaRecentSession = {
 
 export type MarginaliaRecentSessions = { results: MarginaliaRecentSession[] };
 
-export type MarginaliaAnnotationLocation = { cfi: string; locationLabel: string };
+export type MarginaliaAnnotationLocation = { location: string; locationLabel: string };
 export type MarginaliaHighlightColor = "yellow" | "green" | "blue" | "pink" | "purple" | "orange";
 
 export type MarginaliaHighlight = {
@@ -110,14 +110,14 @@ export type MarginaliaBootstrap = {
   closedSessions: PaginatedResponse<MarginaliaSessionSummary>;
 };
 
-export type MarginaliaProgressInput = { cfi: string; locationLabel?: string };
+export type MarginaliaProgressInput = { location: string; locationLabel?: string };
 export type MarginaliaSessionMetadataInput = { name?: string; notes?: string };
 export type MarginaliaSessionFinalizeInput = MarginaliaSessionMetadataInput & { progress?: MarginaliaProgressInput };
 
 export type MarginaliaHighlightUpsert = {
   clientId: string;
   kind: "highlight";
-  location: { cfi: string; locationLabel?: string };
+  location: { location: string; locationLabel?: string };
   body: {
     text: string;
     prefix?: string;
@@ -130,7 +130,7 @@ export type MarginaliaHighlightUpsert = {
 export type MarginaliaBookmarkUpsert = {
   clientId: string;
   kind: "bookmark";
-  location: { cfi: string; locationLabel?: string };
+  location: { location: string; locationLabel?: string };
 };
 
 export type MarginaliaAnnotationBatchOperation =

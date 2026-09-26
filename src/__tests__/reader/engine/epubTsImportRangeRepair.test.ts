@@ -53,7 +53,7 @@ describe("EPUB import range repair matching", () => {
       color: "yellow",
     })).toMatchObject({
       annotation: {
-        location: { cfi: "epubcfi(/6/2!/4/2,/1:7,/1:34)" },
+        location: { location: "epubcfi(/6/2!/4/2,/1:7,/1:34)" },
         body: { text: "complete imported highlight", prefix: "Before", suffix: "after" },
       },
     });

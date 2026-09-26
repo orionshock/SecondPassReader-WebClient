@@ -39,7 +39,7 @@ export function recentSessionFixture(overrides: Partial<MarginaliaRecentSession>
     lastActivityAt: "2026-08-02T12:00:00Z",
     book: { id: "book-1", title: "Book One", coverUrl: null, canOpen: true },
     progress: {
-      cfi: "epubcfi(/6/8!/4/2)",
+      location: "epubcfi(/6/8!/4/2)",
       locationLabel: "Chapter 08 - 42%",
       updatedAt: "2026-08-02T12:00:00Z",
     },

@@ -117,14 +117,14 @@ describe("offline Reader Session authority reconciliation", () => {
 
   it("preserves local progress, annotation projection, origin, and local identity while binding", async () => {
     const localState = state("provisional");
-    localState.progress = { cfi: "epubcfi(/6/8)", percentage: 30, locationLabel: "030% - Chapter" };
+    localState.progress = { location: "epubcfi(/6/8)", percentage: 30, locationLabel: "030% - Chapter" };
     localState.annotations = [{
       status: "present",
       origin: { kind: "server-confirmed", serverSessionId: "historical-session" },
       annotation: {
         clientId: "annotation-1",
         kind: "highlight",
-        location: { cfi: "epubcfi(/6/4)" },
+        location: { location: "epubcfi(/6/4)" },
         body: { text: "Text", color: "yellow" },
       },
     }];
@@ -147,7 +147,7 @@ describe("offline Reader Session authority reconciliation", () => {
       annotation: {
         clientId: "local-annotation",
         kind: "bookmark",
-        location: { cfi: "epubcfi(/6/10)" },
+        location: { location: "epubcfi(/6/10)" },
       },
     });
 

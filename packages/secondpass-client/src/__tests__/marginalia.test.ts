@@ -4,10 +4,10 @@ import { createSecondPassClient } from "../index";
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
 const fetchMock = () => vi.mocked(globalThis.fetch);
 const wireBook = { id: "book-1", title: "Book", cover_url: null, can_open: true };
-const wireProgress = { cfi: "epubcfi(/6/2)", location_label: "Chapter 08 - 42%", updated_at: "2026-08-02T10:00:00Z" };
+const wireProgress = { location: "epubcfi(/6/2)", location_label: "Chapter 08 - 42%", updated_at: "2026-08-02T10:00:00Z" };
 const wireSession = { id: "session-1", name: "Morning", notes: "Notes", status: "active", started_at: "2026-08-01T10:00:00Z", closed_at: null, updated_at: "2026-08-02T10:00:00Z", last_activity_at: "2026-08-02T10:00:00Z", annotation_count: 2, progress: wireProgress };
-const highlight = { id: "ann-h", client_id: "client-h", kind: "highlight", location: { cfi: "epubcfi(/6/4,/2,/8)", location_label: "Chapter 09 - 50%" }, body: { text: "Quote", prefix: "Before", suffix: "After", color: "purple", note: "Note" }, created_at: "2026-08-01", updated_at: "2026-08-02" };
-const bookmark = { id: "ann-b", client_id: "client-b", kind: "bookmark", location: { cfi: "epubcfi(/6/8)", location_label: "Location 08 - 42%" }, created_at: "2026-08-01", updated_at: "2026-08-02" };
+const highlight = { id: "ann-h", client_id: "client-h", kind: "highlight", location: { location: "epubcfi(/6/4,/2,/8)", location_label: "Chapter 09 - 50%" }, body: { text: "Quote", prefix: "Before", suffix: "After", color: "purple", note: "Note" }, created_at: "2026-08-01", updated_at: "2026-08-02" };
+const bookmark = { id: "ann-b", client_id: "client-b", kind: "bookmark", location: { location: "epubcfi(/6/8)", location_label: "Location 08 - 42%" }, created_at: "2026-08-01", updated_at: "2026-08-02" };
 const emptyPage = { count: 0, next: null, previous: null, results: [] };
 
 describe("marginalia client", () => {
@@ -26,7 +26,7 @@ describe("marginalia client", () => {
     const recent = await spl.marginalia.sessions.recent({ limit: 10, includeClosed: true });
     expect(books.results[0]).toEqual({ id: "book-1", title: "Book", authors: [{ id: "author-1", name: "Author" }], series: { id: "series-1", name: "Series", seriesIndex: "1.25" }, coverUrl: null, canOpen: true, sessionCount: 3, activeSessionCount: 1, lastActivityAt: null });
     expect(recent.results[0].book).toEqual({ id: "book-1", title: "Book", coverUrl: null, canOpen: true });
-    expect(recent.results[0].progress).toEqual({ cfi: wireProgress.cfi, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at });
+    expect(recent.results[0].progress).toEqual({ location: wireProgress.location, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at });
     expect(recent.results[1].progress).toBeNull();
     expect(String(fetchMock().mock.calls[0]![0])).toContain("page_size=50");
     expect(String(fetchMock().mock.calls[1]![0])).toBe("https://api.example/api/v1/marginalia/sessions/recent/?limit=10&include_closed=true");
@@ -43,7 +43,7 @@ describe("marginalia client", () => {
     const detail = await spl.marginalia.sessions.get("session-1");
     expect(global.results[0].book.coverUrl).toBeNull();
     expect(scoped.context.book.canOpen).toBe(true);
-    expect(detail.session.progress).toEqual({ cfi: wireProgress.cfi, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at });
+    expect(detail.session.progress).toEqual({ location: wireProgress.location, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at });
     expect(String(fetchMock().mock.calls[0]![0])).toContain("has_annotations=true");
     expect(String(fetchMock().mock.calls[1]![0])).toContain("/marginalia/books/book-1/sessions/");
   });
@@ -64,8 +64,10 @@ describe("marginalia client", () => {
     fetchMock().mockResolvedValueOnce(json({ progress: null })).mockResolvedValueOnce(json({ progress: wireProgress }));
     const spl = client();
     await expect(spl.marginalia.sessions.getProgress("session-1")).resolves.toEqual({ progress: null });
-    await expect(spl.marginalia.sessions.replaceProgress("session-1", { cfi: wireProgress.cfi, locationLabel: wireProgress.location_label })).resolves.toEqual({ progress: { cfi: wireProgress.cfi, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at } });
-    expect(JSON.parse(String(fetchMock().mock.calls[1]![1]?.body))).toEqual({ cfi: wireProgress.cfi, location_label: wireProgress.location_label });
+    await expect(spl.marginalia.sessions.replaceProgress("session-1", { location: wireProgress.location, locationLabel: wireProgress.location_label })).resolves.toEqual({ progress: { location: wireProgress.location, locationLabel: wireProgress.location_label, updatedAt: wireProgress.updated_at } });
+    const requestBody = JSON.parse(String(fetchMock().mock.calls[1]![1]?.body));
+    expect(requestBody).toEqual({ location: wireProgress.location, location_label: wireProgress.location_label });
+    expect(requestBody).not.toHaveProperty("cfi");
     expect(fetchMock().mock.calls[1]![1]?.method).toBe("PUT");
   });
 
@@ -75,14 +77,14 @@ describe("marginalia client", () => {
     const spl = client();
     const opened = await spl.marginalia.books.open("book-1", { name: "Morning" });
     const active = await spl.marginalia.books.getActiveSession("book-1");
-    await spl.marginalia.books.startOver("book-1", { name: "Done", progress: { cfi: "epubcfi(/6/10)", locationLabel: "Chapter 10 - 75%" } }, { idempotencyKey: "start-over-action-1" });
+    await spl.marginalia.books.startOver("book-1", { name: "Done", progress: { location: "epubcfi(/6/10)", locationLabel: "Chapter 10 - 75%" } }, { idempotencyKey: "start-over-action-1" });
     expect(opened.created).toBe(true);
     expect(opened.session).toMatchObject({ status: "active" });
     expect(opened.annotations[1]).not.toHaveProperty("body");
     expect(active.session).toBeNull();
     const startInit = fetchMock().mock.calls[2]![1]!;
     expect((startInit.headers as Record<string, string>)["Idempotency-Key"]).toBe("start-over-action-1");
-    expect(JSON.parse(String(startInit.body))).toEqual({ name: "Done", progress: { cfi: "epubcfi(/6/10)", location_label: "Chapter 10 - 75%" } });
+    expect(JSON.parse(String(startInit.body))).toEqual({ name: "Done", progress: { location: "epubcfi(/6/10)", location_label: "Chapter 10 - 75%" } });
   });
 
   it("maps close progress and authoritative annotation collections and batches", async () => {
@@ -91,16 +93,18 @@ describe("marginalia client", () => {
       .mockResolvedValueOnce(json({ annotations: [highlight, bookmark] }))
       .mockResolvedValueOnce(json({ annotations: [highlight, bookmark] }));
     const spl = client();
-    await spl.marginalia.sessions.close("session-1", { progress: { cfi: "epubcfi(/6/12)", locationLabel: "Chapter 12 - 90%" } });
+    await spl.marginalia.sessions.close("session-1", { progress: { location: "epubcfi(/6/12)", locationLabel: "Chapter 12 - 90%" } });
     const collection = await spl.marginalia.sessions.getAnnotations("session-1");
     await spl.marginalia.sessions.batchAnnotations("session-1", [
-      { action: "upsert", annotation: { clientId: "client-h", kind: "highlight", location: { cfi: "range", locationLabel: "Chapter 1 - 10%" }, body: { text: "Quote", color: "yellow" } } },
-      { action: "upsert", annotation: { clientId: "client-b", kind: "bookmark", location: { cfi: "point", locationLabel: "Location 1 - 10%" } } },
+      { action: "upsert", annotation: { clientId: "client-h", kind: "highlight", location: { location: "range", locationLabel: "Chapter 1 - 10%" }, body: { text: "Quote", color: "yellow" } } },
+      { action: "upsert", annotation: { clientId: "client-b", kind: "bookmark", location: { location: "point", locationLabel: "Location 1 - 10%" } } },
       { action: "delete", clientId: "client-old" },
     ]);
     expect(collection.annotations[0]).toMatchObject({ clientId: "client-h", location: { locationLabel: "Chapter 09 - 50%" } });
     expect(collection.annotations[1]).not.toHaveProperty("body");
     const body = JSON.parse(String(fetchMock().mock.calls[2]![1]?.body));
+    expect(body.operations[0].annotation.location).toEqual({ location: "range", location_label: "Chapter 1 - 10%" });
+    expect(body.operations[0].annotation.location).not.toHaveProperty("cfi");
     expect(body.operations[0].annotation.body.text).toBe("Quote");
     expect(body.operations[1].annotation).not.toHaveProperty("body");
     expect(body.operations[2]).toEqual({ action: "delete", client_id: "client-old" });

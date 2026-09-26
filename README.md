@@ -15,7 +15,8 @@ boundaries.
 
 - Browse and search Books, Authors, Series, catalog tags, and Library Groups.
 - Resume Books from Recent History and organize personal Shelves.
-- Read EPUBs with search, Table of Contents navigation, display settings, and CFI-based progress.
+- Read EPUBs with search, Table of Contents navigation, display settings, and durable progress
+  locations backed by EPUB CFI strings.
 - Create and review Reading Sessions, bookmarks, highlights, notes, and Marginalia from previous
   Reading Sessions.
 - Import Glasp CSV Marginalia and split `SecondPassMarginaliaExport` files locally.

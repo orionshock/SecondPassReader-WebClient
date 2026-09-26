@@ -140,10 +140,10 @@ async function deliver(
   let confirmed: MarginaliaProgress;
   try {
     const response = await input.client.marginalia.sessions.replaceProgress(serverSessionId, {
-      cfi: deliveredProgress.cfi,
+      location: deliveredProgress.location,
       locationLabel: deliveredProgress.locationLabel,
     });
-    if (!response.progress?.cfi?.trim() || typeof response.progress.locationLabel !== "string") {
+    if (!response.progress?.location?.trim() || typeof response.progress.locationLabel !== "string") {
       return { status: "failed" };
     }
     confirmed = response.progress;
@@ -196,7 +196,7 @@ async function deliver(
             ...current,
             progress: {
               ...deliveredProgress,
-              cfi: confirmed.cfi.trim(),
+              location: confirmed.location.trim(),
               locationLabel: confirmed.locationLabel,
             },
           }
@@ -281,7 +281,7 @@ function sameProgress(
   right: OfflineReaderBookState["progress"],
 ): boolean {
   return Boolean(left && right
-    && left.cfi === right.cfi
+    && left.location === right.location
     && left.percentage === right.percentage
     && left.locationLabel === right.locationLabel);
 }

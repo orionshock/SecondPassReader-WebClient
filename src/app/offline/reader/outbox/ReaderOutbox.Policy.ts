@@ -44,7 +44,7 @@ export type EstablishReaderSessionIntent = ReaderIntentScope & AttemptedReaderIn
 export type ReplaceReaderProgressIntent = ReaderIntentScope & SessionTarget & MutableReaderIntent & AttemptedReaderIntent & {
   type: "replace-progress";
   progress: {
-    cfi: string;
+    location: string;
     percentage: number | null;
     locationLabel: string;
   };

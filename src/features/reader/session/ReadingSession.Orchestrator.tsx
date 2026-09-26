@@ -75,7 +75,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   );
   const finalProgress = useMemo(
     () => progressLocation?.cfi
-      ? { cfi: progressLocation.cfi, locationLabel: progressLocationLabel }
+      ? { location: progressLocation.cfi, locationLabel: progressLocationLabel }
       : undefined,
     [progressLocation?.cfi, progressLocationLabel],
   );
@@ -111,7 +111,7 @@ export function ReadingSessionOrchestrator(props: ReadingSessionOrchestratorProp
   const bootstrapSession = serverBootstrap?.session ?? null;
   const initialDisplayTarget: ReaderLocationTarget | undefined = useMemo(() => {
     const progress = serverBootstrap?.session?.progress ?? localBootstrap?.continuity.progress;
-    const cfi = progress?.cfi ?? null;
+    const cfi = progress?.location ?? null;
     if (typeof cfi === "string" && cfi.trim()) return { type: "cfi", cfi: cfi.trim() };
     return undefined;
   }, [localBootstrap?.continuity.progress, serverBootstrap?.session?.progress]);

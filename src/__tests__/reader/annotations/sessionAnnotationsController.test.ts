@@ -29,7 +29,7 @@ describe("session annotation controller helpers", () => {
       id: "annotation-a",
       clientId: "client-a",
       kind: "bookmark",
-      location: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 1" },
+      location: { location: "epubcfi(/6/2)", locationLabel: "Chapter 1" },
       createdAt: "now",
       updatedAt: "now",
     } satisfies MarginaliaAnnotation;

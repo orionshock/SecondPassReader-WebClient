@@ -87,7 +87,7 @@ describe("atomic local Reader annotation commit", () => {
   it("commits a confirmed tombstone and delete intent, then permits an explicit restore against that tombstone", async () => {
     const { repositories, state } = await setup();
     state.annotations = [{ status: "present", origin: { kind: "server-confirmed", serverSessionId: "session-1" },
-      annotation: { clientId: "annotation-1", kind: "bookmark", location: { cfi: "point", locationLabel: "" } } }];
+      annotation: { clientId: "annotation-1", kind: "bookmark", location: { location: "point", locationLabel: "" } } }];
     await repositories.readerState.putBookState(state);
     const deleted = await repositories.readerAnnotationCommit.commit(author(state, { action: "delete", clientId: "annotation-1" }));
     if (deleted.status !== "committed") throw new Error("delete failed");
@@ -134,7 +134,7 @@ describe("atomic local Reader annotation commit", () => {
       if (condition === "closed") next.session.lastKnownServerStatus = "closed";
       if (condition === "changed-authority") next.session.localSessionId = "local:other";
       if (condition === "previous-session") next.annotations = [{ status: "present", origin: { kind: "server-confirmed", serverSessionId: "previous" },
-        annotation: { clientId: "annotation-1", kind: "bookmark", location: { cfi: "point", locationLabel: "" } } }];
+        annotation: { clientId: "annotation-1", kind: "bookmark", location: { location: "point", locationLabel: "" } } }];
       await repositories.readerState.putBookState(next);
     }
     await expect(repositories.readerAnnotationCommit.commit(input)).resolves.toEqual({ status: condition === "missing-state" ? "no-local-state" : "not-writable" });

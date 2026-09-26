@@ -27,8 +27,9 @@ export type MarginaliaSplitResult = {
   items: MarginaliaSplitItem[];
 };
 
-type SessionCollectionKey = "sessions" | "reading_sessions";
-type AnnotationCollectionKey = "annotations" | "items";
+const MARGINALIA_EXPORT_TYPE = "SecondPassMarginaliaExport";
+const MARGINALIA_EXPORT_SCHEMA_VERSION = "0.1.0";
+const MARGINALIA_EXPORT_PROFILE = "https://secondpasslibrary.local/specs/marginalia/0.1.0";
 
 export function parseAndSplitMarginaliaExport(text: string): MarginaliaSplitResult {
   let parsed: unknown;
@@ -43,37 +44,37 @@ export function parseAndSplitMarginaliaExport(text: string): MarginaliaSplitResu
 export function splitMarginaliaExport(input: unknown): MarginaliaSplitResult {
   if (!isRecord(input)) throw new Error("This file is not a Second Pass Marginalia export. Choose another file.");
 
-  const schemaVersion = getString(input.schema_version) ?? getString(input.schemaVersion);
-  if (schemaVersion !== "0.1.0") {
+  const schemaVersion = getString(input.schemaVersion);
+  if (schemaVersion !== MARGINALIA_EXPORT_SCHEMA_VERSION) {
     throw new Error("This export version cannot be split with this version of Second Pass Reader.", {
       cause: new Error(`Unsupported Marginalia export schema version: ${schemaVersion ?? "missing"}.`),
     });
   }
+  if (input.type !== MARGINALIA_EXPORT_TYPE || input.profile !== MARGINALIA_EXPORT_PROFILE) {
+    throw new Error("This file is not a supported Second Pass Marginalia export.");
+  }
 
   const books = readBooks(input);
   if (books.length === 0) throw new Error("This export contains no Books to split.");
+  validateArchiveLocations(books);
 
   const items: MarginaliaSplitItem[] = [];
   let annotationCount = 0;
 
   books.forEach((book, bookIndex) => {
-    const sessionKey = getSessionCollectionKey(book);
-    const sessions = getArray(book[sessionKey]);
+    const sessions = getArray(book.readingSessions);
     sessions.forEach((sessionRaw, sessionIndex) => {
       if (!isRecord(sessionRaw)) return;
 
-      const annotationKey = getAnnotationCollectionKey(sessionRaw);
-      const annotations = getArray(sessionRaw[annotationKey]);
+      const annotations = getArray(sessionRaw.annotations);
       annotationCount += annotations.length;
 
-      const session = { ...sessionRaw, [annotationKey]: annotations };
-      const bookCopy = { ...book, [sessionKey]: [session] };
+      const session = { ...sessionRaw, annotations };
+      const bookCopy = { ...book, readingSessions: [session] };
       const exportJson: Record<string, unknown> = {
         ...input,
         books: [bookCopy],
       };
-
-      delete exportJson.book;
 
       const id = `${bookIndex + 1}-${sessionIndex + 1}`;
       items.push({
@@ -104,14 +105,11 @@ export function buildSplitFilename(input: {
   sessionIndex: number;
 }): string {
   const bookPart =
-    getString(input.book.id) ??
-    getString(input.book.book_id) ??
+    getString(input.book.fileHash) ??
     getString(input.book.title) ??
     `book-${input.bookIndex + 1}`;
   const sessionPart =
-    getString(input.session.id) ??
-    getString(input.session.session_id) ??
-    getString(input.session.started_at) ??
+    getString(input.session.sourceReadingSessionId) ??
     getString(input.session.startedAt) ??
     `session-${input.sessionIndex + 1}`;
 
@@ -121,8 +119,7 @@ export function buildSplitFilename(input: {
 
 export function buildBookFolderName(input: { book: Record<string, unknown>; bookIndex: number }): string {
   const bookPart =
-    getString(input.book.id) ??
-    getString(input.book.book_id) ??
+    getString(input.book.fileHash) ??
     getString(input.book.title) ??
     `book-${input.bookIndex + 1}`;
   const prefix = String(input.bookIndex + 1).padStart(2, "0");
@@ -189,28 +186,40 @@ export function formatMarginaliaBookLabel(book: Record<string, unknown>): string
 
 export function formatMarginaliaSessionLabel(session: Record<string, unknown>): string {
   return (
-    getString(session.label) ??
     getString(session.name) ??
-    getString(session.started_at) ??
     getString(session.startedAt) ??
-    getString(session.id) ??
-    getString(session.session_id) ??
+    getString(session.sourceReadingSessionId) ??
     "Untitled Reading Session"
   );
 }
 
 function readBooks(input: Record<string, unknown>): Record<string, unknown>[] {
-  const books = getArray(input.books).filter(isRecord);
-  if (books.length > 0) return books;
-  return isRecord(input.book) ? [input.book] : [];
+  return getArray(input.books).filter(isRecord);
 }
 
-function getSessionCollectionKey(book: Record<string, unknown>): SessionCollectionKey {
-  return Array.isArray(book.reading_sessions) && !Array.isArray(book.sessions) ? "reading_sessions" : "sessions";
+function validateArchiveLocations(books: readonly Record<string, unknown>[]): void {
+  for (const book of books) {
+    if (!Array.isArray(book.readingSessions)) throw new Error("A Marginalia Book is missing readingSessions.");
+    for (const session of book.readingSessions) {
+      if (!isRecord(session) || !Array.isArray(session.annotations)) {
+        throw new Error("A Marginalia Reading Session is invalid.");
+      }
+      if (session.progress !== null) validateProgressLocation(session.progress);
+      for (const annotation of session.annotations) validateAnnotationLocation(annotation);
+    }
+  }
 }
 
-function getAnnotationCollectionKey(session: Record<string, unknown>): AnnotationCollectionKey {
-  return Array.isArray(session.items) && !Array.isArray(session.annotations) ? "items" : "annotations";
+function validateProgressLocation(value: unknown): void {
+  if (!isRecord(value) || "cfi" in value || !getString(value.location)) {
+    throw new Error("Marginalia progress requires a nonblank location.");
+  }
+}
+
+function validateAnnotationLocation(value: unknown): void {
+  if (!isRecord(value) || !isRecord(value.location) || "cfi" in value.location || !getString(value.location.location)) {
+    throw new Error("A Marginalia annotation requires location.location.");
+  }
 }
 
 function slugPart(value: string): string {

@@ -19,7 +19,7 @@ export function sameAnnotation(
   right: MarginaliaBookmarkUpsert | MarginaliaHighlightUpsert,
 ): boolean {
   if (left.clientId !== right.clientId || left.kind !== right.kind
-    || left.location.cfi !== right.location.cfi || left.location.locationLabel !== right.location.locationLabel) return false;
+    || left.location.location !== right.location.location || left.location.locationLabel !== right.location.locationLabel) return false;
   if (left.kind === "bookmark" || right.kind === "bookmark") return true;
   return left.body.text === right.body.text && left.body.prefix === right.body.prefix
     && left.body.suffix === right.body.suffix && left.body.note === right.body.note

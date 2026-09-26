@@ -23,14 +23,14 @@ import type {
 } from "./schemas/Marginalia.Types";
 
 type WireBook = { id: string; title: string; cover_url: string | null; can_open: boolean };
-type WireProgress = { cfi: string; location_label: string; updated_at: string };
+type WireProgress = { location: string; location_label: string; updated_at: string };
 type WireSession = {
   id: string; name: string; notes: string; status: MarginaliaSessionStatus; started_at: string; closed_at: string | null;
   updated_at: string; last_activity_at: string; annotation_count: number; progress?: WireProgress | null; book?: WireBook;
 };
 type WireAnnotation = {
   id: string; client_id: string; kind: "highlight" | "bookmark";
-  location: { cfi: string; location_label: string };
+  location: { location: string; location_label: string };
   body?: { text: string; prefix: string; suffix: string; color: MarginaliaHighlightColor; note: string };
   created_at: string; updated_at: string;
 };
@@ -57,14 +57,14 @@ const page = <T, R>(value: WirePage<T>, project: (item: T) => R): PaginatedRespo
   count: value.count, next: value.next, previous: value.previous, results: value.results.map(project),
 });
 const book = (value: WireBook): BoundedSessionBook => ({ id: String(value.id), title: value.title, coverUrl: value.cover_url, canOpen: value.can_open });
-const progress = (value: WireProgress): MarginaliaProgress => ({ cfi: value.cfi, locationLabel: value.location_label, updatedAt: value.updated_at });
+const progress = (value: WireProgress): MarginaliaProgress => ({ location: value.location, locationLabel: value.location_label, updatedAt: value.updated_at });
 const sessionSummary = (value: WireSession): MarginaliaSessionSummary => ({
   id: String(value.id), name: value.name, notes: value.notes, status: value.status, startedAt: value.started_at,
   closedAt: value.closed_at, updatedAt: value.updated_at, lastActivityAt: value.last_activity_at, annotationCount: value.annotation_count,
 });
 const session = (value: WireSession): MarginaliaSession => ({ ...sessionSummary(value), progress: value.progress ? progress(value.progress) : null });
 const annotation = (value: WireAnnotation): MarginaliaAnnotation => {
-  const common = { id: String(value.id), clientId: value.client_id, location: { cfi: value.location.cfi, locationLabel: value.location.location_label }, createdAt: value.created_at, updatedAt: value.updated_at };
+  const common = { id: String(value.id), clientId: value.client_id, location: { location: value.location.location, locationLabel: value.location.location_label }, createdAt: value.created_at, updatedAt: value.updated_at };
   if (value.kind === "bookmark") return { ...common, kind: "bookmark" };
   if (!value.body) throw new Error("Marginalia highlight response is missing its body.");
   return { ...common, kind: "highlight", body: { ...value.body } };
@@ -87,7 +87,7 @@ const projectBootstrap = (value: WireBootstrap): MarginaliaBootstrap => ({
   created: value.created, context: { book: book(value.context.book) }, session: value.session ? session(value.session) : null,
   annotations: value.annotations.map(annotation), closedSessions: page(value.closed_sessions, sessionSummary),
 });
-const progressBody = (value: MarginaliaProgressInput) => ({ cfi: value.cfi, ...(value.locationLabel !== undefined ? { location_label: value.locationLabel } : {}) });
+const progressBody = (value: MarginaliaProgressInput) => ({ location: value.location, ...(value.locationLabel !== undefined ? { location_label: value.locationLabel } : {}) });
 const finalizeBody = (value?: MarginaliaSessionFinalizeInput) => value ? ({ ...("name" in value ? { name: value.name } : {}), ...("notes" in value ? { notes: value.notes } : {}), ...(value.progress ? { progress: progressBody(value.progress) } : {}) }) : {};
 const get = <T>(ctx: AuthenticatedClientContext, endpointOrUrl: string) => requestJson<T>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl, options: { errorMessages: forbidden } });
 const send = <T>(ctx: AuthenticatedClientContext, endpointOrUrl: string, method: "POST" | "PUT" | "PATCH", bodyValue: unknown, headers?: Record<string, string>) => requestJson<T>({ apiRootUrl: ctx.apiRootUrl, accessToken: ctx.accessToken, tokenType: ctx.tokenType, endpointOrUrl, options: { method, body: bodyValue, headers, errorMessages: forbidden } });
@@ -113,4 +113,4 @@ export async function closeMarginaliaSession(ctx: AuthenticatedClientContext, se
 export async function getMarginaliaProgress(ctx: AuthenticatedClientContext, sessionId: string): Promise<{ progress: MarginaliaProgress | null }> { const value = await get<{ progress: WireProgress | null }>(ctx, url(ctx, `/sessions/${encodeURIComponent(sessionId)}/progress/`)); return { progress: value.progress ? progress(value.progress) : null }; }
 export async function replaceMarginaliaProgress(ctx: AuthenticatedClientContext, sessionId: string, input: MarginaliaProgressInput): Promise<{ progress: MarginaliaProgress }> { const value = await send<{ progress: WireProgress }>(ctx, url(ctx, `/sessions/${encodeURIComponent(sessionId)}/progress/`), "PUT", progressBody(input)); return { progress: progress(value.progress) }; }
 export async function getMarginaliaAnnotations(ctx: AuthenticatedClientContext, sessionId: string): Promise<MarginaliaAnnotationCollection> { const value = await get<{ annotations: WireAnnotation[] }>(ctx, url(ctx, `/sessions/${encodeURIComponent(sessionId)}/annotations/`)); return { annotations: value.annotations.map(annotation) }; }
-export async function batchMarginaliaAnnotations(ctx: AuthenticatedClientContext, sessionId: string, operations: MarginaliaAnnotationBatchOperation[]): Promise<MarginaliaAnnotationCollection> { if (operations.length < 1 || operations.length > 100) throw new Error("Annotation batch requires 1-100 operations."); const mapped = operations.map((op) => op.action === "delete" ? { action: "delete", client_id: op.clientId } : { action: "upsert", annotation: { client_id: op.annotation.clientId, kind: op.annotation.kind, location: { cfi: op.annotation.location.cfi, ...(op.annotation.location.locationLabel !== undefined ? { location_label: op.annotation.location.locationLabel } : {}) }, ...(op.annotation.kind === "highlight" ? { body: op.annotation.body } : {}) } }); const value = await send<{ annotations: WireAnnotation[] }>(ctx, url(ctx, `/sessions/${encodeURIComponent(sessionId)}/annotations/batch/`), "POST", { operations: mapped }); return { annotations: value.annotations.map(annotation) }; }
+export async function batchMarginaliaAnnotations(ctx: AuthenticatedClientContext, sessionId: string, operations: MarginaliaAnnotationBatchOperation[]): Promise<MarginaliaAnnotationCollection> { if (operations.length < 1 || operations.length > 100) throw new Error("Annotation batch requires 1-100 operations."); const mapped = operations.map((op) => op.action === "delete" ? { action: "delete", client_id: op.clientId } : { action: "upsert", annotation: { client_id: op.annotation.clientId, kind: op.annotation.kind, location: { location: op.annotation.location.location, ...(op.annotation.location.locationLabel !== undefined ? { location_label: op.annotation.location.locationLabel } : {}) }, ...(op.annotation.kind === "highlight" ? { body: op.annotation.body } : {}) } }); const value = await send<{ annotations: WireAnnotation[] }>(ctx, url(ctx, `/sessions/${encodeURIComponent(sessionId)}/annotations/batch/`), "POST", { operations: mapped }); return { annotations: value.annotations.map(annotation) }; }

@@ -43,7 +43,8 @@ Because navigation state follows `#`, application routes are not sent to the sta
 - IndexedDB stores namespace-scoped cached projections, explicitly retained publication assets and
   covers, Reader continuity, and pending Reader work.
 - Renderer state is transient. It is never canonical Reader or Marginalia data.
-- W3C Web Annotation JSON-LD and EPUB CFI selectors remain the canonical annotation contract.
+- Durable progress and annotation records expose the format-neutral `location` field. The current
+  EPUB implementation stores an accepted EPUB CFI string in that field.
 - `@likecoin/epub-ts` types and behavior stay behind the Reader engine boundary.
 
 After linking, the Web Client deliberately persists its single active connection, including the

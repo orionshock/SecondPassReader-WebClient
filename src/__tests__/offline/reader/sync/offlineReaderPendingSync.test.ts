@@ -379,7 +379,7 @@ function annotationIntent(bookId: string, clientId = "annotation-1"): ReaderOutb
     serverSessionId: null,
     intentRevision: 1,
     origin: { kind: "local-unconfirmed" },
-    annotation: { clientId, kind: "bookmark", location: { cfi: "epubcfi(/6/8)" } },
+    annotation: { clientId, kind: "bookmark", location: { location: "epubcfi(/6/8)" } },
   };
 }
 
@@ -390,7 +390,7 @@ function progressIntent(bookId: string): ReaderOutboxIntent {
     bookId,
     serverSessionId: null,
     intentRevision: 1,
-    progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
+    progress: { location: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
   };
 }
 

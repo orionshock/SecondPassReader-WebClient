@@ -22,10 +22,10 @@ describe("durable EPUB CFI profile", () => {
     expect(rangeCfi).toBe("epubcfi(/6/4[chapter]!/4/2[paragraph],/1:6,/1:10)");
     expect(() => assertDurableReaderCfi(pointCfi)).not.toThrow();
     expect(() => assertDurableReaderCfi(rangeCfi)).not.toThrow();
-    expect(buildMarginaliaProgressInput(pointCfi).cfi).toBe(pointCfi);
-    expect(buildOfflineReadingProgress({ location: { cfi: pointCfi }, toc: null })?.cfi).toBe(pointCfi);
+    expect(buildMarginaliaProgressInput(pointCfi).location).toBe(pointCfi);
+    expect(buildOfflineReadingProgress({ location: { cfi: pointCfi }, toc: null })?.location).toBe(pointCfi);
     expect(buildHighlightUpsert({ clientId: "highlight", cfi: rangeCfi, text: "beta", prefix: "Alpha ", suffix: " gamma", color: "yellow" }))
-      .toMatchObject({ annotation: { location: { cfi: rangeCfi }, body: { text: "beta", prefix: "Alpha", suffix: "gamma" } } });
+      .toMatchObject({ annotation: { location: { location: rangeCfi }, body: { text: "beta", prefix: "Alpha", suffix: "gamma" } } });
   });
 
   it("accepts historical-style structural IDs and rejects text assertions and other unsupported offsets", () => {
@@ -33,7 +33,7 @@ describe("durable EPUB CFI profile", () => {
     expect(() => assertDurableReaderCfi(historical)).not.toThrow();
     expect(() => assertDurableReaderCfi("epubcfi(/6/4!/4[element-id]/1:17)")).not.toThrow();
     expect(buildHighlightUpsert({ clientId: "imported", cfi: historical, text: "quote", color: "yellow" }))
-      .toMatchObject({ annotation: { location: { cfi: historical } } });
+      .toMatchObject({ annotation: { location: { location: historical } } });
     for (const unsupported of [
       "epubcfi(/6/4!/4/1:17[surrounding text])",
       "epubcfi(/6/4!/4/1:17~5)",

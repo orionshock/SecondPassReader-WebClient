@@ -27,7 +27,7 @@ describe("offline Home presentation", () => {
       lastActivityAt: "2026-08-02T12:00:00Z",
       offlineReadable: true,
       progress: {
-        cfi: "epubcfi(/6/99)",
+        location: "epubcfi(/6/99)",
         percentage: 87,
         locationLabel: "087% - Chapter 9",
         source: "local",
@@ -44,7 +44,7 @@ describe("offline Home presentation", () => {
     });
 
     expect(item.progress).toMatchObject({
-      cfi: "epubcfi(/6/8)",
+      location: "epubcfi(/6/8)",
       locationLabel: "042% - Chapter 4",
       percentage: null,
       source: "cached-server",
@@ -231,7 +231,7 @@ function recent(bookId: string, title: string, status: "active" | "closed" = "ac
     status,
     lastActivityAt: "2026-08-02T12:00:00Z",
     book: { id: bookId, title, coverUrl: "https://library.example/cover.jpg", canOpen: true },
-    progress: { cfi: "epubcfi(/6/8)", locationLabel: "042% - Chapter 4", updatedAt: "2026-08-02T12:00:00Z" },
+    progress: { location: "epubcfi(/6/8)", locationLabel: "042% - Chapter 4", updatedAt: "2026-08-02T12:00:00Z" },
   };
 }
 
@@ -242,7 +242,7 @@ function readerState(bookId: string, cfi: string, locationLabel: string): Offlin
     bookId,
     schemaVersion: 1,
     session: { kind: "provisional", localSessionId: `local:${bookId}`, serverSessionId: null, lastKnownServerStatus: null },
-    progress: { cfi, locationLabel, percentage: 87 },
+    progress: { location: cfi, locationLabel, percentage: 87 },
     annotations: [],
   };
 }

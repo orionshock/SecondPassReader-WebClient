@@ -16,7 +16,7 @@ const bookmark = {
   id: "bookmark-1",
   clientId: "client-bookmark",
   kind: "bookmark",
-  location: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 1" },
+  location: { location: "epubcfi(/6/2)", locationLabel: "Chapter 1" },
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
 } satisfies MarginaliaAnnotation;
@@ -25,7 +25,7 @@ const highlight = {
   id: "highlight-1",
   clientId: "client-highlight",
   kind: "highlight",
-  location: { cfi: "epubcfi(/6/4,/2,/8)", locationLabel: "Chapter 2" },
+  location: { location: "epubcfi(/6/4,/2,/8)", locationLabel: "Chapter 2" },
   body: { text: "Hello", prefix: "Before", suffix: "After", color: "yellow", note: "Note here" },
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
@@ -41,7 +41,7 @@ describe("reader annotation boundary", () => {
   it("uses only a nonblank marginalia location CFI as the machine anchor", () => {
     expect(getAnnotationFragmentCfi(bookmark)).toBe("epubcfi(/6/2)");
     expect(getAnnotationFragmentCfi(highlight)).toBe("epubcfi(/6/4,/2,/8)");
-    expect(getAnnotationFragmentCfi({ ...bookmark, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
+    expect(getAnnotationFragmentCfi({ ...bookmark, location: { location: "", locationLabel: "Opaque" } })).toBeNull();
   });
 
   it("extracts canonical highlight body fields", () => {
@@ -76,8 +76,8 @@ describe("reader annotation boundary", () => {
   });
 
   it("rejects annotations without a CFI", () => {
-    expect(toReaderAnnotation({ ...bookmark, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
-    expect(toReaderAnnotation({ ...highlight, location: { cfi: "", locationLabel: "Opaque" } })).toBeNull();
+    expect(toReaderAnnotation({ ...bookmark, location: { location: "", locationLabel: "Opaque" } })).toBeNull();
+    expect(toReaderAnnotation({ ...highlight, location: { location: "", locationLabel: "Opaque" } })).toBeNull();
   });
 
   it("finds the current bookmark by exact CFI after normalizing the current location", () => {

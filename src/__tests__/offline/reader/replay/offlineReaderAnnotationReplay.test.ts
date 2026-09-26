@@ -505,7 +505,7 @@ function highlightIntent(
     annotation: {
       clientId,
       kind: "highlight",
-      location: { cfi: `epubcfi(/6/${clientId.length})`, locationLabel: "010% - Chapter" },
+      location: { location: `epubcfi(/6/${clientId.length})`, locationLabel: "010% - Chapter" },
       body: { text: "Quoted text", prefix: "Before", suffix: "After", color: "yellow", note },
     },
   };
@@ -535,7 +535,7 @@ function progressIntent(): Extract<ReaderOutboxIntent, { type: "replace-progress
     bookId: "book-1",
     serverSessionId: "session-1",
     intentRevision: 8,
-    progress: { cfi: "epubcfi(/6/20)", percentage: 50, locationLabel: "050% - Chapter" },
+    progress: { location: "epubcfi(/6/20)", percentage: 50, locationLabel: "050% - Chapter" },
   };
 }
 
@@ -556,7 +556,7 @@ function serverHighlight(clientId: string, note: string): MarginaliaAnnotation {
     id: `server:${clientId}`,
     clientId,
     kind: "highlight",
-    location: { cfi: `epubcfi(/6/${clientId.length})`, locationLabel: "010% - Chapter" },
+    location: { location: `epubcfi(/6/${clientId.length})`, locationLabel: "010% - Chapter" },
     body: { text: "Quoted text", prefix: "Before", suffix: "After", color: "yellow", note },
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
@@ -568,7 +568,7 @@ function serverBookmark(clientId: string): MarginaliaAnnotation {
     id: `server:${clientId}`,
     clientId,
     kind: "bookmark",
-    location: { cfi: "epubcfi(/6/20)", locationLabel: "020% - Chapter" },
+    location: { location: "epubcfi(/6/20)", locationLabel: "020% - Chapter" },
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
   };

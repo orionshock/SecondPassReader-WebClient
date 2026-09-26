@@ -182,7 +182,7 @@ function progressMatchesServer(
 ): boolean {
   const serverProgress = session?.progress;
   if (!progress || !serverProgress) return false;
-  return progress.cfi.trim() === serverProgress.cfi.trim()
+  return progress.location.trim() === serverProgress.location.trim()
     && progress.locationLabel === serverProgress.locationLabel;
 }
 

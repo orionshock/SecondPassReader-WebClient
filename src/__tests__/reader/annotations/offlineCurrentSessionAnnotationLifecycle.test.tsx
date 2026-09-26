@@ -71,7 +71,7 @@ describe("offline current-session annotation lifecycle", () => {
       annotation: {
         clientId: "bookmark-1",
         kind: "bookmark",
-        location: { cfi: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
+        location: { location: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
       },
     }];
 

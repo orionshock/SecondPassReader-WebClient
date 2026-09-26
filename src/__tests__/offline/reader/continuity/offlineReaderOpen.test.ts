@@ -83,7 +83,7 @@ describe("offline Reader admission", () => {
         lastKnownServerStatus: null,
       },
       progress: {
-        cfi: "epubcfi(/6/18)",
+        location: "epubcfi(/6/18)",
         percentage: 75,
         locationLabel: "075% - Latest local position",
       },
@@ -95,7 +95,7 @@ describe("offline Reader admission", () => {
     expect(result.status).toBe("opened");
     if (result.status !== "opened") return;
     expect(result.openedBook.bootstrap.continuity.progress).toEqual({
-      cfi: "epubcfi(/6/18)",
+      location: "epubcfi(/6/18)",
       percentage: 75,
       locationLabel: "075% - Latest local position",
     });

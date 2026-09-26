@@ -12,7 +12,7 @@ export function mapOfflineReaderAnnotations(
       id: `local:${annotation.clientId}`,
       clientId: annotation.clientId,
       location: {
-        cfi: annotation.location.cfi,
+        location: annotation.location.location,
         locationLabel: annotation.location.locationLabel ?? "",
       },
       createdAt: "",

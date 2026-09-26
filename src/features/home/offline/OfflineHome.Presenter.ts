@@ -13,7 +13,7 @@ export type OfflineHomeRecentItem = {
   bookId: string;
   bookTitle: string;
   progress: {
-    cfi: string;
+    location: string;
     locationLabel: string;
     percentage: number | null;
     source: "cached-server" | "local";
@@ -40,14 +40,14 @@ export function presentOfflineHomeRecent(input: {
     const localProgress = input.readerStates.get(bookId)?.progress ?? null;
     const progress = localProgress
       ? {
-          cfi: localProgress.cfi,
+          location: localProgress.location,
           locationLabel: localProgress.locationLabel,
           percentage: localProgress.percentage,
           source: "local" as const,
         }
       : item.progress
         ? {
-            cfi: item.progress.cfi,
+            location: item.progress.location,
             locationLabel: item.progress.locationLabel,
             percentage: null,
             source: "cached-server" as const,

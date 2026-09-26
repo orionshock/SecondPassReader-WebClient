@@ -9,7 +9,7 @@ const annotations = (id: string): MarginaliaAnnotation[] => [{
   id,
   clientId: `${id}-client`,
   kind: "bookmark",
-  location: { cfi: `epubcfi(/6/${id.length})`, locationLabel: "Chapter" },
+  location: { location: `epubcfi(/6/${id.length})`, locationLabel: "Chapter" },
   createdAt: "created",
   updatedAt: "updated",
 }];

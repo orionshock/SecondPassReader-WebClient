@@ -123,7 +123,7 @@ describe("offline Reader continuity persistence", () => {
     const closedState = readerState(serverSession("closed"));
     closedState.annotationRevision = 7;
     closedState.progress = {
-      cfi: "epubcfi(/6/4)",
+      location: "epubcfi(/6/4)",
       percentage: 20,
       locationLabel: "020% - Chapter",
     };

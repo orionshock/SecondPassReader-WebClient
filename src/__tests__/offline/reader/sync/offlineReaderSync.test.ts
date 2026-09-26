@@ -256,7 +256,7 @@ function syncClient(order: string[] = [], annotations: MarginaliaAnnotation[] = 
         }),
         replaceProgress: vi.fn(async (_sessionId, input) => {
           order.push("progress");
-          return { progress: serverProgress(input.cfi, input.locationLabel) };
+          return { progress: serverProgress(input.location, input.locationLabel) };
         }),
       },
     },
@@ -294,7 +294,7 @@ function progressIntent(
     bookId,
     serverSessionId: "session-1",
     intentRevision: 1,
-    progress: { cfi: "epubcfi(/6/12)", percentage: 60, locationLabel: "060% - Chapter" },
+    progress: { location: "epubcfi(/6/12)", percentage: 60, locationLabel: "060% - Chapter" },
   };
 }
 
@@ -312,7 +312,7 @@ function annotationIntent(
     annotation: {
       clientId: `annotation:${bookId}`,
       kind: "bookmark",
-      location: { cfi: "epubcfi(/6/8)", locationLabel: "040% - Chapter" },
+      location: { location: "epubcfi(/6/8)", locationLabel: "040% - Chapter" },
     },
   };
 }
@@ -327,7 +327,7 @@ function serverAnnotation(intent: UpsertReaderAnnotationIntent): MarginaliaAnnot
     id: `server:${annotation.clientId}`,
     clientId: annotation.clientId,
     location: {
-      cfi: annotation.location.cfi,
+      location: annotation.location.location,
       locationLabel: annotation.location.locationLabel ?? "040% - Chapter",
     },
     createdAt: "2026-01-01T00:00:00Z",
@@ -374,7 +374,7 @@ function session(id: string): MarginaliaSession {
 }
 
 function serverProgress(cfi: string, locationLabel: string): MarginaliaProgress {
-  return { cfi, locationLabel, updatedAt: "2026-01-01T00:00:00Z" };
+  return { location: cfi, locationLabel, updatedAt: "2026-01-01T00:00:00Z" };
 }
 
 function apiError(status: number, code = "private server response"): ApiError {

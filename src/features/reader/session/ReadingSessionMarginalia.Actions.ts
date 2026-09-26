@@ -21,7 +21,7 @@ export function normalizeOptionalHighlightContext(value?: string): string {
 
 export function buildMarginaliaProgressInput(cfi: string, locationLabel?: string): MarginaliaProgressInput {
   assertDurableReaderCfi(cfi);
-  return { cfi, locationLabel: toMarginaliaLocationLabel(locationLabel) };
+  return { location: cfi, locationLabel: toMarginaliaLocationLabel(locationLabel) };
 }
 
 export function buildBookmarkUpsert(input: {
@@ -35,7 +35,7 @@ export function buildBookmarkUpsert(input: {
     annotation: {
       clientId: input.clientId,
       kind: "bookmark",
-      location: { cfi: input.cfi, locationLabel: toMarginaliaLocationLabel(input.locationLabel) },
+      location: { location: input.cfi, locationLabel: toMarginaliaLocationLabel(input.locationLabel) },
     },
   };
 }
@@ -59,7 +59,7 @@ export function buildHighlightUpsert(input: {
     annotation: {
       clientId: input.clientId,
       kind: "highlight",
-      location: { cfi: input.cfi, locationLabel: toMarginaliaLocationLabel(input.locationLabel) },
+      location: { location: input.cfi, locationLabel: toMarginaliaLocationLabel(input.locationLabel) },
       body: {
         text,
         prefix: normalizeOptionalHighlightContext(input.prefix),
@@ -77,7 +77,7 @@ export function buildHighlightUpdate(annotation: MarginaliaHighlight, input: {
 }): CurrentSessionAnnotationMutation {
   const text = normalizeHighlightText(annotation.body.text);
   if (!text) throw new Error("Highlight text must not be blank.");
-  assertDurableReaderCfi(annotation.location.cfi);
+  assertDurableReaderCfi(annotation.location.location);
 
   return {
     action: "upsert",
@@ -110,7 +110,7 @@ export function buildCurrentSessionHighlightCommit(input: {
 }): { kind: "created" | "updated"; operation: CurrentSessionAnnotationMutation } {
   const existing = input.currentAnnotations.find(
     (annotation): annotation is MarginaliaHighlight =>
-      annotation.kind === "highlight" && annotation.location.cfi === input.cfi,
+      annotation.kind === "highlight" && annotation.location.location === input.cfi,
   );
   if (existing) {
     return {

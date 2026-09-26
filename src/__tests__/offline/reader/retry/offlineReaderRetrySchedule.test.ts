@@ -41,7 +41,7 @@ function progress(attempt?: Attempt, revision = 1): ReplaceReaderProgressIntent 
     bookId: `book-${revision}`,
     serverSessionId: "session-1",
     intentRevision: revision,
-    progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - One" },
+    progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - One" },
     ...(attempt ? { attempt: {
       revision: attempt.revision ?? revision,
       classification: attempt.classification,

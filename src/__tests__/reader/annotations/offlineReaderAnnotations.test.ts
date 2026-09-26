@@ -10,7 +10,7 @@ describe("offline Reader annotation projection", () => {
         annotation: {
           clientId: "highlight-1",
           kind: "highlight",
-          location: { cfi: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
+          location: { location: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
           body: { text: "Quoted text", color: "blue" },
         },
       },
@@ -25,7 +25,7 @@ describe("offline Reader annotation projection", () => {
       id: "local:highlight-1",
       clientId: "highlight-1",
       kind: "highlight",
-      location: { cfi: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
+      location: { location: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
       body: expect.objectContaining({ text: "Quoted text", color: "blue" }),
     })]);
   });

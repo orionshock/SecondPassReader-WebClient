@@ -73,20 +73,20 @@ function parseSplMarginaliaSessionImport(text: string, fileName: string, now = n
 }
 
 function toImportRow(annotation: Record<string, unknown>, index: number): ReaderImportRow {
-  const kind = isBookmarkAnnotation(annotation) ? "bookmark" : "highlight";
-  const quote = readQuote(annotation);
+  const kind = getString(annotation.kind) === "bookmark" ? "bookmark" : "highlight";
+  const body = isRecord(annotation.body) ? annotation.body : undefined;
   const cfiHint = readCfiHint(annotation);
-  const quoteText = kind === "bookmark" ? undefined : getString(annotation.highlight_text) ?? quote?.exact ?? getString(annotation.text);
-  const noteText = getString(annotation.comment_text) ?? readBodyNote(annotation) ?? getString(annotation.note) ?? getString(annotation.comment);
-  const color = readColor(annotation);
+  const quoteText = kind === "bookmark" ? undefined : getString(body?.text);
+  const noteText = getString(body?.note);
+  const color = getString(body?.color);
 
   return {
-    id: getString(annotation.id) ?? `annotation-${index}`,
+    id: getString(annotation.clientAnnotationId) ?? `annotation-${index}`,
     kind,
     index,
     quoteText,
-    preQuoteText: quote?.prefix,
-    postQuoteText: quote?.suffix,
+    preQuoteText: getString(body?.prefix),
+    postQuoteText: getString(body?.suffix),
     cfiHint,
     noteText,
     color,
@@ -94,79 +94,12 @@ function toImportRow(annotation: Record<string, unknown>, index: number): Reader
   };
 }
 
-function isBookmarkAnnotation(annotation: Record<string, unknown>): boolean {
-  if (getString(annotation.kind) === "bookmark") return true;
-  const motivation = annotation.motivation;
-  const motivations = Array.isArray(motivation) ? motivation : [motivation];
-  return motivations.some((item) => getString(item) === "bookmarking");
-}
-
-function readColor(annotation: Record<string, unknown>): string | undefined {
-  const direct = getString(annotation.highlight_color) ?? getString(annotation.highlightColor) ?? getString(annotation.color);
-  if (direct) return direct;
-
-  const body = annotation.body;
-  const bodies = Array.isArray(body) ? body : [body];
-  for (const item of bodies) {
-    if (!isRecord(item)) continue;
-    const color = getString(item.color);
-    if (color) return color;
-  }
-  return undefined;
-}
-
 function readAnnotations(session: Record<string, unknown>): Record<string, unknown>[] {
-  const value = Array.isArray(session.items) && !Array.isArray(session.annotations) ? session.items : session.annotations;
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-function readQuote(annotation: Record<string, unknown>): { exact: string; prefix?: string; suffix?: string } | undefined {
-  const quote = annotation.quote;
-  if (isRecord(quote)) return buildQuote(quote);
-
-  const target = annotation.target;
-  if (!isRecord(target)) return undefined;
-  const selector = target.selector;
-  const selectors = Array.isArray(selector) ? selector : [selector];
-  for (const item of selectors) {
-    if (isRecord(item) && getString(item.type) === "TextQuoteSelector") return buildQuote(item);
-  }
-  return undefined;
-}
-
-function buildQuote(value: Record<string, unknown>): { exact: string; prefix?: string; suffix?: string } | undefined {
-  const exact = getString(value.exact);
-  if (!exact) return undefined;
-  return {
-    exact,
-    prefix: getString(value.prefix),
-    suffix: getString(value.suffix),
-  };
+  return Array.isArray(session.annotations) ? session.annotations.filter(isRecord) : [];
 }
 
 function readCfiHint(annotation: Record<string, unknown>): string | undefined {
-  const selector = annotation.selector ?? (isRecord(annotation.target) ? annotation.target.selector : undefined);
-  const selectors = Array.isArray(selector) ? selector : [selector];
-  for (const item of selectors) {
-    if (!isRecord(item)) continue;
-    const kind = getString(item.kind) ?? getString(item.type);
-    const value = getString(item.value);
-    if (value && (kind === "epub_cfi" || kind === "FragmentSelector")) return value;
-  }
-  return undefined;
-}
-
-function readBodyNote(annotation: Record<string, unknown>): string | undefined {
-  const body = annotation.body;
-  const bodies = Array.isArray(body) ? body : [body];
-  for (const item of bodies) {
-    if (!isRecord(item)) continue;
-    const purpose = getString(item.purpose);
-    if (purpose && purpose !== "commenting") continue;
-    const value = getString(item.value);
-    if (value) return value;
-  }
-  return undefined;
+  return isRecord(annotation.location) ? getString(annotation.location.location) : undefined;
 }
 
 function getString(value: unknown): string | undefined {

@@ -137,7 +137,7 @@ function progress(
     type: "replace-progress",
     ...scope,
     intentRevision,
-    progress: { cfi, percentage, locationLabel: `${percentage.toString().padStart(3, "0")}% - Location` },
+    progress: { location: cfi, percentage, locationLabel: `${percentage.toString().padStart(3, "0")}% - Location` },
   };
 }
 
@@ -157,7 +157,7 @@ function annotationUpsert(
     annotation: {
       clientId,
       kind: "highlight",
-      location: { cfi: "epubcfi(/6/2)", locationLabel: "010% - Chapter 1" },
+      location: { location: "epubcfi(/6/2)", locationLabel: "010% - Chapter 1" },
       body: { text: "Quote", prefix: "Before", suffix: "After", color, note },
     },
   };

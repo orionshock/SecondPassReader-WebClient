@@ -11,7 +11,7 @@ const highlight = {
   id: "highlight-1",
   clientId: "client-1",
   kind: "highlight",
-  location: { cfi: "epubcfi(/6/2,/4,/8)", locationLabel: "Chapter 01" },
+  location: { location: "epubcfi(/6/2,/4,/8)", locationLabel: "Chapter 01" },
   body: { text: "Quoted text", prefix: "", suffix: "", color: "yellow", note: "Reader note" },
   createdAt: "created",
   updatedAt: "updated",
@@ -21,7 +21,7 @@ const bookmark = {
   id: "bookmark-1",
   clientId: "client-2",
   kind: "bookmark",
-  location: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01" },
+  location: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01" },
   createdAt: "created",
   updatedAt: "updated",
 } satisfies MarginaliaAnnotation;

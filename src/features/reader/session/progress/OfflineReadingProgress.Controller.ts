@@ -32,7 +32,7 @@ export function buildOfflineReadingProgress(input: {
     ? Math.max(0, Math.min(100, Math.round(rawProgress * 100)))
     : null;
   return {
-    cfi,
+    location: cfi,
     percentage,
     locationLabel: buildSavedReaderLocationLabel(input),
   };
@@ -136,5 +136,5 @@ export class OfflineReadingProgressController {
 }
 
 function progressKey(progress: OfflineReadingProgress | null): string | null {
-  return progress ? JSON.stringify([progress.cfi, progress.percentage, progress.locationLabel]) : null;
+  return progress ? JSON.stringify([progress.location, progress.percentage, progress.locationLabel]) : null;
 }

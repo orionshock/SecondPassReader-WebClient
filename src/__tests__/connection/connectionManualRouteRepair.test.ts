@@ -66,7 +66,7 @@ describe("explicit Library route repair", () => {
     const covers = await factories.createPublicationCoverRepository();
     const readerState = await factories.createReaderStateRepository();
     const outbox = await factories.createReaderOutboxRepository();
-    const progress = { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010%" };
+    const progress = { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010%" };
     await projections.put({ namespaceKey: key, projectionKey: "book:1", value: { id: "1" }, fetchedAt: 1, schemaVersion: 1 });
     await assets.putComplete({
       status: "complete", namespaceKey: key, bookId: "1", format: "epub", checksum: "a".repeat(64),

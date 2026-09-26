@@ -25,7 +25,7 @@ describe("offline reading progress shape", () => {
         bookProgress: 0.126,
       },
     })).toEqual({
-      cfi: "epubcfi(/6/4)",
+      location: "epubcfi(/6/4)",
       percentage: 13,
       locationLabel: "013% - Chapter One",
     });
@@ -260,5 +260,5 @@ function initialState(): OfflineReaderBookState {
 }
 
 function progress(cfi: string, percentage: number) {
-  return { cfi, percentage, locationLabel: `${String(percentage).padStart(3, "0")}% - Location` };
+  return { location: cfi, percentage, locationLabel: `${String(percentage).padStart(3, "0")}% - Location` };
 }

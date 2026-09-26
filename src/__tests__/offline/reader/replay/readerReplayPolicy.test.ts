@@ -100,7 +100,7 @@ function progress(overrides: Partial<ReplaceReaderProgressIntent> = {}): Replace
     type: "replace-progress",
     ...SCOPE,
     intentRevision: 1,
-    progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - Location" },
+    progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - Location" },
     ...overrides,
   };
 }
@@ -114,7 +114,7 @@ function annotationUpsert(clientId: string, intentRevision: number): UpsertReade
     annotation: {
       clientId,
       kind: "bookmark",
-      location: { cfi: "epubcfi(/6/2)", locationLabel: "010% - Location" },
+      location: { location: "epubcfi(/6/2)", locationLabel: "010% - Location" },
     },
   };
 }

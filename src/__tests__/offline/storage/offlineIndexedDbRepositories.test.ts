@@ -185,13 +185,13 @@ describe("IndexedDB offline repository lifecycle", () => {
     expect(stale?.annotationRevision).toBe(0);
     await expect(first.readerState.updateBookState("account-a", "book-1", (current) => ({
       ...current,
-      progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Location" },
+      progress: { location: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Location" },
     }))).resolves.toMatchObject({ status: "committed" });
 
     expect(await second.readerState.getBookState("account-a", "book-1")).toMatchObject({
       annotationRevision: 1,
       annotations: [bookmarkProjection("annotation-new")],
-      progress: { cfi: "epubcfi(/6/8)" },
+      progress: { location: "epubcfi(/6/8)" },
     });
     first.close();
     second.close();
@@ -202,12 +202,12 @@ describe("IndexedDB offline repository lifecycle", () => {
     const stale = await first.readerState.getBookState("account-a", "book-1");
     await second.readerState.updateBookState("account-a", "book-1", (current) => ({
       ...current,
-      progress: { cfi: "epubcfi(/6/12)", percentage: 60, locationLabel: "060% - Location" },
+      progress: { location: "epubcfi(/6/12)", percentage: 60, locationLabel: "060% - Location" },
       annotationRevision: 1,
       annotations: [bookmarkProjection("annotation-new")],
     }));
 
-    expect(stale?.progress?.cfi).toBe("epubcfi(/6/2)");
+    expect(stale?.progress?.location).toBe("epubcfi(/6/2)");
     await first.readerState.updateBookState("account-a", "book-1", (current) => ({
       ...current,
       session: {
@@ -220,7 +220,7 @@ describe("IndexedDB offline repository lifecycle", () => {
 
     expect(await second.readerState.getBookState("account-a", "book-1")).toMatchObject({
       session: { serverSessionId: "session-2" },
-      progress: { cfi: "epubcfi(/6/12)" },
+      progress: { location: "epubcfi(/6/12)" },
       annotationRevision: 1,
       annotations: [bookmarkProjection("annotation-new")],
     });
@@ -233,7 +233,7 @@ describe("IndexedDB offline repository lifecycle", () => {
     const stale = (await first.readerState.getBookState("account-a", "book-1"))!;
     await second.readerState.updateBookState("account-a", "book-1", (current) => ({
       ...current,
-      progress: { cfi: "epubcfi(/6/14)", percentage: 70, locationLabel: "070% - Location" },
+      progress: { location: "epubcfi(/6/14)", percentage: 70, locationLabel: "070% - Location" },
     }));
 
     const commit: LocalReaderAnnotationCommit = {
@@ -248,14 +248,14 @@ describe("IndexedDB offline repository lifecycle", () => {
         annotation: {
           clientId: "annotation-atomic",
           kind: "bookmark",
-          location: { cfi: "epubcfi(/6/4)", locationLabel: "Bookmark" },
+          location: { location: "epubcfi(/6/4)", locationLabel: "Bookmark" },
         },
       },
     };
     await expect(first.readerAnnotationCommit.commit(commit)).resolves.toMatchObject({ status: "committed" });
 
     expect(await second.readerState.getBookState("account-a", "book-1")).toMatchObject({
-      progress: { cfi: "epubcfi(/6/14)" },
+      progress: { location: "epubcfi(/6/14)" },
       annotationRevision: 1,
     });
     expect(await second.readerOutbox.list("account-a")).toHaveLength(1);
@@ -271,7 +271,7 @@ describe("IndexedDB offline repository lifecycle", () => {
     expect(stale).not.toBeNull();
     await expect(first.readerState.updateBookState("account-a", "book-1", (current) => ({
       ...current,
-      progress: { cfi: "epubcfi(/6/20)", percentage: 100, locationLabel: "100% - Location" },
+      progress: { location: "epubcfi(/6/20)", percentage: 100, locationLabel: "100% - Location" },
     }))).resolves.toEqual({ status: "missing" });
     expect(await second.readerState.getBookState("account-a", "book-1")).toBeNull();
     first.close();
@@ -298,7 +298,7 @@ function readerState(): OfflineReaderBookState {
       lastKnownServerStatus: "active",
     },
     progress: {
-      cfi: "epubcfi(/6/2)",
+      location: "epubcfi(/6/2)",
       percentage: 10,
       locationLabel: "010% - Location",
     },
@@ -322,7 +322,7 @@ function bookmarkProjection(clientId: string): OfflineReaderBookState["annotatio
     annotation: {
       clientId,
       kind: "bookmark",
-      location: { cfi: "epubcfi(/6/4)", locationLabel: "Bookmark" },
+      location: { location: "epubcfi(/6/4)", locationLabel: "Bookmark" },
     },
   };
 }
@@ -334,7 +334,7 @@ function progressIntent(intentRevision: number, cfi: string): ReplaceReaderProgr
     bookId: "book-1",
     serverSessionId: "session-1",
     intentRevision,
-    progress: { cfi, percentage: 10, locationLabel: "010% - Location" },
+    progress: { location: cfi, percentage: 10, locationLabel: "010% - Location" },
   };
 }
 

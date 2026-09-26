@@ -174,7 +174,7 @@ function deferredProgress(retryEligibleAt: number): ReplaceReaderProgressIntent 
     bookId: "book-1",
     serverSessionId: "session-1",
     intentRevision: 1,
-    progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - One" },
+    progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - One" },
     attempt: {
       revision: 1, classification: "retry-later", attemptCount: 1, attemptedAt: 500, retryEligibleAt,
     },

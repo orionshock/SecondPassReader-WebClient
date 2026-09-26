@@ -3,8 +3,8 @@ import type { MarginaliaAnnotation } from "@secondpass/client";
 import { toPreviousSessionHighlightMarks, toPreviousSessionItems, type PreviousSessionLocationDescriptionCacheEntry } from "../../../features/reader/session/previousSession/PreviousSessionAnnotationItems.Presenter";
 
 const annotations: MarginaliaAnnotation[] = [
-  { id: "highlight-a", clientId: "client-h", kind: "highlight", location: { cfi: "epubcfi(/6/2,/4/2,/4/8)", locationLabel: "Chapter 08 - 42%" }, body: { text: "Quoted text", prefix: "", suffix: "", color: "yellow", note: "Note text" }, createdAt: "2024-01-01", updatedAt: "2024-01-02" },
-  { id: "bookmark-a", clientId: "client-b", kind: "bookmark", location: { cfi: "epubcfi(/6/4)", locationLabel: "Server label" }, createdAt: "2024-01-01", updatedAt: "2024-01-01" },
+  { id: "highlight-a", clientId: "client-h", kind: "highlight", location: { location: "epubcfi(/6/2,/4/2,/4/8)", locationLabel: "Chapter 08 - 42%" }, body: { text: "Quoted text", prefix: "", suffix: "", color: "yellow", note: "Note text" }, createdAt: "2024-01-01", updatedAt: "2024-01-02" },
+  { id: "bookmark-a", clientId: "client-b", kind: "bookmark", location: { location: "epubcfi(/6/4)", locationLabel: "Server label" }, createdAt: "2024-01-01", updatedAt: "2024-01-01" },
 ];
 
 describe("previousSessionAnnotationItems", () => {

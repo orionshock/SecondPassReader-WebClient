@@ -129,7 +129,7 @@ export function useOfflineReadingProgress(input: {
 
 function offlineProgressKey(progress: OfflineReadingProgress | null): string | null {
   return progress
-    ? JSON.stringify([progress.cfi, progress.percentage, progress.locationLabel])
+    ? JSON.stringify([progress.location, progress.percentage, progress.locationLabel])
     : null;
 }
 

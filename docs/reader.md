@@ -2,7 +2,8 @@
 
 The Reader organizes each EPUB workflow around a Reading Session and its Marginalia. Second Pass
 Library owns server data; the browser owns interaction state and sends EPUB operations through the
-Reader engine boundary. EPUB CFI is the canonical machine anchor. Renderer state is transient.
+Reader engine boundary. Durable product records call the machine anchor `location`; for EPUB Books
+that value is an EPUB CFI string. Renderer state is transient.
 
 ## Durable EPUB CFI profile
 
@@ -14,12 +15,12 @@ also unsupported. All clients must author this compact structural profile for in
 
 epub-ts creates and interprets Web locations. Progress and annotation writes guard against
 unsupported authored forms; this lightweight guard is not a full CFI parser. The Library validates
-the wire profile and stores accepted CFIs byte-for-byte without opening EPUBs, resolving locations,
+the wire profile and stores accepted `location` strings byte-for-byte without opening EPUBs, resolving locations,
 or repairing anchors. Quote repair context belongs in the separate `text`, `prefix`, and `suffix`
 fields, never inside a CFI. Chapter labels and percentages are presentation metadata, not anchors.
 
-Glasp quote matching generates a new EPUB range CFI through epub-ts. Second Pass Marginalia CFI
-hints are probed against the EPUB and retained unchanged when accepted; structural ID assertions
+Glasp quote matching generates a new EPUB range CFI through epub-ts. Second Pass Marginalia location
+hints containing EPUB CFIs are probed against the EPUB and retained unchanged when accepted; structural ID assertions
 are valid. Existing server/import validation handles unsupported imported values. Continuation and
 copy-forward retain an accepted CFI unchanged.
 
@@ -121,7 +122,7 @@ enter current-session mutation actions.
 - `GET /books/:id/active-session/` may return no Reading Session. A concurrent close can also make an
   `open` response contain a closed snapshot. Closed snapshots render read-only and do not start
   progress autosave.
-- Closing from the Reader drains and stops progress writes, then sends the latest stable CFI and
+- Closing from the Reader drains and stops progress writes, then sends the latest stable `location` and
   location label so metadata, final progress, and closed status commit atomically.
 - Progress `409 SESSION_CLOSED` means the server has closed the Reading Session. Autosave stops
   further writes for it while leaving the Reader usable.
@@ -174,8 +175,8 @@ Known library defects and limits belong in the
 
 ## Operating invariants
 
-- CFI is the canonical restore and spatial anchor. Href, labels, and percentage are display
-  metadata.
+- `location` is the durable restore and spatial-anchor field. Its current EPUB value is a CFI;
+  href, labels, and percentage are display metadata.
 - Drawer, menu, dialog, Settings, import, annotation, toolbar, and connectivity state must not
   recreate the EPUB engine.
 - Viewport mutations run through `ReaderRuntime.Controller.ts`; competing display, navigation,

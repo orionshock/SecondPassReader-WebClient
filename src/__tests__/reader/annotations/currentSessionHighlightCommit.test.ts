@@ -9,7 +9,7 @@ function highlight(cfi = exactCfi): MarginaliaHighlight {
     id: "highlight-1",
     clientId: "existing-client",
     kind: "highlight",
-    location: { cfi, locationLabel: "Existing chapter" },
+    location: { location: cfi, locationLabel: "Existing chapter" },
     body: {
       text: "Existing quote",
       prefix: "Existing prefix",
@@ -48,7 +48,7 @@ describe("current-session highlight commit", () => {
       id: "bookmark-1",
       clientId: "bookmark-client",
       kind: "bookmark",
-      location: { cfi: exactCfi, locationLabel: "Bookmark" },
+      location: { location: exactCfi, locationLabel: "Bookmark" },
       createdAt: "created",
       updatedAt: "updated",
     };
@@ -62,7 +62,7 @@ describe("current-session highlight commit", () => {
       annotation: {
         clientId: "new-client",
         kind: "highlight",
-        location: { cfi: exactCfi },
+        location: { location: exactCfi },
       },
     });
   });
@@ -76,7 +76,7 @@ describe("current-session highlight commit", () => {
       action: "upsert",
       annotation: {
         clientId: "existing-client",
-        location: { cfi: exactCfi, locationLabel: "Existing chapter" },
+        location: { location: exactCfi, locationLabel: "Existing chapter" },
         body: {
           text: "Existing quote",
           prefix: "Existing prefix",

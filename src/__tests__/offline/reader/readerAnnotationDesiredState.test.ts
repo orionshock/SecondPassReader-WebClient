@@ -5,7 +5,7 @@ import type { OfflineReaderAnnotationProjection } from "../../../app/offline/sto
 import type { UpsertReaderAnnotationIntent } from "../../../app/offline/reader/outbox/ReaderOutbox.Policy";
 
 const annotation: MarginaliaHighlightUpsert = {
-  clientId: "highlight", kind: "highlight", location: { cfi: "range", locationLabel: "Chapter" },
+  clientId: "highlight", kind: "highlight", location: { location: "range", locationLabel: "Chapter" },
   body: { text: "Quote", prefix: "Before", suffix: "After", color: "yellow", note: "Note" },
 };
 const origin = { kind: "local-unconfirmed" } as const;
@@ -18,7 +18,7 @@ describe("Reader annotation desired state", () => {
   it("compares meaning independently of object property insertion order", () => {
     expect(sameAnnotation(annotation, {
       body: { note: "Note", color: "yellow", suffix: "After", prefix: "Before", text: "Quote" },
-      location: { locationLabel: "Chapter", cfi: "range" }, kind: "highlight", clientId: "highlight",
+      location: { locationLabel: "Chapter", location: "range" }, kind: "highlight", clientId: "highlight",
     })).toBe(true);
   });
 
@@ -29,7 +29,7 @@ describe("Reader annotation desired state", () => {
   it("includes identity, kind, CFI, and label, without normalizing missing context into empty context", () => {
     expect(sameAnnotation(annotation, { ...annotation, clientId: "other" })).toBe(false);
     expect(sameAnnotation(annotation, { clientId: annotation.clientId, kind: "bookmark", location: annotation.location })).toBe(false);
-    expect(sameAnnotation(annotation, { ...annotation, location: { ...annotation.location, cfi: "other" } })).toBe(false);
+    expect(sameAnnotation(annotation, { ...annotation, location: { ...annotation.location, location: "other" } })).toBe(false);
     expect(sameAnnotation(annotation, { ...annotation, location: { ...annotation.location, locationLabel: "other" } })).toBe(false);
     expect(sameAnnotation({ ...annotation, body: { ...annotation.body, prefix: undefined } },
       { ...annotation, body: { ...annotation.body, prefix: "" } })).toBe(false);

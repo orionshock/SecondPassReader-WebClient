@@ -193,7 +193,7 @@ function readerState(namespaceKey: string, bookId: string): OfflineReaderBookSta
       serverSessionId: `session:${bookId}`,
       lastKnownServerStatus: "active",
     },
-    progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010%" },
+    progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010%" },
     annotations: [],
     annotationRevision: 0,
   };
@@ -206,6 +206,6 @@ function progressIntent(namespaceKey: string, bookId: string): ReplaceReaderProg
     bookId,
     serverSessionId: `session:${bookId}`,
     intentRevision: 1,
-    progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010%" },
+    progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010%" },
   };
 }

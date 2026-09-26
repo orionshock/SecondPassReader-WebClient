@@ -7,7 +7,7 @@ function bookmark(id: string, updatedAt: string): MarginaliaAnnotation {
     id,
     clientId: `client-${id}`,
     kind: "bookmark",
-    location: { cfi: `epubcfi(/6/${id.length})`, locationLabel: id },
+    location: { location: `epubcfi(/6/${id.length})`, locationLabel: id },
     createdAt: updatedAt,
     updatedAt,
   };

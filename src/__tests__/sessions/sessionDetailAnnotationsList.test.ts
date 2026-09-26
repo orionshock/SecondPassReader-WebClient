@@ -19,7 +19,7 @@ function highlight(overrides: Partial<HighlightAnnotation["body"]> = {}): Highli
     id: "highlight-1",
     clientId: "client-1",
     kind: "highlight",
-    location: { cfi: "epubcfi(/6/2,/4,/8)", locationLabel: "Chapter 01" },
+    location: { location: "epubcfi(/6/2,/4,/8)", locationLabel: "Chapter 01" },
     body: {
       text: "Quoted text",
       prefix: "",
@@ -66,7 +66,7 @@ describe("SessionDetailAnnotationsList", () => {
       id: "bookmark-1",
       clientId: "client-1",
       kind: "bookmark",
-      location: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01" },
+      location: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01" },
       createdAt: "2026-08-09T00:00:00Z",
       updatedAt: "2026-08-09T00:00:00Z",
     } satisfies MarginaliaAnnotation;

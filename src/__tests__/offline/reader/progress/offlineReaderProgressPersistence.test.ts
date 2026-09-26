@@ -174,7 +174,7 @@ function initialState(): OfflineReaderBookState {
 }
 
 function progress(cfi: string, percentage: number): OfflineReadingProgress {
-  return { cfi, percentage, locationLabel: `${String(percentage).padStart(3, "0")}% - Location` };
+  return { location: cfi, percentage, locationLabel: `${String(percentage).padStart(3, "0")}% - Location` };
 }
 
 function progressResourceKey(): string {

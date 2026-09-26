@@ -137,7 +137,7 @@ still gate mutations on status.
 ### Progress and annotations
 
 - `spl.marginalia.sessions.getProgress(sessionId)`
-- `spl.marginalia.sessions.replaceProgress(sessionId, { cfi, locationLabel? })`
+- `spl.marginalia.sessions.replaceProgress(sessionId, { location, locationLabel? })`
 - `spl.marginalia.sessions.getAnnotations(sessionId)`
 - `spl.marginalia.sessions.batchAnnotations(sessionId, operations)`
 

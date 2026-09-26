@@ -5,7 +5,7 @@ export function isBookmarkAnnotation(annotation: MarginaliaAnnotation): boolean 
 export function isHighlightAnnotation(annotation: MarginaliaAnnotation): boolean { return annotation.kind === "highlight"; }
 export function isCommentAnnotation(annotation: MarginaliaAnnotation): boolean { return annotation.kind === "highlight" && Boolean(annotation.body.note); }
 
-export function getAnnotationFragmentCfi(annotation: MarginaliaAnnotation): string | null { return annotation.location.cfi || null; }
+export function getAnnotationFragmentCfi(annotation: MarginaliaAnnotation): string | null { return annotation.location.location || null; }
 
 export function getAnnotationDescribingText(annotation: MarginaliaAnnotation): string | null {
   return annotation.kind === "highlight" ? annotation.body.text : null;

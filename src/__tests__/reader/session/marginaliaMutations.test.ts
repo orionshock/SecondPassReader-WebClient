@@ -12,7 +12,7 @@ import { buildSavedReaderLocationLabel } from "../../../features/reader/display/
 
 describe("Reader marginalia mutations", () => {
   it("maps progress location labels without changing their text", () => {
-    expect(buildMarginaliaProgressInput("epubcfi(/6/2)", "Chapter 08 - The Blackstaff - 42%")).toEqual({ cfi: "epubcfi(/6/2)", locationLabel: "Chapter 08 - The Blackstaff - 42%" });
+    expect(buildMarginaliaProgressInput("epubcfi(/6/2)", "Chapter 08 - The Blackstaff - 42%")).toEqual({ location: "epubcfi(/6/2)", locationLabel: "Chapter 08 - The Blackstaff - 42%" });
     expect(toMarginaliaLocationLabel("x".repeat(300))).toHaveLength(255);
   });
 
@@ -46,7 +46,7 @@ describe("Reader marginalia mutations", () => {
       suffix: "After the quote",
     });
     expect(operation).toHaveProperty("annotation.location", {
-      cfi: "  epubcfi(/6/2)  ",
+      location: "  epubcfi(/6/2)  ",
       locationLabel: "042% - Chapter 08",
     });
   });
@@ -56,7 +56,7 @@ describe("Reader marginalia mutations", () => {
       id: "highlight-1",
       clientId: "client-h",
       kind: "highlight",
-      location: { cfi: "epubcfi(/6/4!/4/2,/1:2,/1:7)", locationLabel: " Label  stays " },
+      location: { location: "epubcfi(/6/4!/4/2,/1:2,/1:7)", locationLabel: " Label  stays " },
       body: {
         text: " Text\n with\tspaces ",
         prefix: " Prefix\n text ",

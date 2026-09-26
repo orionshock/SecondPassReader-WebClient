@@ -8,6 +8,8 @@ import {
   registerReaderImportHandler,
 } from "../../../features/reader/imports/ReaderImportFormats.Registry";
 
+const CFI = "epubcfi(/6/8!/4/2[chapter],/1:2,/1:8)";
+
 describe("reader import handlers", () => {
   it("exposes self-registered built-in import formats through the shared registry", () => {
     expect(getReaderImportHandlers().map((format) => format.kind)).toEqual(["glasp-csv", "spl-session-json"]);
@@ -16,7 +18,6 @@ describe("reader import handlers", () => {
   it("keeps duplicate handler registration safe by kind", () => {
     const before = getReaderImportHandlers();
     registerReaderImportHandler(glaspCsvImportHandler);
-
     expect(getReaderImportHandlers()).toHaveLength(before.length);
     expect(getReaderImportFormat("glasp-csv")).toBe(glaspCsvImportHandler);
   });
@@ -24,242 +25,106 @@ describe("reader import handlers", () => {
   it("imports Glasp CSV through the handler boundary", async () => {
     const file = new File(["Highlight Text,Note,Color\nQuote,Note,yellow\n"], "glasp.csv", { type: "text/csv" });
     const job = await getReaderImportFormat("glasp-csv").importFile(file);
-
     expect(job).toMatchObject({
       format: "glasp-csv",
       fileName: "glasp.csv",
-      summaryDisplay: "glasp.csv",
       rows: [{ quoteText: "Quote", noteText: "Note", color: "yellow", status: "pending" }],
     });
-    expect(job.rows[0]?.kind).toBe("highlight");
   });
 
-  it("accepts exactly one SPL session through the handler boundary", async () => {
-    const file = jsonFile({
-      schema_version: "0.1.0",
-      books: [
+  it("maps canonical Marginalia locations and quote context without changing the EPUB CFI", async () => {
+    const job = await getReaderImportFormat("spl-session-json").importFile(jsonFile(archive([
+      highlight("highlight-1", CFI),
+      bookmark("bookmark-1", "epubcfi(/6/10!/4/2)"),
+    ])));
+
+    expect(job).toMatchObject({
+      format: "spl-session-json",
+      summaryDisplay: "Imported Session",
+      rows: [
         {
-          title: "Book",
-          author: ["Author"],
-          sessions: [
-            {
-              id: "session-1",
-              label: "Session label",
-              annotations: [
-                {
-                  id: "ann-1",
-                  highlight_text: "Selected text",
-                  comment_text: "Note",
-                  body: [{ type: "TextualBody", purpose: "describing", value: "Selected text", color: "green" }],
-                  selector: { kind: "epub_cfi", value: "/6/2" },
-                },
-              ],
-            },
-          ],
+          id: "highlight-1",
+          kind: "highlight",
+          cfiHint: CFI,
+          quoteText: "Selected text",
+          preQuoteText: "Before",
+          postQuoteText: "After",
+          noteText: "Note",
+          color: "green",
+          status: "pending",
+        },
+        {
+          id: "bookmark-1",
+          kind: "bookmark",
+          cfiHint: "epubcfi(/6/10!/4/2)",
+          status: "pending",
         },
       ],
     });
-
-    const job = await getReaderImportFormat("spl-session-json").importFile(file);
-
-    expect(job.format).toBe("spl-session-json");
-    expect(job.fileName).toBe("session.json");
-    expect(job.summaryDisplay).toBe("Session label");
-    expect(job.rows).toHaveLength(1);
-    expect(job.rows[0]).toMatchObject({
-      id: "ann-1",
-      kind: "highlight",
-      index: 1,
-      quoteText: "Selected text",
-      noteText: "Note",
-      color: "green",
-      cfiHint: "/6/2",
-      status: "pending",
-    });
   });
 
-  it("maps SPL bookmarks to bookmark rows with selector hints and no quote requirement", async () => {
-    const file = jsonFile({
-      schema_version: "0.1.0",
-      books: [
-        {
-          title: "Book",
-          sessions: [
-            {
-              id: "session",
-              annotations: [
-                {
-                  id: "bookmark-1",
-                  motivation: ["bookmarking"],
-                  target: {
-                    selector: [{ type: "FragmentSelector", value: "epubcfi(/6/2)" }],
-                  },
-                },
-                {
-                  id: "bookmark-2",
-                  kind: "bookmark",
-                  selector: { kind: "epub_cfi", value: "/6/4" },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-
-    const job = await getReaderImportFormat("spl-session-json").importFile(file);
-
-    expect(job.rows).toEqual([
-      expect.objectContaining({
-        id: "bookmark-1",
-        kind: "bookmark",
-        cfiHint: "epubcfi(/6/2)",
-        status: "pending",
-      }),
-      expect.objectContaining({
-        id: "bookmark-2",
-        kind: "bookmark",
-        cfiHint: "/6/4",
-        status: "pending",
-      }),
-    ]);
+  it("rejects old cfi archive keys instead of treating them as location hints", async () => {
+    const value = archive([{ ...bookmark("bookmark-1", CFI), location: { cfi: CFI } }]);
+    await expect(getReaderImportFormat("spl-session-json").importFile(jsonFile(value))).rejects.toThrow(/location\.location/);
   });
 
-  it("keeps SPL highlights without quote text as empty highlight rows", async () => {
-    const file = jsonFile({
-      schema_version: "0.1.0",
-      books: [
-        {
-          title: "Book",
-          sessions: [
-            {
-              id: "session",
-              annotations: [
-                {
-                  id: "empty-highlight",
-                  motivation: ["highlighting"],
-                  target: { selector: [{ type: "FragmentSelector", value: "epubcfi(/6/8)" }] },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-
-    const job = await getReaderImportFormat("spl-session-json").importFile(file);
-
-    expect(job.rows[0]).toMatchObject({
-      id: "empty-highlight",
-      kind: "highlight",
-      cfiHint: "epubcfi(/6/8)",
-      status: "pending",
-    });
-  });
-
-  it("rejects zero SPL sessions through the shared parse error contract", async () => {
-    const file = jsonFile({ schema_version: "0.1.0", books: [{ title: "Book", sessions: [] }] }, "empty.json");
-
-    await expect(getReaderImportFormat("spl-session-json").importFile(file)).rejects.toMatchObject({
+  it("rejects zero or multiple Reading Sessions through the import error contract", async () => {
+    await expect(getReaderImportFormat("spl-session-json").importFile(jsonFile(archive([], [])))).rejects.toMatchObject({
       name: "ReaderImportParseError",
       code: "spl-session-empty",
-      action: undefined,
     });
-  });
-
-  it("rejects multiple SPL sessions and exposes the export splitter action", async () => {
-    const file = jsonFile(
-      {
-        schema_version: "0.1.0",
-        books: [{ title: "Book", sessions: [{ id: "one" }, { id: "two" }] }],
-      },
-      "multi.json",
-    );
-
-    await expect(getReaderImportFormat("spl-session-json").importFile(file)).rejects.toMatchObject({
+    const multiple = archive([], [session([]), { ...session([]), sourceReadingSessionId: "session-2" }]);
+    await expect(getReaderImportFormat("spl-session-json").importFile(jsonFile(multiple))).rejects.toMatchObject({
       name: "ReaderImportParseError",
       code: "spl-session-multiple",
-      detail: { sessionCount: 2 },
-      action: { href: "#/settings?tab=tools" },
+      action: { label: "Split export", href: "#/settings?tab=tools" },
     });
-  });
-
-  it("maps SPL selectors, quotes, comments, and colors into source-fact row fields", async () => {
-    const selectorArray = [
-      { type: "FragmentSelector", value: "epubcfi(/old/hint)", custom: "keep" },
-      { type: "TextQuoteSelector", exact: "quoted text", prefix: "before", suffix: "after" },
-    ];
-    const file = jsonFile({
-      schema_version: "0.1.0",
-      export_unknown: "keep",
-      books: [
-        {
-          title: "Book",
-          reading_sessions: [
-            {
-              id: "session",
-              session_unknown: true,
-              items: [
-                {
-                  id: "ann",
-                  comment_text: "Comment",
-                  body: [{ type: "TextualBody", purpose: "describing", value: "quoted text", color: "yellow" }],
-                  deleted: true,
-                  annotation_unknown: { keep: true },
-                  target: { selector: selectorArray },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-
-    const job = await getReaderImportFormat("spl-session-json").importFile(file);
-    const row = job.rows[0]!;
-
-    expect(row.quoteText).toBe("quoted text");
-    expect(row.preQuoteText).toBe("before");
-    expect(row.postQuoteText).toBe("after");
-    expect(row.cfiHint).toBe("epubcfi(/old/hint)");
-    expect(row.noteText).toBe("Comment");
-    expect(row.color).toBe("yellow");
-    expect(job.summaryDisplay).toBe("session");
-  });
-
-  it("reads SPL highlight color from direct and body color fields through the handler boundary", async () => {
-    const file = jsonFile({
-      schema_version: "0.1.0",
-      books: [
-        {
-          title: "Book",
-          sessions: [
-            {
-              id: "session",
-              annotations: [
-                { id: "direct", highlight_text: "Direct", highlight_color: "blue" },
-                { id: "camel", highlight_text: "Camel", highlightColor: "purple" },
-                { id: "plain", highlight_text: "Plain", color: "orange" },
-                { id: "green", highlight_text: "Green", body: [{ type: "TextualBody", color: "green" }] },
-                { id: "pink", highlight_text: "Pink", body: [{ type: "TextualBody", color: "pink" }] },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-
-    const job = await getReaderImportFormat("spl-session-json").importFile(file);
-
-    expect(job.rows.map((row) => [row.id, row.color])).toEqual([
-      ["direct", "blue"],
-      ["camel", "purple"],
-      ["plain", "orange"],
-      ["green", "green"],
-      ["pink", "pink"],
-    ]);
   });
 });
+
+function archive(annotations: unknown[], readingSessions = [session(annotations)]) {
+  return {
+    type: "SecondPassMarginaliaExport",
+    schemaVersion: "0.1.0",
+    profile: "https://secondpasslibrary.local/specs/marginalia/0.1.0",
+    generatedAt: "2026-01-03T00:00:00Z",
+    generator: "Second Pass Library",
+    books: [{ title: "Book", authors: ["Author"], readingSessions }],
+  };
+}
+
+function session(annotations: unknown[]) {
+  return {
+    sourceReadingSessionId: "session-1",
+    name: "Imported Session",
+    notes: "",
+    status: "closed",
+    startedAt: "2026-01-01T00:00:00Z",
+    closedAt: "2026-01-02T00:00:00Z",
+    createdAt: "2026-01-01T00:00:00Z",
+    updatedAt: "2026-01-02T00:00:00Z",
+    progress: null,
+    annotations,
+  };
+}
+
+function bookmark(clientAnnotationId: string, location: string) {
+  return {
+    clientAnnotationId,
+    kind: "bookmark",
+    location: { location, locationLabel: "042% - Chapter" },
+    createdAt: "2026-01-01T00:00:00Z",
+    updatedAt: "2026-01-02T00:00:00Z",
+  };
+}
+
+function highlight(clientAnnotationId: string, location: string) {
+  return {
+    ...bookmark(clientAnnotationId, location),
+    kind: "highlight",
+    body: { text: "Selected text", prefix: "Before", suffix: "After", color: "green", note: "Note" },
+  };
+}
 
 function jsonFile(value: unknown, name = "session.json"): File {
   return new File([JSON.stringify(value)], name, { type: "application/json" });

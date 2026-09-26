@@ -18,14 +18,14 @@ export function buildReadingProgressSaveInput(input: {
   toc: ReaderTocItem[] | null;
   bookTitle?: string | null;
 }): {
-  cfi: string;
+  location: string;
   locationLabel: string;
 } | null {
   if (!input.location) return null;
   const cfi = typeof input.location.cfi === "string" ? input.location.cfi.trim() : "";
   if (!cfi) return null;
   assertDurableReaderCfi(cfi);
-  return { cfi, locationLabel: buildSavedReaderLocationLabel(input) };
+  return { location: cfi, locationLabel: buildSavedReaderLocationLabel(input) };
 }
 
 export function useReadingProgressAutosave(input: {
@@ -51,11 +51,11 @@ export function useReadingProgressAutosave(input: {
     bookTitle: input.bookTitle,
   }), [input.bookTitle, input.location, input.toc]);
   const saveProgress = useCallback(
-    async (sessionId: string, payload: { cfi: string; locationLabel: string }) => {
+    async (sessionId: string, payload: { location: string; locationLabel: string }) => {
       if (!input.spl) throw new Error("Reading progress client is unavailable.");
       const response = await input.spl.marginalia.sessions.replaceProgress(
         sessionId,
-        buildMarginaliaProgressInput(payload.cfi, payload.locationLabel),
+        buildMarginaliaProgressInput(payload.location, payload.locationLabel),
       );
       return response.progress;
     },

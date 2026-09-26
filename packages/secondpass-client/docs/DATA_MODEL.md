@@ -14,11 +14,11 @@ operation.
 
 ## Progress
 
-- `cfi` is the canonical restore anchor.
+- `location` is the format-neutral durable restore anchor. For EPUB Books its value is an EPUB CFI string.
 - `locationLabel` is opaque display metadata mapped to `location_label`.
 - `updatedAt` is assigned by Second Pass Library.
 
-Reader close includes the latest stable CFI and location label. The server commits final progress
+Reader close includes the latest stable location and location label. The server commits final progress
 atomically with Reading Session metadata and closed status. Progress replacement that loses a race
 with close returns `409 SESSION_CLOSED`.
 
@@ -43,6 +43,10 @@ Live annotations use the Marginalia API projection. Applications write them thro
 
 Bookmarks contain identity, kind, location, and timestamps but no body. Highlights contain body
 text and may include quote context, color, and notes.
+
+Annotation location objects use `location.location`. The SDK does not accept the former generic
+`cfi` field. EPUB-facing Reader code may still name local values `cfi` or `cfiRange` when they
+specifically represent that format.
 
 Upserts, updates, restores, and retry-safe deletes use annotation batch operations keyed by
 `client_id`. A batch contains 1-100 operations.

@@ -218,9 +218,9 @@ function defineOfflineRepositoryContractTests(
       const state = readerState("account-a", "book-1", "epubcfi(/6/2)");
 
       await repository.putBookState(state);
-      state.progress!.cfi = "changed-before-read";
+      state.progress!.location = "changed-before-read";
       const first = await repository.getBookState("account-a", "book-1");
-      first!.progress!.cfi = "changed-after-read";
+      first!.progress!.location = "changed-after-read";
 
       expect(await repository.getBookState("account-a", "book-1")).toEqual(
         readerState("account-a", "book-1", "epubcfi(/6/2)"),
@@ -246,13 +246,13 @@ function defineOfflineRepositoryContractTests(
 
       const result = await repository.updateBookState("account-a", "book-1", (current) => ({
         ...current,
-        progress: { ...current.progress!, cfi: "epubcfi(/6/8)" },
+        progress: { ...current.progress!, location: "epubcfi(/6/8)" },
       }));
       expect(result.status).toBe("committed");
       if (result.status !== "committed") throw new Error("Reader state update failed");
-      result.state.progress!.cfi = "changed-after-update";
+      result.state.progress!.location = "changed-after-update";
 
-      expect((await repository.getBookState("account-a", "book-1"))?.progress?.cfi)
+      expect((await repository.getBookState("account-a", "book-1"))?.progress?.location)
         .toBe("epubcfi(/6/8)");
     });
 
@@ -402,7 +402,7 @@ function defineOfflineRepositoryContractTests(
       await repository.upsertIntent(first);
       await repository.upsertIntent(retained);
       const listed = await repository.list("account-a");
-      (listed[0] as ReplaceReaderProgressIntent).progress.cfi = "changed";
+      (listed[0] as ReplaceReaderProgressIntent).progress.location = "changed";
 
       expect(await repository.list("account-a")).toEqual([first]);
       await repository.deleteNamespace("account-a");
@@ -464,7 +464,7 @@ function readerState(namespaceKey: string, bookId: string, cfi: string): Offline
       serverSessionId: "session-1",
       lastKnownServerStatus: "active",
     },
-    progress: { cfi, percentage: 10, locationLabel: "010% - Location" },
+    progress: { location: cfi, percentage: 10, locationLabel: "010% - Location" },
     annotations: [],
   };
 }
@@ -482,7 +482,7 @@ function progressIntent(
     bookId,
     serverSessionId,
     intentRevision,
-    progress: { cfi, percentage: 10, locationLabel: "010% - Location" },
+    progress: { location: cfi, percentage: 10, locationLabel: "010% - Location" },
   };
 }
 
@@ -507,7 +507,7 @@ function annotationUpsert(
     annotation: {
       clientId,
       kind: "highlight",
-      location: { cfi: "epubcfi(/6/2)", locationLabel: "010% - Location" },
+      location: { location: "epubcfi(/6/2)", locationLabel: "010% - Location" },
       body: { text: "Quote", color: "yellow", note },
     },
   };

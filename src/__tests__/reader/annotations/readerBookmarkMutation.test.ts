@@ -10,7 +10,7 @@ const existingBookmark: MarginaliaAnnotation = {
   id: "bookmark-1",
   clientId: "bookmark-client-1",
   kind: "bookmark",
-  location: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01" },
+  location: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01" },
   createdAt: "created",
   updatedAt: "updated",
 };

@@ -166,8 +166,8 @@ namespace that started them; removal, replacement, repair, or a newer preview in
 publication work so it cannot recreate a cleaned projection.
 
 Offline Home preserves cached membership, ordering, Reading Session identity, status, and activity
-metadata. Matching local Reader state may replace only desired CFI, percentage, and stable location
-label. CFI strings are never compared for order. Provisional continuity does not change cached
+metadata. Matching local Reader state may replace only desired location, percentage, and stable
+location label. EPUB CFI strings are never compared for order. Provisional continuity does not change cached
 server status, and local Books absent from the cached Recent History are not appended.
 
 Shelf previews remain read-only and do not navigate into Shelf management. Missing sections are
@@ -256,14 +256,15 @@ Provisional IDs are never sent as server IDs, and `start-over` is never automati
 
 ### Progress
 
-Settled offline movement persists the latest CFI, integer percentage, and stable location label.
+Settled offline movement persists the latest `location`, integer percentage, and stable location
+label. The current EPUB `location` value is an EPUB CFI string.
 Writes are debounced. Reader hide, page exit, or close requests a bounded local-only flush.
 The interaction controller owns that timing; one progress persistence action owns revision
 allocation and writes Reader state before its coalesced `replace-progress` intent.
 These are intentionally separate durability steps: resume progress may survive an outbox failure,
 and later retry can restore delivery work. They are not one atomic progress-plus-outbox commit.
 
-Offline reopen uses durable local progress. CFI strings are never compared for recency. Exact
+Offline reopen uses durable local progress. EPUB CFI strings are never compared for recency. Exact
 revision acknowledgement prevents a stale response from clearing newer movement.
 
 ### Marginalia
@@ -271,7 +272,8 @@ revision acknowledgement prevents a stale response from clearing newer movement.
 Current Reading Session authoring uses one semantic mutation vocabulary: bookmark upsert,
 highlight upsert, or delete by `clientId`. Manual selections, note/color edits, bookmark controls,
 and confirmed imports use the same annotation builders and exact-CFI highlight update policy.
-CFI is the spatial anchor; `clientId` is annotation identity.
+`location` is the durable spatial-anchor field; its EPUB value is a CFI string, while `clientId` is
+annotation identity.
 
 Online authority delivers the mutation through the serialized SDK owner and publishes the
 authoritative response. Local-first authority displays the local change immediately and commits

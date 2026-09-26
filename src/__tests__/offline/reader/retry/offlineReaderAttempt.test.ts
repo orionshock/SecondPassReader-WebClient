@@ -102,7 +102,7 @@ function progressIntent(
     bookId,
     serverSessionId: "session-1",
     intentRevision: revision,
-    progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "Chapter" },
+    progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "Chapter" },
     attempt,
   };
 }

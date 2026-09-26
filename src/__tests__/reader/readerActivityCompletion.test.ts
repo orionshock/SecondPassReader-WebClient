@@ -29,7 +29,7 @@ describe("Reader end-of-book completion", () => {
     const spl = {
       marginalia: { sessions: { update, close } },
     } as unknown as SecondPassClient;
-    const finalProgress = { cfi: "epubcfi(/6/20)", locationLabel: "098% - Chapter 10" };
+    const finalProgress = { location: "epubcfi(/6/20)", locationLabel: "098% - Chapter 10" };
 
     await closeReadingSession({
       spl,

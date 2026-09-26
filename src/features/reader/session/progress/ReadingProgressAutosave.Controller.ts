@@ -5,7 +5,7 @@ import { debugWarn } from "../../../../lib/debug/DebugLogger.Diagnostics";
 export const READING_PROGRESS_AUTOSAVE_DELAY_MS = 3000;
 
 export type ReadingProgressSavePayload = {
-  cfi: string;
+  location: string;
   locationLabel: string;
 };
 
@@ -14,7 +14,7 @@ export type ReadingProgressAutosaveStatus = "idle" | "pending" | "saving" | "sav
 export type ReadingProgressAutosaveState = {
   status: ReadingProgressAutosaveStatus;
   lastSavedAt?: string;
-  lastSavedCfi?: string;
+  lastSavedLocation?: string;
   nextSaveAt?: number;
   error?: string;
   dirty?: boolean;
@@ -37,7 +37,7 @@ type ActiveDrain = {
 };
 
 function payloadKey(payload: ReadingProgressSavePayload | null): string | null {
-  return payload ? `${payload.cfi}\u0000${payload.locationLabel}` : null;
+  return payload ? `${payload.location}\u0000${payload.locationLabel}` : null;
 }
 
 function progressErrorMessage(error: unknown): string {
@@ -144,10 +144,10 @@ export class ReadingProgressAutosaveController {
 
   seedSavedProgress(sessionId: string, progress: MarginaliaProgress): void {
     if (sessionId !== this.input.sessionId || this.seededGeneration === this.generation) return;
-    const cfi = progress.cfi.trim();
-    if (!cfi) return;
+    const location = progress.location.trim();
+    if (!location) return;
 
-    const savedPayload = { cfi, locationLabel: progress.locationLabel };
+    const savedPayload = { location, locationLabel: progress.locationLabel };
     const savedKey = payloadKey(savedPayload);
     this.seededGeneration = this.generation;
     this.lastSavedPayloadKey = savedKey;
@@ -159,7 +159,7 @@ export class ReadingProgressAutosaveController {
     this.publish({
       status: "saved",
       lastSavedAt: progress.updatedAt,
-      lastSavedCfi: cfi,
+      lastSavedLocation: location,
       dirty: false,
       progress,
     });
@@ -247,7 +247,7 @@ export class ReadingProgressAutosaveController {
           ...this.state,
           status: "saved",
           lastSavedAt: new Date().toISOString(),
-          lastSavedCfi: progress.cfi,
+          lastSavedLocation: progress.location,
           error: undefined,
           dirty: hasNewerProgress,
           nextSaveAt: undefined,

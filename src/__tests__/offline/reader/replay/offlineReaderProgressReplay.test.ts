@@ -36,7 +36,7 @@ describe("offline Reader progress replay", () => {
     const result = await replay(client, repositories, "session-1");
 
     expect(client.marginalia.sessions.replaceProgress).toHaveBeenCalledWith("session-1", {
-      cfi: desired.cfi,
+      location: desired.location,
       locationLabel: desired.locationLabel,
     });
     expect(result).toEqual({
@@ -183,8 +183,8 @@ describe("offline Reader progress replay", () => {
     const result = await replaying;
 
     expect(vi.mocked(client.marginalia.sessions.replaceProgress).mock.calls).toEqual([
-      ["session-1", { cfi: first.cfi, locationLabel: first.locationLabel }],
-      ["session-2", { cfi: latest.cfi, locationLabel: latest.locationLabel }],
+      ["session-1", { location: first.location, locationLabel: first.locationLabel }],
+      ["session-2", { location: latest.location, locationLabel: latest.locationLabel }],
     ]);
     expect(result).toMatchObject({
       status: "replayed",
@@ -331,7 +331,7 @@ function readerState(value: ReplaceReaderProgressIntent["progress"]): OfflineRea
 }
 
 function progress(cfi: string, percentage: number): ReplaceReaderProgressIntent["progress"] {
-  return { cfi, percentage, locationLabel: `${String(percentage).padStart(3, "0")}% - Chapter` };
+  return { location: cfi, percentage, locationLabel: `${String(percentage).padStart(3, "0")}% - Chapter` };
 }
 
 function progressIntent(
@@ -357,12 +357,12 @@ function annotationIntent(): Extract<ReaderOutboxIntent, { type: "upsert-annotat
     serverSessionId: "session-1",
     intentRevision: 1,
     origin: { kind: "local-unconfirmed" },
-    annotation: { clientId: "annotation-1", kind: "bookmark", location: { cfi: "epubcfi(/6/4)" } },
+    annotation: { clientId: "annotation-1", kind: "bookmark", location: { location: "epubcfi(/6/4)" } },
   };
 }
 
 function serverProgress(value: ReplaceReaderProgressIntent["progress"]): MarginaliaProgress {
-  return { cfi: value.cfi, locationLabel: value.locationLabel, updatedAt: "2026-01-01T00:00:00Z" };
+  return { location: value.location, locationLabel: value.locationLabel, updatedAt: "2026-01-01T00:00:00Z" };
 }
 
 function activeBootstrap(id: string): MarginaliaBootstrap {

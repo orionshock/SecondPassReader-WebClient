@@ -8,7 +8,7 @@ import {
 import { buildReadingProgressSaveInput } from "../../../features/reader/session/progress/ReadingProgressAutosave.Lifecycle";
 
 function savedProgress(cfi: string, locationLabel: string): MarginaliaProgress {
-  return { cfi, locationLabel, updatedAt: "2026-08-08T00:00:00Z" };
+  return { location: cfi, locationLabel, updatedAt: "2026-08-08T00:00:00Z" };
 }
 
 function deferred<T>() {
@@ -34,7 +34,7 @@ describe("reading progress autosave input", () => {
         href: "The Blackstaff.xhtml",
       },
     })).toEqual({
-      cfi: "epubcfi(/6/2)",
+      location: "epubcfi(/6/2)",
       locationLabel: "001% - Dedication",
     });
   });
@@ -45,15 +45,15 @@ describe("ReadingProgressAutosaveController", () => {
   afterEach(() => vi.useRealTimers());
 
   it("preserves the three-second product debounce interval", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
 
     controller.update({
       enabled: true,
       autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
       saveProgress: save,
     });
 
@@ -64,8 +64,8 @@ describe("ReadingProgressAutosaveController", () => {
   });
 
   it("treats opened progress and its identical initial relocation as already saved", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     const openedProgress = savedProgress("epubcfi(/6/8)", "Chapter 04 - 40%");
 
@@ -73,19 +73,19 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: "session-1",
-      progress: { cfi: openedProgress.cfi, locationLabel: openedProgress.locationLabel },
+      progress: { location: openedProgress.location, locationLabel: openedProgress.locationLabel },
       saveProgress: save,
     });
     controller.seedSavedProgress("session-1", openedProgress);
     await vi.advanceTimersByTimeAsync(READING_PROGRESS_AUTOSAVE_DELAY_MS);
 
     expect(save).not.toHaveBeenCalled();
-    expect(controller.getState()).toMatchObject({ status: "saved", dirty: false, lastSavedCfi: openedProgress.cfi });
+    expect(controller.getState()).toMatchObject({ status: "saved", dirty: false, lastSavedLocation: openedProgress.location });
   });
 
   it("saves a different relocation after opened progress seeds the saved baseline", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     const common = {
       enabled: true,
@@ -94,26 +94,26 @@ describe("ReadingProgressAutosaveController", () => {
       saveProgress: save,
     };
 
-    controller.update({ ...common, progress: { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" } });
+    controller.update({ ...common, progress: { location: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" } });
     controller.seedSavedProgress("session-1", savedProgress("epubcfi(/6/8)", "Chapter 04 - 40%"));
-    controller.update({ ...common, progress: { cfi: "epubcfi(/6/10)", locationLabel: "Chapter 05 - 50%" } });
+    controller.update({ ...common, progress: { location: "epubcfi(/6/10)", locationLabel: "Chapter 05 - 50%" } });
     await vi.advanceTimersByTimeAsync(READING_PROGRESS_AUTOSAVE_DELAY_MS);
 
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith("session-1", {
-      cfi: "epubcfi(/6/10)",
+      location: "epubcfi(/6/10)",
       locationLabel: "Chapter 05 - 50%",
     });
   });
 
   it("does not carry a saved-progress seed into another session generation", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
-    const payload = { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" };
+    const payload = { location: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" };
 
     controller.update({ enabled: true, autosaveDelayMs: 10, sessionId: "session-1", progress: payload, saveProgress: save });
-    controller.seedSavedProgress("session-1", savedProgress(payload.cfi, payload.locationLabel));
+    controller.seedSavedProgress("session-1", savedProgress(payload.location, payload.locationLabel));
     controller.update({ enabled: true, autosaveDelayMs: 10, sessionId: "session-2", progress: payload, saveProgress: save });
     await vi.advanceTimersByTimeAsync(10);
 
@@ -122,8 +122,8 @@ describe("ReadingProgressAutosaveController", () => {
   });
 
   it("does not exit-flush unchanged progress that was seeded from open", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     const openedProgress = savedProgress("epubcfi(/6/8)", "Chapter 04 - 40%");
 
@@ -131,7 +131,7 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: "session-1",
-      progress: { cfi: openedProgress.cfi, locationLabel: openedProgress.locationLabel },
+      progress: { location: openedProgress.location, locationLabel: openedProgress.locationLabel },
       saveProgress: save,
     });
     controller.seedSavedProgress("session-1", openedProgress);
@@ -141,15 +141,15 @@ describe("ReadingProgressAutosaveController", () => {
   });
 
   it("resets on session swap and ignores the old session timer", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
 
     controller.update({
       enabled: true,
       autosaveDelayMs: 5000,
       sessionId: "session-old",
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "Old" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "Old" },
       saveProgress: save,
     });
     await vi.advanceTimersByTimeAsync(2500);
@@ -157,29 +157,29 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: 5000,
       sessionId: "session-new",
-      progress: { cfi: "epubcfi(/6/4)", locationLabel: "New" },
+      progress: { location: "epubcfi(/6/4)", locationLabel: "New" },
       saveProgress: save,
     });
 
     expect(controller.getState().status).toBe("pending");
-    expect(controller.getState().lastSavedCfi).toBeUndefined();
+    expect(controller.getState().lastSavedLocation).toBeUndefined();
     await vi.advanceTimersByTimeAsync(2500);
     expect(save).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(2500);
-    expect(save).toHaveBeenCalledWith("session-new", { cfi: "epubcfi(/6/4)", locationLabel: "New" });
+    expect(save).toHaveBeenCalledWith("session-new", { location: "epubcfi(/6/4)", locationLabel: "New" });
   });
 
   it("does not let an old session completion mark the new session saved", async () => {
     const oldSave = deferred<MarginaliaProgress>();
-    const save = vi.fn((_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      progress.cfi.includes("/2") ? oldSave.promise : Promise.resolve(savedProgress(progress.cfi, progress.locationLabel)));
+    const save = vi.fn((_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      progress.location.includes("/2") ? oldSave.promise : Promise.resolve(savedProgress(progress.location, progress.locationLabel)));
     const controller = new ReadingProgressAutosaveController(() => undefined);
 
     controller.update({
       enabled: true,
       autosaveDelayMs: 10,
       sessionId: "session-old",
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "Old" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "Old" },
       saveProgress: save,
     });
     await vi.advanceTimersByTimeAsync(10);
@@ -187,16 +187,16 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: 10,
       sessionId: "session-new",
-      progress: { cfi: "epubcfi(/6/4)", locationLabel: "New" },
+      progress: { location: "epubcfi(/6/4)", locationLabel: "New" },
       saveProgress: save,
     });
     oldSave.resolve(savedProgress("epubcfi(/6/2)", "Old"));
     await Promise.resolve();
 
     expect(controller.getState().status).toBe("pending");
-    expect(controller.getState().lastSavedCfi).toBeUndefined();
+    expect(controller.getState().lastSavedLocation).toBeUndefined();
     await vi.advanceTimersByTimeAsync(10);
-    expect(controller.getState()).toMatchObject({ status: "saved", lastSavedCfi: "epubcfi(/6/4)" });
+    expect(controller.getState()).toMatchObject({ status: "saved", lastSavedLocation: "epubcfi(/6/4)" });
   });
 
   it("ignores an in-flight server completion after mutation authority is withdrawn", async () => {
@@ -208,7 +208,7 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: 10,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/8)", locationLabel: "Chapter" },
+      progress: { location: "epubcfi(/6/8)", locationLabel: "Chapter" },
       saveProgress: save,
     };
 
@@ -224,15 +224,15 @@ describe("ReadingProgressAutosaveController", () => {
 
   it("drains the newest complete progress payload after an in-flight save", async () => {
     const firstSave = deferred<MarginaliaProgress>();
-    const save = vi.fn((_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      progress.cfi.includes("/2") ? firstSave.promise : Promise.resolve(savedProgress(progress.cfi, progress.locationLabel)));
+    const save = vi.fn((_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      progress.location.includes("/2") ? firstSave.promise : Promise.resolve(savedProgress(progress.location, progress.locationLabel)));
     const controller = new ReadingProgressAutosaveController(() => undefined);
 
     controller.update({
       enabled: true,
       autosaveDelayMs: 10,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
       saveProgress: save,
     });
     await vi.advanceTimersByTimeAsync(10);
@@ -240,7 +240,7 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: 10,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" },
+      progress: { location: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" },
       saveProgress: save,
     });
     firstSave.resolve(savedProgress("epubcfi(/6/2)", "Chapter 01 - 10%"));
@@ -250,23 +250,23 @@ describe("ReadingProgressAutosaveController", () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(save.mock.calls[1]).toEqual([
       "session-1",
-      { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" },
+      { location: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" },
     ]);
-    expect(controller.getState()).toMatchObject({ status: "saved", lastSavedCfi: "epubcfi(/6/8)" });
+    expect(controller.getState()).toMatchObject({ status: "saved", lastSavedLocation: "epubcfi(/6/8)" });
   });
 
   it("does not save without a session, client, or complete progress", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     const base = { enabled: true, autosaveDelayMs: 10, saveProgress: save };
 
-    controller.update({ ...base, sessionId: null, progress: { cfi: "epubcfi(/6/2)", locationLabel: "A" } });
+    controller.update({ ...base, sessionId: null, progress: { location: "epubcfi(/6/2)", locationLabel: "A" } });
     controller.update({ ...base, sessionId: "session-1", progress: null });
     controller.update({
       ...base,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "A" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "A" },
       saveProgress: null,
     });
     await vi.runAllTimersAsync();
@@ -275,14 +275,14 @@ describe("ReadingProgressAutosaveController", () => {
   });
 
   it("flushes the latest pending payload immediately and does not resend it once saved", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     controller.update({
       enabled: true,
       autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" },
+      progress: { location: "epubcfi(/6/8)", locationLabel: "Chapter 04 - 40%" },
       saveProgress: save,
     });
 
@@ -291,14 +291,14 @@ describe("ReadingProgressAutosaveController", () => {
 
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith("session-1", {
-      cfi: "epubcfi(/6/8)",
+      location: "epubcfi(/6/8)",
       locationLabel: "Chapter 04 - 40%",
     });
   });
 
   it("flushes the newest complete payload instead of the originally scheduled payload", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     const common = {
       enabled: true,
@@ -308,29 +308,29 @@ describe("ReadingProgressAutosaveController", () => {
     };
     controller.update({
       ...common,
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
     });
     controller.update({
       ...common,
-      progress: { cfi: "epubcfi(/6/10)", locationLabel: "Chapter 05 - 50%" },
+      progress: { location: "epubcfi(/6/10)", locationLabel: "Chapter 05 - 50%" },
     });
 
     await controller.flushNow();
 
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith("session-1", {
-      cfi: "epubcfi(/6/10)",
+      location: "epubcfi(/6/10)",
       locationLabel: "Chapter 05 - 50%",
     });
   });
 
   it("does not flush without a session, save client, or complete progress", async () => {
-    const save = vi.fn(async (_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      savedProgress(progress.cfi, progress.locationLabel));
+    const save = vi.fn(async (_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      savedProgress(progress.location, progress.locationLabel));
     const inputs = [
-      { sessionId: null, progress: { cfi: "epubcfi(/6/2)", locationLabel: "A" }, saveProgress: save },
+      { sessionId: null, progress: { location: "epubcfi(/6/2)", locationLabel: "A" }, saveProgress: save },
       { sessionId: "session-1", progress: null, saveProgress: save },
-      { sessionId: "session-1", progress: { cfi: "epubcfi(/6/2)", locationLabel: "A" }, saveProgress: null },
+      { sessionId: "session-1", progress: { location: "epubcfi(/6/2)", locationLabel: "A" }, saveProgress: null },
     ];
 
     for (const input of inputs) {
@@ -348,8 +348,8 @@ describe("ReadingProgressAutosaveController", () => {
 
   it("reuses an in-flight drain and then flushes one newer payload", async () => {
     const firstSave = deferred<MarginaliaProgress>();
-    const save = vi.fn((_sessionId: string, progress: { cfi: string; locationLabel: string }) =>
-      progress.cfi.includes("/2") ? firstSave.promise : Promise.resolve(savedProgress(progress.cfi, progress.locationLabel)));
+    const save = vi.fn((_sessionId: string, progress: { location: string; locationLabel: string }) =>
+      progress.location.includes("/2") ? firstSave.promise : Promise.resolve(savedProgress(progress.location, progress.locationLabel)));
     const controller = new ReadingProgressAutosaveController(() => undefined);
     const common = {
       enabled: true,
@@ -359,12 +359,12 @@ describe("ReadingProgressAutosaveController", () => {
     };
     controller.update({
       ...common,
-      progress: { cfi: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
+      progress: { location: "epubcfi(/6/2)", locationLabel: "Chapter 01 - 10%" },
     });
     await vi.advanceTimersByTimeAsync(10);
     controller.update({
       ...common,
-      progress: { cfi: "epubcfi(/6/12)", locationLabel: "Chapter 06 - 60%" },
+      progress: { location: "epubcfi(/6/12)", locationLabel: "Chapter 06 - 60%" },
     });
 
     const flush = controller.flushNow();
@@ -374,7 +374,7 @@ describe("ReadingProgressAutosaveController", () => {
     expect(save).toHaveBeenCalledTimes(2);
     expect(save.mock.calls[1]).toEqual([
       "session-1",
-      { cfi: "epubcfi(/6/12)", locationLabel: "Chapter 06 - 60%" },
+      { location: "epubcfi(/6/12)", locationLabel: "Chapter 06 - 60%" },
     ]);
   });
 
@@ -385,7 +385,7 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: READING_PROGRESS_AUTOSAVE_DELAY_MS,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/4)", locationLabel: "Chapter 02 - 20%" },
+      progress: { location: "epubcfi(/6/4)", locationLabel: "Chapter 02 - 20%" },
       saveProgress: vi.fn().mockRejectedValue(new Error("offline")),
     });
     onStateChange.mockClear();
@@ -407,13 +407,13 @@ describe("ReadingProgressAutosaveController", () => {
       enabled: true,
       autosaveDelayMs: 10,
       sessionId: "session-1",
-      progress: { cfi: "epubcfi(/6/4)", locationLabel: "020% - Chapter 2" },
+      progress: { location: "epubcfi(/6/4)", locationLabel: "020% - Chapter 2" },
       saveProgress: save,
     };
 
     controller.update(input);
     await vi.advanceTimersByTimeAsync(10);
-    controller.update({ ...input, progress: { cfi: "epubcfi(/6/6)", locationLabel: "030% - Chapter 3" } });
+    controller.update({ ...input, progress: { location: "epubcfi(/6/6)", locationLabel: "030% - Chapter 3" } });
     await vi.advanceTimersByTimeAsync(10);
 
     expect(save).toHaveBeenCalledOnce();

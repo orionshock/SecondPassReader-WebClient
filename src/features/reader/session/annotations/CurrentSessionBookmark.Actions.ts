@@ -49,7 +49,7 @@ export async function executeReaderBookmarkMutation(args: {
     const response = await commitServerCurrentSessionAnnotation(args.spl!, args.sessionId,
       buildBookmarkUpsert({ clientId: crypto.randomUUID(), cfi, locationLabel: args.locationLabel }),
     );
-    const created = response.annotations.find((item) => item.kind === "bookmark" && item.location.cfi === cfi);
+    const created = response.annotations.find((item) => item.kind === "bookmark" && item.location.location === cfi);
     if (!created || !toReaderBookmark(created)) {
       return {
         result: {

@@ -114,7 +114,7 @@ function Harness({
     bookId: "book-1",
     serverBootstrap: BOOTSTRAP,
     readAnnotations: readNoAnnotations,
-    progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
+    progress: { location: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
     openRepositories,
   });
   onState(state);

@@ -222,7 +222,7 @@ describe("offline current-session annotations", () => {
         outboxRepository: repositories.outboxRepository,
       }),
     });
-    progress.update({ cfi: "epubcfi(/6/10)", percentage: 40, locationLabel: "040% - Chapter" });
+    progress.update({ location: "epubcfi(/6/10)", percentage: 40, locationLabel: "040% - Chapter" });
 
     await Promise.all([
       progress.flushNow(),
@@ -233,7 +233,7 @@ describe("offline current-session annotations", () => {
     ]);
 
     const stored = await repositories.stateRepository.getBookState("account-a", "book-1");
-    expect(stored?.progress?.cfi).toBe("epubcfi(/6/10)");
+    expect(stored?.progress?.location).toBe("epubcfi(/6/10)");
     expect(stored?.annotations).toHaveLength(1);
   });
 });
@@ -296,7 +296,7 @@ function confirmedState(): OfflineReaderBookState {
       annotation: {
         clientId: "confirmed-1",
         kind: "highlight",
-        location: { cfi: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
+        location: { location: "epubcfi(/6/4)", locationLabel: "010% - Chapter" },
         body: { text: "Original", prefix: "", suffix: "", color: "yellow", note: "" },
       },
     }],

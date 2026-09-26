@@ -15,7 +15,7 @@ describe("online Reader offline handoff", () => {
       bookId: "book-1",
       session: activeSession(),
       annotations: [bookmark("bookmark-1")],
-      progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
+      progress: { location: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
       stateRepository,
       outboxRepository,
       generateLocalId: () => "handoff",
@@ -43,7 +43,7 @@ describe("online Reader offline handoff", () => {
       }),
       delayMs: 0,
     });
-    progress.update({ cfi: "epubcfi(/6/10)", percentage: 50, locationLabel: "050% - Chapter" });
+    progress.update({ location: "epubcfi(/6/10)", percentage: 50, locationLabel: "050% - Chapter" });
     await progress.flushNow();
 
     const annotations = new OfflineCurrentSessionAnnotationController({
@@ -90,7 +90,7 @@ describe("online Reader offline handoff", () => {
       bookId: "book-1",
       session: activeSession(),
       annotations: [bookmark("bookmark-1"), bookmark("bookmark-server")],
-      progress: { cfi: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - Chapter" },
+      progress: { location: "epubcfi(/6/2)", percentage: 10, locationLabel: "010% - Chapter" },
       stateRepository,
       outboxRepository,
     });
@@ -128,7 +128,7 @@ describe("online Reader offline handoff", () => {
     const { stateRepository, outboxRepository } = await repositories();
     const session = activeSession();
     session.progress = {
-      cfi: "epubcfi(/6/8)",
+      location: "epubcfi(/6/8)",
       locationLabel: "040% - Chapter",
       updatedAt: "2026-09-12T00:00:00Z",
     };
@@ -137,7 +137,7 @@ describe("online Reader offline handoff", () => {
       bookId: "book-1",
       session,
       annotations: [],
-      progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
+      progress: { location: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
       stateRepository,
       outboxRepository,
       generateLocalId: () => "acknowledged",
@@ -161,7 +161,7 @@ describe("online Reader offline handoff", () => {
       bookId: "book-1",
       session: activeSession(),
       annotations: [bookmark("bookmark-server")],
-      progress: { cfi: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
+      progress: { location: "epubcfi(/6/8)", percentage: 40, locationLabel: "040% - Chapter" },
       stateRepository,
       outboxRepository,
     })).rejects.toThrow("removed during handoff");
@@ -198,7 +198,7 @@ function bookmark(clientId: string): MarginaliaAnnotation {
     id: `server:${clientId}`,
     clientId,
     kind: "bookmark",
-    location: { cfi: "epubcfi(/6/4)", locationLabel: "020% - Chapter" },
+    location: { location: "epubcfi(/6/4)", locationLabel: "020% - Chapter" },
     createdAt: "2026-09-12T00:00:00Z",
     updatedAt: "2026-09-12T00:00:00Z",
   };
@@ -216,7 +216,7 @@ function existingState(): OfflineReaderBookState {
       serverSessionId: "session-1",
       lastKnownServerStatus: "active",
     },
-    progress: { cfi: "epubcfi(/6/20)", percentage: 90, locationLabel: "090% - Chapter" },
+    progress: { location: "epubcfi(/6/20)", percentage: 90, locationLabel: "090% - Chapter" },
     annotations: [{
       status: "deleted",
       origin: { kind: "server-confirmed", serverSessionId: "session-1" },

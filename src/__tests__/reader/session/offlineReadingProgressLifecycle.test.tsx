@@ -48,7 +48,7 @@ describe("offline reading progress lifecycle", () => {
     act(() => root.unmount());
     root = createRoot(container);
     await waitFor(async () => (
-      (await readerState.getBookState("account-a", "book-1"))?.progress?.cfi === "epubcfi(/6/8)"
+      (await readerState.getBookState("account-a", "book-1"))?.progress?.location === "epubcfi(/6/8)"
     ));
 
     expect(await readerOutbox.list("account-a")).toEqual([
@@ -64,7 +64,7 @@ describe("offline reading progress lifecycle", () => {
     const preserved = bootstrap();
     preserved.suppressInitialProgressWrite = true;
     preserved.continuity.progress = {
-      cfi: "epubcfi(/6/20)",
+      location: "epubcfi(/6/20)",
       percentage: 90,
       locationLabel: "090% - Later",
     };
@@ -76,7 +76,7 @@ describe("offline reading progress lifecycle", () => {
     ));
     await act(async () => Promise.resolve());
 
-    expect((await readerState.getBookState("account-a", "book-1"))?.progress?.cfi).toBe("epubcfi(/6/20)");
+    expect((await readerState.getBookState("account-a", "book-1"))?.progress?.location).toBe("epubcfi(/6/20)");
     expect(await readerOutbox.list("account-a")).toEqual([]);
   });
 });
