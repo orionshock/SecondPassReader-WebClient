@@ -21,10 +21,10 @@ const SHELF_ORDERING_OPTIONS: Array<OrderingOption<ShelfOrdering>> = [
   { value: "name", label: "Shelf A-Z", icon: "sort_by_alpha" },
   { value: "-item_count", label: "Most books", icon: "format_list_numbered" },
 ];
-const SHELF_SCOPES: Array<{ value: ShelfScope; label: string; icon: string; empty: string }> = [
-  { value: "personal", label: "Personal", icon: "shelves", empty: "You do not have any personal shelves." },
-  { value: "shared", label: "Shared by Others", icon: "share", empty: "No shelves shared by others." },
-  { value: "group", label: "Group Shelves", icon: "group_work", empty: "No group shelves." },
+const SHELF_SCOPES: Array<{ value: ShelfScope; label: string; icon: string; empty: string; searchEmpty: string; searchPlaceholder: string }> = [
+  { value: "personal", label: "Personal", icon: "shelves", empty: "You do not have any personal shelves.", searchEmpty: "No personal shelves match this search.", searchPlaceholder: "Search shelves" },
+  { value: "shared", label: "Shared by Others", icon: "share", empty: "No shelves shared by others.", searchEmpty: "No shared shelves match this search.", searchPlaceholder: "Search shelves or users" },
+  { value: "group", label: "Group Shelves", icon: "group_work", empty: "No group shelves.", searchEmpty: "No group shelves match this search.", searchPlaceholder: "Search shelves or groups" },
 ];
 
 export function ShelvesLoadErrorNotice({
@@ -53,21 +53,33 @@ export function ShelvesLoadErrorNotice({
 export function ShelvesPage({
   connection,
   spl,
+  scope: routeScope,
+  q: routeQuery,
   ordering: routeOrdering,
+  onChangeScope,
+  onCommitSearch,
   onChangeOrdering,
+  onViewBook,
 }: {
   connection: ActiveConnection | null;
   spl: SecondPassClient | null;
+  scope?: ShelfScope;
+  q?: string;
   ordering?: string;
+  onChangeScope?: (scope: ShelfScope) => void;
+  onCommitSearch?: (q: string) => void;
   onChangeOrdering?: (ordering: string) => void;
+  onViewBook?: (bookId: string) => void;
 }) {
-  const [activeScope, setActiveScope] = useState<ShelfScope>("personal");
+  const activeScope = routeScope ?? "personal";
+  const submittedQuery = routeQuery?.trim() ?? "";
+  const [searchDraft, setSearchDraft] = useState(submittedQuery);
   const [displayScope, setDisplayScope] = useState<ShelfScope>("personal");
   const ordering = SHELF_ORDERING_OPTIONS.some((option) => option.value === routeOrdering) ? (routeOrdering as ShelfOrdering) : "name";
   const {
     canLoad, busy, pages, pageSize, changePageSize, createOpen, createDraft, menuShelfId, mutationBusy, mutationError,
     createShelf, deleteShelf, beginCreate, cancelCreate, changeCreateDraft, toggleMenu, dismissMenu,
-  } = useShelfCollection({ spl, ordering, activeScope });
+  } = useShelfCollection({ spl, q: submittedQuery, ordering, activeScope });
   const requestedPage = pages[activeScope];
   const visibleScope = requestedPage.data || requestedPage.error ? activeScope : displayScope;
   const activePage = pages[visibleScope];
@@ -75,6 +87,9 @@ export function ShelvesPage({
   useEffect(() => {
     if (requestedPage.data || requestedPage.error) setDisplayScope(activeScope);
   }, [activeScope, requestedPage.data, requestedPage.error]);
+  useEffect(() => {
+    setSearchDraft(submittedQuery);
+  }, [submittedQuery]);
   const createDialogRef = useRef<HTMLElement | null>(null);
   const createDialogCloseRef = useRef<HTMLButtonElement | null>(null);
   useModalDialogFocus({
@@ -105,7 +120,10 @@ export function ShelvesPage({
           <PreviewBookCoverStack
             previewBooks={normalizePreviewBooks(shelf.preview_books)}
             baseUrl={connection}
-            onBookClick={(bookId) => navigateTo({ kind: "shelves", bookId })}
+            onBookClick={(bookId) => {
+              if (onViewBook) onViewBook(bookId);
+              else navigateTo({ kind: "shelves", bookId });
+            }}
           />
           {canEdit ? (
             <div
@@ -156,7 +174,7 @@ export function ShelvesPage({
         </div>
       </div>
     );
-  }, [visibleScope, deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, toggleMenu]);
+  }, [visibleScope, deleteShelf, dismissMenu, menuShelfId, mutationBusy, connection, onViewBook, toggleMenu]);
 
   const formOpen = createOpen;
 
@@ -228,15 +246,38 @@ export function ShelvesPage({
         <div>
           <div className="shelfScopeControls" role="group" aria-label="Shelf scope">
             {SHELF_SCOPES.map((scope) => (
-              <button key={scope.value} type="button" className={`button buttonCompact shelfScopeButton${visibleScope === scope.value ? " shelfScopeButtonActive" : ""}${activeScope === scope.value && visibleScope !== activeScope ? " shelfScopeButtonPending" : ""}`} aria-label={scope.label} aria-pressed={visibleScope === scope.value} aria-busy={activeScope === scope.value && visibleScope !== activeScope} onClick={() => setActiveScope(scope.value)}>
+              <button key={scope.value} type="button" className={`button buttonCompact shelfScopeButton${visibleScope === scope.value ? " shelfScopeButtonActive" : ""}${activeScope === scope.value && visibleScope !== activeScope ? " shelfScopeButtonPending" : ""}`} aria-label={scope.label} aria-pressed={visibleScope === scope.value} aria-busy={activeScope === scope.value && visibleScope !== activeScope} onClick={() => {
+                setSearchDraft("");
+                onChangeScope?.(scope.value);
+              }}>
                 <MaterialIcon name={scope.icon} />{scope.label}
               </button>
             ))}
           </div>
+          <form
+            className="shelfSearchForm"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onCommitSearch?.(searchDraft.trim());
+            }}
+          >
+            <label className="toolbarField toolbarSearch shelfSearchField">
+              <span className="srOnly">{SHELF_SCOPES.find((scope) => scope.value === activeScope)!.searchPlaceholder}</span>
+              <input
+                className="input inputCompact"
+                type="search"
+                value={searchDraft}
+                onChange={(event) => setSearchDraft(event.target.value)}
+                placeholder={SHELF_SCOPES.find((scope) => scope.value === activeScope)!.searchPlaceholder}
+                aria-label={SHELF_SCOPES.find((scope) => scope.value === activeScope)!.searchPlaceholder}
+              />
+            </label>
+            <button className="button buttonPrimary" type="submit">Search</button>
+          </form>
           <section className="shelfList" aria-label={activeScopeInfo.label}>
             {activePage.busy && !activePage.data ? <p className="muted">Loading {activeScopeInfo.label.toLowerCase()} shelves...</p> : null}
             {activePage.error ? <ShelvesLoadErrorNotice error={activePage.error} onRetry={() => void activePage.retry()} disabled={activePage.busy} /> : null}
-            {activePage.data?.count === 0 && !activePage.error ? <p className="muted">{activeScopeInfo.empty}</p> : null}
+            {activePage.data?.count === 0 && !activePage.error ? <p className="muted">{activePage.dataQuery ? activeScopeInfo.searchEmpty : activeScopeInfo.empty}</p> : null}
             <ShelfCollectionPager
               title={activeScopeInfo.label}
               section={activePage}

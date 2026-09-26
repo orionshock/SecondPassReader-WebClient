@@ -127,6 +127,24 @@ describe("navigation route ordering params", () => {
       ordering: "-item_count",
     })).toBe("#/shelves?ordering=-item_count");
 
+    const searchHash = routeToHash({
+      kind: "shelves",
+      scope: "group",
+      q: "  history & memoir  ",
+      ordering: "-item_count",
+    });
+    expect(searchHash).toBe("#/shelves?scope=group&q=history+%26+memoir&ordering=-item_count");
+    vi.stubGlobal("window", { location: { hash: searchHash } });
+    expect(parseCurrentRoute()).toEqual({
+      kind: "shelves",
+      scope: "group",
+      q: "history & memoir",
+      ordering: "-item_count",
+    });
+
+    vi.stubGlobal("window", { location: { hash: "#/shelves?scope=unknown&q=+++" } });
+    expect(parseCurrentRoute()).toEqual({ kind: "shelves", scope: undefined, q: undefined, ordering: undefined });
+
     expect(routeToHash({
       kind: "shelf",
       shelfId: "shelf-1",

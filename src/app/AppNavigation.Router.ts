@@ -23,7 +23,7 @@ export type AppRoute =
     }
   | { kind: "sessions"; bookId?: string; q?: string }
   | { kind: "session"; sessionId: string }
-  | { kind: "shelves"; bookId?: string; ordering?: string }
+  | { kind: "shelves"; bookId?: string; ordering?: string; scope?: "personal" | "shared" | "group"; q?: string }
   | { kind: "shelf"; shelfId: string; bookId?: string; ordering?: string; page?: number; pageSize?: number }
   | { kind: "shelfEdit"; shelfId: string }
   | { kind: "settings"; tab?: SettingsTab; bookId?: string }
@@ -96,6 +96,8 @@ export function routeToHash(route: AppRoute): string {
       return `#/sessions/${encodeURIComponent(route.sessionId)}`;
     case "shelves":
       return `#/shelves${buildQuery({
+        scope: route.scope && route.scope !== "personal" ? route.scope : undefined,
+        q: route.q,
         ordering: nonDefaultOrdering(route.ordering, "name"),
         book: route.bookId,
       })}`;
@@ -239,7 +241,12 @@ export function parseCurrentRoute(): AppRoute | null {
           : { kind: "shelf", shelfId: parts[1], ordering, page, pageSize };
       }
     }
-    return bookId ? { kind: "shelves", ordering, bookId } : { kind: "shelves", ordering };
+    const scopeRaw = queryParams.get("scope")?.trim();
+    const scope = scopeRaw === "shared" || scopeRaw === "group" ? scopeRaw : undefined;
+    const q = queryParams.get("q")?.trim() || undefined;
+    return bookId
+      ? { kind: "shelves", ordering, scope, q, bookId }
+      : { kind: "shelves", ordering, scope, q };
   }
   if (head === "settings") {
     const tabRaw = queryParams.get("tab")?.trim() ?? "";

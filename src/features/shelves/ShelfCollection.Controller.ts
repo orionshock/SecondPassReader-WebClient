@@ -21,25 +21,31 @@ type ShelfPageState = {
   page: number;
   requestedPage: number;
   data: PaginatedShelfResponse | null;
+  dataQuery: string;
+  stale: boolean;
   busy: boolean;
   error: unknown;
 };
 
-const initialPageState = (): ShelfPageState => ({ page: 1, requestedPage: 1, data: null, busy: false, error: null });
+const initialPageState = (): ShelfPageState => ({ page: 1, requestedPage: 1, data: null, dataQuery: "", stale: false, busy: false, error: null });
 
-function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering: "name" | "-item_count", pageSize: number, active: boolean) {
+function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, q: string, ordering: "name" | "-item_count", pageSize: number, active: boolean) {
   const [state, setState] = useState<ShelfPageState>(initialPageState);
   const requestSeq = useRef(0);
-  const previousQuery = useRef({ spl, ordering, pageSize });
+  const previousQuery = useRef({ spl, q, ordering, pageSize });
   const hasActiveData = useRef(false);
+  const hasData = useRef(false);
+  const isActive = useRef(active);
   hasActiveData.current = active && state.data !== null;
+  hasData.current = state.data !== null;
+  isActive.current = active;
   const load = useCallback(async (targetPage: number) => {
     if (!spl) return;
     const request = ++requestSeq.current;
     setState((current) => ({ ...current, requestedPage: targetPage, busy: true, error: null }));
     try {
       const result = await spl.shelves.list({
-        scope, ordering, page: targetPage, pageSize,
+        scope, ...(q ? { q } : {}), ordering, page: targetPage, pageSize,
         includePreviewBooks: true, previewLimit: SHELF_PREVIEW_LIMIT,
       });
       if (request !== requestSeq.current) return;
@@ -48,31 +54,41 @@ function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering:
         await load(lastPage);
         return;
       }
-      setState({ page: targetPage, requestedPage: targetPage, data: result, busy: false, error: null });
+      setState({ page: targetPage, requestedPage: targetPage, data: result, dataQuery: q, stale: false, busy: false, error: null });
     } catch (error) {
       if (request !== requestSeq.current) return;
       debugWarn("reader", "shelf page could not be loaded", { scope, page: targetPage, error });
       setState((current) => ({ ...current, busy: false, error }));
     }
-  }, [spl, scope, ordering, pageSize]);
+  }, [spl, scope, q, ordering, pageSize]);
 
   useEffect(() => {
+    const qChanged = previousQuery.current.q !== q;
+    const orderingChanged = previousQuery.current.ordering !== ordering;
     const preserveData = previousQuery.current.spl === spl
       && previousQuery.current.pageSize === pageSize
-      && previousQuery.current.ordering !== ordering
+      && (orderingChanged || qChanged)
       && hasActiveData.current;
-    previousQuery.current = { spl, ordering, pageSize };
+    const retainStaleData = previousQuery.current.spl === spl
+      && previousQuery.current.pageSize === pageSize
+      && !orderingChanged
+      && qChanged
+      && !isActive.current
+      && hasData.current;
+    previousQuery.current = { spl, q, ordering, pageSize };
     requestSeq.current += 1;
     setState((current) => preserveData
       ? { ...current, requestedPage: 1, busy: false, error: null }
-      : initialPageState());
+      : retainStaleData
+        ? { ...current, requestedPage: 1, stale: true, busy: false, error: null }
+        : initialPageState());
     if (preserveData) void load(1);
     return () => { requestSeq.current += 1; };
-  }, [load, spl, ordering, pageSize]);
+  }, [load, spl, q, ordering, pageSize]);
 
   useEffect(() => {
-    if (active && spl && !state.data && !state.busy && !state.error) void load(1);
-  }, [active, spl, state.data, state.busy, state.error, load]);
+    if (active && spl && (!state.data || state.stale) && !state.busy && !state.error) void load(1);
+  }, [active, spl, state.data, state.stale, state.busy, state.error, load]);
 
   return {
     ...state,
@@ -83,16 +99,17 @@ function useShelfPage(scope: ShelfScope, spl: SecondPassClient | null, ordering:
   };
 }
 
-export function useShelfCollection({ spl, ordering, activeScope }: {
+export function useShelfCollection({ spl, q, ordering, activeScope }: {
   spl: SecondPassClient | null;
+  q: string;
   ordering: "name" | "-item_count";
   activeScope: ShelfScope;
 }) {
   const canLoad = Boolean(spl);
   const [pageSize, changePageSize] = useState(DEFAULT_APP_PAGE_SIZE);
-  const personal = useShelfPage("personal", spl, ordering, pageSize, activeScope === "personal");
-  const shared = useShelfPage("shared", spl, ordering, pageSize, activeScope === "shared");
-  const group = useShelfPage("group", spl, ordering, pageSize, activeScope === "group");
+  const personal = useShelfPage("personal", spl, activeScope === "personal" ? q : "", ordering, pageSize, activeScope === "personal");
+  const shared = useShelfPage("shared", spl, activeScope === "shared" ? q : "", ordering, pageSize, activeScope === "shared");
+  const group = useShelfPage("group", spl, activeScope === "group" ? q : "", ordering, pageSize, activeScope === "group");
   const pages = { personal, shared, group };
   const busy = pages[activeScope].busy;
   const [createOpen, setCreateOpen] = useState(false);
@@ -108,7 +125,7 @@ export function useShelfCollection({ spl, ordering, activeScope }: {
     setMutationError(null);
     setMutationBusy(false);
     return () => { mutationRequestSeq.current += 1; };
-  }, [spl, ordering, pageSize, activeScope, personal.requestedPage, shared.requestedPage, group.requestedPage]);
+  }, [spl, q, ordering, pageSize, activeScope, personal.requestedPage, shared.requestedPage, group.requestedPage]);
 
   const handleCreate = useCallback(async () => {
     if (!spl) return;

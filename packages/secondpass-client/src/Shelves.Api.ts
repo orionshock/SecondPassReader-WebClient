@@ -24,6 +24,7 @@ export async function listShelves(
 
   const url = new URL(resolveUrl(ctx.apiRootUrl, "/shelves/"));
   if (input?.scope) url.searchParams.set("scope", input.scope);
+  if (input?.q !== undefined) url.searchParams.set("q", input.q);
   if (input?.ownerGroup !== undefined) url.searchParams.set("owner_group", String(input.ownerGroup));
   if (input?.book !== undefined) url.searchParams.set("book", String(input.book));
   if (input?.page !== undefined) url.searchParams.set("page", String(input.page));

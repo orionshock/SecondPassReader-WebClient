@@ -120,14 +120,36 @@ export function AppLibraryRouteRenderer({
         <ShelvesPage
           connection={connection}
           spl={spl}
+          scope={route.scope}
+          q={route.q}
           ordering={route.ordering}
+          onChangeScope={(scope) => {
+            navigateTo({
+              kind: "shelves",
+              scope: scope === "personal" ? undefined : scope,
+              ordering: route.ordering,
+              bookId: route.bookId,
+            });
+          }}
+          onCommitSearch={(q) => {
+            navigateTo({
+              kind: "shelves",
+              scope: route.scope,
+              q: q || undefined,
+              ordering: route.ordering,
+              bookId: route.bookId,
+            });
+          }}
           onChangeOrdering={(ordering) => {
             navigateTo({
               kind: "shelves",
+              scope: route.scope,
+              q: route.q,
               ordering,
               bookId: route.bookId,
             });
           }}
+          onViewBook={(bookId) => navigateTo({ ...route, bookId })}
         />
       </div>
     );

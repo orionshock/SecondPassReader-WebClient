@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { PaginatedShelfResponse, SecondPassClient, Shelf } from "@secondpass/client";
@@ -24,16 +24,28 @@ let remove: ReturnType<typeof vi.fn>;
 let spl: SecondPassClient;
 let state: ReturnType<typeof useShelfCollection>;
 
-function Harness({ activeScope = "personal", ordering = "name" }: {
+function Harness({ activeScope = "personal", q = "", ordering = "name" }: {
   activeScope?: ShelfScope;
+  q?: string;
   ordering?: "name" | "-item_count";
 }) {
-  state = useShelfCollection({ spl, ordering, activeScope });
+  state = useShelfCollection({ spl, q, ordering, activeScope });
   return null;
 }
 
-async function renderPage(ordering?: string, onChangeOrdering?: (ordering: string) => void) {
-  await act(async () => root.render(<ShelvesPage connection={null} spl={spl} ordering={ordering} onChangeOrdering={onChangeOrdering} />));
+function PageHarness({ ordering, initialQ = "", onChangeOrdering, onCommitSearch }: {
+  ordering?: string;
+  initialQ?: string;
+  onChangeOrdering?: (ordering: string) => void;
+  onCommitSearch?: (q: string) => void;
+}) {
+  const [scope, setScope] = useState<ShelfScope>("personal");
+  const [q, setQ] = useState(initialQ);
+  return <ShelvesPage connection={null} spl={spl} scope={scope} q={q} ordering={ordering} onChangeScope={(next) => { setScope(next); setQ(""); }} onCommitSearch={(next) => { onCommitSearch?.(next); setQ(next); }} onChangeOrdering={onChangeOrdering} />;
+}
+
+async function renderPage(ordering?: string, onChangeOrdering?: (ordering: string) => void, initialQ?: string, onCommitSearch?: (q: string) => void) {
+  await act(async () => root.render(<PageHarness ordering={ordering} initialQ={initialQ} onChangeOrdering={onChangeOrdering} onCommitSearch={onCommitSearch} />));
 }
 
 async function selectScope(label: string) {
@@ -158,6 +170,93 @@ it("keeps the current Shelf rows visible until a new sort order arrives", async 
   await act(async () => resolveSorted({ ...page("personal", 1, 25), results: [{ ...shelf, name: "Most books first" }] }));
   expect(container.textContent).toContain("Most books first");
   expect(container.textContent).not.toContain("personal page 1");
+});
+
+it("keeps submitted q through paging and sorting while resetting each changed query to page 1", async () => {
+  list.mockImplementation(({ scope, page: number, q }: { scope: ShelfScope; page: number; q?: string }) =>
+    Promise.resolve({ ...page(scope, number, 45), results: [{ ...shelf, name: q ? `${q} ${number}` : `all ${number}` }] }));
+  await act(async () => root.render(<Harness q="history" />));
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "personal", q: "history", page: 1 }));
+  await act(async () => state.pages.personal.next());
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ q: "history", page: 2 }));
+
+  await act(async () => root.render(<Harness q="history" ordering="-item_count" />));
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ q: "history", ordering: "-item_count", page: 1 }));
+  await act(async () => root.render(<Harness q="memoir" ordering="-item_count" />));
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ q: "memoir", ordering: "-item_count", page: 1 }));
+});
+
+it.each([
+  ["an old unfiltered", "", "history"],
+  ["an old searched", "history", "memoir"],
+])("does not let %s response replace the current query", async (_label, oldQ, currentQ) => {
+  let resolveOld!: (value: PaginatedShelfResponse) => void;
+  list.mockImplementation(({ q }: { q?: string }) => (q ?? "") === oldQ
+    ? new Promise<PaginatedShelfResponse>((resolve) => { resolveOld = resolve; })
+    : Promise.resolve({ ...page("personal"), results: [{ ...shelf, name: currentQ }] }));
+  await act(async () => root.render(<Harness q={oldQ} />));
+  await act(async () => root.render(<Harness q={currentQ} />));
+  expect(state.pages.personal.data?.results[0]?.name).toBe(currentQ);
+  await act(async () => resolveOld({ ...page("personal"), results: [{ ...shelf, name: "stale" }] }));
+  expect(state.pages.personal.data?.results[0]?.name).toBe(currentQ);
+});
+
+it("submits trimmed search through a native form, syncs the input, and clears it on scope change", async () => {
+  const committed = vi.fn();
+  await renderPage(undefined, undefined, "route query", committed);
+  const input = container.querySelector<HTMLInputElement>('.shelfSearchForm input[type="search"]')!;
+  const form = container.querySelector<HTMLFormElement>(".shelfSearchForm")!;
+  expect(input.value).toBe("route query");
+  expect(input.placeholder).toBe("Search shelves");
+  expect(form.querySelector<HTMLButtonElement>('button[type="submit"]')?.textContent).toBe("Search");
+
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "  history  ");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  expect(committed).toHaveBeenLastCalledWith("history");
+  expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "personal", q: "history", page: 1 }));
+
+  await selectScope("Shared by Others");
+  expect(input.value).toBe("");
+  expect(input.placeholder).toBe("Search shelves or users");
+  expect(list).toHaveBeenLastCalledWith(expect.not.objectContaining({ q: expect.anything() }));
+  await selectScope("Group Shelves");
+  expect(input.placeholder).toBe("Search shelves or groups");
+});
+
+it("removes q for a whitespace-only submission", async () => {
+  const committed = vi.fn();
+  await renderPage(undefined, undefined, "history", committed);
+  const input = container.querySelector<HTMLInputElement>(".shelfSearchForm input")!;
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "   ");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => input.form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  expect(committed).toHaveBeenLastCalledWith("");
+  expect(list).toHaveBeenLastCalledWith(expect.not.objectContaining({ q: expect.anything() }));
+});
+
+it("keeps old rows during a search and shows search-specific empty copy only after the response", async () => {
+  let resolveSearch!: (value: PaginatedShelfResponse) => void;
+  list.mockImplementation(({ q }: { q?: string }) => q
+    ? new Promise<PaginatedShelfResponse>((resolve) => { resolveSearch = resolve; })
+    : Promise.resolve(page("personal")));
+  await renderPage();
+  const input = container.querySelector<HTMLInputElement>(".shelfSearchForm input")!;
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "missing");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  act(() => input.form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  expect(container.textContent).toContain("personal page 1");
+  expect(container.textContent).not.toContain("Loading");
+  expect(container.textContent).not.toContain("No personal shelves match this search.");
+  await act(async () => resolveSearch(empty));
+  expect(container.textContent).not.toContain("personal page 1");
+  expect(container.textContent).toContain("No personal shelves match this search.");
 });
 
 it("shows only the active scope pager before its rows with server count", async () => {

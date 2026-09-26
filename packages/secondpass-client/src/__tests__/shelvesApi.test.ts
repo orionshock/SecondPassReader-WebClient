@@ -49,6 +49,39 @@ describe("SDK Shelves API", () => {
     expect(personalUrl.searchParams.has("owner_group")).toBe(false);
     expect(personalUrl.searchParams.has("include_preview_books")).toBe(false);
     expect(personalUrl.searchParams.has("preview_limit")).toBe(false);
+    expect(personalUrl.searchParams.has("q")).toBe(false);
+    transport.assertComplete();
+  });
+
+  it("shelves.list sends q alone and composed with server paging, ordering, and previews", async () => {
+    const transport = installScriptedTransport([
+      { name: "search shelves", response: jsonResponse({ count: 0, next: null, previous: null, results: [] }) },
+      { name: "search shared shelves", response: jsonResponse({ count: 0, next: null, previous: null, results: [] }) },
+    ]);
+    const spl = createSecondPassClient({ apiRootUrl: "https://api.example", accessToken: "t" });
+
+    await spl.shelves.list({ q: "history" });
+    await spl.shelves.list({
+      scope: "shared",
+      q: "alice",
+      ordering: "-item_count",
+      page: 3,
+      pageSize: 50,
+      includePreviewBooks: true,
+      previewLimit: 24,
+    });
+
+    expect(new URL(String(transport.request("search shelves").input)).searchParams.get("q")).toBe("history");
+    const composed = new URL(String(transport.request("search shared shelves").input)).searchParams;
+    expect(Object.fromEntries(composed)).toEqual({
+      scope: "shared",
+      q: "alice",
+      page: "3",
+      page_size: "50",
+      include_preview_books: "true",
+      preview_limit: "24",
+      ordering: "-item_count",
+    });
     transport.assertComplete();
   });
 

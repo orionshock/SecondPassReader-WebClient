@@ -64,6 +64,7 @@ export type PaginatedShelfResponse = PaginatedResponse<Shelf>;
 export type PaginatedShelfItemResponse = PaginatedResponse<ShelfItem>;
 
 type ShelfListBaseParams = {
+  q?: string;
   book?: string | number;
   page?: number;
   pageSize?: number;
