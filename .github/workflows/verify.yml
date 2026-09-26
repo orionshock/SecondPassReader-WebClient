@@ -15,7 +15,7 @@ jobs:
     name: Full Web verification
     runs-on: ubuntu-latest
     permissions:
-      code: read
+      contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
