@@ -47,7 +47,6 @@
     "recommendations": [
       "vitest.explorer",
       "mhutchie.git-graph",
-      "openai.chatgpt",
       "guwidoe.vscode-repo-stats"
     ]
   }
