@@ -3,7 +3,7 @@ name: secondpassreader-webclient
 services:
   secondpassreader-webclient:
     # Prefer an immutable dev-sha-* or release tag for reproducible deployments.
-    image: git.zcaprica.duckdns.org/orionshock/secondpassreader-webclient:dev
+    image: ghcr.io/orionshock/secondpassreader-webclient:dev
     environment:
       SECONDPASS_SERVER_PRESETS_JSON: '["https://library.example.com"]'
     ports:

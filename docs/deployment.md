@@ -22,7 +22,7 @@ HTTPS browser
 
 1. Copy `docker/compose.example.yml` to the deployment host.
 2. Edit the image tag, host port, and Library preset URLs inline.
-3. If the registry requires authentication, run `docker login git.zcaprica.duckdns.org`.
+3. Public GHCR images can be pulled anonymously; no registry login is required.
 4. Start the service:
 
 ```bash
@@ -42,7 +42,7 @@ operator-managed HTTPS proxy in production.
 The image repository is:
 
 ```text
-git.zcaprica.duckdns.org/orionshock/secondpassreader-webclient
+ghcr.io/orionshock/secondpassreader-webclient
 ```
 
 - `dev` is the latest development image that passed source verification, image build, image smoke,
@@ -98,12 +98,17 @@ Ordinary pushes and pull requests run the complete `npm run verify` gate and nev
 an image. The manually dispatched `Build development image` workflow publishes `dev-sha-*` and
 advances `dev` only after its immutable image has been pulled back and smoked. Matching release Git
 tags trigger the `Release` workflow, which publishes `sha-*` and the exact release tag; it does not
-move `dev` or publish `latest`.
+move `dev` or publish `latest`. After pull-back smoke verification, it creates or updates a GitHub
+prerelease containing the source commit, source date, image references, and verified digest.
 
-Workflow registry coordinates are repository variables named `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
-`REGISTRY_USERNAME`. `REGISTRY_TOKEN` is a repository secret containing a dedicated Gitea access
-token limited to `write:package`; the OCI registry does not accept the Actions job token for Docker
-login. Credentials must not be committed to workflows, Compose, or documentation examples.
+Workflows derive the lowercase GHCR image path from the GitHub repository owner and name. They
+authenticate as the workflow actor using `GITHUB_TOKEN` with job-scoped `packages: write` permission.
+Release metadata also requires `contents: write`; ordinary verification has only `contents: read`.
+No custom registry credentials or personal access token are required for publication.
+
+The package owner must set the GHCR package visibility to public after its first publication;
+repository visibility alone does not make a container package public. Public deployment hosts need
+no credentials. Keep any credentials for private operator-managed images out of Compose examples.
 
 ## Reverse proxy and Library access
 

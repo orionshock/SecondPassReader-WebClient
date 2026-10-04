@@ -3,13 +3,12 @@ name: Build development image
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: build-development-image
   cancel-in-progress: false
-
-env:
-  REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
-  REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
 
 jobs:
   build:
@@ -17,9 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
     steps:
       - name: Check out complete Git history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -30,30 +30,26 @@ jobs:
       - name: Run the canonical repository gate
         run: npm run verify
 
-      - name: Require registry configuration
-        shell: bash
-        env:
-          REGISTRY_USERNAME: ${{ vars.REGISTRY_USERNAME }}
-          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          test -n "$REGISTRY_HOST" || { echo "REGISTRY_HOST is required." >&2; exit 1; }
-          test -n "$REGISTRY_IMAGE" || { echo "REGISTRY_IMAGE is required." >&2; exit 1; }
-          test -n "$REGISTRY_USERNAME" || { echo "REGISTRY_USERNAME is required." >&2; exit 1; }
-          test -n "$REGISTRY_TOKEN" || { echo "REGISTRY_TOKEN is required." >&2; exit 1; }
-
       - name: Derive development image metadata
         id: metadata
         shell: bash
         run: |
           set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
           release_date=$(git log -1 --format=%cs)
           {
             echo "version=dev-sha-${GITHUB_SHA}"
             echo "release_date=$release_date"
-            echo "immutable_image=${REGISTRY_IMAGE}:dev-sha-${GITHUB_SHA}"
-            echo "dev_image=${REGISTRY_IMAGE}:dev"
+            echo "immutable_image=${image}:dev-sha-${GITHUB_SHA}"
+            echo "dev_image=${image}:dev"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       - name: Build and smoke production image
         uses: ./.github/actions/build-production-image
@@ -62,13 +58,6 @@ jobs:
           smoke_image: ${{ steps.metadata.outputs.immutable_image }}
           app_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
-
-      - name: Log in to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.REGISTRY_HOST }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Publish immutable development image
         env:
@@ -103,6 +92,11 @@ jobs:
           dev_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$DEV_IMAGE")
           dev_digest=${dev_digest#*@}
           test "$immutable_digest" = "$dev_digest"
+          {
+            echo "Verified development image: \`$IMMUTABLE_IMAGE\`"
+            echo "Development channel: \`$DEV_IMAGE\`"
+            echo "Digest: \`$immutable_digest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove workflow image tags
         if: ${{ always() }}

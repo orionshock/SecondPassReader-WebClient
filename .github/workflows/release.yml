@@ -5,23 +5,23 @@ on:
     tags:
       - "alpha-rc[0-9]*"
 
+permissions:
+  contents: read
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
-
-env:
-  REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
-  REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
 
 jobs:
   release:
     name: Verify, build, smoke, and publish release
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      packages: write
     steps:
       - name: Check out complete Git history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -42,35 +42,31 @@ jobs:
       - name: Run the canonical repository gate
         run: npm run verify
 
-      - name: Require registry configuration
-        shell: bash
-        env:
-          REGISTRY_USERNAME: ${{ vars.REGISTRY_USERNAME }}
-          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          test -n "$REGISTRY_HOST" || { echo "REGISTRY_HOST is required." >&2; exit 1; }
-          test -n "$REGISTRY_IMAGE" || { echo "REGISTRY_IMAGE is required." >&2; exit 1; }
-          test -n "$REGISTRY_USERNAME" || { echo "REGISTRY_USERNAME is required." >&2; exit 1; }
-          test -n "$REGISTRY_TOKEN" || { echo "REGISTRY_TOKEN is required." >&2; exit 1; }
-
       - name: Derive release image metadata
         id: metadata
         shell: bash
         run: |
           set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
           tag=${GITHUB_REF#refs/tags/}
           release_date=$(git log -1 --format=%cs)
           {
             echo "version=$tag"
             echo "release_date=$release_date"
-            echo "immutable_image=${REGISTRY_IMAGE}:sha-${GITHUB_SHA}"
-            echo "release_image=${REGISTRY_IMAGE}:$tag"
+            echo "immutable_image=${image}:sha-${GITHUB_SHA}"
+            echo "release_image=${image}:$tag"
             echo "images<<EOF"
-            echo "${REGISTRY_IMAGE}:sha-${GITHUB_SHA}"
-            echo "${REGISTRY_IMAGE}:$tag"
+            echo "${image}:sha-${GITHUB_SHA}"
+            echo "${image}:$tag"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       - name: Build and smoke production image
         uses: ./.github/actions/build-production-image
@@ -79,13 +75,6 @@ jobs:
           smoke_image: ${{ steps.metadata.outputs.immutable_image }}
           app_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
-
-      - name: Log in to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.REGISTRY_HOST }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Publish immutable release tags
         shell: bash
@@ -98,6 +87,7 @@ jobs:
           done <<< "$IMAGES"
 
       - name: Pull back and smoke exact release tag
+        id: published
         shell: bash
         env:
           IMMUTABLE_IMAGE: ${{ steps.metadata.outputs.immutable_image }}
@@ -107,8 +97,44 @@ jobs:
         run: |
           set -euo pipefail
           docker image rm "$IMMUTABLE_IMAGE" "$RELEASE_IMAGE"
+          docker pull "$IMMUTABLE_IMAGE"
           docker pull "$RELEASE_IMAGE"
+          immutable_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMMUTABLE_IMAGE")
+          immutable_digest=${immutable_digest#*@}
+          release_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$RELEASE_IMAGE")
+          release_digest=${release_digest#*@}
+          test "$immutable_digest" = "$release_digest"
           sh tools/smoke-production-image.sh "$RELEASE_IMAGE" "$EXPECTED_VERSION" "$EXPECTED_RELEASE_DATE"
+          echo "digest=$release_digest" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.metadata.outputs.version }}
+          RELEASE_DATE: ${{ steps.metadata.outputs.release_date }}
+          IMMUTABLE_IMAGE: ${{ steps.metadata.outputs.immutable_image }}
+          RELEASE_IMAGE: ${{ steps.metadata.outputs.release_image }}
+          IMAGE_DIGEST: ${{ steps.published.outputs.digest }}
+        run: |
+          set -euo pipefail
+          notes="$RUNNER_TEMP/secondpass-release-notes.md"
+          {
+            printf 'Second Pass Reader %s\n\n' "$TAG"
+            printf -- '- Source commit: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Source commit date: `%s`\n' "$RELEASE_DATE"
+            printf -- '- Release image: `%s`\n' "$RELEASE_IMAGE"
+            printf -- '- Immutable image: `%s`\n' "$IMMUTABLE_IMAGE"
+            printf -- '- Verified digest: `%s`\n' "$IMAGE_DIGEST"
+            printf '\nThe published image passed production smoke verification after pulling it from GHCR.\n'
+          } > "$notes"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TAG" --notes-file "$notes" --prerelease --latest=false
+          else
+            gh release create "$TAG" --verify-tag --target "$GITHUB_SHA" --title "$TAG" --notes-file "$notes" --prerelease --latest=false
+          fi
+          cat "$notes" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove workflow image tags
         if: ${{ always() }}

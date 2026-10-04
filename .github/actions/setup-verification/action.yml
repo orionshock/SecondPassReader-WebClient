@@ -5,12 +5,13 @@ runs:
   using: composite
   steps:
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version-file: .node-version
+        package-manager-cache: false
 
     - name: Restore npm download cache
-      uses: actions/cache@v4.1.2
+      uses: actions/cache@v6
       with:
         path: .npm-cache
         key: ${{ runner.os }}-npm-${{ hashFiles('.node-version', 'package.json', 'package-lock.json') }}
