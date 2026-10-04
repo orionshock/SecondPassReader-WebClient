@@ -30,7 +30,7 @@
     "@tiptap/extension-list": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
-    "dompurify": "^3.4.15",
+    "dompurify": "^3.4.16",
     "fflate": "^0.8.3",
     "material-symbols": "^0.46.0",
     "papaparse": "^5.7.0",
