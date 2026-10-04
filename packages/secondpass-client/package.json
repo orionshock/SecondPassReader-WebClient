@@ -14,5 +14,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run -c ../../vitest.config.ts"
+  },
+  "license": "Apache-2.0",
+  "author": "Apollo Shockman",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orionshock/SecondPassReader-WebClient.git",
+    "directory": "packages/secondpass-client"
+  },
+  "homepage": "https://github.com/orionshock/SecondPassReader-WebClient/tree/master/packages/secondpass-client#readme",
+  "bugs": {
+    "url": "https://github.com/orionshock/SecondPassReader-WebClient/issues"
   }
 }

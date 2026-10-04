@@ -49,5 +49,15 @@
     "typescript": "7.0.2",
     "vite": "8.3.0",
     "vitest": "4.1.11"
+  },
+  "license": "Apache-2.0",
+  "author": "Apollo Shockman",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orionshock/SecondPassReader-WebClient.git"
+  },
+  "homepage": "https://github.com/orionshock/SecondPassReader-WebClient#readme",
+  "bugs": {
+    "url": "https://github.com/orionshock/SecondPassReader-WebClient/issues"
   }
 }
