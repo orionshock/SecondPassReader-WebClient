@@ -45,6 +45,12 @@ manifest and lockfile changes.
 - Workspace SDK [`@secondpass/client`](packages/secondpass-client/README.md) for Second Pass Library
   transport and data projection
 
+Source and prereleases are available on
+[GitHub](https://github.com/orionshock/SecondPassReader-WebClient).
+Prebuilt images are published to
+[GHCR](https://github.com/orionshock/SecondPassReader-WebClient/pkgs/container/secondpassreader-webclient).
+See [Deployment](docs/deployment.md) to run the Reader with Docker Compose.
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
